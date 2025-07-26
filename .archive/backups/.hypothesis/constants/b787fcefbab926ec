@@ -1,0 +1,4 @@
+# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/validators/author.py
+# hypothesis_version: 6.135.29
+
+[',', ', ', '.', 'II', 'III', 'IV', 'Jr.', 'M.D.', 'No authors found', 'Ph.D.', 'Sr.', 'V', '[^A-Z]', '^[A-Z](\\.[A-Z])*\\.$', '^[A-Z]\\.$', 'author', 'authors', 'da', 'de', 'degli', 'del', 'della', 'den', 'der', 'des', 'di', 'do', 'dos', 'du', 'la', 'le', 'te', 'ter', 'van', 'von']

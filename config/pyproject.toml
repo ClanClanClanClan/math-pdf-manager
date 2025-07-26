@@ -1,0 +1,258 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "math-pdf-manager"
+version = "2.17.4"
+description = "Academic PDF management system for mathematics research"
+readme = "README.md"
+authors = [
+    {name = "Dylan Possamaï", email = "dylan.possamai@example.com"}
+]
+license = {text = "MIT"}
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+requires-python = ">=3.9"
+dependencies = [
+    "PyYAML>=6.0.1",
+    "requests>=2.31.0",
+    "tqdm>=4.66.0",
+    "PyMuPDF>=1.23.0",
+    "pdfplumber>=0.10.0",
+    "jinja2>=3.1.2",
+    "rapidfuzz>=3.5.0",
+    "regex>=2023.12.0",
+    "defusedxml>=0.7.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-timeout>=2.2.0",
+    "pytest-benchmark>=4.0.0",
+    "hypothesis>=6.92.0",
+    "black>=23.12.0",
+    "isort>=5.13.0",
+    "flake8>=7.0.0",
+    "mypy>=1.8.0",
+    "bandit>=1.7.0",
+    "pre-commit>=3.6.0",
+]
+ocr = [
+    "pytesseract>=0.3.10",
+    "Pillow>=10.0.0",
+    "opencv-python>=4.8.0",
+    "pdf2image>=1.16.0",
+]
+api = [
+    "aiohttp>=3.9.0",
+    "httpx>=0.25.0",
+    "tenacity>=8.2.0",
+    "backoff>=2.2.0",
+]
+ml = [
+    "transformers>=4.36.0",
+    "torch>=2.1.0",
+    "sentence-transformers>=2.2.0",
+]
+all = ["math-pdf-manager[dev,ocr,api,ml]"]
+
+[project.scripts]
+mathpdf = "main:main"
+mathpdf-secure = "main_secure:main"
+
+[project.urls]
+Homepage = "https://github.com/dylanpossamai/math-pdf-manager"
+Documentation = "https://math-pdf-manager.readthedocs.io"
+Repository = "https://github.com/dylanpossamai/math-pdf-manager.git"
+Issues = "https://github.com/dylanpossamai/math-pdf-manager/issues"
+
+[tool.setuptools]
+packages = ["Scripts", "Scripts.core", "Scripts.utils", "Scripts.validators"]
+
+[tool.setuptools.package-data]
+Scripts = ["*.yaml", "*.txt", "*.html", "*.json"]
+
+[tool.black]
+line-length = 100
+target-version = ['py39', 'py310', 'py311', 'py312']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # Directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+  | grobid
+  | unicode_utils
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 100
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+ensure_newline_before_comments = true
+skip_glob = ["*/grobid/*", "*/unicode_utils/*"]
+
+[tool.mypy]
+python_version = "2.17.4"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+
+# Per-module options
+[[tool.mypy.overrides]]
+module = "tests.*"
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = [
+    "pdfplumber",
+    "PyMuPDF",
+    "language_tool_python",
+    "spacy",
+    "transformers",
+    "scholarly",
+]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+minversion = "2.17.4"
+testpaths = ["tests"]
+addopts = """
+    -ra
+    --strict-markers
+    --cov=Scripts
+    --cov-report=html
+    --cov-report=term-missing:skip-covered
+    --timeout=300
+"""
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "security: marks tests as security tests",
+    "performance: marks tests as performance tests",
+    "network: marks tests that require network access",
+    "stress: marks tests as stress tests",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning:pdfminer.*",
+    "ignore::DeprecationWarning:PyMuPDF.*",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["Scripts"]
+omit = [
+    "*/tests/*",
+    "*/test_*.py",
+    "*/__pycache__/*",
+    "*/grobid/*",
+    "*/unicode_utils/*",
+]
+
+[tool.coverage.report]
+precision = 2
+show_missing = true
+skip_covered = false
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
+
+[tool.bandit]
+exclude_dirs = ["tests", "grobid", "unicode_utils"]
+skip = ["B101", "B601", "B602"]  # Skip assert_used, paramiko, subprocess
+severity = "medium"
+confidence = "medium"
+
+[tool.pydocstyle]
+convention = "google"
+add-ignore = ["D100", "D101", "D102", "D103", "D104", "D107"]
+match-dir = "^(?!tests|grobid|unicode_utils).*"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "C",   # flake8-comprehensions
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+]
+ignore = [
+    "E501",  # line too long (handled by black)
+    "B008",  # do not perform function calls in argument defaults
+    "C901",  # too complex
+]
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".hg",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "venv",
+    "grobid",
+    "unicode_utils",
+]
+
+[tool.ruff.per-file-ignores]
+"__init__.py" = ["E402"]
+"tests/*" = ["S101"]  # Allow assert in tests

@@ -1,0 +1,8 @@
+{
+  "title": "Utility maximization problem with uncertainty and a jump setting",
+  "authors": [],
+  "year": null,
+  "citation_id": null,
+  "snippet": "We study a robust utility maximization problem in the unbounded case with a general penalty term and information including jumps. We focus on time consistent penalties and we prove that there exists an optimal probability measure solution of the robust problem. Then, we characterize the dynamic value process of our stochastic control problem as the unique solution of a Quadratic-Exponential BSDE.",
+  "source": "scholar_serpapi"
+}

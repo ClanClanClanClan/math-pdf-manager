@@ -1,0 +1,8 @@
+{
+  "title": "Large deviations for generalized backward stochastic differential equations",
+  "authors": [],
+  "year": null,
+  "citation_id": null,
+  "snippet": "This work concerns generalized backward stochastic differential equations, which are coupled with a family of reflecting diffusion processes. First of all, we establish the large deviation principle for forward stochastic differential equations with reflecting boundaries under weak monotonicity conditions. Then based on the obtained result and the contraction principle, the large deviation principle for the generalized backward stochastic differential equations is proved. As a by-product, we obtain a limit result about parabolic partial differential equations with the nonlinear Neumann boundary conditions.",
+  "source": "scholar_serpapi"
+}

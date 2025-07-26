@@ -1,0 +1,4 @@
+# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/src/downloader/integrated_downloader.py
+# hypothesis_version: 6.135.32
+
+[0.0, 200, 300, 8192, '(\\d{4}\\.\\d{4,5})', '10.1109', '2', 'ArXiv', 'ETH_PASSWORD', 'ETH_USERNAME', 'User-Agent', 'class', 'downloads', 'epubs.siam.org', 'eth', 'eth_password', 'eth_username', 'ieee', 'patterns', 'siam', 'v(\\d+)', 'wb']

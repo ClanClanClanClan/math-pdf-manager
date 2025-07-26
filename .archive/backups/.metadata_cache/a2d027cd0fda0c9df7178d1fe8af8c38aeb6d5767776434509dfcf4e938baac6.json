@@ -1,0 +1,8 @@
+{
+  "title": "Mean field games with major and minor agents: the limiting problem and Nash equilibrium",
+  "authors": [],
+  "year": null,
+  "citation_id": null,
+  "snippet": "In this paper, we consider a mean field game (MFG) with a major and N minor agents. We first consider the limiting problem and allow the coefficients to vary with the conditional distribution in a nonlinear way. We use the stochastic maximum principle to transform the limiting control problem into a system of two coupled conditional distribution dependent forward\u2013backward stochastic differential equations (FBSDEs), and prove the existence and uniqueness result of the FBSDEs when the dependence between major agent and minor agents is sufficiently weak. We then use the solution of the limiting problem to construct an -Nash equilibrium for the MFG with a major and N minor agents.",
+  "source": "scholar_serpapi"
+}

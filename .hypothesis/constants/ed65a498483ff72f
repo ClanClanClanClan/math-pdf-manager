@@ -1,0 +1,4 @@
+# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/src/validators/author_parser.py
+# hypothesis_version: 6.135.32
+
+[126, ' & ', ' - ', ' and ', '([A-Z])\\.([A-Z])', ',', ', ', '-', '.', '.pdf', '; ', 'Dr', 'II', 'III', 'IV', 'IX', 'Jr', 'MD', 'PhD', 'Prof', 'Sr', 'V', 'VI', 'VII', 'VIII', 'X', '\\1, \\2', '\\1. \\2', '\\s*,\\s*', '\\s+', '^((?:(?:', 'da', 'de', 'del', 'della', 'den', 'der', 'des', 'di', 'du', 'la', 'le', 'ten', 'ter', 'van', 'von', '|', '«empty»', '\u200b', '\u200c', '\u200d', '\u200e', '\u200f', '–', '\u202a', '\u202b', '\u202c', '\u202d', '\u202e', '\u2060', '\u2061', '\u2062', '\u2063', '\u2064', '\ufeff']

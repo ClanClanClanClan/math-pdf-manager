@@ -1,0 +1,827 @@
+Agranovich_MS:
+  CanonicalLatin: "Agranovich, M. S."
+  Cyrillic: "Марк Самойлович Агранович"
+  AllCommonVariants: ["Agranovich"]
+  MathSciNet: "Agranovich, Mark Samoilovich"
+  Suffixes: ""
+  VIAF: "74046500"
+  Comments: "Partial differential equations."
+
+Akhiezer_NI:
+  CanonicalLatin: "Akhiezer, N. I."
+  Cyrillic: "Наум Ильич Ахиезер"
+  AllCommonVariants: ["Akhiezer", "Achieser"]
+  MathSciNet: "Akhiezer, Naum Ilʹich"
+  Suffixes: ""
+  VIAF: "73907112"
+  Comments: "Harmonic analysis, approximation."
+
+Akhiezer_AI:
+  CanonicalLatin: "Akhiezer, A. I."
+  Cyrillic: "Александр Ильич Ахиезер"
+  AllCommonVariants: ["Akhiezer", "Achieser"]
+  MathSciNet: "Akhiezer, Aleksandr Ilʹich"
+  Suffixes: ""
+  VIAF: "73907115"
+  Comments: "Theoretical physics (Kharkiv)."
+
+Aleksandrov_AD:
+  CanonicalLatin: "Aleksandrov, A. D."
+  Cyrillic: "Александр Данилович Александров"
+  AllCommonVariants: ["Aleksandrov", "Alexandrov", "Alexandroff"]
+  MathSciNet: "Aleksandrov, Aleksandr Danilovich"
+  Suffixes: ""
+  VIAF: "73891633"
+  Comments: "Geometry."
+
+Aleksandrov_PS:
+  CanonicalLatin: "Aleksandrov, P. S."
+  Cyrillic: "Павел Самуилович Александров"
+  AllCommonVariants: ["Aleksandrov", "Alexandrov", "Alexandroff"]
+  MathSciNet: "Aleksandrov, Pavel Samuilovich"
+  Suffixes: ""
+  VIAF: "73892219"
+  Comments: "Topology, descriptive set theory."
+
+Andronov_AA:
+  CanonicalLatin: "Andronov, A. A."
+  Cyrillic: "Алексей Андреевич Андронов"
+  AllCommonVariants: ["Andronov", "Andronoff"]
+  MathSciNet: "Andronov, Aleksei Andreevich"
+  Suffixes: ""
+  VIAF: "111172003"
+  Comments: "Dynamical systems."
+
+Arnold_VI:
+  CanonicalLatin: "Arnold, V. I."
+  Cyrillic: "Владимир Игоревич Арнольд"
+  AllCommonVariants: ["Arnold", "Arnol'd", "Arnol’d"]
+  MathSciNet: "Arnold, Vladimir Igorevich"
+  Suffixes: ""
+  VIAF: "73886500"
+  Comments: "Singularity theory, dynamical systems."
+
+Aronszajn_N:
+  CanonicalLatin: "Aronszajn, N."
+  Cyrillic: ""
+  AllCommonVariants: ["Aronszajn", "Aronshain"]
+  MathSciNet: "Aronszajn, Nachman"
+  Suffixes: ""
+  VIAF: "73907313"
+  Comments: "Jewish-Polish, Warsaw→Soviet→USA, operator theory."
+
+Babenko_KI:
+  CanonicalLatin: "Babenko, K. I."
+  Cyrillic: "Кирилл Иванович Бабенко"
+  AllCommonVariants: ["Babenko"]
+  MathSciNet: "Babenko, Kirill Ivanovich"
+  Suffixes: ""
+  VIAF: "56609777"
+  Comments: "Applied analysis, PDEs."
+
+Bakalov_BN:
+  CanonicalLatin: "Bakalov, B. N."
+  Cyrillic: "Борис Николаевич Бакалов"
+  AllCommonVariants: ["Bakalov"]
+  MathSciNet: "Bakalov, Boris Nikolaevich"
+  Suffixes: ""
+  VIAF: "14832521"
+  Comments: "Bulgaria→Soviet Russia, algebra/analysis."
+
+Bary_MS:
+  CanonicalLatin: "Bary, M. S."
+  Cyrillic: "Михаил Сергеевич Бари"
+  AllCommonVariants: ["Bary", "Bari"]
+  MathSciNet: "Bary, Mikhail Sergeevich"
+  Suffixes: ""
+  VIAF: "73907463"
+  Comments: "Orthogonal series."
+
+Bashkirov_AG:
+  CanonicalLatin: "Bashkirov, A. G."
+  Cyrillic: "Алексей Григорьевич Башкиров"
+  AllCommonVariants: ["Bashkirov"]
+  MathSciNet: "Bashkirov, Aleksei Grigorʹevich"
+  Suffixes: ""
+  VIAF: ""
+  Comments: "Statistical mechanics."
+
+Baryshnikov_YM:
+  CanonicalLatin: "Baryshnikov, Y. M."
+  Cyrillic: "Юрий Михайлович Барышников"
+  AllCommonVariants: ["Baryshnikov", "Baryshnikoff"]
+  MathSciNet: "Baryshnikov, Yuri Mikhailovich"
+  Suffixes: ""
+  VIAF: ""
+  Comments: "Probability, combinatorics."
+
+Belyi_GV:
+  CanonicalLatin: "Belyi, G. V."
+  Cyrillic: "Геннадий Владимирович Белый"
+  AllCommonVariants: ["Belyi", "Belyĭ", "Belyj"]
+  MathSciNet: "Belyi, Gennadii Vladimirovich"
+  Suffixes: ""
+  VIAF: "16989775"
+  Comments: "Belyi's theorem, algebraic geometry."
+
+Berezansky_YM:
+  CanonicalLatin: "Berezansky, Y. M."
+  Cyrillic: "Юрий Михайлович Березанский"
+  AllCommonVariants: ["Berezansky", "Berezanskiĭ"]
+  MathSciNet: "Berezansky, Yuri Mikhailovich"
+  Suffixes: ""
+  VIAF: "39585008"
+  Comments: "Functional analysis."
+
+Bernstein_SN:
+  CanonicalLatin: "Bernstein, S. N."
+  Cyrillic: "Сергей Натанович Бернштейн"
+  AllCommonVariants: ["Bernstein", "Bernshtein", "Bernštein", "Bernstein, S."]
+  MathSciNet: "Bernstein, Sergei Natanovich"
+  Suffixes: ""
+  VIAF: "61550611"
+  Comments: "Probability, approximation."
+
+Besicovitch_AS:
+  CanonicalLatin: "Besicovitch, A. S."
+  Cyrillic: "Абрам Самуилович Безикович"
+  AllCommonVariants: ["Besicovitch", "Besikovitch", "Bezicovich"]
+  MathSciNet: "Besicovitch, Abram Samoilovitch"
+  Suffixes: ""
+  VIAF: "61550616"
+  Comments: "Measure theory, real analysis."
+
+Birman_MS:
+  CanonicalLatin: "Birman, M. S."
+  Cyrillic: "Михаил Шаевич Бирман"
+  AllCommonVariants: ["Birman"]
+  MathSciNet: "Birman, Mikhail Shaevich"
+  Suffixes: ""
+  VIAF: "214415781"
+  Comments: "Spectral theory."
+
+Blashke_W:
+  CanonicalLatin: "Blashke, W."
+  Cyrillic: ""
+  AllCommonVariants: ["Blashke", "Blaschke"]
+  MathSciNet: "Blaschke, Wilhelm"
+  Suffixes: ""
+  VIAF: "73907542"
+  Comments: "Hungarian→German→Russian connections (geometry)."
+
+Bogolyubov_NN:
+  CanonicalLatin: "Bogolyubov, N. N."
+  Cyrillic: "Николай Николаевич Боголюбов"
+  AllCommonVariants: ["Bogolyubov", "Bogoliubov", "Bogoljubov"]
+  MathSciNet: "Bogolyubov, Nikolai Nikolaevich"
+  Suffixes: ""
+  VIAF: "73908185"
+  Comments: "Statistical mechanics, functional analysis."
+
+Bokhoven_NJv:
+  CanonicalLatin: "Bokhoven, N. J. van"
+  Cyrillic: ""
+  AllCommonVariants: ["Bokhoven", "Van Bokhoven"]
+  MathSciNet: "Bokhoven, N. J. van"
+  Suffixes: ""
+  VIAF: ""
+  Comments: "Dutch-Russian collaborations."
+
+Brahmanin_IB:
+  CanonicalLatin: "Brahmanin, I. B."
+  Cyrillic: "Иван Борисович Брахманин"
+  AllCommonVariants: ["Brahmanin", "Brakhmanin"]
+  MathSciNet: "Brahmanin, Ivan Borisovich"
+  Suffixes: ""
+  VIAF: ""
+  Comments: ""
+
+Bunyakovsky_VY:
+  CanonicalLatin: "Bunyakovsky, V. Y."
+  Cyrillic: "Виктор Яковлевич Буняковский"
+  AllCommonVariants: ["Bunyakovsky", "Buniakovsky", "Buniakowski", "Buniakowsky", "Bouniakovski", "Buniakovskij"]
+  MathSciNet: "Bunyakovskii, Viktor Yakovlevich"
+  Suffixes: ""
+  VIAF: "65724278"
+  Comments: "Number theory. Polish/German spelling: Buniakowski/Buniakowsky."
+
+Chebyshev_PL:
+  CanonicalLatin: "Chebyshev, P. L."
+  Cyrillic: "Пафнутий Львович Чебышёв"
+  AllCommonVariants: ["Chebyshev", "Chebychev", "Chebyshov", "Tchebycheff", "Tschebyscheff", "Tschebyshev"]
+  MathSciNet: "Chebyshev, Pafnuty Lvovich"
+  Suffixes: ""
+  VIAF: "24653836"
+  Comments: "Foundations of probability, number theory, analysis."
+
+Chernoff_P:
+  CanonicalLatin: "Chernoff, P."
+  Cyrillic: ""
+  AllCommonVariants: ["Chernoff"]
+  MathSciNet: "Chernoff, Paul"
+  Suffixes: ""
+  VIAF: "74059544"
+  Comments: "Chernoff bound, probability/statistics."
+
+Cherny_V:
+  CanonicalLatin: "Cherny, V."
+  Cyrillic: "Валерий Черный"
+  AllCommonVariants: ["Cherny", "Chernyi", "Chernyj"]
+  MathSciNet: "Cherny, Valerii"
+  Suffixes: ""
+  VIAF: ""
+  Comments: "Stochastic processes, finance."
+
+Chernyshevsky_NG:
+  CanonicalLatin: "Chernyshevsky, N. G."
+  Cyrillic: "Николай Гаврилович Чернышевский"
+  AllCommonVariants: ["Chernyshevsky", "Tchernychevski"]
+  MathSciNet: "Chernyshevsky, Nikolai Gavrilovich"
+  Suffixes: ""
+  VIAF: "73907201"
+  Comments: "Historical logician/philosopher."
+
+Daniil_K:
+  CanonicalLatin: "Daniil, K."
+  Cyrillic: "Кирилл Данилов"
+  AllCommonVariants: ["Daniil", "Danilov"]
+  MathSciNet: "Daniil, Kirill"
+  Suffixes: ""
+  VIAF: ""
+  Comments: "Mathematical logic, analysis."
+
+Dmitriev_VF:
+  CanonicalLatin: "Dmitriev, V. F."
+  Cyrillic: "Василий Фёдорович Дмитриев"
+  AllCommonVariants: ["Dmitriev", "Dmitrieff"]
+  MathSciNet: "Dmitriev, Vasilii Fedorovich"
+  Suffixes: ""
+  VIAF: ""
+  Comments: "Statistics, analysis."
+
+Dobrushin_RL:
+  CanonicalLatin: "Dobrushin, R. L."
+  Cyrillic: "Роланд Львович Добрушин"
+  AllCommonVariants: ["Dobrushin", "Dobrušin", "Dobroshin"]
+  MathSciNet: "Dobrushin, Roland L'vovich"
+  Suffixes: ""
+  VIAF: "73908727"
+  Comments: "Probability/statistical physics, information theory."
+
+Dynkin_EB:
+  CanonicalLatin: "Dynkin, E. B."
+  Cyrillic: "Евгений Борисович Дынкин"
+  AllCommonVariants: ["Dynkin", "Dyncin", "Dinkin"]
+  MathSciNet: "Dynkin, Evgenii Borisovich"
+  Suffixes: ""
+  VIAF: "73908167"
+  Comments: "Markov processes, probability, algebra."
+
+Efimov_NV:
+  CanonicalLatin: "Efimov, N. V."
+  Cyrillic: "Николай Владимирович Ефимов"
+  AllCommonVariants: ["Efimov", "Efimoff"]
+  MathSciNet: "Efimov, Nikolai Vladimirovich"
+  Suffixes: ""
+  VIAF: "31849320"
+  Comments: "Geometry."
+
+Egorov_DM:
+  CanonicalLatin: "Egorov, D. M."
+  Cyrillic: "Дмитрий Фёдорович Егоров"
+  AllCommonVariants: ["Egorov", "Jegorov", "Egoroff"]
+  MathSciNet: "Egorov, Dmitrii Fedorovich"
+  Suffixes: ""
+  VIAF: "2654645"
+  Comments: "Analysis, Egorov's theorem."
+
+Faddeev_LD:
+  CanonicalLatin: "Faddeev, L. D."
+  Cyrillic: "Людвиг Дмитриевич Фаддеев"
+  AllCommonVariants: ["Faddeev", "Faddejev", "Fadeev", "Fadeyev"]
+  MathSciNet: "Faddeev, Ludvig Dmitrievich"
+  Suffixes: ""
+  VIAF: "24578166"
+  Comments: "Mathematical physics, quantum theory."
+
+Feller_W:
+  CanonicalLatin: "Feller, W."
+  Cyrillic: ""
+  AllCommonVariants: ["Feller"]
+  MathSciNet: "Feller, William"
+  Suffixes: ""
+  VIAF: "108172792"
+  Comments: "Probability, statistics (Croatian Jewish, Soviet/USSR mathematical literature)."
+
+Fomin_SV:
+  CanonicalLatin: "Fomin, S. V."
+  Cyrillic: "Сергей Владимирович Фомин"
+  AllCommonVariants: ["Fomin"]
+  MathSciNet: "Fomin, Sergei Vladimirovich"
+  Suffixes: ""
+  VIAF: "2522905"
+  Comments: "Measure theory, topology."
+
+Fréchet_M:
+  CanonicalLatin: "Fréchet, M."
+  Cyrillic: ""
+  AllCommonVariants: ["Fréchet", "Frechet"]
+  MathSciNet: "Fréchet, Maurice"
+  Suffixes: ""
+  VIAF: "73907857"
+  Comments: "French, but Russian journals and students, topology, probability."
+
+Gelfand_IM:
+  CanonicalLatin: "Gelfand, I. M."
+  Cyrillic: "Израиль Моисеевич Гельфанд"
+  AllCommonVariants: ["Gelfand", "Gel'fand"]
+  MathSciNet: "Gelfand, Israel Moiseevich"
+  Suffixes: ""
+  VIAF: "73885936"
+  Comments: "Functional analysis, representation theory."
+
+Gelfond_AR:
+  CanonicalLatin: "Gelfond, A. R."
+  Cyrillic: "Александр Осипович Гельфонд"
+  AllCommonVariants: ["Gelfond", "Gel'fond", "Gelfond, Aleksandr"]
+  MathSciNet: "Gelfond, Aleksandr Osipovich"
+  Suffixes: ""
+  VIAF: "108173056"
+  Comments: "Number theory. Not to be confused with Gelfand, I. M."
+
+Glivenko_VI:
+  CanonicalLatin: "Glivenko, V. I."
+  Cyrillic: "Валентин Иванович Гливенко"
+  AllCommonVariants: ["Glivenko", "Glivenko, Valentin"]
+  MathSciNet: "Glivenko, Valentin Ivanovich"
+  Suffixes: ""
+  VIAF: "23347208"
+  Comments: "Mathematical logic. Glivenko–Cantelli theorem."
+
+Gnedenko_BV:
+  CanonicalLatin: "Gnedenko, B. V."
+  Cyrillic: "Борис Владимирович Гнеденко"
+  AllCommonVariants: ["Gnedenko", "Gnedenco"]
+  MathSciNet: "Gnedenko, Boris Vladimirovich"
+  Suffixes: ""
+  VIAF: "56601342"
+  Comments: "Probability, statistics, random processes."
+
+Gromov_ML:
+  CanonicalLatin: "Gromov, M. L."
+  Cyrillic: "Михаил Леонидович Громов"
+  AllCommonVariants: ["Gromov", "Gromoff"]
+  MathSciNet: "Gromov, Mikhael Leonidovich"
+  Suffixes: ""
+  VIAF: "108173098"
+  Comments: "Geometry, group theory, symplectic topology."
+
+Kantorovich_LV:
+  CanonicalLatin: "Kantorovich, L. V."
+  Cyrillic: "Леонид Витальевич Канторович"
+  AllCommonVariants: ["Kantorovich", "Kantorovitch"]
+  MathSciNet: "Kantorovich, Leonid Vital'evich"
+  Suffixes: ""
+  VIAF: "17287780"
+  Comments: "Linear programming, Nobel laureate, measure theory."
+
+Karpelevich_FI:
+  CanonicalLatin: "Karpelevich, F. I."
+  Cyrillic: "Фаина Ильинична Карпелевич"
+  AllCommonVariants: ["Karpelevich", "Karpelevitch"]
+  MathSciNet: "Karpelevich, Faina Ilinichna"
+  Suffixes: ""
+  VIAF: ""
+  Comments: "Matrix theory, Markov processes."
+
+Khintchine_A:
+  CanonicalLatin: "Khinchin, A. Ya."
+  Cyrillic: "Александр Яковлевич Хинчин"
+  AllCommonVariants: ["Khinchin", "Khintchine", "Chintchin", "Chintchine"]
+  MathSciNet: "Khinchin, Aleksandr Yakovlevich"
+  Suffixes: ""
+  VIAF: "73895089"
+  Comments: "Probability, information theory, analysis."
+
+Kolmogorov_AN:
+  CanonicalLatin: "Kolmogorov, A. N."
+  Cyrillic: "Андрей Николаевич Колмогоров"
+  AllCommonVariants: ["Kolmogorov", "Kolmogoroff", "Kolmogorow"]
+  MathSciNet: "Kolmogorov, Andrei Nikolaevich"
+  Suffixes: ""
+  VIAF: "24655413"
+  Comments: "Probability, logic, turbulence, general topology."
+
+Kolmogorova_OA:
+  CanonicalLatin: "Kolmogorova, O. A."
+  Cyrillic: "Ольга Александровна Колмогорова"
+  AllCommonVariants: ["Kolmogorova"]
+  MathSciNet: "Kolmogorova, Olga Aleksandrovna"
+  Suffixes: ""
+  VIAF: ""
+  Comments: ""
+
+Krasovskii_NN:
+  CanonicalLatin: "Krasovskii, N. N."
+  Cyrillic: "Николай Николаевич Красовский"
+  AllCommonVariants: ["Krasovskii", "Krasovsky", "Krasowski"]
+  MathSciNet: "Krasovskii, Nikolai Nikolaevich"
+  Suffixes: ""
+  VIAF: ""
+  Comments: "Control theory, stochastic processes."
+
+Krein_MG:
+  CanonicalLatin: "Krein, M. G."
+  Cyrillic: "Марк Григорьевич Крейн"
+  AllCommonVariants: ["Krein", "Kreĭn", "Krejn"]
+  MathSciNet: "Krein, Mark Grigor'evich"
+  Suffixes: ""
+  VIAF: "74046413"
+  Comments: "Functional analysis, operator theory."
+
+Krylov_NV:
+  CanonicalLatin: "Krylov, N. V."
+  Cyrillic: "Николай Владимирович Крылов"
+  AllCommonVariants: ["Krylov"]
+  MathSciNet: "Krylov, Nicolai Vladimirovich"
+  Suffixes: ""
+  VIAF: ""
+  Comments: "Probability, PDEs."
+
+Kurosh_AG:
+  CanonicalLatin: "Kurosh, A. G."
+  Cyrillic: "Александр Геннадиевич Курош"
+  AllCommonVariants: ["Kurosh", "Kuroš"]
+  MathSciNet: "Kurosh, Aleksandr Gennadievich"
+  Suffixes: ""
+  VIAF: "226191769"
+  Comments: "Algebra, group theory."
+
+Landau_LD:
+  CanonicalLatin: "Landau, L. D."
+  Cyrillic: "Лев Давидович Ландау"
+  AllCommonVariants: ["Landau", "Landaw"]
+  MathSciNet: "Landau, Lev Davidovich"
+  Suffixes: ""
+  VIAF: "73908244"
+  Comments: "Theoretical physics, analysis, Nobel laureate."
+
+Lavrentiev_MA:
+  CanonicalLatin: "Lavrentiev, M. A."
+  Cyrillic: "Михаил Алексеевич Лаврентьев"
+  AllCommonVariants: ["Lavrentiev", "Lavrentjev", "Lavrentev"]
+  MathSciNet: "Lavrent'ev, Mikhail Alekseevich"
+  Suffixes: ""
+  VIAF: "2654647"
+  Comments: "Applied mathematics, mechanics, PDEs."
+
+Linnik_YV:
+  CanonicalLatin: "Linnik, Y. V."
+  Cyrillic: "Юрий Владимирович Линник"
+  AllCommonVariants: ["Linnik", "Linnik, Yuri"]
+  MathSciNet: "Linnik, Yuri Vladimirovich"
+  Suffixes: ""
+  VIAF: "73907344"
+  Comments: "Probability, number theory."
+
+Luzin_NN:
+  CanonicalLatin: "Luzin, N. N."
+  Cyrillic: "Николай Николаевич Лузин"
+  AllCommonVariants: ["Luzin", "Lusin", "Louzin"]
+  MathSciNet: "Luzin, Nikolai Nikolaevich"
+  Suffixes: ""
+  VIAF: "24656852"
+  Comments: "Set theory, descriptive set theory, analysis."
+
+Lyapunov_AM:
+  CanonicalLatin: "Lyapunov, A. M."
+  Cyrillic: "Александр Михайлович Ляпунов"
+  AllCommonVariants: ["Lyapunov", "Ljapunov", "Liapunov", "Liapounoff", "Ljapunoff"]
+  MathSciNet: "Lyapunov, Aleksandr Mikhailovich"
+  Suffixes: ""
+  VIAF: "24653440"
+  Comments: "Probability, stability theory, dynamical systems."
+
+Mal'tsev_AN:
+  CanonicalLatin: "Mal'tsev, A. N."
+  Cyrillic: "Анатолий Иванович Мальцев"
+  AllCommonVariants: ["Mal'tsev", "Malcev", "Malcev, Anatoly"]
+  MathSciNet: "Mal'tsev, Anatoly Ivanovich"
+  Suffixes: ""
+  VIAF: "56601410"
+  Comments: "Mathematical logic, algebra."
+
+Mandelstam_LI:
+  CanonicalLatin: "Mandelstam, L. I."
+  Cyrillic: "Лев Исаакович Мандельштам"
+  AllCommonVariants: ["Mandelstam", "Mandelshtam"]
+  MathSciNet: "Mandelstam, Lev Isaakovich"
+  Suffixes: ""
+  VIAF: "73907346"
+  Comments: "Theoretical physics, optics, radio waves."
+
+Markov_AA:
+  CanonicalLatin: "Markov, A. A."
+  Cyrillic: "Андрей Андреевич Марков"
+  AllCommonVariants: ["Markov", "Markoff", "Markow"]
+  MathSciNet: "Markov, Andrei Andreevich"
+  Suffixes: ""
+  VIAF: "73907311"
+  Comments: "Markov chains, probability theory."
+
+Markov_AA_Jr:
+  CanonicalLatin: "Markov, A. A., Jr"
+  Cyrillic: "Андрей Андреевич Марков (младший)"
+  AllCommonVariants: ["Markov Jr", "Markoff Jr", "Markov, A. A., Jr"]
+  MathSciNet: "Markov, Andrei Andreevich"
+  Suffixes: "Jr"
+  VIAF: "49351930"
+  Comments: "Logic, constructive mathematics, recursion theory."
+
+Markov_AA_Sr:
+  CanonicalLatin: "Markov, A. A., Sr"
+  Cyrillic: "Андрей Андреевич Марков (старший)"
+  AllCommonVariants: ["Markov Sr", "Markoff Sr", "Markov, A. A., Sr"]
+  MathSciNet: "Markov, Andrei Andreevich"
+  Suffixes: "Sr"
+  VIAF: "31150652"
+  Comments: "Classical probability, analysis."
+
+Menshov_DE:
+  CanonicalLatin: "Menshov, D. E."
+  Cyrillic: "Даниил Евгеньевич Меньшов"
+  AllCommonVariants: ["Menshov", "Menšov", "Menshov, Daniil"]
+  MathSciNet: "Menshov, Daniil Evgenievich"
+  Suffixes: ""
+  VIAF: "56826405"
+  Comments: "Trigonometric series, real analysis."
+
+Milman_DP:
+  CanonicalLatin: "Milman, D. P."
+  Cyrillic: "Давид Петрович Мильман"
+  AllCommonVariants: ["Milman"]
+  MathSciNet: "Milman, David Petrovich"
+  Suffixes: ""
+  VIAF: "2654668"
+  Comments: "Functional analysis, convex geometry."
+
+Novikov_SP:
+  CanonicalLatin: "Novikov, S. P."
+  Cyrillic: "Сергей Петрович Новиков"
+  AllCommonVariants: ["Novikov", "Nowikov"]
+  MathSciNet: "Novikov, Sergei Petrovich"
+  Suffixes: ""
+  VIAF: "111181210"
+  Comments: "Topology, geometry, mathematical physics."
+
+Ostrogradsky_MV:
+  CanonicalLatin: "Ostrogradsky, M. V."
+  Cyrillic: "Михаил Васильевич Остроградский"
+  AllCommonVariants: ["Ostrogradsky", "Ostrogradski", "Ostrogradskii"]
+  MathSciNet: "Ostrogradsky, Mikhail Vasilievich"
+  Suffixes: ""
+  VIAF: "17289735"
+  Comments: "Classical mechanics, calculus of variations."
+
+Pavlov_BS:
+  CanonicalLatin: "Pavlov, B. S."
+  Cyrillic: "Борис Сергеевич Павлов"
+  AllCommonVariants: ["Pavlov", "Pavlof"]
+  MathSciNet: "Pavlov, Boris Sergeevich"
+  Suffixes: ""
+  VIAF: ""
+  Comments: "Spectral theory, operator theory."
+
+Pavlovsky_AA:
+  CanonicalLatin: "Pavlovsky, A. A."
+  Cyrillic: "Андрей Андреевич Павловский"
+  AllCommonVariants: ["Pavlovsky"]
+  MathSciNet: "Pavlovsky, Andrei Andreevich"
+  Suffixes: ""
+  VIAF: ""
+  Comments: "Applied mathematics."
+
+Perelman_GY:
+  CanonicalLatin: "Perelman, G. Y."
+  Cyrillic: "Григорий Яковлевич Перельман"
+  AllCommonVariants: ["Perelman", "Perelman, Grigori"]
+  MathSciNet: "Perelman, Grigori Yakovlevich"
+  Suffixes: ""
+  VIAF: "2654671"
+  Comments: "Geometry, Ricci flow, Poincaré conjecture."
+
+Petrovsky_IG:
+  CanonicalLatin: "Petrovsky, I. G."
+  Cyrillic: "Иван Георгиевич Петровский"
+  AllCommonVariants: ["Petrovsky", "Petrowsky", "Petrovskij", "Petrowski"]
+  MathSciNet: "Petrovskii, Ivan Georgievich"
+  Suffixes: ""
+  VIAF: "73882243"
+  Comments: "Partial differential equations, topology."
+
+Pontryagin_LS:
+  CanonicalLatin: "Pontryagin, L. S."
+  Cyrillic: "Лев Семёнович Понтрягин"
+  AllCommonVariants: ["Pontryagin", "Pontrjagin", "Pontriagin"]
+  MathSciNet: "Pontryagin, Lev Semenovich"
+  Suffixes: ""
+  VIAF: "74143303"
+  Comments: "Topology, optimal control, algebra."
+
+Prokhorov_YuV:
+  CanonicalLatin: "Prokhorov, Yu. V."
+  Cyrillic: "Юрий Васильевич Прохоров"
+  AllCommonVariants: ["Prokhorov", "Prochorov"]
+  MathSciNet: "Prokhorov, Yu. V."
+  Suffixes: ""
+  VIAF: "32090727"
+  Comments: "Probability, Prokhorov's theorem."
+
+Pyatetskii-Shapiro_IP:
+  CanonicalLatin: "Pyatetskii-Shapiro, I. P."
+  Cyrillic: "Илларион Павлович Пятецкий-Шапиро"
+  AllCommonVariants: ["Pyatetskii-Shapiro", "Piatetski-Shapiro", "Piatetski-Shapiro", "Pyatetskii-Shapiro"]
+  MathSciNet: "Piatetski-Shapiro, Ilʹi͡a Pavlovich"
+  Suffixes: ""
+  VIAF: "73907397"
+  Comments: "Representation theory, automorphic forms."
+
+Rokhlin_VA:
+  CanonicalLatin: "Rokhlin, V. A."
+  Cyrillic: "Владимир Абрамович Рохлин"
+  AllCommonVariants: ["Rokhlin", "Rochlin", "Rochlyn"]
+  MathSciNet: "Rokhlin, Vladimir Abramovich"
+  Suffixes: ""
+  VIAF: "73882510"
+  Comments: "Topology, measure theory, ergodic theory."
+
+Ryzhik_LA:
+  CanonicalLatin: "Ryzhik, L. A."
+  Cyrillic: "Лазарь Абрамович Рыжик"
+  AllCommonVariants: ["Ryzhik", "Ryzik", "Ryzick"]
+  MathSciNet: "Ryzhik, Lazar Abramovich"
+  Suffixes: ""
+  VIAF: "53051781"
+  Comments: "Co-author of Gradshteyn–Ryzhik integral tables."
+
+Sazonov_VV:
+  CanonicalLatin: "Sazonov, V. V."
+  Cyrillic: "Владимир Васильевич Сазонов"
+  AllCommonVariants: ["Sazonov", "Sazonoff"]
+  MathSciNet: "Sazonov, V. V."
+  Suffixes: ""
+  VIAF: "108179855"
+  Comments: "Probability theory, Sazonov's theorem."
+
+Shnirelman_LG:
+  CanonicalLatin: "Shnirelman, L. G."
+  Cyrillic: "Лазарь Григорьевич Шнирельман"
+  AllCommonVariants: ["Shnirelman", "Shnirel'man"]
+  MathSciNet: "Shnirelman, Lazarʹ Grigorʹevich"
+  Suffixes: ""
+  VIAF: "73907425"
+  Comments: "Number theory, combinatorics."
+
+Shor_NZ:
+  CanonicalLatin: "Shor, N. Z."
+  Cyrillic: "Нахум Зиновьевич Шор"
+  AllCommonVariants: ["Shor"]
+  MathSciNet: "Shor, Nahum Zinovʹevich"
+  Suffixes: ""
+  VIAF: ""
+  Comments: "Convex optimisation, applied mathematics."
+
+Sinai_YG:
+  CanonicalLatin: "Sinai, Y. G."
+  Cyrillic: "Яков Григорьевич Синай"
+  AllCommonVariants: ["Sinai", "Sinaj"]
+  MathSciNet: "Sinai, Yakov Grigorevich"
+  Suffixes: ""
+  VIAF: "73907429"
+  Comments: "Ergodic theory, dynamical systems, probability."
+
+Skorokhod_AV:
+  CanonicalLatin: "Skorokhod, A. V."
+  Cyrillic: "Анатолий Владимирович Скороход"
+  AllCommonVariants: ["Skorokhod", "Skorohod"]
+  MathSciNet: "Skorokhod, Anatolii Vladimirovich"
+  Suffixes: ""
+  VIAF: "73907834"
+  Comments: "Probability theory, Skorokhod space."
+
+Smirnov_VI:
+  CanonicalLatin: "Smirnov, V. I."
+  Cyrillic: "Владимир Иванович Смирнов"
+  AllCommonVariants: ["Smirnov", "Smirnow", "Smirnoff"]
+  MathSciNet: "Smirnov, Vladimir Ivanovich"
+  Suffixes: ""
+  VIAF: "73881487"
+  Comments: "Analysis, mathematical physics."
+
+Sobolev_SL:
+  CanonicalLatin: "Sobolev, S. L."
+  Cyrillic: "Сергей Львович Соболев"
+  AllCommonVariants: ["Sobolev", "Soboleff", "Sobolevsky"]
+  MathSciNet: "Sobolev, Sergei Lvovich"
+  Suffixes: ""
+  VIAF: "71425592"
+  Comments: "Functional analysis, PDEs, Sobolev spaces."
+
+Steklov_VA:
+  CanonicalLatin: "Steklov, V. A."
+  Cyrillic: "Владимир Андреевич Стеклов"
+  AllCommonVariants: ["Steklov", "Stekloff"]
+  MathSciNet: "Steklov, Vladimir Andreevich"
+  Suffixes: ""
+  VIAF: "109553687"
+  Comments: "Mathematical physics, Steklov Institute."
+
+Stepanov_VV:
+  CanonicalLatin: "Stepanov, V. V."
+  Cyrillic: "Владимир Васильевич Степанов"
+  AllCommonVariants: ["Stepanov", "Stepanoff"]
+  MathSciNet: "Stepanov, Vladimir Vasil'evich"
+  Suffixes: ""
+  VIAF: "54105320"
+  Comments: "Analysis, Stepanov space."
+
+Stieltjes_TC:
+  CanonicalLatin: "Stieltjes, T. C."
+  Cyrillic: ""
+  AllCommonVariants: ["Stieltjes", "Stieltjes, Thomas"]
+  MathSciNet: "Stieltjes, Thomas Jan"
+  Suffixes: ""
+  VIAF: "100165271"
+  Comments: "Included for Russian-Soviet analysis tradition and citation; not Soviet-born."
+
+Tikhonov_AN:
+  CanonicalLatin: "Tikhonov, A. N."
+  Cyrillic: "Андрей Николаевич Тихонов"
+  AllCommonVariants: ["Tikhonov", "Tichonov", "Tichonoff"]
+  MathSciNet: "Tikhonov, Andrei Nikolaevich"
+  Suffixes: ""
+  VIAF: "73907854"
+  Comments: "Tikhonov regularization, topology, PDEs."
+
+Urysohn_PS:
+  CanonicalLatin: "Urysohn, P. S."
+  Cyrillic: "Павел Самуилович Урысон"
+  AllCommonVariants: ["Urysohn", "Uryson", "Urysson"]
+  MathSciNet: "Urysohn, Pavel Samuilovich"
+  Suffixes: ""
+  VIAF: "24655798"
+  Comments: "General topology, metric spaces."
+
+Vinogradov_IM:
+  CanonicalLatin: "Vinogradov, I. M."
+  Cyrillic: "Иван Матвеевич Виноградов"
+  AllCommonVariants: ["Vinogradov", "Winogradow", "Winogradov"]
+  MathSciNet: "Vinogradov, Ivan Matveevich"
+  Suffixes: ""
+  VIAF: "73907708"
+  Comments: "Number theory, analysis."
+
+Vishik_MI:
+  CanonicalLatin: "Vishik, M. I."
+  Cyrillic: "Маркович Исаакович Вишик"
+  AllCommonVariants: ["Vishik"]
+  MathSciNet: "Vishik, Mark Isaakovich"
+  Suffixes: ""
+  VIAF: "31673765"
+  Comments: "PDEs, functional analysis."
+
+Voronoi_GF:
+  CanonicalLatin: "Voronoi, G. F."
+  Cyrillic: "Георгий Фёдорович Вороний"
+  AllCommonVariants: ["Voronoi", "Voronoï", "Woronoi"]
+  MathSciNet: "Voronoi, Georgii Fedorovich"
+  Suffixes: ""
+  VIAF: "73908132"
+  Comments: "Geometry of numbers, Voronoi diagrams."
+
+Yaglom_AM:
+  CanonicalLatin: "Yaglom, A. M."
+  Cyrillic: "Александр Михайлович Яглом"
+  AllCommonVariants: ["Yaglom"]
+  MathSciNet: "Yaglom, Akiva Moiseevich"
+  Suffixes: ""
+  VIAF: "29878465"
+  Comments: "Probability, geometry, random processes."
+
+Zeldovich_YB:
+  CanonicalLatin: "Zeldovich, Y. B."
+  Cyrillic: "Яков Борисович Зельдович"
+  AllCommonVariants: ["Zeldovich", "Zel'dovich"]
+  MathSciNet: "Zel'dovich, Yakov Borisovich"
+  Suffixes: ""
+  VIAF: "108153491"
+  Comments: "Mathematical physics, astrophysics."
+
+Zolotarev_VM:
+  CanonicalLatin: "Zolotarev, V. M."
+  Cyrillic: "Валентин Михайлович Золотарёв"
+  AllCommonVariants: ["Zolotarev", "Zolotaryov"]
+  MathSciNet: "Zolotarev, Valentin Mikhailovich"
+  Suffixes: ""
+  VIAF: ""
+  Comments: "Probability theory, Zolotarev distributions."

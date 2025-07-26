@@ -1,0 +1,643 @@
+/Users/dylanpossamai/Dropbox/Work/Maths
+├── 01 - Astérisque
+│   ├── Astérisque 052–053 - Temps locaux (Paris VI, 1976–1977)
+│   ├── Astérisque 074 - Journées sur les marches aléatoires (Nancy, 1979)
+│   ├── Astérisque 131 - Colloque en l'honneur de L. Schwartz, vol. I
+│   ├── Astérisque 132 - Colloque en l’honneur de Laurent Schwartz, volume 2, école Polytechnique, 30 mai–3 juin 1983
+│   └── Astérisque 217 - Colloque d’analyse complexe et géométrie, Marseille, janvier 1992
+├── 02 - BSDEs
+│   ├── 01-Numerical methods
+│   │   ├── Papers to be downloaded
+│   │   │   └── Journal of Numerical Mathematics
+│   │   ├── Published
+│   │   ├── Unpublished papers
+│   │   └── Working papers
+│   │       ├── 2021
+│   │       ├── 2022
+│   │       ├── 2023
+│   │       ├── 2024
+│   │       └── 2025
+│   ├── 02-2BSDEs and G-BSDEs
+│   │   ├── 2BSDEs
+│   │   │   ├── Published papers
+│   │   │   └── Working papers
+│   │   │       └── 2024
+│   │   └── G-BSDEs
+│   │       ├── Published papers
+│   │       ├── To be downloaded
+│   │       ├── Unpublished papers
+│   │       └── Working papers
+│   │           ├── 2021
+│   │           ├── 2022
+│   │           ├── 2023
+│   │           ├── 2024
+│   │           └── 2025
+│   ├── 03-Published
+│   │   ├── A
+│   │   ├── B
+│   │   ├── C
+│   │   ├── D
+│   │   ├── E
+│   │   ├── F
+│   │   ├── G
+│   │   ├── H
+│   │   ├── I
+│   │   ├── J
+│   │   ├── K
+│   │   ├── L
+│   │   ├── M
+│   │   ├── N
+│   │   ├── O
+│   │   ├── P
+│   │   ├── Q
+│   │   ├── R
+│   │   ├── S
+│   │   ├── T
+│   │   ├── V
+│   │   ├── W
+│   │   ├── X
+│   │   ├── Y
+│   │   └── Z
+│   ├── 04-Working papers
+│   │   ├── 2021
+│   │   ├── 2022
+│   │   ├── 2023
+│   │   ├── 2024
+│   │   └── 2025
+│   ├── 05-Unpublished papers
+│   ├── 06-Papers to be downloaded
+│   │   ├── Chinese Science Abstracts Series A
+│   │   ├── Mathematical Control and Related Fields
+│   │   ├── Not fully published version
+│   │   └── Stochastics and Quality Control
+│   ├── 07-Books and lecture notes
+│   └── 08-Theses
+├── 03 - Contract theory
+│   ├── Books and lecture notes
+│   ├── ESG
+│   │   ├── Papers to be downloaded
+│   │   ├── Published papers
+│   │   └── Working papers
+│   │       └── 2024
+│   ├── Papers to be downloaded
+│   │   ├── Conference Proceedings
+│   │   └── Not fully published version
+│   ├── Published
+│   │   ├── A
+│   │   ├── B
+│   │   ├── C
+│   │   ├── D
+│   │   ├── E
+│   │   ├── F
+│   │   ├── G
+│   │   ├── H
+│   │   ├── I
+│   │   ├── J
+│   │   ├── K
+│   │   ├── L
+│   │   ├── M
+│   │   ├── N
+│   │   ├── O
+│   │   ├── P
+│   │   ├── Q
+│   │   ├── R
+│   │   ├── S
+│   │   ├── T
+│   │   ├── U
+│   │   ├── V
+│   │   ├── W
+│   │   ├── X
+│   │   ├── Y
+│   │   └── Z
+│   ├── Theses
+│   ├── Unpublished papers
+│   └── Working papers
+│       ├── 2021
+│       ├── 2022
+│       ├── 2023
+│       ├── 2024
+│       └── 2025
+├── 04 - Séminaires de probabilités de Strasbourg
+│   ├── Séminaire 01 - 1967
+│   ├── Séminaire 02 - 1968
+│   ├── Séminaire 03 - 1969
+│   ├── Séminaire 04 - 1970
+│   ├── Séminaire 05 - 1971
+│   ├── Séminaire 06 - 1972
+│   ├── Séminaire 07 - 1973
+│   ├── Séminaire 08 - 1974
+│   ├── Séminaire 09 - 1975
+│   ├── Séminaire 10 - 1976
+│   ├── Séminaire 11 - 1977
+│   ├── Séminaire 12 - 1978
+│   ├── Séminaire 13 - 1979
+│   ├── Séminaire 14 - 1980
+│   ├── Séminaire 15 - 1981
+│   ├── Séminaire 16 - 1982
+│   ├── Séminaire 16 bis - 1982
+│   ├── Séminaire 17 - 1983
+│   ├── Séminaire 18 - 1984
+│   ├── Séminaire 19 - 1985
+│   ├── Séminaire 20 - 1986
+│   ├── Séminaire 21 - 1987
+│   ├── Séminaire 22 - 1988
+│   ├── Séminaire 23 - 1989
+│   ├── Séminaire 24 - 1990
+│   ├── Séminaire 25 - 1991
+│   ├── Séminaire 26 - 1992
+│   ├── Séminaire 27 - 1993
+│   ├── Séminaire 28 - 1994
+│   ├── Séminaire 29 - 1995
+│   ├── Séminaire 30 - 1996
+│   ├── Séminaire 31 - 1997
+│   ├── Séminaire 32 - 1998
+│   ├── Séminaire 33 - 1999
+│   ├── Séminaire 34 - 2000
+│   ├── Séminaire 35 - 2001
+│   ├── Séminaire 36 - 2002
+│   ├── Séminaire 37 - 2003
+│   ├── Séminaire 38 - 2005
+│   ├── Séminaire 39 - 2006
+│   ├── Séminaire 40 - 2007
+│   ├── Séminaire 41 - 2008
+│   ├── Séminaire 42 - 2009
+│   ├── Séminaire 43 - 2010
+│   ├── Séminaire 44 - 2011
+│   ├── Séminaire 45 - 2012
+│   ├── Séminaire 46 - 2013
+│   ├── Séminaire 47 - 2014
+│   ├── Séminaire 48 - 2016
+│   ├── Séminaire 49 - 2018
+│   ├── Séminaire 50 - 2020
+│   └── Séminaire 51 - 2022
+├── 05 - Séminaire Bourbaki
+├── 06 - Time-inconsistent stochastic control
+│   ├── Books and lecture notes
+│   ├── Papers to be downloaded
+│   │   └── Not fully published version
+│   ├── Published
+│   ├── Theses
+│   ├── Unpublished papers
+│   └── Working papers
+│       ├── 2022
+│       ├── 2023
+│       ├── 2024
+│       └── 2025
+├── 07 - Stackelberg games
+│   ├── Books and lecture notes
+│   ├── Papers to be downloadded
+│   │   └── Numerical Algebra, Control and Optimization
+│   ├── Published papers
+│   ├── Theses
+│   ├── Unpublished papers
+│   └── Working papers
+│       ├── 2021
+│       ├── 2022
+│       ├── 2023
+│       ├── 2024
+│       └── 2025
+├── 08 - Optimal control on networks
+│   ├── 01 - Published papers
+│   ├── 02 - Unpublished papers
+│   ├── 03 - Working papers
+│   │   ├── 2021
+│   │   ├── 2023
+│   │   ├── 2024
+│   │   └── 2025
+│   ├── 04 - Books and lecture notes
+│   ├── 05 - Theses
+│   └── 06 - Papers to be downloaded
+├── 09 - Math articles - published
+│   ├── 00 - Journal Électronique d'Histoire des Probabilités et de la Statistique
+│   │   ├── Volume 01
+│   │   │   ├── Fascicule 01 - Probabilités et statistiques autour de la première guerre mondiale (1905–1925)
+│   │   │   │   └── Le rapport de Poincaré au procès en cassation de l’affaire Dreyfus de 1904
+│   │   │   └── Fascicule 02 - Moments romantiques autour de la période 1800–1840
+│   │   │       └── Chabrol–Fourier, recherches statistiques sur la ville de Paris et le département de la Seine (1821)
+│   │   ├── Volume 02
+│   │   │   ├── Fascicule 01a - L’art de conjecturer des Bernoulli, actes de la conférence CAC 2005, Octobre 2005, Paris, 1ère partie
+│   │   │   ├── Fascicule 01b - L’art de conjecturer des Bernoulli, actes de la conférence CAC 2005, Octobre 2005, Paris, 2ème partie
+│   │   │   └── Fascicule 02 - Enseigner le hasard ? (1885–1945)
+│   │   ├── Volume 03
+│   │   │   ├── Fascicule 01 - Probabilités médiévales
+│   │   │   └── Fascicule 02 - Varia
+│   │   ├── Volume 04
+│   │   │   ├── Fascicule 01 - Fragments d’histoire de la théorie du choix social
+│   │   │   └── Fascicule 02 - Matériaux pour l’histoire de l’analyse des données
+│   │   ├── Volume 05
+│   │   │   ├── Fascicule 01 - Splendeurs et misères des martingales
+│   │   │   └── Fascicule 02 - Varia
+│   │   ├── Volume 06
+│   │   │   ├── Fascicule 01 - Varia
+│   │   │   └── Fascicule 02 - 150th anniversary of the société de statistique de Paris
+│   │   ├── Volume 07 - Probabilités juridiques et statistiques judiciaires
+│   │   ├── Volume 08 - Les 200 ans de la théorie analytique de Laplace
+│   │   └── Volume 09 - Marc Barbut (1928–2011)
+│   ├── A
+│   ├── B
+│   ├── C
+│   ├── D
+│   ├── E
+│   ├── F
+│   ├── G
+│   ├── H
+│   ├── I
+│   ├── J
+│   ├── K
+│   ├── L
+│   ├── M
+│   ├── N
+│   ├── O
+│   ├── P
+│   ├── Q
+│   ├── R
+│   ├── S
+│   ├── T
+│   ├── U
+│   ├── V
+│   ├── W
+│   ├── X
+│   ├── Y
+│   └── Z
+├── 10 - Math articles - unpublished
+│   ├── A
+│   ├── B
+│   ├── C
+│   ├── D
+│   ├── E
+│   ├── F
+│   ├── G
+│   ├── H
+│   ├── I
+│   ├── J
+│   ├── K
+│   ├── L
+│   ├── M
+│   ├── N
+│   ├── O
+│   ├── P
+│   ├── Q
+│   ├── R
+│   ├── S
+│   ├── T
+│   ├── U
+│   ├── V
+│   ├── W
+│   ├── X
+│   ├── Y
+│   └── Z
+├── 11 - Math articles - working papers
+│   ├── A
+│   │   ├── 2021
+│   │   ├── 2022
+│   │   ├── 2023
+│   │   ├── 2024
+│   │   └── 2025
+│   ├── B
+│   │   ├── 2021
+│   │   ├── 2022
+│   │   ├── 2023
+│   │   ├── 2024
+│   │   └── 2025
+│   ├── C
+│   │   ├── 2021
+│   │   ├── 2022
+│   │   ├── 2023
+│   │   ├── 2024
+│   │   └── 2025
+│   ├── D
+│   │   ├── 2021
+│   │   ├── 2022
+│   │   ├── 2023
+│   │   ├── 2024
+│   │   └── 2025
+│   ├── E
+│   │   ├── 2021
+│   │   ├── 2022
+│   │   ├── 2023
+│   │   ├── 2024
+│   │   └── 2025
+│   ├── F
+│   │   ├── 2021
+│   │   ├── 2022
+│   │   ├── 2023
+│   │   ├── 2024
+│   │   └── 2025
+│   ├── G
+│   │   ├── 2021
+│   │   ├── 2022
+│   │   ├── 2023
+│   │   ├── 2024
+│   │   └── 2025
+│   ├── H
+│   │   ├── 2013
+│   │   ├── 2021
+│   │   ├── 2022
+│   │   ├── 2023
+│   │   ├── 2024
+│   │   └── 2025
+│   ├── I
+│   │   ├── 2021
+│   │   ├── 2022
+│   │   ├── 2023
+│   │   ├── 2024
+│   │   └── 2025
+│   ├── J
+│   │   ├── 2021
+│   │   ├── 2022
+│   │   ├── 2023
+│   │   ├── 2024
+│   │   └── 2025
+│   ├── K
+│   │   ├── 2021
+│   │   ├── 2022
+│   │   ├── 2023
+│   │   ├── 2024
+│   │   └── 2025
+│   ├── L
+│   │   ├── 2021
+│   │   ├── 2022
+│   │   ├── 2023
+│   │   ├── 2024
+│   │   └── 2025
+│   ├── M
+│   │   ├── 2021
+│   │   ├── 2022
+│   │   ├── 2023
+│   │   ├── 2024
+│   │   └── 2025
+│   ├── N
+│   │   ├── 2021
+│   │   ├── 2022
+│   │   ├── 2023
+│   │   ├── 2024
+│   │   └── 2025
+│   ├── O
+│   │   ├── 2022
+│   │   ├── 2023
+│   │   ├── 2024
+│   │   └── 2025
+│   ├── P
+│   │   ├── 2021
+│   │   ├── 2022
+│   │   ├── 2023
+│   │   ├── 2024
+│   │   └── 2025
+│   ├── Q
+│   │   ├── 2022
+│   │   ├── 2023
+│   │   ├── 2024
+│   │   └── 2025
+│   ├── R
+│   │   ├── 2021
+│   │   ├── 2022
+│   │   ├── 2023
+│   │   ├── 2024
+│   │   └── 2025
+│   ├── S
+│   │   ├── 2021
+│   │   ├── 2022
+│   │   ├── 2023
+│   │   ├── 2024
+│   │   └── 2025
+│   ├── T
+│   │   ├── 2021
+│   │   ├── 2022
+│   │   ├── 2023
+│   │   ├── 2024
+│   │   └── 2025
+│   ├── U
+│   │   ├── 2021
+│   │   ├── 2022
+│   │   ├── 2023
+│   │   ├── 2024
+│   │   └── 2025
+│   ├── V
+│   │   ├── 2021
+│   │   ├── 2023
+│   │   ├── 2024
+│   │   └── 2025
+│   ├── W
+│   │   ├── 2021
+│   │   ├── 2022
+│   │   ├── 2023
+│   │   ├── 2024
+│   │   └── 2025
+│   ├── X
+│   │   ├── 2021
+│   │   ├── 2022
+│   │   ├── 2023
+│   │   ├── 2024
+│   │   └── 2025
+│   ├── Y
+│   │   ├── 2021
+│   │   ├── 2022
+│   │   ├── 2023
+│   │   ├── 2024
+│   │   └── 2025
+│   └── Z
+│       ├── 2021
+│       ├── 2022
+│       ├── 2023
+│       ├── 2024
+│       └── 2025
+├── 12 - Math books and lecture notes
+│   ├── 00 - Histoire de l'académie royale des sciences
+│   │   ├── Mémoires
+│   │   └── Procès-verbaux des séances de l'Académie des sciences
+│   ├── 01 - Comptes rendus hebdomadaires de l'académie des sciences
+│   │   ├── Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 271, séries A et B - juillet–décembre 1970
+│   │   ├── Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 273, séries A et B - juillet–décembre 1971
+│   │   ├── Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 274, séries A et B - janvier–juin 1972
+│   │   ├── Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 275, séries A et B - juillet–décembre 1972
+│   │   ├── Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 281, série D - juillet–décembre 1975
+│   │   ├── Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 284, série D - janvier–juin 1977
+│   │   ├── Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 287, série D - juillet–décembre 1978
+│   │   ├── Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 289, série C - juillet–décembre 1979
+│   │   ├── Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 290, série C - janvier–juin 1980
+│   │   ├── Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 290, vie académique - janvier–juin 1980
+│   │   ├── Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 291, série C - juillet–décembre 1980
+│   │   ├── Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 292, série I - mathématique, avril–juin 1981
+│   │   ├── Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 293, série I - mathématique, juillet–décembre 1981
+│   │   ├── Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 294, série I - mathématique, janvier–juin 1982
+│   │   ├── Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 296, série I - mathématique, janvier–juin 1983
+│   │   ├── Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 298, série I - mathématique, janvier–mai 1984
+│   │   ├── Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 300, série I - mathématique, janvier–mai 1985
+│   │   ├── Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 301, série I - mathématique, juin–décembre 1985
+│   │   ├── Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 302, série I - mathématique, janvier–mai 1986
+│   │   ├── Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 303, série I - mathématique, juin–décembre 1986
+│   │   ├── Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 304, série I - mathématique, janvier–mai 1987
+│   │   ├── Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 305, série I - mathématique, juin–décembre 1987
+│   │   ├── Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 306, série I - mathématique, janvier–mai 1988
+│   │   ├── Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 307, série I - mathématique, juin–décembre 1988
+│   │   ├── Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 308, série I - mathématique, janvier–mai 1989
+│   │   ├── Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 308, série II - mécanique, physique, chimie, sciences de l'univers, sciences de la terre - 1989
+│   │   ├── Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 317, série III - sciences de la vie - 1994
+│   │   ├── Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 318, série II - sciences de la terre et des planètes - janvier–juin 1994
+│   │   ├── Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 318, série III - sciences de la vie - 1995
+│   │   ├── Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 319, série II - sciences de la terre et des planètes - juillet–décembre 1994
+│   │   ├── Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 319, série III - sciences de la vie - 1996
+│   │   ├── Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 320, série I - mathématique, janvier–mai 1995
+│   │   ├── Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 320, série II - sciences de la terre et des planètes - juillet–décembre 1995
+│   │   ├── Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 320, série IIb - mécanique, physique, chimie, astronomie - 1995
+│   │   ├── Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 321, série I - mathématique, juin–décembre 1995
+│   │   ├── Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 321, série II - sciences de la terre et des planètes - août-décembre 1995
+│   │   ├── Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 321, série IIb - mécanique, physique, chimie, astronomie - 1995
+│   │   ├── Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 322, série I - mathématique, janvier–mai 1996
+│   │   ├── Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 322, série II - sciences de la terre et des planètes - janvier–juin 1996
+│   │   ├── Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 322, série IIb - mécanique, physique, chimie, astronomie - 1996
+│   │   ├── Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 323, série I - mathématique, juin–décembre 1996
+│   │   ├── Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 323, série II - sciences de la terre et des planètes - juillet–décembre 1996
+│   │   ├── Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 323, série IIb - mécanique, physique, chimie, astronomie - 1996
+│   │   └── La vie des sciences
+│   │       ├── La vie des sciences, comptes rendus, série générale, tome 10, 1993
+│   │       ├── La vie des sciences, comptes rendus, série générale, tome 12, 1995
+│   │       ├── La vie des sciences, comptes rendus, série générale, tome 13, 1996
+│   │       ├── La vie des sciences, comptes rendus, série générale, tome 2, 1985
+│   │       ├── La vie des sciences, comptes rendus, série générale, tome 3, 1986
+│   │       ├── La vie des sciences, comptes rendus, série générale, tome 4, 1987
+│   │       └── La vie des sciences, comptes rendus, série générale, tome 7, 1990
+│   ├── 02 - Mémoires présentés par divers savants à l'académie royale des sciences de l'institut de France
+│   ├── 03 - Proceedings of the ICM
+│   ├── 04 - Saint-Flour
+│   ├── 05 - Lviv Scottish book
+│   │   ├── Book 0
+│   │   ├── Book 1
+│   │   ├── Book 2
+│   │   └── Book 3
+│   ├── 06 - Messenger of mathematics
+│   ├── 07 - Cours spécialisés société mathématique de France
+│   ├── 08 - Mémoires de la société mathématique de France
+│   ├── 09 - The science reports of the Tōhoku imperial university
+│   ├── A
+│   ├── B
+│   ├── C
+│   ├── D
+│   ├── E
+│   ├── F
+│   ├── G
+│   ├── H
+│   ├── I
+│   ├── J
+│   ├── K
+│   ├── L
+│   ├── M
+│   ├── N
+│   ├── O
+│   ├── P
+│   ├── Q
+│   ├── R
+│   ├── S
+│   ├── T
+│   ├── U
+│   ├── V
+│   ├── W
+│   ├── X
+│   ├── Y
+│   └── Z
+├── 13 - Math slides
+├── 14 - Papers to be downloaded
+│   ├── Advances in Differential Equations
+│   ├── Applicationes Mathematicae
+│   ├── Banach Center Publications
+│   ├── Bankers, Markets & Investors
+│   ├── Banque et Marchés
+│   ├── Bulletin des sciences mathématiques
+│   ├── Bulletin of the Polish Academy of Sciences. Mathematics
+│   ├── Communications in Applied and Industrial Mathematics
+│   ├── Communications in Information and Systems
+│   ├── Communications in Mathematical Sciences
+│   ├── CRAS
+│   ├── Dissertationes Mathematicae
+│   ├── Dynamics of Continuous, Discrete and Impulsive Systems Series B, Applications & Algorithms
+│   ├── Foundations and Trends® in Technology, Information and Operations Management
+│   ├── Foundations of Data Science
+│   ├── From books
+│   │   ├── Alexander, C. - Risk management and analysis, volume 2, new markets and products
+│   │   ├── Alvino, A., Buonocore, P., Ferone, V., Giarusso, E., Trombetti, G., Matarasso, S. - Progress in elliptic and parabolic partial differential equations
+│   │   ├── Berkes, I., Csáki, E., Csörgő, M. - Limit theorems in probability and statistics, Balatonlelle, 1999
+│   │   ├── Crisan, D., Rozovskii, B. - The Oxford handbook of nonlinear filtering
+│   │   ├── Daghighi, A., Fitting, M., Gabbay, D., Pourmahdian, M., Rezus, A. - Research trends in contemporary logic
+│   │   ├── Équations aux dérivées partielles et applications, articles dédiés à Jacques-Louis Lions
+│   │   ├── Hughston, L.P. - Vasicek and beyond, approaches to building and applying interest rate models
+│   │   ├── Kolokol’tsov, V.N., Malafeyev, O.A. - Understanding game theory, introduction to the analysis of many agent systems with competition and cooperation, 2nd edition
+│   │   ├── Lungu, E. - Proceedings of the first symposium on mathematical finance in Gaborone, Botswana 1997
+│   │   ├── Menaldi, J.L., Rofman, E., Sulam, A. - Optimal control and partial differential equations—innovations & applications, in honor of professor Alain Bensoussan’s 60th anniversary
+│   │   ├── Osband, K. - Iceberg risk, an adventure in portfolio theory
+│   │   ├── Rank, J. -  Copulas, from theory to application in finance
+│   │   ├── Shiryaev, A.N., Sulem, A. - Proceedings of the workshop on mathematical finance, INRIA, Paris
+│   │   ├── Sinha, A. - Select topics in econophysics
+│   │   └── Yong, J., Cont, R. - Mathematical finance—theory and practice
+│   ├── Fundamenta Mathematicae
+│   ├── HOPOS, The Journal of the International Society for the History of Philosophy of Science
+│   ├── ICML
+│   ├── International Mathematical Journal
+│   ├── Internationale Mathematische Nachrichten
+│   ├── Involve
+│   ├── Journal of Applied Probability and Statistics
+│   ├── Journal of Computational Finance
+│   ├── Journal of Convex Analysis
+│   ├── Journal of Dynamics & Games
+│   ├── Journal of Industrial & Management Optimization
+│   ├── Journal of Nonlinear and Convex Analysis
+│   ├── Journal of Performance Measurement
+│   ├── Kinetic and Related Models
+│   ├── Kyoto Journal of Mathematics
+│   ├── Market Microstructure and Liquidity
+│   ├── Markov Processes and Related Fields
+│   ├── Matematicheskoe Prosveschenie
+│   ├── Mathematical Control & Related Fields
+│   ├── Mathematical Inequalities & Applications
+│   ├── Mathematical Methods of Statistics
+│   ├── Mathematics Today
+│   ├── Not fully published version
+│   ├── Numerical Algebra, Control, and Optimization
+│   ├── Pure and Applied Functional Analysis
+│   ├── Quadrature
+│   ├── Real Analysis Exchange
+│   ├── Rendiconti Lincei Matematica e Applicazioni
+│   ├── Review of Futures Markets
+│   ├── Risk
+│   ├── Risk and Decision Analysis
+│   ├── Studia Mathematica
+│   ├── Teoriya Veroyatnostei i ee Primeneniya
+│   ├── The Energy Journal
+│   ├── The Journal of Derivatives
+│   ├── The Journal of Fixed Income
+│   ├── The Review of Futures Markets
+│   ├── Theory of Probability and Mathematical Statistics
+│   ├── Tohoku Mathematical Journal
+│   ├── Tokyo Journal of Mathematics
+│   ├── Transactions of the Moscow Mathematical Society
+│   └── Willmott Magazine
+├── 15 - Theses
+│   ├── A
+│   ├── B
+│   ├── C
+│   ├── D
+│   ├── E
+│   ├── F
+│   ├── G
+│   ├── H
+│   ├── I
+│   ├── J
+│   ├── K
+│   ├── L
+│   ├── M
+│   ├── N
+│   ├── O
+│   ├── P
+│   ├── Q
+│   ├── R
+│   ├── S
+│   ├── T
+│   ├── U
+│   ├── V
+│   ├── W
+│   ├── X
+│   ├── Y
+│   └── Z
+├── Reports
+└── Scripts
+
+641 directories

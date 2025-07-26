@@ -1,0 +1,4 @@
+# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/filename_checker/tokenization.py
+# hypothesis_version: 6.135.32
+
+['-', "-–'", '.,;:!?()[]{}"\'-', 'LMN', 'PHRASE', 'TOKEN', '\\b\\w+- and \\w+-\\w+\\b']

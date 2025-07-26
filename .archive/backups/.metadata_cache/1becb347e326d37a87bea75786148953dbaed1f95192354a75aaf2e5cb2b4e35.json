@@ -1,0 +1,8 @@
+{
+  "title": "Strong solutions to submodular mean field games with common noise and related McKean-Vlasov FBSDEs",
+  "authors": [],
+  "year": null,
+  "citation_id": null,
+  "snippet": "This paper studies multidimensional mean field games with common noise and the related system of McKean-Vlasov forward-backward stochastic differential equations deriving from the stochastic maximum principle. We first propose some structural conditions which are related to the submodularity of the underlying mean field game and are a sort of opposite version of the well known Lasry-Lions monotonicity. By reformulating the representative player minimization problem via the stochastic maximum principle, the submodularity conditions allow to prove comparison principles for the forward-backward system, which correspond to the monotonicity of the best reply map. Building on this property, existence of strong solutions is shown via Tarski's fixed point theorem, both for the mean field game and for the related McKean-Vlasov forward-backward system. In both cases, the set of solutions enjoys a lattice structure, with minimal and maximal solutions which can be constructed by iterating the best reply map or via the fictitious play algorithm.",
+  "source": "scholar_serpapi"
+}

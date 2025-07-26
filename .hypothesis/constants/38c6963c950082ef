@@ -1,0 +1,4 @@
+# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/src/core/text_processing/normalizer.py
+# hypothesis_version: 6.135.32
+
+[1000, '"', "'", '-', 'Mn', 'NFC', 'NFD', '[""‚„‹›«»]', '[-]{2,}', '[^\\w\\s]', '[`´]', '[‒–—―]', '\\s+', 'cache_info', 'config', 'patterns_loaded']

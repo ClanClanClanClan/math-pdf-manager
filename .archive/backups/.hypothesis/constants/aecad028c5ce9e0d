@@ -1,0 +1,4 @@
+# file: /Users/dylanpossamai/Dropbox/Work/Maths/Scripts/my_spellchecker.py
+# hypothesis_version: 6.135.13
+
+[128, 10000, 1000000, 10485760, " -_'.,;:!?()", '#', '-', '--file', '--json', '--known', '--language', '--lt-server', '--text', '--use-lt', '--verbose', '-v', 'File to check', 'MORFOLOGIK_RULE', 'NFC', 'NFKD', 'Text to check', 'Use LanguageTool', 'Verbose output', '[–—−]', '\\(C\\)', '\\(R\\)', '\\bTM\\b', '\\btm\\b', '^-+|-+$', '__main__', 'close', 'count', 'en', 'en-GB', 'en_GB', 'errors', 'known_words.txt', 'my_spellchecker', 'r', 'store_true', 'strict', 'text_length', 'utf-8-sig', '©', '®', '°', '±', '²', '³', '¹', 'º', '×', '÷', '™', '\ufeff']

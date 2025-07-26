@@ -1,0 +1,8 @@
+{
+  "title": "Decentralized Strategies for Backward Linear\u2010Quadratic Mean Field Games and Teams",
+  "authors": [],
+  "year": null,
+  "citation_id": null,
+  "snippet": "This paper studies a new class of linear\u2010quadratic mean field games and teams problem, where the large\u2010population system satisfies a class of N$$ N $$ weakly coupled linear backward stochastic differential equations (BSDEs), and zi$$ {z}_i $$ (a part of solution of BSDE) enter the state equations and cost functionals. Inspired by the stochastic control problem with partial information, we adopt the backward separation approach to solve the problem. By virtue of the stochastic maximum principle and optimal filter technique, we obtain a Hamiltonian system first, which is a fully coupled forward\u2010backward stochastic differential equation (FBSDE). And then, by decoupling the Hamiltonian system, we derive a feedback form optimal strategy by introducing Riccati equations, stochastic differential equation (SDE), and BSDE. Finally, we provide a numerical example to simulate our results.",
+  "source": "scholar_serpapi"
+}

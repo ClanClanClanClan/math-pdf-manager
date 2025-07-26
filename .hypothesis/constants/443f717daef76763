@@ -1,0 +1,4 @@
+# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/src/downloader/__init__.py
+# hypothesis_version: 6.135.32
+
+['AcademicDownloader', 'DownloadResult', 'Downloader', 'SourceType', 'get_download_sources']

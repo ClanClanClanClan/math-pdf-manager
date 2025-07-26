@@ -1,0 +1,1118 @@
+{
+  "total_papers": 10,
+  "total_attempts": 100,
+  "successful_papers": 1,
+  "total_successful_attempts": 8,
+  "paper_results": [
+    {
+      "doi": "10.1002/anie.202004934",
+      "journal": "Angewandte Chemie International Edition",
+      "total_attempts": 10,
+      "successful_attempts": 0,
+      "success_rate": 0.0,
+      "average_size_mb": 0,
+      "average_response_time": 0.1751553773880005,
+      "all_results": [
+        {
+          "doi": "10.1002/anie.202004934",
+          "journal": "Angewandte Chemie International Edition",
+          "attempt": 1,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.538856029510498,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/anie.202004934",
+          "journal": "Angewandte Chemie International Edition",
+          "attempt": 2,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.1350569725036621,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/anie.202004934",
+          "journal": "Angewandte Chemie International Edition",
+          "attempt": 3,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13371515274047852,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/anie.202004934",
+          "journal": "Angewandte Chemie International Edition",
+          "attempt": 4,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.133986234664917,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/anie.202004934",
+          "journal": "Angewandte Chemie International Edition",
+          "attempt": 5,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.1328270435333252,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/anie.202004934",
+          "journal": "Angewandte Chemie International Edition",
+          "attempt": 6,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.1344308853149414,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/anie.202004934",
+          "journal": "Angewandte Chemie International Edition",
+          "attempt": 7,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13493609428405762,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/anie.202004934",
+          "journal": "Angewandte Chemie International Edition",
+          "attempt": 8,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13689517974853516,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/anie.202004934",
+          "journal": "Angewandte Chemie International Edition",
+          "attempt": 9,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.1364290714263916,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/anie.202004934",
+          "journal": "Angewandte Chemie International Edition",
+          "attempt": 10,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13442111015319824,
+          "error": "HTTP 500"
+        }
+      ]
+    },
+    {
+      "doi": "10.1002/adma.202001924",
+      "journal": "Advanced Materials",
+      "total_attempts": 10,
+      "successful_attempts": 0,
+      "success_rate": 0.0,
+      "average_size_mb": 0,
+      "average_response_time": 0.13496818542480468,
+      "all_results": [
+        {
+          "doi": "10.1002/adma.202001924",
+          "journal": "Advanced Materials",
+          "attempt": 1,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.133195161819458,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/adma.202001924",
+          "journal": "Advanced Materials",
+          "attempt": 2,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.1354219913482666,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/adma.202001924",
+          "journal": "Advanced Materials",
+          "attempt": 3,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13440275192260742,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/adma.202001924",
+          "journal": "Advanced Materials",
+          "attempt": 4,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13416576385498047,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/adma.202001924",
+          "journal": "Advanced Materials",
+          "attempt": 5,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.1350116729736328,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/adma.202001924",
+          "journal": "Advanced Materials",
+          "attempt": 6,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13371682167053223,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/adma.202001924",
+          "journal": "Advanced Materials",
+          "attempt": 7,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13422584533691406,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/adma.202001924",
+          "journal": "Advanced Materials",
+          "attempt": 8,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13554000854492188,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/adma.202001924",
+          "journal": "Advanced Materials",
+          "attempt": 9,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13658499717712402,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/adma.202001924",
+          "journal": "Advanced Materials",
+          "attempt": 10,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13741683959960938,
+          "error": "HTTP 500"
+        }
+      ]
+    },
+    {
+      "doi": "10.1002/aenm.202001789",
+      "journal": "Advanced Energy Materials",
+      "total_attempts": 10,
+      "successful_attempts": 0,
+      "success_rate": 0.0,
+      "average_size_mb": 0,
+      "average_response_time": 0.13794519901275634,
+      "all_results": [
+        {
+          "doi": "10.1002/aenm.202001789",
+          "journal": "Advanced Energy Materials",
+          "attempt": 1,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13924598693847656,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/aenm.202001789",
+          "journal": "Advanced Energy Materials",
+          "attempt": 2,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.16056418418884277,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/aenm.202001789",
+          "journal": "Advanced Energy Materials",
+          "attempt": 3,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13820385932922363,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/aenm.202001789",
+          "journal": "Advanced Energy Materials",
+          "attempt": 4,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13312387466430664,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/aenm.202001789",
+          "journal": "Advanced Energy Materials",
+          "attempt": 5,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.1353142261505127,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/aenm.202001789",
+          "journal": "Advanced Energy Materials",
+          "attempt": 6,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13335013389587402,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/aenm.202001789",
+          "journal": "Advanced Energy Materials",
+          "attempt": 7,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13561582565307617,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/aenm.202001789",
+          "journal": "Advanced Energy Materials",
+          "attempt": 8,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13643598556518555,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/aenm.202001789",
+          "journal": "Advanced Energy Materials",
+          "attempt": 9,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13423991203308105,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/aenm.202001789",
+          "journal": "Advanced Energy Materials",
+          "attempt": 10,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13335800170898438,
+          "error": "HTTP 500"
+        }
+      ]
+    },
+    {
+      "doi": "10.1002/pssa.202000456",
+      "journal": "Physica Status Solidi A",
+      "total_attempts": 10,
+      "successful_attempts": 0,
+      "success_rate": 0.0,
+      "average_size_mb": 0,
+      "average_response_time": 0.13834331035614014,
+      "all_results": [
+        {
+          "doi": "10.1002/pssa.202000456",
+          "journal": "Physica Status Solidi A",
+          "attempt": 1,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13321995735168457,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/pssa.202000456",
+          "journal": "Physica Status Solidi A",
+          "attempt": 2,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13489508628845215,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/pssa.202000456",
+          "journal": "Physica Status Solidi A",
+          "attempt": 3,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13336706161499023,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/pssa.202000456",
+          "journal": "Physica Status Solidi A",
+          "attempt": 4,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.1330249309539795,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/pssa.202000456",
+          "journal": "Physica Status Solidi A",
+          "attempt": 5,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13300299644470215,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/pssa.202000456",
+          "journal": "Physica Status Solidi A",
+          "attempt": 6,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.14160418510437012,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/pssa.202000456",
+          "journal": "Physica Status Solidi A",
+          "attempt": 7,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13354802131652832,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/pssa.202000456",
+          "journal": "Physica Status Solidi A",
+          "attempt": 8,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13316893577575684,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/pssa.202000456",
+          "journal": "Physica Status Solidi A",
+          "attempt": 9,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.17163586616516113,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/pssa.202000456",
+          "journal": "Physica Status Solidi A",
+          "attempt": 10,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13596606254577637,
+          "error": "HTTP 500"
+        }
+      ]
+    },
+    {
+      "doi": "10.1002/path.5678",
+      "journal": "The Journal of Pathology",
+      "total_attempts": 10,
+      "successful_attempts": 0,
+      "success_rate": 0.0,
+      "average_size_mb": 0,
+      "average_response_time": 0.13564710617065429,
+      "all_results": [
+        {
+          "doi": "10.1002/path.5678",
+          "journal": "The Journal of Pathology",
+          "attempt": 1,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.14855027198791504,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/path.5678",
+          "journal": "The Journal of Pathology",
+          "attempt": 2,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.1329352855682373,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/path.5678",
+          "journal": "The Journal of Pathology",
+          "attempt": 3,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.1331799030303955,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/path.5678",
+          "journal": "The Journal of Pathology",
+          "attempt": 4,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.1358180046081543,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/path.5678",
+          "journal": "The Journal of Pathology",
+          "attempt": 5,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13506722450256348,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/path.5678",
+          "journal": "The Journal of Pathology",
+          "attempt": 6,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.1343681812286377,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/path.5678",
+          "journal": "The Journal of Pathology",
+          "attempt": 7,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13347697257995605,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/path.5678",
+          "journal": "The Journal of Pathology",
+          "attempt": 8,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13418126106262207,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/path.5678",
+          "journal": "The Journal of Pathology",
+          "attempt": 9,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.1344449520111084,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/path.5678",
+          "journal": "The Journal of Pathology",
+          "attempt": 10,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13444900512695312,
+          "error": "HTTP 500"
+        }
+      ]
+    },
+    {
+      "doi": "10.1002/jcp.30123",
+      "journal": "Journal of Cellular Physiology",
+      "total_attempts": 10,
+      "successful_attempts": 0,
+      "success_rate": 0.0,
+      "average_size_mb": 0,
+      "average_response_time": 0.13485195636749267,
+      "all_results": [
+        {
+          "doi": "10.1002/jcp.30123",
+          "journal": "Journal of Cellular Physiology",
+          "attempt": 1,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13440394401550293,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/jcp.30123",
+          "journal": "Journal of Cellular Physiology",
+          "attempt": 2,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13406991958618164,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/jcp.30123",
+          "journal": "Journal of Cellular Physiology",
+          "attempt": 3,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13485383987426758,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/jcp.30123",
+          "journal": "Journal of Cellular Physiology",
+          "attempt": 4,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13576102256774902,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/jcp.30123",
+          "journal": "Journal of Cellular Physiology",
+          "attempt": 5,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.1333470344543457,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/jcp.30123",
+          "journal": "Journal of Cellular Physiology",
+          "attempt": 6,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13553094863891602,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/jcp.30123",
+          "journal": "Journal of Cellular Physiology",
+          "attempt": 7,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.1342029571533203,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/jcp.30123",
+          "journal": "Journal of Cellular Physiology",
+          "attempt": 8,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13692736625671387,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/jcp.30123",
+          "journal": "Journal of Cellular Physiology",
+          "attempt": 9,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13399791717529297,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/jcp.30123",
+          "journal": "Journal of Cellular Physiology",
+          "attempt": 10,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13542461395263672,
+          "error": "HTTP 500"
+        }
+      ]
+    },
+    {
+      "doi": "10.1002/jmv.26789",
+      "journal": "Journal of Medical Virology",
+      "total_attempts": 10,
+      "successful_attempts": 0,
+      "success_rate": 0.0,
+      "average_size_mb": 0,
+      "average_response_time": 0.1346222162246704,
+      "all_results": [
+        {
+          "doi": "10.1002/jmv.26789",
+          "journal": "Journal of Medical Virology",
+          "attempt": 1,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13411188125610352,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/jmv.26789",
+          "journal": "Journal of Medical Virology",
+          "attempt": 2,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13397502899169922,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/jmv.26789",
+          "journal": "Journal of Medical Virology",
+          "attempt": 3,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.1337599754333496,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/jmv.26789",
+          "journal": "Journal of Medical Virology",
+          "attempt": 4,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13383889198303223,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/jmv.26789",
+          "journal": "Journal of Medical Virology",
+          "attempt": 5,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13476324081420898,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/jmv.26789",
+          "journal": "Journal of Medical Virology",
+          "attempt": 6,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13387393951416016,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/jmv.26789",
+          "journal": "Journal of Medical Virology",
+          "attempt": 7,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13974809646606445,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/jmv.26789",
+          "journal": "Journal of Medical Virology",
+          "attempt": 8,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13304805755615234,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/jmv.26789",
+          "journal": "Journal of Medical Virology",
+          "attempt": 9,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.1336660385131836,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/jmv.26789",
+          "journal": "Journal of Medical Virology",
+          "attempt": 10,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13543701171875,
+          "error": "HTTP 500"
+        }
+      ]
+    },
+    {
+      "doi": "10.1002/hep.31456",
+      "journal": "Hepatology",
+      "total_attempts": 10,
+      "successful_attempts": 0,
+      "success_rate": 0.0,
+      "average_size_mb": 0,
+      "average_response_time": 0.13429276943206786,
+      "all_results": [
+        {
+          "doi": "10.1002/hep.31456",
+          "journal": "Hepatology",
+          "attempt": 1,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.1328449249267578,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/hep.31456",
+          "journal": "Hepatology",
+          "attempt": 2,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13335776329040527,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/hep.31456",
+          "journal": "Hepatology",
+          "attempt": 3,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13355302810668945,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/hep.31456",
+          "journal": "Hepatology",
+          "attempt": 4,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.1358027458190918,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/hep.31456",
+          "journal": "Hepatology",
+          "attempt": 5,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13431191444396973,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/hep.31456",
+          "journal": "Hepatology",
+          "attempt": 6,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13373804092407227,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/hep.31456",
+          "journal": "Hepatology",
+          "attempt": 7,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13806605339050293,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/hep.31456",
+          "journal": "Hepatology",
+          "attempt": 8,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13285207748413086,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/hep.31456",
+          "journal": "Hepatology",
+          "attempt": 9,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13498520851135254,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/hep.31456",
+          "journal": "Hepatology",
+          "attempt": 10,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13341593742370605,
+          "error": "HTTP 500"
+        }
+      ]
+    },
+    {
+      "doi": "10.1002/art.41234",
+      "journal": "Arthritis & Rheumatism",
+      "total_attempts": 10,
+      "successful_attempts": 0,
+      "success_rate": 0.0,
+      "average_size_mb": 0,
+      "average_response_time": 0.2659470558166504,
+      "all_results": [
+        {
+          "doi": "10.1002/art.41234",
+          "journal": "Arthritis & Rheumatism",
+          "attempt": 1,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.1351020336151123,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/art.41234",
+          "journal": "Arthritis & Rheumatism",
+          "attempt": 2,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13725996017456055,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/art.41234",
+          "journal": "Arthritis & Rheumatism",
+          "attempt": 3,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13832521438598633,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/art.41234",
+          "journal": "Arthritis & Rheumatism",
+          "attempt": 4,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13394784927368164,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/art.41234",
+          "journal": "Arthritis & Rheumatism",
+          "attempt": 5,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13457989692687988,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/art.41234",
+          "journal": "Arthritis & Rheumatism",
+          "attempt": 6,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13419413566589355,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/art.41234",
+          "journal": "Arthritis & Rheumatism",
+          "attempt": 7,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.13257336616516113,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/art.41234",
+          "journal": "Arthritis & Rheumatism",
+          "attempt": 8,
+          "success": false,
+          "status_code": 403,
+          "size_mb": 0,
+          "response_time": 0.5677649974822998,
+          "error": "HTTP 403"
+        },
+        {
+          "doi": "10.1002/art.41234",
+          "journal": "Arthritis & Rheumatism",
+          "attempt": 9,
+          "success": false,
+          "status_code": 403,
+          "size_mb": 0,
+          "response_time": 0.5913000106811523,
+          "error": "HTTP 403"
+        },
+        {
+          "doi": "10.1002/art.41234",
+          "journal": "Arthritis & Rheumatism",
+          "attempt": 10,
+          "success": false,
+          "status_code": 403,
+          "size_mb": 0,
+          "response_time": 0.5544230937957764,
+          "error": "HTTP 403"
+        }
+      ]
+    },
+    {
+      "doi": "10.1002/aic.17123",
+      "journal": "AIChE Journal",
+      "total_attempts": 10,
+      "successful_attempts": 8,
+      "success_rate": 80.0,
+      "average_size_mb": 1.476515769958496,
+      "average_response_time": 1.1933625221252442,
+      "all_results": [
+        {
+          "doi": "10.1002/aic.17123",
+          "journal": "AIChE Journal",
+          "attempt": 1,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.14097094535827637,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/aic.17123",
+          "journal": "AIChE Journal",
+          "attempt": 2,
+          "success": false,
+          "status_code": 500,
+          "size_mb": 0,
+          "response_time": 0.1358630657196045,
+          "error": "HTTP 500"
+        },
+        {
+          "doi": "10.1002/aic.17123",
+          "journal": "AIChE Journal",
+          "attempt": 3,
+          "success": true,
+          "status_code": 200,
+          "size_mb": 1.476515769958496,
+          "response_time": 1.2415211200714111,
+          "error": null
+        },
+        {
+          "doi": "10.1002/aic.17123",
+          "journal": "AIChE Journal",
+          "attempt": 4,
+          "success": true,
+          "status_code": 200,
+          "size_mb": 1.476515769958496,
+          "response_time": 1.7856051921844482,
+          "error": null
+        },
+        {
+          "doi": "10.1002/aic.17123",
+          "journal": "AIChE Journal",
+          "attempt": 5,
+          "success": true,
+          "status_code": 200,
+          "size_mb": 1.476515769958496,
+          "response_time": 1.812941074371338,
+          "error": null
+        },
+        {
+          "doi": "10.1002/aic.17123",
+          "journal": "AIChE Journal",
+          "attempt": 6,
+          "success": true,
+          "status_code": 200,
+          "size_mb": 1.476515769958496,
+          "response_time": 1.6777369976043701,
+          "error": null
+        },
+        {
+          "doi": "10.1002/aic.17123",
+          "journal": "AIChE Journal",
+          "attempt": 7,
+          "success": true,
+          "status_code": 200,
+          "size_mb": 1.476515769958496,
+          "response_time": 1.6272599697113037,
+          "error": null
+        },
+        {
+          "doi": "10.1002/aic.17123",
+          "journal": "AIChE Journal",
+          "attempt": 8,
+          "success": true,
+          "status_code": 200,
+          "size_mb": 1.476515769958496,
+          "response_time": 1.2279880046844482,
+          "error": null
+        },
+        {
+          "doi": "10.1002/aic.17123",
+          "journal": "AIChE Journal",
+          "attempt": 9,
+          "success": true,
+          "status_code": 200,
+          "size_mb": 1.476515769958496,
+          "response_time": 1.0846617221832275,
+          "error": null
+        },
+        {
+          "doi": "10.1002/aic.17123",
+          "journal": "AIChE Journal",
+          "attempt": 10,
+          "success": true,
+          "status_code": 200,
+          "size_mb": 1.476515769958496,
+          "response_time": 1.1990771293640137,
+          "error": null
+        }
+      ]
+    }
+  ]
+}

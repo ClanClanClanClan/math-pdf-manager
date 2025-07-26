@@ -1,0 +1,4 @@
+# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/src/validators/__init__.py
+# hypothesis_version: 6.135.32
+
+['AuthorParser', 'FilenameCheckResult', 'FilenameValidator', 'MathHandler', 'Message', 'PatternMatcher', 'SuggestionEngine', 'TitleNormalizer', 'Token', 'UnicodeHandler', 'ValidationResult', 'apply_suggestion', 'check_filename', 'debug_print', 'disable_debug', 'enable_debug', 'find_math_regions', 'fix_author_block', 'generate_suggestions', 'get_quick_fixes', 'is_in_math_region', 'is_math_token', 'normalize_title', 'normalize_token']

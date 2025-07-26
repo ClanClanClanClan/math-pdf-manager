@@ -1,0 +1,4 @@
+# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/filename_checker/core.py
+# hypothesis_version: 6.135.32
+
+[5000, '\x00', ' -', ' - ', '- ', '..', '/', 'LATIN', '\\', '\\w\\.\\s+[A-Z]', 'en', 'error', 'ext', 'fix', 'info', 'warning']

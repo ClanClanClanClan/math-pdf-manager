@@ -1,0 +1,4 @@
+# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/core/text_processing/tokenizer.py
+# hypothesis_version: 6.135.32
+
+[500, "'", '([-–—])', '-', '[^\\w\\s]', '\\s+', 'academic_chars', 'citation', 'citation_pattern', 'citations', 'config', 'consecutive', 'email', 'email_pattern', 'filename', 'latex', 'latex_pattern', 'long_words', 'math', 'math_expressions', 'math_pattern', 'patterns_loaded', 'position', 'punctuation', 'repeated_words', 'tokenize_cache_info', 'type', 'unknown', 'url', 'url_pattern', 'whitespace', 'word', 'word_pattern', '–', '—']

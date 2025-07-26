@@ -1,0 +1,4 @@
+# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/pdf_parser.py
+# hypothesis_version: 6.135.32
+
+['*', '*.pdf', '--config', '--debug', '--no-api', '--stats', '.', '=', 'Config file path', 'Disable ArXiv API', 'Doe', 'Enable debug mode', 'John', 'PDF files to process', 'PDF_PARSER_OFFLINE', 'PYTEST_CURRENT_TEST', 'Sample Title', '__main__', 'authors', 'config.yaml', 'dummy ocr text', 'first', 'grobid_client', 'last', 'pdf_files', 'pytesseract', 'store_true', 'title']

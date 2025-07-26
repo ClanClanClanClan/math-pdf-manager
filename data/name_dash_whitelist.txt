@@ -1,0 +1,2 @@
+# Name dash whitelist
+Weierstrass

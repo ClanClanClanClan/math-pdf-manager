@@ -1,0 +1,8 @@
+{
+  "title": "A General Maximum Principle for Progressive Optimal Control of Fully Coupled Forward-Backward Stochastic Systems with Jumps",
+  "authors": [],
+  "year": null,
+  "citation_id": null,
+  "snippet": "This paper is concerned with a general maximum principle for the fully coupled forward-backward stochastic optimal control problem with jumps, where the control domain is not necessarily convex, within the progressively measurable framework. It is worth noting that not only the control variable enters into all the coefficients, but also the jump size \"\" . We first proposed that the solution of BSDEP also contains the variable \"\", which is different from previous articles and we provide an explanation in Remark 2.1.",
+  "source": "scholar_serpapi"
+}

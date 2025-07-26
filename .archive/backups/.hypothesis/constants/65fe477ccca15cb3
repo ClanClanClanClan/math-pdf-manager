@@ -1,0 +1,4 @@
+# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/reporter.py
+# hypothesis_version: 6.135.13
+
+[2024, '%Y-%m-%d %H:%M UTC', '/Papers', '2401.00001', '9.9.9', '; ', 'Bad dash -- use –', 'Doe', 'Good_File.pdf', 'Replace ASCII hyphen', 'Smith', 'Smith_-Doe_2024.pdf', 'Smith‒Doe_2024.pdf', '\\$.*?\\$', '\\s+', '__main__', 'arxiv', 'arxiv_id', 'authors', 'deadbeef', 'demo-user', 'demo_report.html', 'dup (1).pdf', 'dup.pdf', 'errors', 'filename', 'fixed_filename', 'folder', 'html', 'now', 'path', 'reason', 'report.csv', 'report.html', 'report_template.html', 'reporter', 'source', 'suggestions', 'templates', 'title', 'type', 'utf-8', 'w', 'xml', 'year', 'α-Enhanced Example']

@@ -1,0 +1,4 @@
+# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/duplicate_detector.py
+# hypothesis_version: 6.135.32
+
+[' ,;:', ' - ', ' and ', '&', ',', ',\\s*[ivxlcdm]+\\s*$', ',\\s*part\\s+\\d+\\b', '-', '-{2,}', '-‒–—―', '.', ';', 'GREEK', 'NFKC', 'NFKD', '[.\\-\\s]', '[:;,]', '[;]', '[\\s.\\-]', '[^\\w\\s\\-]', '[^\\w\\s]', '\\$[^$]*\\$', '\\\\[a-zA-Z]+', '\\b[IVXLCDM]+\\b', '\\s*-\\s*$', '\\s+', '^(volume|vol)\\s*\\d+$', '^\\s*no\\.?\\s*\\d+\\s*', 'a', 'an', 'authors_raw', 'da', 'de', 'del', 'della', 'den', 'der', 'di', 'dos', 'du', 'duplicate_detector', 'filename', 'just', 'la', 'le', 'name', 'no', 'number', 'part', 'path', 'section', 'ten', 'the', 'title_raw', 'van', 'vol', 'volume', 'von', '\u200b']

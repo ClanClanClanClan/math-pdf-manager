@@ -1,0 +1,4 @@
+# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/validators/math_utils.py
+# hypothesis_version: 6.135.32
+
+[0.0, 0.2, 0.5, '$', '(?<!.)\\.\\.\\.(?!\\.)', '[A-Za-z]\\^[0-9]', '[A-Za-z]_[0-9]', '[α-ωΑ-Ω]', '\\$.*\\$', '\\[', '\\\\[a-zA-Z]+', '\\\\mathbb\\{([A-Z])\\}', '\\]', 'algebra', 'analysis', 'calculus', 'complexity', 'convergence', 'derivative', 'differential', 'equation', 'formula', 'function', 'geometry', 'has_math_regions', 'has_math_symbols', 'high', 'integral', 'lemma', 'limit', 'low', 'manifold', 'math_ratio', 'math_regions', 'matrix', 'medium', 'none', 'proof', 'space', 'theorem', 'topology', 'vector', '…']

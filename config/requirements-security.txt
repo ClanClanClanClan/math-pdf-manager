@@ -1,0 +1,77 @@
+# Security-enhanced requirements for Math-PDF Manager
+
+# Core dependencies (existing)
+PyYAML>=6.0.1
+requests>=2.31.0
+tqdm>=4.66.0
+PyMuPDF>=1.23.0
+pdfplumber>=0.10.0
+jinja2>=3.1.2
+
+# Security enhancements
+defusedxml>=0.7.1  # Secure XML parsing
+cryptography>=41.0.0  # Secure cryptographic operations
+python-multipart>=0.0.6  # Secure multipart parsing
+
+# Enhanced validation
+pydantic>=2.5.0  # Data validation with type safety
+python-magic>=0.4.27  # File type validation
+validators>=0.22.0  # Common validation patterns
+
+# Secure temporary files and paths
+secure-tempfile>=0.2.0
+pathvalidate>=3.2.0
+
+# Rate limiting and resource protection
+slowapi>=0.1.9  # Rate limiting
+memory-profiler>=0.61.0  # Memory monitoring
+psutil>=5.9.0  # System resource monitoring
+
+# API security
+httpx>=0.25.0  # Modern HTTP client with better security
+tenacity>=8.2.0  # Retry with exponential backoff
+backoff>=2.2.0  # Decorator for retry logic
+
+# Async support for performance
+aiohttp>=3.9.0
+aiofiles>=23.2.0
+asyncio-throttle>=1.0.0
+
+# Caching with security
+diskcache>=5.6.0  # Thread-safe disk cache
+cachetools>=5.3.0  # Memory caching utilities
+
+# Logging and monitoring
+structlog>=23.2.0  # Structured logging
+python-json-logger>=2.0.7  # JSON logging
+sentry-sdk>=1.39.0  # Error tracking (optional)
+
+# Development and testing
+pytest>=7.4.0
+pytest-cov>=4.1.0
+pytest-asyncio>=0.21.0
+pytest-timeout>=2.2.0
+pytest-benchmark>=4.0.0
+hypothesis>=6.92.0  # Property-based testing
+tox>=4.11.0  # Test automation
+mypy>=1.8.0  # Type checking
+black>=23.12.0  # Code formatting
+isort>=5.13.0  # Import sorting
+flake8>=7.0.0  # Linting
+bandit>=1.7.0  # Security linting
+safety>=3.0.0  # Dependency security checker
+pre-commit>=3.6.0  # Git hooks
+
+# Documentation
+mkdocs>=1.5.0
+mkdocs-material>=9.5.0
+mkdocstrings>=0.24.0
+
+# Performance profiling
+py-spy>=0.3.14  # Sampling profiler
+scalene>=1.5.0  # CPU+GPU+memory profiler
+
+# Optional ML enhancements (commented out by default)
+# transformers>=4.36.0
+# torch>=2.1.0
+# sentence-transformers>=2.2.0

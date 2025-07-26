@@ -1,0 +1,4 @@
+# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/validators/math_handler.py
+# hypothesis_version: 6.135.32
+
+['$', '1\\d{3}', '[<>≤≥≠≈]', '[=+\\-*/^]', '[a-zA-Z]\\([^)]+\\)', '[a-zA-Z]\\^\\{?\\w+\\}?', '[a-zA-Z]\\d+', '[a-zA-Z]_\\{?\\w+\\}?', '[∑∏∫∂∇]', '\\$', '\\$\\$', '\\(', '\\[', '\\\\\\(', '\\\\\\)', '\\\\\\[', '\\\\\\]', '\\\\begin\\{align\\}', '\\\\begin\\{eqnarray\\}', '\\\\begin\\{equation\\}', '\\\\end\\{align\\}', '\\\\end\\{displaymath\\}', '\\\\end\\{eqnarray\\}', '\\\\end\\{equation\\}', '\\begin{equation', '\\d+[a-zA-Z]', '\\d+\\.\\d+', 'x\\d+|y\\d+|z\\d+']

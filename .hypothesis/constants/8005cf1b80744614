@@ -1,0 +1,4 @@
+# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/src/core/tokenization.py
+# hypothesis_version: 6.135.32
+
+[512, 'Token', '[\\s\\-–—]+', '\\ ', '\\b', '\\s+', '_phrase_regex', 'mask_math_regions', '¤']

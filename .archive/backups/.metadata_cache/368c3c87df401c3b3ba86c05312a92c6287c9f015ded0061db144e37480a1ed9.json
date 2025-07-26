@@ -1,0 +1,8 @@
+{
+  "title": "Existence, uniqueness and comparison theorem on unbounded solutions of general time interval BSDEs with sub-quadratic generators",
+  "authors": [],
+  "year": null,
+  "citation_id": null,
+  "snippet": "This paper is devoted to the existence, uniqueness and comparison theorem on unbounded solutions of one-dimensional backward stochastic differential equations (BSDEs) with sub-quadratic generators, where the terminal time is allowed to be finite or infinite. We first establish existence of the unbounded solutions for this kind of BSDEs with generator satisfying a time-varying one-sided linear growth in the first unknown variable and a time-varying sub-quadratic growth in the second unknown variable . Then, the uniqueness and comparison theorem of the unbounded solutions for this kind of BSDEs are proved under a time-varying extended convexity assumption. These results generalized those obtained in \\cite{12} to the general time interval BSDEs. Finally, several sufficient conditions ensuring that the uniqueness holds are put forward and verified via some innovative ideas, which are explored at the first time even though for the case of finite time interval BSDEs.",
+  "source": "scholar_serpapi"
+}

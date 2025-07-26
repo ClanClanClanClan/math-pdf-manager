@@ -1,0 +1,4 @@
+# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/src/core/text_canonicalization.py
+# hypothesis_version: 6.135.32
+
+['-', '- ', '-{2,}', 'NFKD', 'canonicalize', 'normalize_token', '\u200b', '–', '—', '−', '\ufeff']

@@ -1,0 +1,22 @@
+{
+  "DOI": "10.1007/s00454-020-00244-6",
+  "is_open_access": true,
+  "oa_locations": [
+    {
+      "url": "https://arxiv.org/pdf/1812.09543",
+      "host_type": "repository",
+      "license": null,
+      "version": null
+    },
+    {
+      "url": "https://hal.science/hal-02003983v1/file/1812.09543.pdf",
+      "host_type": "repository",
+      "license": "other-oa",
+      "version": null
+    }
+  ],
+  "best_oa_location": "https://arxiv.org/pdf/1812.09543",
+  "oa_date": null,
+  "journal_is_oa": false,
+  "source": "unpaywall"
+}

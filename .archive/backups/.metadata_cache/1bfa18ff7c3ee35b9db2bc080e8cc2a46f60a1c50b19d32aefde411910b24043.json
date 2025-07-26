@@ -1,0 +1,8 @@
+{
+  "title": "Backward stochastic differential equations with double mean reflections",
+  "authors": [],
+  "year": null,
+  "citation_id": null,
+  "snippet": "In this paper, we study the backward stochastic differential equation (BSDE) with two nonlinear mean reflections, which means that the constraints are imposed on the distribution of the solution but not on its paths. Based on the backward Skorokhod problem with nonlinear constraints, we obtain the existence and uniqueness result by constructing a contraction mapping. When the constraints are linear, the solution can be approximated by a family of penalized mean-field BSDEs.",
+  "source": "scholar_serpapi"
+}

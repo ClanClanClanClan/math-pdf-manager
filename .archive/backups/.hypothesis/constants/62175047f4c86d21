@@ -1,0 +1,4 @@
+# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/validators/filename.py
+# hypothesis_version: 6.135.29
+
+[100, 200, 255, 880, 1023, ' - ', '$', ',', ', ', '-', '--', '...', '.pdf', 'DetectorFactory', 'NFC', 'TOKEN_RE', 'Text is empty', '\\', '\\w+', '_', 'author', 'authors', 'en', 'extension', 'ff', 'ffi', 'ffl', 'fi', 'filename', 'fl', 'format', 'is_valid', 'issues', 'no_change', 'path', 'title', 'utf-8', '…', 'ﬀ', 'ﬁ', 'ﬂ', 'ﬃ', 'ﬄ']

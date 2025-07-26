@@ -1,0 +1,8 @@
+{
+  "title": "Existence, uniqueness and propagation of chaos for general McKean-Vlasov and mean-field BSDEs",
+  "authors": [],
+  "year": null,
+  "citation_id": null,
+  "snippet": "We consider backward stochastic differential equations (BSDEs) with mean-field and McKean-Vlasov interactions in their generators in a general setting, where the drivers are square-integrable martingales, with a focus on the independent increments case, and the filtrations are (possibly) stochastically discontinuous. In other words, we consider discrete- and continuous-time systems of mean-field BSDEs and McKean-Vlasov BSDEs in a unified setting. We provide existence and uniqueness results for these BSDEs using new a priori estimates that utilize the stochastic exponential. Then, we provide propagation of chaos results for systems of particles that satisfy BSDEs, i.e. we show that the asymptotic behaviour of the solutions of mean-field systems of BSDEs, as the multitude of the systems grows to infinity, converges to I.I.D solutions of McKean-Vlasov BSDEs. We introduce a new technique for showing the backward propagation of chaos, that makes repeated use of the a priori estimates, inequalities for the Wasserstein distance and the ``conservation of solutions'' under different filtrations, and does not demand the solutions of the mean field systems to be exchangeable or symmetric. Finally, we deduce convergence rates for the propagation of chaos, under advanced integrability conditions on the solutions of the BSDEs.",
+  "source": "scholar_serpapi"
+}

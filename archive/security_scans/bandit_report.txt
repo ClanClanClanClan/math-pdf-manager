@@ -1,0 +1,193 @@
+[main]	INFO	profile include tests: None
+[main]	INFO	profile exclude tests: None
+[main]	INFO	cli include tests: None
+[main]	INFO	cli exclude tests: B101,B110,B603,B607
+[main]	INFO	running on Python 3.12.4
+Working... ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100% 0:00:00
+Run started:2025-07-20 09:17:27.904999
+
+Test results:
+>> Issue: [B310:blacklist] Audit url open for permitted schemes. Allowing use of file:/ or custom schemes is often unexpected.
+   Severity: Medium   Confidence: High
+   CWE: CWE-22 (https://cwe.mitre.org/data/definitions/22.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b310-urllib-urlopen
+   Location: src/api/arxiv_client.py:71:23
+70	            # Make request
+71	            response = urlopen(url, timeout=10)
+72	            xml_content = response.read().decode('utf-8')
+
+--------------------------------------------------
+>> Issue: [B310:blacklist] Audit url open for permitted schemes. Allowing use of file:/ or custom schemes is often unexpected.
+   Severity: Medium   Confidence: High
+   CWE: CWE-22 (https://cwe.mitre.org/data/definitions/22.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b310-urllib-urlopen
+   Location: src/api/arxiv_client.py:123:23
+122	            # Make request
+123	            response = urlopen(url, timeout=10)
+124	            xml_content = response.read().decode('utf-8')
+
+--------------------------------------------------
+>> Issue: [B108:hardcoded_tmp_directory] Probable insecure usage of temp file/directory.
+   Severity: Medium   Confidence: Medium
+   CWE: CWE-377 (https://cwe.mitre.org/data/definitions/377.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b108_hardcoded_tmp_directory.html
+   Location: src/core/security/secure_file_ops.py:30:17
+29	            Path.home() / '.cache',
+30	            Path('/tmp'),
+31	            Path(tempfile.gettempdir()).resolve()
+
+--------------------------------------------------
+>> Issue: [B314:blacklist] Using xml.etree.ElementTree.fromstring to parse untrusted XML data is known to be vulnerable to XML attacks. Replace xml.etree.ElementTree.fromstring with its defusedxml equivalent function or make sure defusedxml.defuse_stdlib() is called
+   Severity: Medium   Confidence: High
+   CWE: CWE-20 (https://cwe.mitre.org/data/definitions/20.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b313-b320-xml-bad-elementtree
+   Location: src/metadata_fetcher.py:67:19
+66	        def parse_string(xml_string):
+67	            return ET.fromstring(xml_string)
+68	
+
+--------------------------------------------------
+>> Issue: [B615:huggingface_unsafe_download] Unsafe Hugging Face Hub download without revision pinning in from_pretrained()
+   Severity: Medium   Confidence: High
+   CWE: CWE-494 (https://cwe.mitre.org/data/definitions/494.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b615_huggingface_unsafe_download.html
+   Location: src/pdf-meta-llm/scripts/finetune.py:53:7
+52	
+53	_tok = AutoTokenizer.from_pretrained(args.base, use_fast=True)
+54	_tok.pad_token = _tok.eos_token  # make pad = eos to avoid resize
+
+--------------------------------------------------
+>> Issue: [B615:huggingface_unsafe_download] Unsafe Hugging Face Hub download without revision pinning in load_dataset()
+   Severity: Medium   Confidence: High
+   CWE: CWE-494 (https://cwe.mitre.org/data/definitions/494.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b615_huggingface_unsafe_download.html
+   Location: src/pdf-meta-llm/scripts/finetune.py:76:5
+75	
+76	ds = load_dataset("json", data_files=str(data_path), split="train")
+77	
+
+--------------------------------------------------
+>> Issue: [B615:huggingface_unsafe_download] Unsafe Hugging Face Hub download without revision pinning in from_pretrained()
+   Severity: Medium   Confidence: High
+   CWE: CWE-494 (https://cwe.mitre.org/data/definitions/494.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b615_huggingface_unsafe_download.html
+   Location: src/pdf-meta-llm/scripts/finetune.py:94:14
+93	
+94	_base_model = AutoModelForCausalLM.from_pretrained(
+95	    args.base,
+96	    torch_dtype=device_dtype,
+97	    device_map="auto",
+98	)
+99	
+
+--------------------------------------------------
+>> Issue: [B615:huggingface_unsafe_download] Unsafe Hugging Face Hub download without revision pinning in from_pretrained()
+   Severity: Medium   Confidence: High
+   CWE: CWE-494 (https://cwe.mitre.org/data/definitions/494.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b615_huggingface_unsafe_download.html
+   Location: src/pdf-meta-llm/scripts/predict.py:64:10
+63	    print("🔹 loading model …", file=sys.stderr)
+64	    tok = transformers.AutoTokenizer.from_pretrained(MODEL_BASE)
+65	    base = transformers.AutoModelForCausalLM.from_pretrained(
+
+--------------------------------------------------
+>> Issue: [B615:huggingface_unsafe_download] Unsafe Hugging Face Hub download without revision pinning in from_pretrained()
+   Severity: Medium   Confidence: High
+   CWE: CWE-494 (https://cwe.mitre.org/data/definitions/494.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b615_huggingface_unsafe_download.html
+   Location: src/pdf-meta-llm/scripts/predict.py:65:11
+64	    tok = transformers.AutoTokenizer.from_pretrained(MODEL_BASE)
+65	    base = transformers.AutoModelForCausalLM.from_pretrained(
+66	        MODEL_BASE, device_map=DEVICE, load_in_8bit=False, torch_dtype=torch.float16
+67	    )
+68	    model = peft.PeftModel.from_pretrained(base, MODEL_LORA)
+
+--------------------------------------------------
+>> Issue: [B314:blacklist] Using xml.etree.ElementTree.fromstring to parse untrusted XML data is known to be vulnerable to XML attacks. Replace xml.etree.ElementTree.fromstring with its defusedxml equivalent function or make sure defusedxml.defuse_stdlib() is called
+   Severity: Medium   Confidence: High
+   CWE: CWE-20 (https://cwe.mitre.org/data/definitions/20.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b313-b320-xml-bad-elementtree
+   Location: src/pdf_processing/extractors.py:38:19
+37	        def parse_string(xml_data: str):
+38	            return ET.fromstring(xml_data)
+39	
+
+--------------------------------------------------
+>> Issue: [B310:blacklist] Audit url open for permitted schemes. Allowing use of file:/ or custom schemes is often unexpected.
+   Severity: Medium   Confidence: High
+   CWE: CWE-22 (https://cwe.mitre.org/data/definitions/22.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b310-urllib-urlopen
+   Location: src/pdf_processing/extractors.py:826:17
+825	
+826	            with urlopen(query_url, timeout=10) as response:
+827	                xml_data = response.read().decode("utf-8")
+
+--------------------------------------------------
+>> Issue: [B324:hashlib] Use of weak MD5 hash for security. Consider usedforsecurity=False
+   Severity: High   Confidence: High
+   CWE: CWE-327 (https://cwe.mitre.org/data/definitions/327.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b324_hashlib.html
+   Location: src/pdf_processing/parsers/base_parser.py:273:22
+272	            file_size=pdf_file.stat().st_size,
+273	            file_hash=hashlib.md5(pdf_file.read_bytes()).hexdigest(),
+274	            extraction_timestamp=time.time(),
+
+--------------------------------------------------
+>> Issue: [B701:jinja2_autoescape_false] By default, jinja2 sets autoescape to False. Consider using autoescape=True or use the select_autoescape function to mitigate XSS vulnerabilities.
+   Severity: High   Confidence: High
+   CWE: CWE-94 (https://cwe.mitre.org/data/definitions/94.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/plugins/b701_jinja2_autoescape_false.html
+   Location: src/reporter.py:260:14
+259	                       template_dir)
+260	        tpl = Environment().from_string(_BUNDLED_TEMPLATE)
+261	
+
+--------------------------------------------------
+>> Issue: [B314:blacklist] Using xml.etree.ElementTree.fromstring to parse untrusted XML data is known to be vulnerable to XML attacks. Replace xml.etree.ElementTree.fromstring with its defusedxml equivalent function or make sure defusedxml.defuse_stdlib() is called
+   Severity: Medium   Confidence: High
+   CWE: CWE-20 (https://cwe.mitre.org/data/definitions/20.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b313-b320-xml-bad-elementtree
+   Location: src/utils/security.py:222:31
+221	                    try:
+222	                        root = ET.fromstring(safe_xml.encode(encoding))
+223	                    except Exception as e:
+
+--------------------------------------------------
+>> Issue: [B314:blacklist] Using xml.etree.ElementTree.fromstring to parse untrusted XML data is known to be vulnerable to XML attacks. Replace xml.etree.ElementTree.fromstring with its defusedxml equivalent function or make sure defusedxml.defuse_stdlib() is called
+   Severity: Medium   Confidence: High
+   CWE: CWE-20 (https://cwe.mitre.org/data/definitions/20.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b313-b320-xml-bad-elementtree
+   Location: src/utils/security.py:228:23
+227	                logger.warning("DefusedXML not available, using standard XML parser (less secure)")
+228	                root = ET.fromstring(xml_string.encode(encoding))
+229	            return root
+
+--------------------------------------------------
+>> Issue: [B314:blacklist] Using xml.etree.ElementTree.parse to parse untrusted XML data is known to be vulnerable to XML attacks. Replace xml.etree.ElementTree.parse with its defusedxml equivalent function or make sure defusedxml.defuse_stdlib() is called
+   Severity: Medium   Confidence: High
+   CWE: CWE-20 (https://cwe.mitre.org/data/definitions/20.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b313-b320-xml-bad-elementtree
+   Location: src/utils/security.py:266:23
+265	                logger.warning("DefusedXML not available, using standard XML parser (less secure)")
+266	                tree = ET.parse(str(xml_path))
+267	            return tree.getroot()
+
+--------------------------------------------------
+
+Code scanned:
+	Total lines of code: 24338
+	Total lines skipped (#nosec): 0
+	Total potential issues skipped due to specifically being disabled (e.g., #nosec BXXX): 0
+
+Run metrics:
+	Total issues (by severity):
+		Undefined: 0
+		Low: 10
+		Medium: 14
+		High: 2
+	Total issues (by confidence):
+		Undefined: 0
+		Low: 0
+		Medium: 4
+		High: 22
+Files skipped (0):

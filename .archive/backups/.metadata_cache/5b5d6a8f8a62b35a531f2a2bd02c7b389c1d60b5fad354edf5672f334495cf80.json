@@ -1,0 +1,17 @@
+{
+  "title": "A new Mertens decomposition of <mml:math xmlns:mml=\"http://www.w3.org/1998/Math/MathML\" display=\"inline\" id=\"d1e24\" altimg=\"si10.svg\"><mml:msup><mml:mrow><mml:mi mathvariant=\"script\" class=\"mathscr\">Y</mml:mi></mml:mrow><mml:mrow><mml:mi>g</mml:mi><mml:mo>,</mml:mo><mml:mi>\u03be</mml:mi></mml:mrow></mml:msup></mml:math>-submartingale systems. Application to BSDEs with weak constraints at stopping times",
+  "authors": [
+    "Dumitrescu, Roxana",
+    "Elie, Romuald",
+    "Sabbagh, Wissal",
+    "Zhou, Chao"
+  ],
+  "DOI": "10.1016/j.spa.2023.07.006",
+  "published": [
+    [
+      2023,
+      10
+    ]
+  ],
+  "source": "crossref"
+}

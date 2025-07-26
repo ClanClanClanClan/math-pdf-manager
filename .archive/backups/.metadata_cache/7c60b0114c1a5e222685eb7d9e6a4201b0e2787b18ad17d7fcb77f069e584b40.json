@@ -1,0 +1,8 @@
+{
+  "title": "-solutions for reflected BSDEs with general jumps and stochastic monotone generators",
+  "authors": [],
+  "year": null,
+  "citation_id": null,
+  "snippet": "We consider a one-reflected backward stochastic differential equation with a general RCLL barrier in a filtration that supports a Brownian motion and an independent Poisson random measure. We establish the existence and uniqueness of a solution in for . The result is obtained by means of the penalization method, under the assumption that the coefficient is stochastically monotone with respect to the state variable , stochastically Lipschitz with respect to the control variables , and satisfies suitable linear growth and -integrability conditions.",
+  "source": "scholar_serpapi"
+}

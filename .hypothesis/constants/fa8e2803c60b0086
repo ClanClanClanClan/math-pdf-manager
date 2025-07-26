@@ -1,0 +1,4 @@
+# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/src/pdf_processing/extractors/arxiv_extractor.py
+# hypothesis_version: 6.135.32
+
+[0.0, 0.3, 0.6, 0.75, 0.8, 200, 250, ' & ', ' and ', ', ', ', et al.', '.,;:-', 'Unknown', 'Unknown Title', '[cs.', '[math.', '[stat.', '\\d+\\s+pages?\\b.*', '\\s+', '^\\[[\\w.]+\\]\\s*', '^\\d{4}-\\d{2}-\\d{2}$', 'algorithm', 'analysis', 'approach', 'arXiv', 'artificial', 'arxiv', 'arxiv:', 'arxiv:\\d{4}\\.\\d{4,5}', 'authors?\\s*:\\s*', 'computer', 'deep', 'framework', 'header_pattern', 'indicators', 'institute', 'intelligence', 'learning', 'machine', 'method', 'model', 'neural', 'revised', 'study', 'submitted', 'survey', 'theory', 'university', 'vision']

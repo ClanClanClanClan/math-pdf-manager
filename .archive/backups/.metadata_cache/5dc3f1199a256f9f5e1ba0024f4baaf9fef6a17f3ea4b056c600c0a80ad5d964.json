@@ -1,0 +1,8 @@
+{
+  "title": "Fully Coupled Nonlocal Quasilinear Forward-Backward Parabolic Equations Arising from Mean Field Games",
+  "authors": [],
+  "year": null,
+  "citation_id": null,
+  "snippet": "In this paper, we study fully coupled nonlocal second order quasilinear forward-backward partial differential equations (FBPDEs), which arise from solution of the mean field game (MFG) suggested by Lasry and Lions [Japan. J. Math. 2 (2007), p. 237 (Remark iv)]. We show the existence of solutions $(u,m)\\in C^{1+\\frac{1}{4},2+\\frac{1}{2}}([0,T]\\times\\mathbb{R}^n)\\times C^{\\frac{1}{2}}([0,T],\\mathcal{P}_1(\\mathbb{R}^n))$, and also the uniqueness under an additional monotonicity condition. Then, we improve the regularity of our weak solution to get a classical solution under appropriate regularity assumptions on coefficients. The FBPDEs can be used to investigate a system of mean field equations (MFEs), where the backward one is a Hamilton-Jacobi-Bellman equation and the forward one is a Fokker-Planck equation. Moreover, we prove a verification theorem and give an optimal strategy of the associated MFG via the solution of MFEs. Finally, we address the linear-quadratic problems.",
+  "source": "scholar_serpapi"
+}

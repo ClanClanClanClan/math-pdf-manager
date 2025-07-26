@@ -1,0 +1,4 @@
+# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/src/pdf_processing/extractors/__init__.py
+# hypothesis_version: 6.135.32
+
+['ArxivAPIClient', '_FakeGrobidClient']

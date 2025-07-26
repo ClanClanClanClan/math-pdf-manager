@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PDF Filename & Metadata Audit Report</title>
+
+<style>
+:root{
+  --bg:#f6f8fa;--surf:#fff;--sh:0 2px 6px rgba(0,0,0,.06);
+  --txt:#222;--pri:#0066cc;--err:#c00;--warn:#b66900;
+  --code:#eef1f4;--muted:#555;--r:8px;--pad:.9rem;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+     background:var(--bg);color:var(--txt);line-height:1.45;-webkit-font-smoothing:antialiased;}
+header{background:var(--pri);color:#fff;padding:var(--pad) calc(2*var(--pad));box-shadow:var(--sh)}
+h1{font-size:1.55rem;margin-bottom:.35rem;font-weight:600}
+.bar{display:flex;flex-wrap:wrap;gap:.5rem;font-size:.85rem;margin-bottom:.55rem}
+.bar code{background:rgba(255,255,255,.17);border-radius:4px;padding:.14rem .5rem}
+.ctrls{display:flex;gap:.55rem;margin-top:.25rem}
+.ctrls button{cursor:pointer;border:none;background:#fff;color:var(--pri);padding:.32rem .85rem;
+              border-radius:4px;font-size:.79rem;box-shadow:var(--sh)}
+.ctrls button:hover{background:#e3ecf9}
+.dry{background:var(--warn);padding:.25rem .6rem;border-radius:4px;color:#fff;font-size:.8rem}
+
+.wrap{max-width:1100px;margin:2rem auto;padding:0 calc(var(--pad)*1.2)}
+.card{background:var(--surf);border-radius:var(--r);box-shadow:var(--sh);padding:var(--pad);margin-bottom:1rem}
+.card details[open]>summary::marker{content:"▼ "}
+summary{cursor:pointer;font-weight:600}
+
+.err{color:var(--err)} .sugg{color:var(--warn)}
+ul{padding-left:1.2rem;margin:.28rem 0}
+.meta{margin-top:.6rem;background:var(--code);padding:.6rem;border-radius:4px;overflow-x:auto;font-size:.87rem}
+.meta table{border-collapse:collapse;width:100%}
+.meta th{text-align:left;color:var(--muted);padding-right:.45rem;font-weight:600;white-space:nowrap}
+.meta td{padding:.15rem .2rem}
+
+pre{display:none}
+</style>
+
+<script>
+function dl(id,f){
+  const d=document.getElementById(id).textContent;if(!d)return;
+  const b=new Blob([d],{type:id==='csvdata'?'text/csv':'application/json'});
+  const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=f;
+  document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(u);
+}
+</script>
+</head>
+<body>
+<header>
+  <h1>PDF Filename & Metadata Audit Report</h1>
+  <div class="bar">
+    <code>Files: {{ filename_checks|length }}</code>
+    <code>Errors: {{ filename_checks|map(attribute='errors')|map('length')|sum }}</code>
+    <code>Suggestions: {{ filename_checks|map(attribute='suggestions')|map('length')|sum }}</code>
+    <code>Duplicates: {{ duplicates|length if duplicates else 0 }}</code>
+    <code>Generated: {{ now() }}</code>
+    <code>Config: {{ config_hash or 'default' }}</code>
+    <code>Version: {{ version or 'n/a' }}</code>
+    <code>User: {{ user or 'unknown' }}</code>
+  </div>
+  {% if dry_run %}<span class="dry">DRY-RUN – no filesystem writes</span>{% endif %}
+  <div class="ctrls">
+    <button onclick="dl('csvdata','report.csv')"  {{ 'disabled' if not csv_content  }}>⬇ CSV</button>
+    <button onclick="dl('jsondata','report.json')" {{ 'disabled' if not json_content }}>⬇ JSON</button>
+  </div>
+</header>
+
+<div class="wrap">
+
+{% if duplicates %}
+  <div class="card">
+    <h2>Possible duplicates ({{ duplicates|length }})</h2>
+    <ul>{% for g in duplicates %}<li>{{ g|join(', ') }}</li>{% endfor %}</ul>
+  </div>
+{% endif %}
+
+{% if skipped_files %}
+  <div class="card">
+    <h2>{{ skipped_section_title }}</h2>
+    <ul>
+      {% for s in skipped_files %}
+        <li>{{ s.path }} — {{ s.reason }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+{% endif %}
+
+{% for row in filename_checks %}
+  <div class="card">
+    <details open>
+      <summary>📄 {{ row.filename }}</summary>
+
+      {% if row.fixed_filename and row.fixed_filename != row.filename %}
+        <p>➜ <b>Suggested:</b> {{ row.fixed_filename }}</p>
+      {% endif %}
+
+      {% if row.errors %}
+        <ul class="err">{% for e in row.errors %}<li>{{ e }}</li>{% endfor %}</ul>
+      {% endif %}
+      {% if row.suggestions %}
+        <ul class="sugg">{% for s in row.suggestions %}<li>{{ s }}</li>{% endfor %}</ul>
+      {% endif %}
+
+      {% if metadata_results.get(row.filename) %}
+        {% set m = metadata_results[row.filename] %}
+        <div class="meta">
+          <table>
+            {% if m.source %}<tr><th>Source</th><td>{{ m.source }}</td></tr>{% endif %}
+            {% if m.year %}  <tr><th>Year</th>  <td>{{ m.year }}</td></tr>{% endif %}
+            {% if m.arxiv_id %}<tr><th>arXiv</th>
+                <td><a href="https://arxiv.org/abs/{{ m.arxiv_id }}" target="_blank">{{ m.arxiv_id }}</a></td></tr>{% endif %}
+            {% if m.DOI %}   <tr><th>DOI</th>
+                <td><a href="https://doi.org/{{ m.DOI }}" target="_blank">{{ m.DOI }}</a></td></tr>{% endif %}
+            {% if m.title %} <tr><th>Title</th><td>{{ m.title }}</td></tr>{% endif %}
+            {% if m.authors %}<tr><th>Authors</th><td>{{ m.authors|join(', ') }}</td></tr>{% endif %}
+          </table>
+        </div>
+      {% endif %}
+    </details>
+  </div>
+{% endfor %}
+
+<pre id="csvdata">{{ csv_content }}</pre>
+<pre id="jsondata">{{ json_content }}</pre>
+</div>
+</body>
+</html>

@@ -1,0 +1,241 @@
+# Configuration Definitions for Academic Papers System
+# Defines all configuration keys, their security levels, and validation rules
+
+# Database Configuration
+database_url:
+  description: "Database connection URL"
+  security_level: "sensitive"
+  required: true
+  validation: "url"
+
+database_password:
+  description: "Database password"
+  security_level: "secret"
+  required: true
+  validation: "api_key"
+
+# API Keys and Credentials
+api_key:
+  description: "Primary API key for external services"
+  security_level: "secret"
+  required: true
+  validation: "api_key"
+
+openai_api_key:
+  description: "OpenAI API key for text processing"
+  security_level: "secret"
+  required: false
+  validation: "api_key"
+
+github_token:
+  description: "GitHub personal access token"
+  security_level: "secret"
+  required: false
+  validation: "api_key"
+
+# ETH Authentication
+eth_username:
+  description: "ETH domain username"
+  security_level: "sensitive"
+  required: false
+
+eth_password:
+  description: "ETH domain password"
+  security_level: "secret"
+  required: false
+
+# IEEE/ACM Access
+ieee_username:
+  description: "IEEE Xplore username"
+  security_level: "sensitive"
+  required: false
+
+ieee_password:
+  description: "IEEE Xplore password"
+  security_level: "secret"
+  required: false
+
+# Application Configuration
+app_name:
+  description: "Application name"
+  security_level: "public"
+  default: "academic_papers"
+  required: true
+
+app_version:
+  description: "Application version"
+  security_level: "public"
+  default: "1.0.0"
+  required: false
+
+debug_mode:
+  description: "Enable debug mode"
+  security_level: "internal"
+  default: false
+  required: false
+  validation: "boolean"
+
+# File Paths
+config_file:
+  description: "Main configuration file path"
+  security_level: "public"
+  default: "config.yaml"
+  required: true
+
+data_directory:
+  description: "Directory for data files"
+  security_level: "public"
+  default: "data"
+  required: true
+
+output_directory:
+  description: "Directory for output files"
+  security_level: "public"
+  default: "output"
+  required: true
+
+# Logging Configuration
+log_level:
+  description: "Logging level"
+  security_level: "public"
+  default: "INFO"
+  required: true
+
+log_file:
+  description: "Log file path"
+  security_level: "public"
+  default: "logs/app.log"
+  required: false
+
+# Performance Settings
+cache_size:
+  description: "Cache size for text processing"
+  security_level: "public"
+  default: 1000
+  required: false
+  validation: "integer"
+
+max_workers:
+  description: "Maximum number of worker threads"
+  security_level: "public"
+  default: 4
+  required: false
+  validation: "integer"
+
+request_timeout:
+  description: "HTTP request timeout in seconds"
+  security_level: "public"
+  default: 30
+  required: false
+  validation: "integer"
+
+# Security Settings
+encryption_enabled:
+  description: "Enable encryption for sensitive data"
+  security_level: "internal"
+  default: true
+  required: false
+  validation: "boolean"
+
+secure_mode:
+  description: "Enable secure mode (no defaults for sensitive values)"
+  security_level: "internal"
+  default: true
+  required: false
+  validation: "boolean"
+
+# Email Configuration
+smtp_server:
+  description: "SMTP server for email notifications"
+  security_level: "internal"
+  required: false
+
+smtp_port:
+  description: "SMTP server port"
+  security_level: "internal"
+  default: 587
+  required: false
+  validation: "integer"
+
+smtp_username:
+  description: "SMTP username"
+  security_level: "sensitive"
+  required: false
+
+smtp_password:
+  description: "SMTP password"
+  security_level: "secret"
+  required: false
+
+# External Service URLs
+arxiv_api_url:
+  description: "ArXiv API base URL"
+  security_level: "public"
+  default: "https://export.arxiv.org/api/query"
+  required: false
+  validation: "url"
+
+ieee_api_url:
+  description: "IEEE Xplore API base URL"
+  security_level: "public"
+  default: "https://ieeexploreapi.ieee.org/api/v1"
+  required: false
+  validation: "url"
+
+# Rate Limiting
+rate_limit_requests:
+  description: "Rate limit: requests per minute"
+  security_level: "public"
+  default: 60
+  required: false
+  validation: "integer"
+
+rate_limit_burst:
+  description: "Rate limit: burst size"
+  security_level: "public"
+  default: 10
+  required: false
+  validation: "integer"
+
+# Features Toggle
+enable_pdf_processing:
+  description: "Enable PDF processing features"
+  security_level: "public"
+  default: true
+  required: false
+  validation: "boolean"
+
+enable_metadata_fetch:
+  description: "Enable metadata fetching from external sources"
+  security_level: "public"
+  default: true
+  required: false
+  validation: "boolean"
+
+enable_duplicate_detection:
+  description: "Enable duplicate detection"
+  security_level: "public"
+  default: true
+  required: false
+  validation: "boolean"
+
+# Backup Configuration
+backup_enabled:
+  description: "Enable automatic backups"
+  security_level: "internal"
+  default: true
+  required: false
+  validation: "boolean"
+
+backup_directory:
+  description: "Directory for backup files"
+  security_level: "public"
+  default: "backups"
+  required: false
+
+backup_retention_days:
+  description: "Number of days to retain backups"
+  security_level: "public"
+  default: 30
+  required: false
+  validation: "integer"

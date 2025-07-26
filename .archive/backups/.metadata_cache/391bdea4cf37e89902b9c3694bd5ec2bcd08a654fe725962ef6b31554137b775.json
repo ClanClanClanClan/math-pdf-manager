@@ -1,0 +1,8 @@
+{
+  "title": "Anticipated BSDEs Driven by Fractional Brownian Motion with a Time-Delayed Generator",
+  "authors": [],
+  "year": null,
+  "citation_id": null,
+  "snippet": "This article describes a new form of an anticipated backward stochastic differential equation (BSDE) with a time-delayed generator driven by fractional Brownian motion, further known as fractional BSDE, with a Hurst parameter H\u2208(1/2,1). This study expands upon the findings of the anticipated BSDE by considering the scenario when the driver is fractional Brownian motion rather instead of standard Brownian motion. Additionally, the generator incorporates not only the present and future but also the past. We will demonstrate the existence and uniqueness of the solutions to these equations by employing the fixed point theorem. Furthermore, an equivalent comparison theorem is derived.",
+  "source": "scholar_serpapi"
+}

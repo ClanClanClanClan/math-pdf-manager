@@ -1,0 +1,8 @@
+{
+  "title": "Growth condition on the generator of BSDE with singular terminal value ensuring continuity up to terminal time",
+  "authors": [],
+  "year": null,
+  "citation_id": null,
+  "snippet": "We study the limit behavior of the solution of a backward stochastic differential equation when the terminal condition is singular, that is it can be equal to infinity with a positive probability. In the Markovian setting, Malliavin\u2019s calculus enables us to prove continuity if a balance condition between the growth wrt y and the growth wrt z of the generator is satisfied. As far as we know, this condition is new. We apply our result to liquidity problem in finance and to the solution of some semi-linear partial differential equation; the imposed assumption is also new in the literature on PDE.",
+  "source": "scholar_serpapi"
+}

@@ -1,0 +1,16 @@
+{
+  "title": "GradPaint: Gradient-guided inpainting with diffusion models",
+  "authors": [
+    "Grechka, Asya",
+    "Couairon, Guillaume",
+    "Cord, Matthieu"
+  ],
+  "DOI": "10.1016/j.cviu.2024.103928",
+  "published": [
+    [
+      2024,
+      3
+    ]
+  ],
+  "source": "crossref"
+}

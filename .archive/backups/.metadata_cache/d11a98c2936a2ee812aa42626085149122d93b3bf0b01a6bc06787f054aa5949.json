@@ -1,0 +1,15 @@
+{
+  "title": "Test Crossref",
+  "authors": [
+    "Smith, John"
+  ],
+  "DOI": "10.1/x",
+  "published": [
+    [
+      2020,
+      1,
+      1
+    ]
+  ],
+  "source": "crossref"
+}

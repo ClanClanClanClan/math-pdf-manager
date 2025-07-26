@@ -1,0 +1,4 @@
+# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/src/pdf_processing/extractors/ssrn_extractor.py
+# hypothesis_version: 6.135.32
+
+[0.0, 0.15, 0.2, 0.3, 0.4, 0.5, 0.6, 0.75, 200, 300, ' & ', ' and ', ', ', ', et al.', '.,;:-', 'SSRN', 'Unknown', 'Unknown Title', '[¹²³⁴⁵⁶⁷⁸⁹⁰*†‡§¶#]+', '\\s+', '_line_counter', 'abstract', 'analysis', 'application', 'approach', 'college', 'department', 'download date', 'economic', 'electronic', 'electronic copy', 'evidence', 'financial', 'framework', 'header_indicators', 'institute', 'investigation', 'keywords', 'last revised', 'machine learning', 'method', 'model', 'network', 'posted at', 'research', 'school', 'science', 'social', 'ssrn', 'ssrn\\.com', 'study', 'theory', 'title_stop_words', 'university']

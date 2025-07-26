@@ -1,0 +1,225 @@
+# Pre-commit hooks for Math-PDF Manager
+# Install with: pre-commit install
+# Run manually: pre-commit run --all-files
+
+default_stages: [commit]
+fail_fast: false
+repos:
+  # General file fixes
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^tests/fixtures/
+      - id: end-of-file-fixer
+        exclude: ^tests/fixtures/
+      - id: check-yaml
+        args: ['--allow-multiple-documents']
+      - id: check-json
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+      - id: check-case-conflict
+      - id: check-merge-conflict
+      - id: check-symlinks
+      - id: check-executables-have-shebangs
+      - id: check-shebang-scripts-are-executable
+      - id: detect-private-key
+      - id: fix-byte-order-marker
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+
+  # Python code formatting
+  - repo: https://github.com/psf/black
+    rev: 24.1.1
+    hooks:
+      - id: black
+        language_version: python3
+        args: ['--line-length=100', '--target-version=py39']
+        exclude: ^(grobid/|unicode_utils/|tests/fixtures/)
+
+  # Import sorting
+  - repo: https://github.com/PyCQA/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        args: ['--profile=black', '--line-length=100']
+        exclude: ^(grobid/|unicode_utils/)
+
+  # Linting
+  - repo: https://github.com/PyCQA/flake8
+    rev: 7.0.0
+    hooks:
+      - id: flake8
+        args: [
+          '--max-line-length=100',
+          '--extend-ignore=E203,W503,E501',
+          '--max-complexity=15'
+        ]
+        exclude: ^(grobid/|unicode_utils/|tests/fixtures/)
+        additional_dependencies: [
+          'flake8-bugbear',
+          'flake8-comprehensions',
+          'flake8-simplify'
+        ]
+
+  # Security checks
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.6
+    hooks:
+      - id: bandit
+        args: ['-r', 'Scripts/', '--skip', 'B101,B601,B602']
+        exclude: ^tests/
+
+  # Type checking (optional - can be slow)
+  # - repo: https://github.com/pre-commit/mirrors-mypy
+  #   rev: v1.8.0
+  #   hooks:
+  #     - id: mypy
+  #       args: ['--ignore-missing-imports', '--no-strict-optional']
+  #       additional_dependencies: [
+  #         'types-PyYAML',
+  #         'types-requests',
+  #         'types-tqdm'
+  #       ]
+
+  # Docstring checking
+  - repo: https://github.com/PyCQA/pydocstyle
+    rev: 6.3.0
+    hooks:
+      - id: pydocstyle
+        args: ['--convention=google', '--add-ignore=D100,D101,D102,D103,D104']
+        exclude: ^(tests/|grobid/|unicode_utils/)
+
+  # YAML formatting
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v3.1.0
+    hooks:
+      - id: prettier
+        types_or: [yaml, json]
+        exclude: ^(grobid/|tests/fixtures/)
+
+  # Check for common security issues
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.4.0
+    hooks:
+      - id: detect-secrets
+        args: ['--baseline', '.secrets.baseline']
+        exclude: ^(tests/fixtures/|\.secrets\.baseline)
+
+  # Python dependency security check
+  - repo: https://github.com/Lucas-C/pre-commit-hooks-safety
+    rev: v1.3.3
+    hooks:
+      - id: python-safety-dependencies-check
+        files: ^requirements.*\.txt$
+
+  # Check for outdated Python syntax
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v3.15.0
+    hooks:
+      - id: pyupgrade
+        args: ['--py39-plus']
+        exclude: ^(grobid/|unicode_utils/)
+
+  # Remove unused imports
+  - repo: https://github.com/PyCQA/autoflake
+    rev: v2.2.1
+    hooks:
+      - id: autoflake
+        args: [
+          '--remove-all-unused-imports',
+          '--remove-unused-variables',
+          '--in-place'
+        ]
+        exclude: ^(grobid/|unicode_utils/)
+
+# Local hooks
+  - repo: local
+    hooks:
+      # ARCHITECTURAL QUALITY GATES - Phase 1 Implementation
+      # Prevent architectural degradation by blocking violations before commit
+      
+      # Architectural Linting - Prevent new violations
+      - id: architectural-lint
+        name: Architectural Linter
+        entry: python automated_improvement_tooling.py --check --fail-on-violations
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [commit]
+        description: "Check for architectural violations (health score, patterns, dependencies)"
+        
+      # File Size Limit - Prevent files over 500 lines
+      - id: file-size-check
+        name: File Size Limit (500 lines)
+        entry: python tools/file_size_check.py --max-lines 500
+        language: system
+        types: [python]
+        fail_fast: true
+        description: "Prevent files exceeding 500 lines"
+        
+      # Forbidden Patterns Enhanced - Block architectural anti-patterns
+      - id: forbidden-patterns-arch
+        name: Forbidden Pattern Check (Architectural)
+        entry: python tools/forbidden_pattern_check.py
+        language: system
+        types: [python]
+        description: "Check for hardcoded defaults, print statements, and architectural anti-patterns"
+        
+      # Multiple Responsibilities - Prevent files doing too many things
+      - id: single-responsibility
+        name: Single Responsibility Check
+        entry: python tools/single_responsibility_check.py --max-responsibilities 1
+        language: system
+        types: [python]
+        exclude: ^(tests/|test_|conftest\.py|__pycache__|\.venv/)
+        description: "Ensure files have single responsibility"
+        
+      # Import Dependency Rules - Enforce architectural boundaries
+      - id: dependency-rules
+        name: Dependency Rule Check
+        entry: python tools/dependency_rule_check.py
+        language: system
+        pass_filenames: false
+        description: "Enforce architectural dependency rules"
+        
+      # Configuration Security - Prevent insecure configuration patterns
+      - id: secure-config-check
+        name: Secure Configuration Check
+        entry: python tools/secure_config_check.py
+        language: system
+        types: [python]
+        description: "Check for insecure configuration patterns"
+
+      # EXISTING HOOKS - Keep current functionality
+      # Check for print statements
+      - id: no-print-statements
+        name: Check for print statements
+        entry: '(?<!def )print\('
+        language: pygrep
+        types: [python]
+        exclude: ^(tests/|debug_|test_)
+
+      # Check for TODO comments
+      - id: todo-comments
+        name: Check for TODO comments
+        entry: '(TODO|FIXME|XXX):'
+        language: pygrep
+        types: [python]
+        pass_filenames: true
+
+      # Validate config files
+      - id: validate-config
+        name: Validate config.yaml
+        entry: python -c "import yaml; yaml.safe_load(open('config.yaml'))"
+        language: system
+        files: ^config\.yaml$
+
+      # Check for large regex patterns (ReDoS prevention)
+      - id: check-regex-safety
+        name: Check regex patterns for ReDoS
+        entry: python -m Scripts.utils.check_regex_safety
+        language: system
+        types: [python]
+        require_serial: true
+        pass_filenames: false

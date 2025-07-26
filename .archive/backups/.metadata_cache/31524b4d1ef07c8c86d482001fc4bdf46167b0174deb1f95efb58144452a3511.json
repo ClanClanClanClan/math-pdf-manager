@@ -1,0 +1,8 @@
+{
+  "title": "Mean-field backward stochastic differential equations and nonlocal PDEs with quadratic growth",
+  "authors": [],
+  "year": null,
+  "citation_id": null,
+  "snippet": "In this paper, we study general mean-field backward stochastic differential equations (BSDEs, for short) with quadratic growth. First, the existence and uniqueness of local and global solutions are proved with some new ideas for a one-dimensional mean-field BSDE when the generator has a quadratic growth in and the terminal value is bounded. Second, a comparison theorem for the general mean-field BSDEs is obtained with the Girsanov transform. Third, we prove the convergence of the particle systems to the mean-field BSDEs with quadratic growth, and the convergence rate is also given. Finally, in this framework, we use the mean-field BSDE to provide a probabilistic representation for the viscosity solution of a nonlocal partial differential equation (PDE, for short) as an extended nonlinear Feynman-Kac formula, which yields the existence and uniqueness of the solution to the PDE.",
+  "source": "scholar_serpapi"
+}

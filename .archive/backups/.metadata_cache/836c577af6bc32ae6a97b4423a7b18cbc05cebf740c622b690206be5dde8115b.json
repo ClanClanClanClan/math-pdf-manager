@@ -1,0 +1,8 @@
+{
+  "title": "Optimal stopping of BSDEs with constrained jumps and related double obstacle PDEs",
+  "authors": [],
+  "year": null,
+  "citation_id": null,
+  "snippet": "We consider partial differential equations (PDEs) characterized by an upper barrier that depends on the solution itself and a fixed lower barrier, while accommodating a non-local driver. First, we show a Feynman\u2013Kac representation for the PDE when the driver is local. Specifically, we relate the non-linear Snell envelope, arising from an optimal stopping problem\u2014where the underlying process is the first component in the solution to a stopped backward stochastic differential equation (BSDE) with jumps and a constraint on the jumps process\u2014to a viscosity solution for the PDE. Leveraging this Feynman\u2013Kac representation, we subsequently prove existence and uniqueness of viscosity solutions in the non-local setting by employing a contraction argument. This approach also introduces a novel form of non-linear Snell envelope and expands the probabilistic representation theory for PDEs.",
+  "source": "scholar_serpapi"
+}

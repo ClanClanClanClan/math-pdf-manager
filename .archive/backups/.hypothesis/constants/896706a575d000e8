@@ -1,0 +1,4 @@
+# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/secure_credential_manager.py
+# hypothesis_version: 6.135.29
+
+[b'academic_papers_salt', 384, 100000, '.encryption_key', 'ETH_PASSWORD', 'ETH_USERNAME', 'Usage:', '__main__', 'academic_papers', 'cloud', 'credentials', 'description', 'encrypted', 'env', 'eth_credentials', 'eth_keyring', 'eth_password', 'eth_password.enc', 'eth_password_env', 'eth_password_file', 'eth_username', 'eth_username.enc', 'eth_username_env', 'eth_username_file', 'file', 'getuid', 'instructions', 'keyring', 'list', 'location', 'method', 'not_found', 'r', 'rb', 'setup-env', 'sources.json', 'unknown', 'utf-8', 'w', 'wb', '|']

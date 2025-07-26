@@ -1,0 +1,4 @@
+# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/src/downloader/academic_downloader.py
+# hypothesis_version: 6.135.32
+
+[0.0, 100, 200, 300, 404, 8192, ' digital library', ' xplore', '(\\d{4}\\.\\d{4,5})', '..', '.pdf', '/', 'Content-Disposition', 'Content-Length', 'Content-Type', 'ETH_PASSWORD', 'ETH_USERNAME', 'Sci-Hub', 'User-Agent', '[^\\w\\s-]', '[^\\w\\s.-]', '\\', '_', 'build_url', 'cookies', 'downloader', 'downloads', 'eth', 'filename=', 'filename="?([^"]+)"?', 'headers', 'ieee', 'ieee_xplore', 'pdf', 'siam', 'title', 'wb']

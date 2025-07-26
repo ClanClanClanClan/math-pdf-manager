@@ -1,0 +1,40 @@
+{
+  "timestamp": "2025-07-17T14:54:57.542683",
+  "status": "PASS",
+  "violations": [],
+  "warnings": [
+    "\u26a0\ufe0f  Unexpected file in tests: test_paper_validator.py",
+    "\u26a0\ufe0f  Unexpected file in tests: test_reporter.py",
+    "\u26a0\ufe0f  Unexpected file in tests: test_utils.py",
+    "\u26a0\ufe0f  Unexpected file in tests: test_security.py",
+    "\u26a0\ufe0f  Unexpected file in tests: test_duplicate_detector.py",
+    "\u26a0\ufe0f  Unexpected file in tests: test_my_spellchecker.py",
+    "\u26a0\ufe0f  Unexpected file in tests: .DS_Store",
+    "\u26a0\ufe0f  Unexpected file in tests: pytest.ini",
+    "\u26a0\ufe0f  Unexpected file in tests: test_auth_manager.py",
+    "\u26a0\ufe0f  Unexpected file in tests: test_scanner.py",
+    "\u26a0\ufe0f  Unexpected file in tests: test_unicode_fix.py",
+    "\u26a0\ufe0f  Unexpected file in tests: test_mathematician_name_validator.py",
+    "\u26a0\ufe0f  Unexpected file in tests: pytest_config.txt",
+    "\u26a0\ufe0f  Unexpected file in tests: test_publisher_strategy.py",
+    "\u26a0\ufe0f  Unexpected file in tests: test_on_files.py",
+    "\u26a0\ufe0f  Unexpected file in tests: test_main_like.py",
+    "\u26a0\ufe0f  Unexpected file in tests: test_ito_possessive.py",
+    "\u26a0\ufe0f  Unexpected file in tests: test_auth_manager.py.bak",
+    "\u26a0\ufe0f  Unexpected file in tests: test_filename_checker.py",
+    "\u26a0\ufe0f  Unexpected file in tests: test_math_detector.py",
+    "\u26a0\ufe0f  Unexpected file in tests: test_basic_validation.py",
+    "\u26a0\ufe0f  Unexpected file in tests: test_minimal.py",
+    "\u26a0\ufe0f  Unexpected file in tests: test_pdf_parser.py",
+    "\u26a0\ufe0f  Unexpected file in tests: test_specific_files.py",
+    "\u26a0\ufe0f  Unexpected file in tests: test_pdf_parser.py.bak",
+    "\u26a0\ufe0f  Unexpected file in tests: test_metadata_fetcher.py",
+    "\u26a0\ufe0f  Unexpected file in tests: test_main.py",
+    "\u26a0\ufe0f  Unexpected file in tests: test_downloader.py"
+  ],
+  "summary": {
+    "total_violations": 0,
+    "total_warnings": 28,
+    "critical_issues": 0
+  }
+}

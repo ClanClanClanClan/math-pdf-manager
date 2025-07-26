@@ -1,0 +1,8 @@
+{
+  "title": "Backward Linear-Quadratic Mean Field Stochastic Differential Games: A Direct Method",
+  "authors": [],
+  "year": null,
+  "citation_id": null,
+  "snippet": "This paper studies a linear-quadratic mean-field game of stochastic large-population system, where the large-population system satisfies a class of weakly coupled linear backward stochastic differential equation. Different from the fixed-point approach commonly used to address large population problems, we first directly apply the maximum principle and decoupling techniques to solve a multi-agent problem, obtaining a centralized optimal strategy. Then, by letting tend to infinity, we establish a decentralized optimal strategy. Subsequently, we prove that the decentralized optimal strategy constitutes an -Nash equilibrium for this game. Finally, we provide a numerical example to simulate our results.",
+  "source": "scholar_serpapi"
+}

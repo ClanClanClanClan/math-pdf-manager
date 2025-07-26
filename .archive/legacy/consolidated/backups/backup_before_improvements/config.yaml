@@ -1,0 +1,1574 @@
+# ═══════════════════════════════════════════════════════════════════
+# Math-PDF Manager Configuration - Compatible with main.py
+# Fixed structure and corrected misspellings
+# ═══════════════════════════════════════════════════════════════════
+
+# ───────────────────────────────────────────────────────────────────
+# 🏠 CORE SETTINGS (Compatible with main.py)
+# ───────────────────────────────────────────────────────────────────
+
+base_maths_folder: "~/Library/CloudStorage/Dropbox/Work/Maths"
+
+# Resource file paths (main.py compatible)
+known_words_file: "~/Library/CloudStorage/Dropbox/Work/Maths/Scripts/known_words.txt"
+name_dash_whitelist_file: "~/Library/CloudStorage/Dropbox/Work/Maths/Scripts/name_dash_whitelist.txt"
+multiword_familynames_file: "~/Library/CloudStorage/Dropbox/Work/Maths/Scripts/multiword_familynames.txt"
+
+# Exception handling (main.py compatible)
+exceptions_file: "~/Library/CloudStorage/Dropbox/Work/Maths/Scripts/exceptions.txt"
+# Alternative: exceptions_list or exceptions (as list)
+
+# ───────────────────────────────────────────────────────────────────
+# 🔤 CAPITALIZATION WHITELIST (Fixed YAML structure)
+# ───────────────────────────────────────────────────────────────────
+
+capitalization_whitelist:
+  # Mathematicians' names (corrected spellings)
+  - Adam
+  - Adams
+  - Airy
+  - Ait-Sahalia
+  - Albert
+  - Alberti
+  - Aldous
+  - Alekseevsky
+  - Alexander
+  - Alexandrov
+  - Almgren
+  - Ampère
+  - Andersen
+  - Anderson
+  - Andrej
+  - Arnold
+  - Arrhenius
+  - Arrow
+  - Aubry
+  - Auger
+  - Aumann
+  - Avellaneda
+  - Avogadro
+  - Awadh
+  - Bachelier
+  - Back
+  - Bahr
+  - Bakry
+  - Banach
+  - Bank
+  - Barndorff-Nielsen
+  - Barnes
+  - Barron
+  - Bartlett
+  - Bass
+  - Bauer
+  - Bayes
+  - Beatty
+  - Bellman
+  - Benamou
+  - Benford
+  - Bergomi
+  - Bernoulli
+  - Bernstein
+  - Berry
+  - Bertrand
+  - Besov
+  - Bessel
+  - Bismut
+  - Black
+  - Blackwell
+  - Blaschke
+  - Blom
+  - Bocher
+  - Bochner
+  - Boltzmann
+  - Borel
+  - Borkar
+  - Borwein
+  - Bouafia
+  - Bougerol
+  - Bregman
+  - Brenier
+  - Breuer
+  - Brinkman
+  - Brønsted
+  - Brown
+  - Brox
+  - Brunn
+  - Bucy
+  - Bunyakovsky  # Fixed: was Bunyakovskii
+  - Burkholder
+  - Caffarelli
+  - Cahn
+  - Cantelli
+  - Cantor
+  - Carathéodory  # Fixed: was Caratheodory, added accent
+  - Cardano
+  - Caristi
+  - Carleman
+  - Carlier
+  - Carlo
+  - Carnot
+  - Casimir
+  - Castaing
+  - Catalan
+  - Cauchy
+  - Celsius
+  - Césaro
+  - Chatal
+  - Chebyshev
+  - Chentsov
+  - Chernoff
+  - Cherny
+  - Cheyette
+  - Chiarella
+  - Chiarenza
+  - Chisini
+  - Choquet
+  - Chriss
+  - Colditz
+  - Cole
+  - Conway
+  - Copin
+  - Cordes
+  - Coulomb
+  - Cournot
+  - Cox
+  - Cramer
+  - Crandall
+  - Crick
+  - Cucker
+  - Dade
+  - Dambins
+  - Dantzig
+  - Darboux
+  - Davis
+  - Dean
+  - Debreu
+  - Dedecker
+  - Denjoy
+  - de Rham
+  - Desargues
+  - Descartes
+  - Dirac
+  - Dirichlet
+  - Doléans
+  - Donsker
+  - Doob
+  - Duminil
+  - Dunford
+  - Dupire
+  - Dvoretzky
+  - Dynkin
+  - Dyson
+  - Egorov
+  - Einstein
+  - El Karoui
+  - Elamite
+  - Ellsberg
+  - Elsinger
+  - Elworthy
+  - Émery
+  - Engelen
+  - Epstein
+  - Erdős
+  - Erlang
+  - Esscher
+  - Esseen
+  - Euclid
+  - Euler
+  - Evans
+  - Ewens
+  - Fahrenheit
+  - Farad
+  - Farkas
+  - Fatou
+  - Faulhaber
+  - Fehlberg
+  - Fejer
+  - Feller
+  - Fermi
+  - Feynman
+  - Fibonacci
+  - Filippov
+  - Finetti
+  - Fisher
+  - FitzHugh
+  - Fleming
+  - Fokker
+  - Föllmer
+  - Forchheimer
+  - Foster
+  - Fourier
+  - Fraenkel
+  - Frasca
+  - Fréchet  # Fixed: was Frechet, added accent
+  - Fredholm
+  - Freidlin
+  - Fritz
+  - Fubini
+  - Fujita
+  - Fukushima
+  - Galerkin
+  - Galois
+  - Galton
+  - Gapeev
+  - Garman
+  - Gâteaux
+  - Gatheral
+  - Gauss
+  - Gebelein
+  - Gegenbauer
+  - Gerver
+  - Gettier
+  - Getty
+  - Gibbs
+  - Gilboa
+  - Gini
+  - Ginibre
+  - Giorgi
+  - Girsanov
+  - Gittins
+  - Glivenko
+  - Glosten
+  - Goldbach
+  - Gordon
+  - Goursat
+  - Gram
+  - Green
+  - Grönwall
+  - Grothendieck
+  - Grushin
+  - Guerand
+  - Gundy
+  - Guyon
+  - Gödel
+  - Hadamard
+  - Halmos
+  - Hamilton
+  - Hammersley
+  - Hanggi
+  - Hanson
+  - Hardy
+  - Harnack
+  - Hartman
+  - Hausdorff
+  - Hawkes
+  - Hawkin
+  - Heath
+  - Hegselmann
+  - Hellinger
+  - Helmholtz
+  - Henry
+  - Heppes
+  - Hermite
+  - Hess
+  - Heston
+  - Hilbert
+  - Hiroshi
+  - Hodge
+  - Hoeffding
+  - Hold
+  - Hölder
+  - Hoover
+  - Hopf
+  - Hsu
+  - Hubbard
+  - Hull
+  - Hurd
+  - Hurst
+  - Hurwitz
+  - Huygens
+  - Hörmander
+  - Ignatov
+  - Ingersoll
+  - Iossif
+  - Isaacs
+  - Ishii
+  - Ishita
+  - Ising
+  - Itô
+  - Jacobi
+  - Jacod
+  - Janardan
+  - Janson
+  - Jarrow
+  - Jensen
+  - John
+  - Jong
+  - Joule
+  - Kabanov
+  - Kac
+  - Kadec
+  - Kalman
+  - Kantorovich
+  - Karasinski
+  - Karhunen
+  - Kazamaki
+  - Keller
+  - Kellerer
+  - Kelvin
+  - Keynes
+  - Khasminskii
+  - Khinchin
+  - Khintchin
+  - Khintchine
+  - Kiefer
+  - Kimura
+  - Kirchhoff
+  - Klein
+  - Klimontovich
+  - Knight
+  - Knightian
+  - Knothe
+  - Koch
+  - Kolmogorov
+  - Komlos
+  - Koopman
+  - Kramers
+  - Krause
+  - Kriging
+  - Krusell
+  - Krylov
+  - Kullback
+  - Kummer
+  - Kunen
+  - Kunita
+  - Kushner
+  - Kusuoka
+  - Kutta
+  - Kyle
+  - Lacan
+  - Lagrange
+  - Laguerre
+  - Laibson
+  - Lambert
+  - Lamperti
+  - Langevin
+  - Laplace
+  - Lawvere
+  - Le
+  - Lebesgue
+  - Lecar
+  - Leffler
+  - Legendre
+  - Lehoczky
+  - Leibler
+  - Leibniz
+  - Lekeufack
+  - Leray
+  - Levine
+  - Levitin
+  - Lévy
+  - Lewis
+  - Li
+  - Lidskii
+  - Lie
+  - Lions
+  - Liouville
+  - Lipschitz
+  - Litt
+  - Littlewood
+  - Loeb
+  - Loeve
+  - Lorentz
+  - Lotka
+  - Loughran
+  - Lundberg
+  - Luzin
+  - Lyapunov
+  - Lyons
+  - Maclaurin
+  - Maenhout
+  - Magnus
+  - Malliavin
+  - Mandelbrot
+  - Marcinkiewicz
+  - Markoff
+  - Markov
+  - Markowitz
+  - Martin
+  - Maruyama
+  - Maryna
+  - Massart
+  - Mather
+  - Mathieu
+  - Matsumoto
+  - Maxwell
+  - McCormick
+  - McDonald
+  - McKean
+  - Mehler
+  - Mellin
+  - Melvin
+  - Mendel
+  - Merryfield
+  - Mertens
+  - Merton
+  - Meyer
+  - Milgrom
+  - Milman
+  - Milstein
+  - Minkowski
+  - Mittag
+  - Möbius
+  - Moiré
+  - Mokobodzki
+  - Monge
+  - Monte
+  - Moran
+  - Morrey
+  - Morton
+  - Moser
+  - Motzkin
+  - Muirhead
+  - Mukherjee
+  - Müntz
+  - Nagumo
+  - Nash
+  - Navier
+  - Nemytskii
+  - Neumann
+  - Newton
+  - Nielsen
+  - Nikodým
+  - Nilakantha
+  - Nobel
+  - Noether
+  - Novikov
+  - Obizhaeva
+  - Ocone
+  - Ogawa
+  - Ohm
+  - Ole
+  - Opial
+  - Orlicz
+  - Ornstein
+  - Osgood
+  - Ostrogradskii
+  - Ostrovskii
+  - Padé
+  - Palm
+  - Pareto
+  - Parisi
+  - Pascal
+  - Pasteur
+  - Pati
+  - Pauli
+  - Paulsen
+  - Pavlov
+  - Peano
+  - Pearson
+  - Pena
+  - Perron
+  - Pettis
+  - Pełczyński
+  - Picard
+  - Pietsch
+  - Pinsker
+  - Pitman
+  - Planck
+  - Poincaré
+  - Poisson
+  - Polya
+  - Polyak
+  - Pontryagin
+  - Posner
+  - Potapov
+  - Potts
+  - Pranav
+  - Pringsheim
+  - Prohorov
+  - Prokhorov
+  - Rademacher
+  - Radner
+  - Radon
+  - Ram
+  - Ramanujan
+  - Ramsey
+  - Rani
+  - Rao
+  - Razumikhin
+  - Rényi
+  - Riccati
+  - Ricci
+  - Riemann
+  - Riesz
+  - Rio
+  - Robbins
+  - Robins
+  - Rockafellar
+  - Röckner
+  - Rogers
+  - Rosenblatt
+  - Ross
+  - Runge
+  - Russo
+  - Safonov
+  - Sannikov
+  - Schauder
+  - Schlomilch
+  - Schmeidler
+  - Scholes
+  - Schrödinger
+  - Schutz
+  - Schwartz
+  - Schwarz
+  - Schweizer
+  - Segel
+  - Selberg
+  - Serrin
+  - Shanker
+  - Shapley
+  - Sharpe
+  - Shephard
+  - Shinohara
+  - Shiryaev
+  - Shukla
+  - Siegmund
+  - Siemens
+  - Sinai
+  - Sinkhorn
+  - Skellam
+  - Skorohod
+  - Skorokhod
+  - Slutsky
+  - Smale
+  - Smirnov
+  - Smith
+  - Smoluchowski
+  - Snell
+  - Sobolev
+  - Solov
+  - Solov'ev
+  - Sparre
+  - Spearman
+  - Sperner
+  - Stackelberg
+  - Stefan
+  - Stein
+  - Steinhaus
+  - Stieltjes
+  - Stirling
+  - Stoikov
+  - Stokes
+  - Strassen
+  - Stratonovich
+  - Student
+  - Sujatha
+  - Suzuki
+  - Svensson
+  - Sylvester
+  - Takagi
+  - Talagrand
+  - Tanaka
+  - Tao
+  - Tauberian
+  - Taylor
+  - Tchebichef
+  - Temam
+  - Tesla
+  - Teugels
+  - Thiele
+  - Thompson
+  - Thorin
+  - Tirole
+  - Toeplitz
+  - Tommassen
+  - Tonelli
+  - Tsallis
+  - Tsirelson
+  - Uhlenbeck
+  - Uspensky
+  - Vallois
+  - Vatan
+  - Vašíček
+  - Ventcell
+  - Ventchel
+  - Ventzell
+  - Veraart
+  - Verhulst
+  - Vervaat
+  - Viana
+  - Viazovska
+  - Vigna
+  - Vigon
+  - Ville
+  - Vince
+  - Vinti
+  - Viot
+  - Vitt
+  - Vladimir
+  - Vlasov
+  - Volt
+  - Volterra
+  - Vopenka
+  - Waerden
+  - Wagner
+  - Wald
+  - Walras
+  - Walsh
+  - Wan
+  - Wang
+  - Ward
+  - Warner
+  - Wasserstein
+  - Watanabe
+  - Watson
+  - Watt
+  - Weber
+  - Wege
+  - Weibull
+  - Weierstrass
+  - Weis
+  - Wentzell
+  - Weyl
+  - White
+  - Wick
+  - Wiener
+  - Wigner
+  - Wilson
+  - Winkler
+  - Wishart
+  - Wisharts
+  - Witt
+  - Wold
+  - Wolfe
+  - Wolfowitz
+  - Wong
+  - Wonham
+  - Woodin
+  - Wright
+  - Wronskian
+  - Wschebor
+  - Yamada
+  - Yang
+  - Yor
+  - Youden
+  - Young
+  - Zakai
+  - Zakharov
+  - Zeghdoudi
+  - Zeman
+  - Zhang
+  - Zhao
+  - Zheng
+  - Zhou
+  - Zin
+  - Zolotarev
+  - Zorn
+  - Zygmund
+  - Łojasiewicz
+
+  # Math terms
+  - 2-dimensional
+  - 2-Wasserstein
+  - 2M
+  - 2M–X
+  - 2star
+  - Anti-Itô
+  - B
+  - B-continuous
+  - c-convex
+  - C-inf
+  - CAO-problem
+  - CEV-type
+  - Chernoff-type
+  - d-concave
+  - d-dimensional
+  - dβ
+  - e-process
+  - e-processes
+  - edge–2star
+  - Euler-based
+  - F-distribution
+  - F-processes
+  - Feynman-type
+  - FX-pricing
+  - G
+  - G–Brownian
+  - G-BSDE
+  - G-BSDEs
+  - G-capacities
+  - G-capacity
+  - G-diffusion
+  - G-diffusions
+  - g-expectation
+  - G-expectation
+  - g-expectations
+  - G-expectations
+  - G-expected
+  - G-framework
+  - G-Gaussian
+  - G–Lévy process
+  - G–Lévy processes
+  - G–Markov
+  - G-martingale
+  - G-martingales
+  - G-neutral
+  - G-SDE
+  - G–SDEs
+  - G-setting
+  - G–stochastic calculus
+  - G–stochastic control
+  - G-utility
+  - G–white noise
+  - Gamma
+  - Gaussian-smoothed
+  - Greeks
+  - GS–exponential
+  - H
+  - H-property
+  - H-theorem
+  - h-transform
+  - h-transforms
+  - Heston-type
+  - I
+  - Itô-formula
+  - Itô-type
+  - J
+  - J1
+  - jump–diffusion
+  - jump–diffusions
+  - k-Hessian
+  - k-mean
+  - k-means
+  - k-ton
+  - k-tons
+  - k-wise
+  - Kochawave
+  - Kusuoka-type
+  - Lᵖ
+  - Lᵖ-sense
+  - Lévy-driven
+  - Lévy-type
+  - locally-Lipschitz
+  - log-Gaussian
+  - M-estimator
+  - M-estimators
+  - M1
+  - M1α
+  - martingales-I
+  - martingales-II
+  - Milstein-type
+  - N-agent
+  - N-agents
+  - N-graph
+  - N-player
+  - N-players
+  - neural-SDE
+  - non-Gaussian
+  - non-Lipschitz
+  - non-Lipschitzian
+  - non-Markov
+  - non-Markovian
+  - non-Weibull
+  - O-summable
+  - Obizhaeva–Wang–type
+  - optimal–PhiBE
+  - Ornstein–Uhlenbeck–related
+  - p–Brownian
+  - p-contest
+  - p-ground
+  - p-Laplacian
+  - p-summing
+  - p-system
+  - p-systems
+  - P-variables
+  - p-variation
+  - p-variations
+  - p-Wasserstein
+  - P1
+  - posedness
+  - pth-variation
+  - q-Bass
+  - Q-learning
+  - q-learning
+  - quasi–Monte
+  - Quasi–Monte
+  - R
+  - rBergomi
+  - S
+  - Schauder-type
+  - semi-Lagrangian
+  - semi-Markov
+  - SSP-based
+  - strong-Feller
+  - sub-Gaussian
+  - Thompson-sampling
+  - THεO
+  - u-dependence
+  - U-max
+  - U-statistics
+  - Uniswap
+  - variation–Wasserstein
+  - Vega
+  - W-random
+  - Wasserstein-1
+  - Wasserstein-2
+  - Wasserstein-p
+  - Weierstrass-type
+  - Wishart-process
+  - Wishart-processes
+  - Zeta
+  - α-BSVI
+  - α-Heston
+  - β-Jacobi
+  - β-mixing
+  - β-VAE
+  - β-Wishart
+  - ε-Nash
+  - ℝ
+  - ℝᵈ-valued
+
+  # Roman numerals
+  - I
+  - II
+  - III
+  - IV
+  - V
+  - VI
+  - VII
+  - VIII
+  - IX
+  - X
+  - XI
+  - XII
+  - XIII
+  - XIV
+  - XV
+  - XVI
+  - XVII
+  - XVIII
+  - XIX
+  - XX
+  - XXI
+  - XXII
+  - XXIII
+  - XXIV
+  - XXV
+  - XXVI
+  - XXVII
+  - XXVIII
+  - XXIX
+  - XXX
+
+  # German nouns
+  - Ansatz
+  - Erfolg
+  - Finanzmathematik
+  - Gemeinwohl
+  - Grenzen
+  - Rechten
+  - Regulierung
+  - Technologien
+
+  # Exceptions
+  - American
+  - Asian
+  - Babylon
+  - Bäsel
+  - Bermudan
+  - Bitcoin
+  - British
+  - Ethereum
+  - European
+  - Hungarian
+  - Italian
+  - Parisian
+  - Polish
+  - Randomstrasse101
+  - Russia
+  - Russian
+  - Stratego
+  - Swiss
+  - Texas
+# ───────────────────────────────────────────────────────────────────
+# 🔤 TECHNICAL ACRONYMS AND ABBREVIATIONS (RESTORED)
+# ───────────────────────────────────────────────────────────────────
+
+common_acronyms:
+  - 2BSDE
+  - 2BSDEJ
+  - 2BSDEJs
+  - 2BSDEs
+  - 2RBSDE
+  - 2RBSDEs
+  - 2D
+  - 3D
+  - 4K
+  - ABC
+  - ABP
+  - ABSDE
+  - ABSDEs
+  - ACLMM
+  - ACLMMs
+  - ADAM
+  - ADMM
+  - ADO
+  - AI
+  - AIP
+  - API
+  - APIs
+  - AR
+  - ARC
+  - ATM
+  - AVaR
+  - BDG
+  - BDSDE
+  - BDSDEs
+  - BERT
+  - BGK
+  - BM
+  - BMO
+  - BSc
+  - BSDE
+  - BSDEs
+  - BSPDE
+  - BSPDEs
+  - BSVIE
+  - BSVIEs
+  - BRST
+  - BVAR
+  - BVARs
+  - CAO
+  - CARA
+  - CARMA
+  - CASL
+  - CAT
+  - CBI
+  - CDE
+  - CDEs
+  - CEO
+  - CEMRACS
+  - CERM
+  - CEV
+  - CFD
+  - CFDs
+  - CFG
+  - CFO
+  - CIR
+  - CLI
+  - CLT
+  - CLTs
+  - CMCDS
+  - CNN
+  - CNNs
+  - COT
+  - COVID
+  - CPU
+  - CPUs
+  - CRRA
+  - CSS
+  - CSV
+  - CT
+  - CTMC
+  - CTO
+  - CUE
+  - CV
+  - CVA
+  - CVAE
+  - CVaR
+  - DDPG
+  - DDSDE
+  - DDSDEs
+  - DeFi
+  - DEX
+  - DFT
+  - DGM
+  - DL
+  - DNA
+  - DPP
+  - DPPs
+  - DQN
+  - DRBSDE
+  - DRBSDEs
+  - DRL
+  - DSP
+  - EFT
+  - EFTs
+  - EQFT
+  - EQFTs
+  - EMM
+  - EMMs
+  - ESG
+  - ESGs
+  - EURIBOR
+  - EV
+  - EVaR
+  - FAQ
+  - fBM
+  - FBS
+  - FBSDE
+  - FBSDEs
+  - Fed
+  - FFT
+  - FIFA
+  - fMRI
+  - FMVol
+  - FP
+  - FT100
+  - FT30
+  - FTAP
+  - FX
+  - GAN
+  - GANs
+  - GARCH
+  - GBSDE
+  - GBSDEs
+  - GDP
+  - GMM
+  - GMWB
+  - GOE
+  - gPAM
+  - GPS
+  - GPT
+  - GPU
+  - GPUs
+  - GRU
+  - GRUs
+  - GS
+  - GUE
+  - GUI
+  - HARA
+  - HD
+  - HH
+  - HJ
+  - HJB
+  - HJBI
+  - HJM
+  - HJX
+  - HOD
+  - HPC
+  - HR
+  - HT
+  - HTML
+  - HTMLs
+  - HTTP
+  - HTTPS
+  - IBM
+  - IBNR
+  - ICU
+  - ID
+  - IDE
+  - IGARCH
+  - IMEX
+  - INAR
+  - INBR
+  - IoT
+  - IPDE
+  - IT
+  - JSON
+  - JWT
+  - KAN
+  - KAM
+  - KdV
+  - KI
+  - KKT
+  - KL
+  - KNN
+  - KPI
+  - KPZ
+  - KVA
+  - LAMN
+  - LAN
+  - LD
+  - LDA
+  - LIBOR
+  - LQ
+  - LQG
+  - LSTM
+  - LSTMs
+  - LSV
+  - LSVs
+  - MATLAB
+  - MD
+  - MDP
+  - MDPs
+  - MESOB
+  - MFG
+  - MFGs
+  - MIT
+  - ML
+  - MLMC
+  - mlOSP
+  - MLP
+  - MLPs
+  - MOT
+  - MP
+  - MRI
+  - MSc
+  - MSRP
+  - MTW
+  - NA
+  - NFL
+  - NFLVR
+  - NJ
+  - NLP
+  - NSDDE
+  - NSDDEs
+  - NUPBR
+  - OAS
+  - ODE
+  - ODEs
+  - OEIS
+  - OS
+  - PCA
+  - PDE
+  - PDEs
+  - PDF
+  - PhD
+  - PIDE
+  - PIDEs
+  - POMPD
+  - POMPDs
+  - POULA
+  - PnL
+  - PPDE
+  - PPDEs
+  - PPO
+  - PR
+  - QAOA
+  - QBD
+  - QFT
+  - QRNG
+  - QuLTSF
+  - QVI
+  - RAM
+  - RBSDE
+  - RBSDEs
+  - RCD
+  - RCLL
+  - RDE
+  - RDEs
+  - REC
+  - ReLU
+  - ReLUs
+  - REST
+  - RKHS
+  - RL
+  - RLs
+  - RNA
+  - RND
+  - RNN
+  - RNNs
+  - SABR
+  - SBR
+  - SDK
+  - SDE
+  - SDEF
+  - SDEFs
+  - SDEs
+  - SEIR
+  - SEIRS
+  - SFDE
+  - SFDEs
+  - SGD
+  - SGLD
+  - SIR
+  - SIRS
+  - SIS
+  - SISTA
+  - SLE
+  - SOAP
+  - SOFR
+  - SOFRs
+  - SOS
+  - SPDE
+  - SPDEs
+  - SQL
+  - SPS
+  - SPX
+  - SQP
+  - SQR
+  - SRM
+  - SSE
+  - SSP
+  - SSR
+  - SSVI
+  - SVD
+  - SVGD
+  - SVI
+  - SVIR
+  - SVIs
+  - SVM
+  - SWIFT
+  - TCP
+  - TSGLD
+  - TTIPO
+  - TUSLA
+  - TV
+  - UDP
+  - UEFA
+  - UK
+  - UMD
+  - UN
+  - URI
+  - URL
+  - URLs
+  - USA
+  - USSR
+  - VAE
+  - VAEs
+  - VaR
+  - VaRs
+  - VIX
+  - VM
+  - VMO
+  - VPN
+  - VPV
+  - VPX
+  - VR
+  - WHO
+  - XML
+  - XMLs
+  - XPDE
+  - XPDEs
+  - XVA
+  - XYZ
+  - ZIP
+
+# ───────────────────────────────────────────────────────────────────
+# 🔤 MIXED-CASE WORDS (RESTORED)
+# ───────────────────────────────────────────────────────────────────
+
+mixed_case_words:
+  - arXiv
+  - BibTeX
+  - ChatGPT
+  - CoffeeScript
+  - ConTeXt
+  - eBay
+  - FaceTime
+  - FreeBSD
+  - FuNVol
+  - GitHub
+  - GitLab
+  - IBMPopSim
+  - iMac
+  - iOS
+  - iPad
+  - iPhone
+  - iPod
+  - JavaScript
+  - KrigHedge
+  - LaTeX
+  - LinkedIn
+  - LuaTeX
+  - macOS
+  - PostScript
+  - PyPI
+  - PyTorch
+  - RePEc
+  - TacticAI
+  - TensorFlow
+  - TypeScript
+  - XeLaTeX
+  - XGamma
+  - XNet
+  - YouTube
+
+# ───────────────────────────────────────────────────────────────────
+# 🔤 PROPER ADJECTIVES (RESTORED)
+# ───────────────────────────────────────────────────────────────────
+
+proper_adjectives:
+  - Abelian
+  - Adomian
+  - Bayesian
+  - Boolean
+  - Brownian
+  - Cartesian
+  - Darwinian
+  - Diophantine
+  - Euclidean
+  - Eulerian
+  - Freudian
+  - Gaussian
+  - Gaussians
+  - Hamiltonian
+  - Hamiltonians
+  - Hermitian
+  - Hessian
+  - Hicksian
+  - Hilbertian
+  - Jacobian
+  - Kantian
+  - Keynesian
+  - Knightian
+  - Kolmogorovian
+  - Lagrangian
+  - Lagrangians
+  - Laplacian
+  - Laplacians
+  - Lipschitzian
+  - Markovian
+  - Marxist
+  - Newtonian
+  - Noetherian
+  - Poissonian
+  - Poissonized
+  - Pythagorean
+  - Riemannian
+  - Rockafellian
+  - Rockafellians
+
+# ───────────────────────────────────────────────────────────────────
+# 🔤 COMPOUND TERMS (Required by main.py)
+# ───────────────────────────────────────────────────────────────────
+
+compound_terms:
+  - backward-forward
+  - forward-backward
+  - G-Brownian motion
+  - G-Lévy process
+  - G-Lévy processes
+  - G-Markov process
+  - G-Markov processes
+  - G-stochastic control
+  - G-stochastic differential equation
+  - Lévy-type
+  - Mean-field–type
+  - mean-variance
+  - non-zero-sum
+  - quadratic–Gaussian
+  - skew–stickiness
+  - slow–fast
+
+# ═══════════════════════════════════════════════════════════════════
+# OPTIONAL SETTINGS (Not used by main.py but kept for other tools)
+# ═══════════════════════════════════════════════════════════════════
+
+# These will be ignored by main.py but might be used by other scripts
+template_dir: "~/Library/CloudStorage/Dropbox/Work/Maths/Scripts/templates"
+known_authors_file: "~/Library/CloudStorage/Dropbox/Work/Maths/Scripts/known_authors.txt"
+enable_spellcheck: true
+backup_enabled: true
+dry_run_default: true
+
+correction_thresholds:
+  author_name_similarity: 95
+  title_similarity: 90
+
+max_unpublished_age_years: 5
+
+# Ultra-Enhanced PDF Parser Configuration
+# FIXED VERSION - All critical issues addressed
+
+extraction:
+  # Basic extraction settings
+  max_pages: 10
+  timeout_seconds: 45  # FIXED: Ensure timeout is always set
+  enable_position_analysis: true
+  enable_font_analysis: true
+  multi_column_threshold: 0.6
+  title_max_lines: 5
+  author_max_lines: 4
+  fallback_enabled: true
+  cache_enabled: true
+
+repositories:
+  # Repository-specific parsers
+  enable_ssrn_parser: true
+  enable_arxiv_parser: true
+  enable_nber_parser: true
+  enable_journal_parser: true
+  enable_pubmed_parser: true
+  enable_repec_parser: true
+
+scoring:
+  # Confidence scoring weights
+  position_weight: 0.25
+  font_weight: 0.20
+  length_weight: 0.15
+  content_weight: 0.40
+  confidence_threshold: 0.5
+
+performance:
+  # Performance and memory settings
+  max_memory_mb: 500
+  cache_size: 2000
+  parallel_enabled: true
+  profiling_enabled: false
+
+engines:
+  # Extraction engine settings
+  enable_grobid: true
+  enable_ocr: true
+
+# Grobid service configuration
+grobid:
+  url: "http://localhost:8070"
+  timeout: 300
+
+# OCR configuration
+ocr:
+  language: "eng"
+  max_pages: 3
+  dpi: 200
+  tesseract_path: null  # Use system default
+
+# Logging configuration
+logging:
+  level: "INFO"
+  enable_debug: false
+  log_file: null
+
+google_scholar:
+  use_proxy: true
+  proxy_list_file: "~/Dropbox/Work/Maths/Scripts/proxies.txt"
+
+# ───────────────────────────────────────────────────────────────────
+# 📂 FOLDER ORGANIZATION
+# ───────────────────────────────────────────────────────────────────
+
+folder_categories:
+  working_papers:
+    - "02 - BSDEs/04-Working papers"
+    - "03 - Contract theory/Working papers"
+    - "03 - Contract theory/ESG/Working papers"
+    - "06 - Time-inconsistent stochastic control/Working papers"
+    - "07 - Stackelberg games/Working papers"
+    - "08 - Optimal control on networks/03 - Working papers"
+    - "09 - Non-commutative stochastic calculus/03 - Working papers"
+    - "12 - Math articles - working papers"
+    - "02 - BSDEs/01-Numerical methods/Working papers"
+    - "02 - BSDEs/02-2BSDEs and G-BSDEs/2BSDEs/Working papers"
+    - "02 - BSDEs/02-2BSDEs and G-BSDEs/G-BSDEs/Working papers"
+
+  published_papers:
+    - "10 - Math articles - published"
+    - "02 - BSDEs/03-Published"
+    - "02 - BSDEs/01-Numerical methods/Published"
+    - "02 - BSDEs/02-2BSDEs and G-BSDEs/2BSDEs/Published papers"
+    - "02 - BSDEs/02-2BSDEs and G-BSDEs/G-BSDEs/Published papers"
+    - "03 - Contract theory/Published"
+    - "03 - Contract theory/ESG/Published papers"
+    - "06 - Time-inconsistent stochastic control/Published"
+    - "07 - Stackelberg games/Published papers"
+    - "08 - Optimal control on networks/01 - Published papers"
+    - "09 - Non-commutative stochastic calculus/01 - Published papers"
+
+  unpublished_papers:
+    - "11 - Math articles - unpublished"
+    - "09 - Non-commutative stochastic calculus/02 - Unpublished papers"
+    - "08 - Optimal control on networks/02 - Unpublished papers"
+    - "07 - Stackelberg games/Unpublished papers"
+    - "02 - BSDEs/02-2BSDEs and G-BSDEs/G-BSDEs/Unpublished papers"
+    - "03 - Contract theory/Unpublished papers"
+    - "06 - Time-inconsistent stochastic control/Unpublished papers"
+    - "02 - BSDEs/05-Unpublished papers"
+    - "02 - BSDEs/01-Numerical methods/Unpublished papers"
+
+  papers_to_be_downloaded:
+    - "15 - Papers to be downloaded"
+    - "09 - Non-commutative stochastic calculus/06 - Papers to be downloaded"
+    - "08 - Optimal control on networks/06 - Papers to be downloaded"
+    - "07 - Stackelberg games/Papers to be downloadded"
+    - "02 - BSDEs/02-2BSDEs and G-BSDEs/G-BSDEs/To be downloaded"
+    - "03 - Contract theory/Papers to be downloaded"
+    - "03 - Contract theory/ESG/Papers to be downloaded"
+    - "06 - Time-inconsistent stochastic control/Papers to be downloaded"
+    - "02 - BSDEs/06-Papers to be downloaded"
+    - "02 - BSDEs/01-Numerical methods/Papers to be downloaded"
+
+  papers_to_be_downloaded_subfolders:
+  not_fully_published_version:
+    - "15 - Papers to be downloaded/Not fully published version"
+    - "02 - BSDEs/06-Papers to be downloaded/Not fully published version"
+    - "03 - Contract theory/Papers to be downloaded/Not fully published version"
+
+  books:
+    - "13 - Math books and lecture notes/A"
+    - "13 - Math books and lecture notes/B"
+    - "13 - Math books and lecture notes/C"
+    - "13 - Math books and lecture notes/D"
+    - "13 - Math books and lecture notes/E"
+    - "13 - Math books and lecture notes/F"
+    - "13 - Math books and lecture notes/G"
+    - "13 - Math books and lecture notes/H"
+    - "13 - Math books and lecture notes/I"
+    - "13 - Math books and lecture notes/J"
+    - "13 - Math books and lecture notes/K"
+    - "13 - Math books and lecture notes/L"
+    - "13 - Math books and lecture notes/M"
+    - "13 - Math books and lecture notes/N"
+    - "13 - Math books and lecture notes/O"
+    - "13 - Math books and lecture notes/P"
+    - "13 - Math books and lecture notes/Q"
+    - "13 - Math books and lecture notes/R"
+    - "13 - Math books and lecture notes/S"
+    - "13 - Math books and lecture notes/T"
+    - "13 - Math books and lecture notes/U"
+    - "13 - Math books and lecture notes/V"
+    - "13 - Math books and lecture notes/W"
+    - "13 - Math books and lecture notes/X"
+    - "13 - Math books and lecture notes/Y"
+    - "13 - Math books and lecture notes/Z"
+    - "13 - Math books and lecture notes/03 - Proceedings of the ICM"
+    - "13 - Math books and lecture notes/04 - Saint-Flour"
+    - "13 - Math books and lecture notes/07 - Cours spécialisés société mathématique de France"
+    - "13 - Math books and lecture notes/08 - Mémoires de la société mathématique de France"
+    - "03 - BSDEs/07-Books and lecture notes"
+    - "03 - Contract theory/Books and lecture notes"
+    - "05 - Séminaire Bourbaki"
+    - "06 - Time-inconsistent stochastic control/Books and lecture notes"
+    - "07 - Stackelberg games/Books and lecture notes"
+    - "08 - Optimal control on networks/04 - Books and lecture notes"
+    - "09 - Non-commutative stochastic calculus/04 - Books and lecture notes"
+
+  theses:
+    - "02 - BSDEs/08-Theses"
+    - "16 - Theses"
+    - "03 - Contract theory/Theses"
+    - "06 - Time-inconsistent stochastic control/Theses"
+    - "07 - Stackelberg games/Theses"
+    - "08 - Optimal control on networks/05 - Theses"
+    - "09 - Non-commutative stochastic calculus/05 - Theses"
+
+# ───────────────────────────────────────────────────────────────────
+# 🚀 SHORTCUTS
+# ───────────────────────────────────────────────────────────────────
+
+folder_shortcuts:
+  working:
+    - "02 - BSDEs/04-Working papers"
+    - "03 - Contract theory/Working papers"
+    - "03 - Contract theory/ESG/Working papers"
+    - "06 - Time-inconsistent stochastic control/Working papers"
+    - "07 - Stackelberg games/Working papers"
+    - "08 - Optimal control on networks/03 - Working papers"
+    - "09 - Non-commutative stochastic calculus/03 - Working papers"
+    - "12 - Math articles - working papers"
+    - "02 - BSDEs/01-Numerical methods/Working papers"
+    - "02 - BSDEs/02-2BSDEs and G-BSDEs/2BSDEs/Working papers"
+    - "02 - BSDEs/02-2BSDEs and G-BSDEs/G-BSDEs/Working papers"
+  books: "13 - Math books and lecture notes"
+  bsde: "02 - BSDEs"
+  contract: "03 - Contract theory"
+  time_inconsistent: "06 - Time-inconsistent stochastic control"
+  stackelberg: "07 - Stackelberg games"
+  networks: "08 - Optimal control on networks"
+  commutative: "09 - Non-commutative stochastic calculus"
+  published:
+    - "10 - Math articles - published"
+    - "02 - BSDEs/03-Published"
+    - "02 - BSDEs/01-Numerical methods/Published"
+    - "02 - BSDEs/02-2BSDEs and G-BSDEs/2BSDEs/Published papers"
+    - "02 - BSDEs/02-2BSDEs and G-BSDEs/G-BSDEs/Published papers"
+    - "03 - Contract theory/Published"
+    - "03 - Contract theory/ESG/Published papers"
+    - "06 - Time-inconsistent stochastic control/Published"
+    - "07 - Stackelberg games/Published papers"
+    - "08 - Optimal control on networks/01 - Published papers"
+    - "09 - Non-commutative stochastic calculus/01 - Published papers"
+  unpublished: "11 - Math articles - unpublished"
+  download: "15 - Papers to be downloaded"
+  theses: "16 - Theses"
+  astérisque: "01 - Astérisque"
+  strasbourg: "04 - Séminaires de probabilités de Strasbourg"
+  bourbaki: "05 - Séminaire Bourbaki"
+
+
+
+# ═══════════════════════════════════════════════════════════════════
+# End of Configuration
+# ═══════════════════════════════════════════════════════════════════

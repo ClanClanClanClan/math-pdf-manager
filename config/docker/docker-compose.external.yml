@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  # Grobid PDF processing service
+  grobid:
+    image: lfoppiano/grobid:0.8.0
+    container_name: mathpdf-grobid
+    ports:
+      - "8070:8070"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8070/api/version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    volumes:
+      - ./config/grobid:/opt/grobid/grobid-home/config
+    environment:
+      - JAVA_OPTS=-Xmx4g
+
+  # LanguageTool grammar checking service  
+  languagetool:
+    image: erikvl87/languagetool
+    container_name: mathpdf-languagetool
+    ports:
+      - "8081:8010"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8010/v2/check"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    environment:
+      - langtool_languageModel=/ngrams  # Optional: for better grammar checking
+      - Java_Xms=512m
+      - Java_Xmx=1g
+
+  # Redis for caching (optional)
+  redis:
+    image: redis:7-alpine
+    container_name: mathpdf-redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+
+volumes:
+  redis_data:
+
+networks:
+  default:
+    name: mathpdf-network

@@ -1,0 +1,519 @@
+{
+  "status": "ok",
+  "message-type": "work",
+  "message-version": "1.0.0",
+  "message": {
+    "indexed": {
+      "date-parts": [
+        [
+          2025,
+          7,
+          20
+        ]
+      ],
+      "date-time": "2025-07-20T03:59:29Z",
+      "timestamp": 1752983969158,
+      "version": "3.37.3"
+    },
+    "reference-count": 40,
+    "publisher": "Wiley",
+    "issue": "36",
+    "license": [
+      {
+        "start": {
+          "date-parts": [
+            [
+              2020,
+              8,
+              13
+            ]
+          ],
+          "date-time": "2020-08-13T00:00:00Z",
+          "timestamp": 1597276800000
+        },
+        "content-version": "am",
+        "delay-in-days": 0,
+        "URL": "http://creativecommons.org/licenses/by-nc/4.0/"
+      },
+      {
+        "start": {
+          "date-parts": [
+            [
+              2020,
+              8,
+              13
+            ]
+          ],
+          "date-time": "2020-08-13T00:00:00Z",
+          "timestamp": 1597276800000
+        },
+        "content-version": "vor",
+        "delay-in-days": 0,
+        "URL": "http://creativecommons.org/licenses/by-nc/4.0/"
+      }
+    ],
+    "funder": [
+      {
+        "DOI": "10.13039/100000893",
+        "name": "Simons Foundation",
+        "doi-asserted-by": "publisher",
+        "award": [
+          "290363"
+        ],
+        "id": [
+          {
+            "id": "10.13039/100000893",
+            "id-type": "DOI",
+            "asserted-by": "publisher"
+          }
+        ]
+      },
+      {
+        "DOI": "10.13039/100000001",
+        "name": "National Science Foundation",
+        "doi-asserted-by": "publisher",
+        "award": [
+          "CHE-1607034"
+        ],
+        "id": [
+          {
+            "id": "10.13039/100000001",
+            "id-type": "DOI",
+            "asserted-by": "publisher"
+          }
+        ]
+      }
+    ],
+    "content-domain": {
+      "domain": [
+        "onlinelibrary.wiley.com"
+      ],
+      "crossmark-restriction": true
+    },
+    "short-container-title": [
+      "Angew Chem Int Ed"
+    ],
+    "published-print": {
+      "date-parts": [
+        [
+          2020,
+          9
+        ]
+      ]
+    },
+    "abstract": "<jats:title>Abstract</jats:title><jats:p>The non\u2010enzymatic replication of the primordial genetic material is thought to have enabled the evolution of early forms of RNA\u2010based life. However, the replication of oligonucleotides long enough to encode catalytic functions is problematic due to the low efficiency of template copying with mononucleotides. We show that template\u2010directed ligation can assemble long RNAs from shorter oligonucleotides, which would be easier to replicate. The rate of ligation can be greatly enhanced by employing a 3\u2032\u2010amino group at the 3\u2032\u2010end of each oligonucleotide, in combination with an N\u2010alkyl imidazole organocatalyst. These modifications enable the copying of RNA templates by the multistep ligation of tetranucleotide building blocks, as well as the assembly of long oligonucleotides using short splint oligonucleotides. We also demonstrate the formation of long oligonucleotides inside model prebiotic vesicles, which suggests a potential route to the assembly of artificial cells capable of evolution.</jats:p>",
+    "DOI": "10.1002/anie.202004934",
+    "type": "journal-article",
+    "created": {
+      "date-parts": [
+        [
+          2020,
+          6,
+          18
+        ]
+      ],
+      "date-time": "2020-06-18T15:59:28Z",
+      "timestamp": 1592495968000
+    },
+    "page": "15682-15687",
+    "update-policy": "https://doi.org/10.1002/crossmark_policy",
+    "source": "Crossref",
+    "is-referenced-by-count": 59,
+    "title": [
+      "Template\u2010Directed Copying of RNA by Non\u2010enzymatic Ligation"
+    ],
+    "prefix": "10.1002",
+    "volume": "59",
+    "author": [
+      {
+        "ORCID": "https://orcid.org/0000-0002-0393-4787",
+        "authenticated-orcid": false,
+        "given": "Lijun",
+        "family": "Zhou",
+        "sequence": "first",
+        "affiliation": [
+          {
+            "name": "Howard Hughes Medical Institute Department of Molecular Biology Center for Computational and Integrative Biology Massachusetts General Hospital  Boston MA 02114 (USA), E"
+          }
+        ]
+      },
+      {
+        "ORCID": "https://orcid.org/0000-0003-3693-6380",
+        "authenticated-orcid": false,
+        "given": "Derek K.",
+        "family": "O'Flaherty",
+        "sequence": "additional",
+        "affiliation": [
+          {
+            "name": "Howard Hughes Medical Institute Department of Molecular Biology Center for Computational and Integrative Biology Massachusetts General Hospital  Boston MA 02114 (USA), E"
+          },
+          {
+            "name": "Present address: Alnylam Pharmaceuticals  Cambridge MA 02142 USA"
+          }
+        ]
+      },
+      {
+        "ORCID": "https://orcid.org/0000-0003-4131-1203",
+        "authenticated-orcid": false,
+        "given": "Jack W.",
+        "family": "Szostak",
+        "sequence": "additional",
+        "affiliation": [
+          {
+            "name": "Howard Hughes Medical Institute Department of Molecular Biology Center for Computational and Integrative Biology Massachusetts General Hospital  Boston MA 02114 (USA), E"
+          }
+        ]
+      }
+    ],
+    "member": "311",
+    "published-online": {
+      "date-parts": [
+        [
+          2020,
+          8,
+          13
+        ]
+      ]
+    },
+    "reference": [
+      {
+        "volume-title": "The Genetic Code the Molecular Basis for Genetic Expression",
+        "year": "1967",
+        "author": "Woese C. R.",
+        "key": "e_1_2_6_1_1"
+      },
+      {
+        "key": "e_1_2_6_2_1",
+        "doi-asserted-by": "publisher",
+        "DOI": "10.1016/0022-2836(68)90392-6"
+      },
+      {
+        "key": "e_1_2_6_3_1",
+        "doi-asserted-by": "publisher",
+        "DOI": "10.1016/0022-2836(68)90393-8"
+      },
+      {
+        "key": "e_1_2_6_4_1",
+        "doi-asserted-by": "publisher",
+        "DOI": "10.1038/319618a0"
+      },
+      {
+        "key": "e_1_2_6_5_1",
+        "doi-asserted-by": "publisher",
+        "DOI": "10.1126/science.1060786"
+      },
+      {
+        "key": "e_1_2_6_6_1",
+        "doi-asserted-by": "publisher",
+        "DOI": "10.1126/science.1200752"
+      },
+      {
+        "key": "e_1_2_6_7_1",
+        "doi-asserted-by": "publisher",
+        "DOI": "10.1126/science.1167856"
+      },
+      {
+        "key": "e_1_2_6_8_1",
+        "doi-asserted-by": "publisher",
+        "DOI": "10.1016/0022-2836(82)90169-3"
+      },
+      {
+        "key": "e_1_2_6_9_1",
+        "doi-asserted-by": "publisher",
+        "DOI": "10.1186/1759-2208-3-2"
+      },
+      {
+        "key": "e_1_2_6_10_1",
+        "doi-asserted-by": "publisher",
+        "DOI": "10.1021/jacs.6b13148"
+      },
+      {
+        "key": "e_1_2_6_11_1",
+        "doi-asserted-by": "publisher",
+        "DOI": "10.1021/jacs.8b00639"
+      },
+      {
+        "key": "e_1_2_6_12_1",
+        "doi-asserted-by": "publisher",
+        "DOI": "10.7554/eLife.17756"
+      },
+      {
+        "key": "e_1_2_6_13_1",
+        "doi-asserted-by": "publisher",
+        "DOI": "10.1002/anie.201704048"
+      },
+      {
+        "key": "e_1_2_6_13_2",
+        "doi-asserted-by": "publisher",
+        "DOI": "10.1002/ange.201704048"
+      },
+      {
+        "key": "e_1_2_6_14_1",
+        "doi-asserted-by": "publisher",
+        "DOI": "10.1017/S0033583517000038"
+      },
+      {
+        "key": "e_1_2_6_15_1",
+        "doi-asserted-by": "publisher",
+        "DOI": "10.1098/rstb.2011.0140"
+      },
+      {
+        "key": "e_1_2_6_16_1",
+        "doi-asserted-by": "publisher",
+        "DOI": "10.1021/ja953712b"
+      },
+      {
+        "key": "e_1_2_6_17_1",
+        "doi-asserted-by": "publisher",
+        "DOI": "10.1038/327346a0"
+      },
+      {
+        "key": "e_1_2_6_18_1",
+        "doi-asserted-by": "publisher",
+        "DOI": "10.1002/anie.198609322"
+      },
+      {
+        "key": "e_1_2_6_18_2",
+        "doi-asserted-by": "publisher",
+        "DOI": "10.1002/ange.19860981029"
+      },
+      {
+        "key": "e_1_2_6_19_1",
+        "doi-asserted-by": "publisher",
+        "DOI": "10.1021/ja00047a001"
+      },
+      {
+        "key": "e_1_2_6_20_1",
+        "doi-asserted-by": "publisher",
+        "DOI": "10.1021/ja00027a040"
+      },
+      {
+        "key": "e_1_2_6_21_1",
+        "doi-asserted-by": "publisher",
+        "DOI": "10.1126/science.161.3839.387"
+      },
+      {
+        "key": "e_1_2_6_22_1",
+        "doi-asserted-by": "publisher",
+        "DOI": "10.1073/pnas.1312329110"
+      },
+      {
+        "key": "e_1_2_6_23_1",
+        "doi-asserted-by": "publisher",
+        "DOI": "10.1021/ja311164j"
+      },
+      {
+        "key": "e_1_2_6_24_1",
+        "doi-asserted-by": "publisher",
+        "DOI": "10.1021/jacs.9b04858"
+      },
+      {
+        "key": "e_1_2_6_25_1",
+        "doi-asserted-by": "publisher",
+        "DOI": "10.1038/s41557-019-0322-x"
+      },
+      {
+        "key": "e_1_2_6_26_1",
+        "doi-asserted-by": "publisher",
+        "DOI": "10.1021/jacs.6b07977"
+      },
+      {
+        "key": "e_1_2_6_27_1",
+        "doi-asserted-by": "publisher",
+        "DOI": "10.1021/acs.biochem.7b00792"
+      },
+      {
+        "key": "e_1_2_6_28_1",
+        "doi-asserted-by": "publisher",
+        "DOI": "10.7554/eLife.36422"
+      },
+      {
+        "key": "e_1_2_6_29_1",
+        "doi-asserted-by": "publisher",
+        "DOI": "10.1038/nature07018"
+      },
+      {
+        "key": "e_1_2_6_30_1",
+        "doi-asserted-by": "publisher",
+        "DOI": "10.1021/ja311164j"
+      },
+      {
+        "key": "e_1_2_6_31_1",
+        "doi-asserted-by": "publisher",
+        "DOI": "10.1002/anie.201805785"
+      },
+      {
+        "key": "e_1_2_6_31_2",
+        "doi-asserted-by": "publisher",
+        "DOI": "10.1002/ange.201805785"
+      },
+      {
+        "key": "e_1_2_6_32_1",
+        "doi-asserted-by": "publisher",
+        "DOI": "10.1021/jacs.8b05189"
+      },
+      {
+        "key": "e_1_2_6_33_1",
+        "doi-asserted-by": "publisher",
+        "DOI": "10.1038/nchem.2628"
+      },
+      {
+        "key": "e_1_2_6_34_1",
+        "doi-asserted-by": "publisher",
+        "DOI": "10.1016/S0076-6879(00)17009-0"
+      },
+      {
+        "key": "e_1_2_6_35_1",
+        "doi-asserted-by": "publisher",
+        "DOI": "10.1073/pnas.0914172107"
+      },
+      {
+        "key": "e_1_2_6_36_1",
+        "doi-asserted-by": "publisher",
+        "DOI": "10.1021/jacs.8b00639"
+      },
+      {
+        "key": "e_1_2_6_37_1",
+        "doi-asserted-by": "publisher",
+        "DOI": "10.1016/j.chembiol.2013.12.004"
+      }
+    ],
+    "container-title": [
+      "Angewandte Chemie International Edition"
+    ],
+    "original-title": [],
+    "language": "en",
+    "link": [
+      {
+        "URL": "https://api.wiley.com/onlinelibrary/tdm/v1/articles/10.1002%2Fanie.202004934",
+        "content-type": "application/pdf",
+        "content-version": "vor",
+        "intended-application": "text-mining"
+      },
+      {
+        "URL": "https://onlinelibrary.wiley.com/doi/pdf/10.1002/anie.202004934",
+        "content-type": "application/pdf",
+        "content-version": "vor",
+        "intended-application": "text-mining"
+      },
+      {
+        "URL": "https://onlinelibrary.wiley.com/doi/full-xml/10.1002/anie.202004934",
+        "content-type": "application/xml",
+        "content-version": "vor",
+        "intended-application": "text-mining"
+      },
+      {
+        "URL": "https://onlinelibrary.wiley.com/doi/am-pdf/10.1002/anie.202004934",
+        "content-type": "application/pdf",
+        "content-version": "am",
+        "intended-application": "syndication"
+      },
+      {
+        "URL": "https://onlinelibrary.wiley.com/doi/pdf/10.1002/anie.202004934",
+        "content-type": "application/pdf",
+        "content-version": "vor",
+        "intended-application": "syndication"
+      },
+      {
+        "URL": "https://onlinelibrary.wiley.com/doi/pdf/10.1002/anie.202004934",
+        "content-type": "unspecified",
+        "content-version": "vor",
+        "intended-application": "similarity-checking"
+      }
+    ],
+    "deposited": {
+      "date-parts": [
+        [
+          2023,
+          9,
+          4
+        ]
+      ],
+      "date-time": "2023-09-04T09:06:23Z",
+      "timestamp": 1693818383000
+    },
+    "score": 1,
+    "resource": {
+      "primary": {
+        "URL": "https://onlinelibrary.wiley.com/doi/10.1002/anie.202004934"
+      }
+    },
+    "subtitle": [],
+    "short-title": [],
+    "issued": {
+      "date-parts": [
+        [
+          2020,
+          8,
+          13
+        ]
+      ]
+    },
+    "references-count": 40,
+    "journal-issue": {
+      "issue": "36",
+      "published-print": {
+        "date-parts": [
+          [
+            2020,
+            9
+          ]
+        ]
+      }
+    },
+    "alternative-id": [
+      "10.1002/anie.202004934"
+    ],
+    "URL": "https://doi.org/10.1002/anie.202004934",
+    "archive": [
+      "Portico"
+    ],
+    "relation": {},
+    "ISSN": [
+      "1433-7851",
+      "1521-3773"
+    ],
+    "issn-type": [
+      {
+        "type": "print",
+        "value": "1433-7851"
+      },
+      {
+        "type": "electronic",
+        "value": "1521-3773"
+      }
+    ],
+    "subject": [],
+    "published": {
+      "date-parts": [
+        [
+          2020,
+          8,
+          13
+        ]
+      ]
+    },
+    "assertion": [
+      {
+        "value": "2020-04-05",
+        "order": 0,
+        "name": "received",
+        "label": "Received",
+        "group": {
+          "name": "publication_history",
+          "label": "Publication History"
+        }
+      },
+      {
+        "value": "2020-08-13",
+        "order": 2,
+        "name": "published",
+        "label": "Published",
+        "group": {
+          "name": "publication_history",
+          "label": "Publication History"
+        }
+      }
+    ]
+  }
+}

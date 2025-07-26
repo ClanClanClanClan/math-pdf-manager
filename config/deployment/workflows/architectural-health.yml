@@ -1,0 +1,346 @@
+name: Architectural Health Check
+# Phase 1, Week 1, Day 3-4: CI/CD Integration
+# Purpose: Continuous monitoring of architectural health and prevention of degradation
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    types: [opened, synchronize, reopened]
+  schedule:
+    # Run daily at 2 AM UTC to track health trends
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      verbose:
+        description: 'Run in verbose mode'
+        required: false
+        default: 'false'
+
+jobs:
+  architectural-analysis:
+    name: Architectural Health Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Full history for trend analysis
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          # Install any additional dependencies for analysis tools
+          pip install pyyaml
+      
+      - name: Run Architectural Analysis
+        id: arch-analysis
+        run: |
+          echo "🏗️ Running Architectural Analysis..."
+          
+          # Run the analysis and capture output
+          python automated_improvement_tooling.py --ci-mode > analysis_output.txt 2>&1
+          exit_code=$?
+          
+          # Extract metrics from output
+          health_score=$(python automated_improvement_tooling.py --score-only)
+          
+          # Set outputs for later steps
+          echo "health_score=$health_score" >> $GITHUB_OUTPUT
+          echo "exit_code=$exit_code" >> $GITHUB_OUTPUT
+          
+          # Display results
+          cat analysis_output.txt
+          
+          # Save detailed report as artifact
+          if [ -f architectural_analysis_report.md ]; then
+            echo "📊 Detailed report generated"
+          fi
+          
+          exit $exit_code
+      
+      - name: Check Health Score Threshold
+        id: health-check
+        run: |
+          health_score=${{ steps.arch-analysis.outputs.health_score }}
+          echo "Current health score: $health_score"
+          
+          # Define thresholds
+          CRITICAL_THRESHOLD=10
+          WARNING_THRESHOLD=30
+          
+          # Check thresholds
+          if (( $(echo "$health_score < $CRITICAL_THRESHOLD" | bc -l) )); then
+            echo "❌ CRITICAL: Health score ($health_score) is below critical threshold ($CRITICAL_THRESHOLD)"
+            echo "status=critical" >> $GITHUB_OUTPUT
+            exit 1
+          elif (( $(echo "$health_score < $WARNING_THRESHOLD" | bc -l) )); then
+            echo "⚠️ WARNING: Health score ($health_score) is below warning threshold ($WARNING_THRESHOLD)"
+            echo "status=warning" >> $GITHUB_OUTPUT
+          else
+            echo "✅ Health score ($health_score) is acceptable"
+            echo "status=healthy" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Run Specific Checks
+        id: specific-checks
+        if: always()
+        run: |
+          echo "🔍 Running specific architectural checks..."
+          
+          # File size check
+          echo "📏 Checking file sizes..."
+          python tools/file_size_check.py --show-all . || true
+          
+          # Forbidden patterns
+          echo "🚫 Checking forbidden patterns..."
+          find . -name "*.py" -type f | grep -v ".venv" | head -20 | \
+            xargs python tools/forbidden_pattern_check.py || true
+          
+          # Configuration security
+          echo "🔒 Checking configuration security..."
+          find . -name "*.py" -type f | grep -v ".venv" | head -20 | \
+            xargs python tools/secure_config_check.py || true
+      
+      - name: Generate Violation Summary
+        if: always()
+        run: |
+          echo "📋 Generating violation summary..."
+          
+          python -c "
+          import json
+          from pathlib import Path
+          
+          # Read the detailed report if it exists
+          report_path = Path('architectural_analysis_report.md')
+          if report_path.exists():
+              content = report_path.read_text()
+              
+              # Extract key metrics
+              print('## 📊 Architectural Health Summary\n')
+              print('| Metric | Value |')
+              print('|--------|-------|')
+              
+              # Parse metrics from report
+              for line in content.split('\n'):
+                  if 'Health score:' in line:
+                      score = line.split(':')[1].strip()
+                      print(f'| Health Score | {score} |')
+                  elif 'Files analyzed:' in line:
+                      files = line.split(':')[1].strip()
+                      print(f'| Files Analyzed | {files} |')
+                  elif 'Violations found:' in line:
+                      violations = line.split(':')[1].strip()
+                      print(f'| Total Violations | {violations} |')
+          "
+      
+      - name: Upload Analysis Report
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: architectural-analysis-report
+          path: |
+            architectural_analysis_report.md
+            analysis_output.txt
+          retention-days: 30
+      
+      - name: Comment on PR
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            
+            // Read analysis output
+            let analysisOutput = '';
+            try {
+              analysisOutput = fs.readFileSync('analysis_output.txt', 'utf8');
+            } catch (e) {
+              analysisOutput = 'Analysis output not available';
+            }
+            
+            // Extract key metrics
+            const healthScore = '${{ steps.arch-analysis.outputs.health_score }}' || '0.0';
+            const status = '${{ steps.health-check.outputs.status }}' || 'unknown';
+            
+            // Create status emoji
+            const statusEmoji = {
+              'critical': '🔴',
+              'warning': '🟡',
+              'healthy': '🟢',
+              'unknown': '⚫'
+            }[status];
+            
+            // Create comment
+            const comment = `## ${statusEmoji} Architectural Health Check
+            
+            **Health Score**: ${healthScore}/100
+            **Status**: ${status.toUpperCase()}
+            
+            <details>
+            <summary>📊 Analysis Details</summary>
+            
+            \`\`\`
+            ${analysisOutput.substring(0, 2000)}
+            \`\`\`
+            
+            </details>
+            
+            ---
+            📚 [View Implementation Roadmap](../blob/main/IMPLEMENTATION_ROADMAP.md) | 🔍 [View Full Report](../actions/runs/${{ github.run_id }})`;
+            
+            // Post comment
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+      
+      - name: Create Health Badge
+        if: always()
+        run: |
+          health_score=${{ steps.arch-analysis.outputs.health_score }}
+          
+          # Determine badge color based on score
+          if (( $(echo "$health_score >= 80" | bc -l) )); then
+            color="brightgreen"
+          elif (( $(echo "$health_score >= 60" | bc -l) )); then
+            color="green"
+          elif (( $(echo "$health_score >= 40" | bc -l) )); then
+            color="yellow"
+          elif (( $(echo "$health_score >= 20" | bc -l) )); then
+            color="orange"
+          else
+            color="red"
+          fi
+          
+          # Create badge JSON
+          echo "{\"schemaVersion\": 1, \"label\": \"architectural health\", \"message\": \"$health_score/100\", \"color\": \"$color\"}" > health-badge.json
+      
+      - name: Track Health Trend
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        run: |
+          echo "📈 Tracking health trend..."
+          
+          # Create or update health tracking file
+          health_score=${{ steps.arch-analysis.outputs.health_score }}
+          date=$(date -u +"%Y-%m-%d")
+          
+          echo "$date,$health_score" >> health_trends.csv
+          
+          # Keep only last 90 days
+          tail -90 health_trends.csv > health_trends_temp.csv
+          mv health_trends_temp.csv health_trends.csv
+          
+          # Generate trend analysis
+          python -c "
+          import csv
+          from pathlib import Path
+          
+          if Path('health_trends.csv').exists():
+              with open('health_trends.csv', 'r') as f:
+                  reader = csv.reader(f)
+                  data = list(reader)
+              
+              if len(data) > 1:
+                  scores = [float(row[1]) for row in data]
+                  latest = scores[-1]
+                  previous = scores[-2] if len(scores) > 1 else latest
+                  avg_7d = sum(scores[-7:]) / len(scores[-7:]) if len(scores) >= 7 else latest
+                  
+                  print(f'📊 Health Trend Analysis:')
+                  print(f'  Latest: {latest:.1f}')
+                  print(f'  Previous: {previous:.1f}')
+                  print(f'  7-day avg: {avg_7d:.1f}')
+                  print(f'  Trend: {\"📈\" if latest > previous else \"📉\" if latest < previous else \"➡️\"}')
+          "
+
+  notification:
+    name: Send Notifications
+    needs: architectural-analysis
+    runs-on: ubuntu-latest
+    if: failure() && (github.event_name == 'push' || github.event_name == 'schedule')
+    
+    steps:
+      - name: Send Slack Notification
+        if: env.SLACK_WEBHOOK_URL != ''
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          curl -X POST $SLACK_WEBHOOK_URL \
+            -H 'Content-type: application/json' \
+            --data '{
+              "text": "🔴 Architectural Health Check Failed",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*🔴 Architectural Health Check Failed*\n\nThe architectural health of the codebase has degraded below acceptable thresholds."
+                  }
+                },
+                {
+                  "type": "section",
+                  "fields": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Repository:*\n${{ github.repository }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Branch:*\n${{ github.ref_name }}"
+                    }
+                  ]
+                },
+                {
+                  "type": "actions",
+                  "elements": [
+                    {
+                      "type": "button",
+                      "text": {
+                        "type": "plain_text",
+                        "text": "View Results"
+                      },
+                      "url": "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                    }
+                  ]
+                }
+              ]
+            }'
+      
+      - name: Create GitHub Issue
+        if: github.event_name == 'schedule'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const date = new Date().toISOString().split('T')[0];
+            
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `🔴 Architectural Health Degradation - ${date}`,
+              body: `## Architectural Health Check Failed
+              
+              The scheduled architectural health check has detected degradation below acceptable thresholds.
+              
+              **Date**: ${date}
+              **Workflow Run**: [View Results](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})
+              
+              ### Required Actions
+              - [ ] Review the architectural analysis report
+              - [ ] Identify root causes of degradation
+              - [ ] Create plan to address violations
+              - [ ] Update team on remediation timeline
+              
+              cc: @${context.repo.owner}`,
+              labels: ['architectural-debt', 'priority:high']
+            });

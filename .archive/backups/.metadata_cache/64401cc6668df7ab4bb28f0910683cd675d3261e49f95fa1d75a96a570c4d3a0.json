@@ -1,0 +1,8 @@
+{
+  "title": "Generalized Reflected BSDEs with RCLL Random Obstacles in a General Filtration",
+  "authors": [],
+  "year": null,
+  "citation_id": null,
+  "snippet": "This paper addresses the existence and uniqueness of solutions to Reflected Generalized Backward Stochastic Differential Equations (GRBSDEs) within a general filtration that supports a Brownian motion and an independent integer-valued random measure. Our study focuses on cases where the given data satisfy appropriate -integrability conditions and the coefficients satisfy a monotonicity assumption. Additionally, we establish a connection between the solution and an optimal control problem over the set of stopping times.",
+  "source": "scholar_serpapi"
+}

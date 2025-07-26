@@ -1,0 +1,4 @@
+# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/main.py
+# hypothesis_version: 6.135.32
+
+[1000, '--auto-fix-authors', '--auto-fix-nfc', '--csv_output', '--debug', '--dry_run', '--exceptions-file', '--output', '--problems_only', '--template_dir', '--verbose', '-v', '?', 'Math-PDF manager', 'Verbose mode enabled', '__main__', 'all', 'config_keys_loaded', 'config_service', 'error', 'exceptions_file', 'file_service', 'fix_auth', 'fix_nfc', 'ignore_nfc_macos', 'info', 'logging_service', 'main_function_calls', 'metrics_service', 'notification_service', 'root', 'short', 'startup_timestamp', 'store_true', 'validation_service', 'warning']

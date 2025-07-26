@@ -1,0 +1,4 @@
+# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/author_processing.py
+# hypothesis_version: 6.135.32
+
+[2.0, 500, 1000, 5000, ' & ', ' and ', ' e ', ' et ', ' und ', ' y ', '#', '$', '%', '&', '([A-Z]\\.)([A-Z])', '*', ',', ',;', '.', '@', '\\1 \\2', '\\s+', '\\s+(?:and|&)\\s+', '^', 'al', 'am', 'and', 'auf', 'aus', 'ba', 'bs', 'da', 'dal', 'das', 'dds', 'de', 'degli', 'dei', 'del', 'della', 'delle', 'dello', 'den', 'der', 'des', 'di', 'dnp', 'do', 'dos', 'dpt', 'drph', 'dsc', 'du', 'dvm', 'e', 'edd', 'el', 'et', 'het', 'i', 'ii', 'iii', 'im', 'iv', 'ix', 'jd', 'jr', 'la', 'las', 'le', 'los', 'ma', 'md', 'mph', 'ms', 'od', 'pharm', 'pharmd', 'phd', 'psyd', 'sr', 'te', 'ten', 'ter', 'und', 'v', 'van', 'vi', 'vii', 'viii', 'vom', 'von', 'x', 'xi', 'xii', 'xiii', 'xiv', 'xix', 'xv', 'xvi', 'xvii', 'xviii', 'xx', 'y', 'zum', 'zur']

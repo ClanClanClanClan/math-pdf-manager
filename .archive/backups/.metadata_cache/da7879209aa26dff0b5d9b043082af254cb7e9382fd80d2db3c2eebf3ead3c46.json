@@ -1,0 +1,8 @@
+{
+  "title": "Optimal liquidation with conditions on minimum price",
+  "authors": [],
+  "year": null,
+  "citation_id": null,
+  "snippet": "The classical optimal trading problem is the closure of an initial position q 0 in a financial asset over a time interval [0T]; the trader tries to maximize an expected utility under the constraint q T= 0, which is the liquidation constraint. Given that the trading takes place in a stochastic environment, the constraint q T= 0 may be too restrictive; the trader may want to relax this constraint or slow down/stop trading depending on price behavior. The goal of this thesis is the formulation and a study of these types of modified liquidation orders. We \u2026",
+  "source": "scholar_serpapi"
+}

@@ -1,0 +1,8 @@
+{
+  "title": "OPTIMAL SELF-PROTECTION VIA BSDES FOR RISK MODELS WITH JUMP CLUSTERS",
+  "authors": [],
+  "year": null,
+  "citation_id": null,
+  "snippet": "We investigate the optimal self-protection problem, from the point of view of an insurance buyer, when the loss process is described by a Cox-shot-noise process and a Hawkes process with an exponential memory kernel. The insurance buyer chooses both the percentage of insured losses and the prevention effort in order to maximize expected exponential utility of terminal wealth, in presence of a terminal reimbursement. We show that an optimal solution exists by proving that this problem can be described in terms of a suitable backward stochastic differential equation (BSDE), which can be explicitly solved in the case of no terminal reimbursement. We extend in several directions the results obtained by Bensalem, Santibanez and Kazi Tani [5] and compare our results with those presented therein.",
+  "source": "scholar_serpapi"
+}

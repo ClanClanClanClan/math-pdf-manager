@@ -1,0 +1,12 @@
+{
+  "timestamp": "2025-07-19T06:35:29.695386",
+  "dry_run": false,
+  "stats": {
+    "backup_files": 56,
+    "pycache_dirs": 67,
+    "pyc_files": 0,
+    "space_freed": 24621471,
+    "errors": []
+  },
+  "space_freed_mb": 23.48
+}

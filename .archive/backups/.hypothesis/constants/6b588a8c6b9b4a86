@@ -1,0 +1,4 @@
+# file: /Users/dylanpossamai/Dropbox/Work/Maths/Scripts/utils.py
+# hypothesis_version: 6.135.13
+
+[512, '!', '#', ',\\s*[MDCLXVI]+\\s*$', '-', '- ', '-{2,}', '.', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '?', 'MATH', 'NFC', 'NFKD', 'PHRASE', 'PUNCT', 'SPACE', 'Token', 'WORD', 'X', 'X ', '[\\p{Pd}‐−]', '[\\s\\p{Pd}]+', '[{}]', '\\\\[a-zA-Z]+\\b', '\\b', '\\b\\w+\\b', '\\s+', '\\s-(?=\\w)', '\\s-\\s', '\\w-\\s', '^(\\d)\\b', '^[^A-Za-z]+', '_phrase_regex', 'canonicalize', 'eight', 'emph', 'filename_checker', 'five', 'four', 'is_series_title', 'load_word_list', 'load_yaml_config', 'mask_math_regions', 'nine', 'normalize_filename', 'normalize_token', 'one', 'read_arxiv_id', 'safe_compare_titles', 'seven', 'six', 'strip_latex', 'three', 'two', 'utf-8', 'zero', '|', '¤', '\u200b', '–', '—', '…', '−', '\ufeff']

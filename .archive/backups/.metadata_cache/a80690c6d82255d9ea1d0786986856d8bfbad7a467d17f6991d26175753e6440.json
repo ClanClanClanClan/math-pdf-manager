@@ -1,0 +1,8 @@
+{
+  "title": "Zero-sum mean-field Dynkin games: characterization and convergence",
+  "authors": [],
+  "year": null,
+  "citation_id": null,
+  "snippet": "We introduce a zero-sum game problem of mean-field type as an extension of the classical zero-sum Dynkin game problem to the case where the payoff processes might depend on the value of the game and its probability law. We establish sufficient conditions under which such a game admits a value and a saddle point. Furthermore, we provide a characterization of the value of the game in terms of a specific class of doubly reflected backward stochastic differential equations of mean-field type, for which we derive an existence and uniqueness result. We then introduce a corresponding system of weakly interacting zero-sum Dynkin games and show its well-posedness. Finally, we provide a propagation of chaos result for the value of the zero-sum mean-field Dynkin game.",
+  "source": "scholar_serpapi"
+}

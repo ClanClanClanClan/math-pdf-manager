@@ -1,0 +1,8 @@
+{
+  "title": "One-dimensional reflected BSDEs and BSDEs with quadratic growth generators",
+  "authors": [],
+  "year": null,
+  "citation_id": null,
+  "snippet": "In this paper, we study the existence, uniqueness and comparison theorems for solutions of one-dimensional reflected backward stochastic differential equations (RBSDEs) with one continuous obstacle and backward stochastic differential equations (BSDEs). The generators of such RBSDEs and BSDEs have a quadratic growth in , with the quadratic term taking the form , where the function is defined on an open interval and locally integrable. The terminal random variables (and obstacles) of such RBSDEs and BSDEs are unbounded. Our proofs mainly depend on a transformation based on and the domination arguments. As applications, we give a probabilistic interpretation of an obstacle problem for a quadratic PDE with continuous coefficient, whose solution takes values in , and study an optimal stopping problem for the payoff of American options.",
+  "source": "scholar_serpapi"
+}

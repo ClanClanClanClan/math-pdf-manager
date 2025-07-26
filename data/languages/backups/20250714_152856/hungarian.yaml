@@ -1,0 +1,238 @@
+Bolyai_F:
+  CanonicalLatin: Bolyai, F.
+  Cyrillic: ''
+  AllCommonVariants:
+  - Bolyai
+  - Bolyai, Farkas
+  - Bolyai, János
+  MathSciNet: Bolyai, Farkas
+  Suffixes: ''
+  VIAF: '19791088'
+  Comments: Foundations of geometry, non-Euclidean geometry, father of János Bolyai.
+Császár_A:
+  CanonicalLatin: Császár, A.
+  Cyrillic: ''
+  AllCommonVariants:
+  - Császár
+  - Csaszar
+  - Császár, Ákos
+  MathSciNet: Császár, Ákos
+  Suffixes: ''
+  VIAF: '98455171'
+  Comments: Topology, combinatorics, Császár polyhedron.
+Erdős_P:
+  CanonicalLatin: Erdős, P.
+  Cyrillic: ''
+  AllCommonVariants:
+  - Erdős
+  - Erdos
+  - Erdős, Paul
+  MathSciNet: Erdős, Paul
+  Suffixes: ''
+  VIAF: '22129910'
+  Comments: Combinatorics, number theory, probability, graph theory; most prolific mathematical author in history.
+Fejér_L:
+  CanonicalLatin: Fejér, L.
+  Cyrillic: ''
+  AllCommonVariants:
+  - Fejér
+  - Fejer
+  - Fejér, Lipót
+  MathSciNet: Fejér, Lipót
+  Suffixes: ''
+  VIAF: '73907517'
+  Comments: Harmonic analysis, Fejér kernel.
+Fischer_F:
+  CanonicalLatin: Fischer, F.
+  Cyrillic: ''
+  AllCommonVariants:
+  - Fischer
+  - Fischer, Friedrich
+  MathSciNet: Fischer, Friedrich
+  Suffixes: ''
+  VIAF: ''
+  Comments: Set theory, real analysis.
+Haar_A:
+  CanonicalLatin: Haar, A.
+  Cyrillic: ''
+  AllCommonVariants:
+  - Haar
+  - Haar, Alfréd
+  MathSciNet: Haar, Alfréd
+  Suffixes: ''
+  VIAF: '61550797'
+  Comments: Haar measure, topology, functional analysis.
+Halász_G:
+  CanonicalLatin: Halász, G.
+  Cyrillic: ''
+  AllCommonVariants:
+  - Halász
+  - Halasz
+  - Halász, Gábor
+  MathSciNet: Halász, Gábor
+  Suffixes: ''
+  VIAF: '108175495'
+  Comments: Probability, number theory, combinatorics.
+Kuratowski_K:
+  CanonicalLatin: Kuratowski, K.
+  Cyrillic: ''
+  AllCommonVariants:
+  - Kuratowski
+  MathSciNet: Kuratowski, Kazimierz
+  Suffixes: ''
+  VIAF: '22131992'
+  Comments: Polish, but published in Hungarian and Soviet journals; topology.
+Kármán_Tv:
+  CanonicalLatin: Kármán, T. von
+  Cyrillic: ''
+  AllCommonVariants:
+  - Kármán
+  - Karman
+  - Kármán, Theodore von
+  - von Kármán
+  - von Karman
+  MathSciNet: Kármán, Theodore von
+  Suffixes: ''
+  VIAF: '22208628'
+  Comments: Applied mathematics, aerodynamics, engineering.
+Kőnig_D:
+  CanonicalLatin: Kőnig, D.
+  Cyrillic: ''
+  AllCommonVariants:
+  - Kőnig
+  - König
+  - König, Dénes
+  - König, Denes
+  MathSciNet: König, Dénes
+  Suffixes: ''
+  VIAF: '61550818'
+  Comments: Graph theory, König's lemma, combinatorics.
+Lovász_L:
+  CanonicalLatin: Lovász, L.
+  Cyrillic: ''
+  AllCommonVariants:
+  - Lovász
+  - Lovasz
+  - Lovász, László
+  MathSciNet: Lovász, László
+  Suffixes: ''
+  VIAF: '22129835'
+  Comments: Combinatorics, graph theory, algorithms, discrete mathematics.
+Pál_J:
+  CanonicalLatin: Pál, J.
+  Cyrillic: ''
+  AllCommonVariants:
+  - Pál
+  - Pal
+  - Pál, János
+  MathSciNet: Pál, János
+  Suffixes: ''
+  VIAF: '61551103'
+  Comments: Convex geometry, covering problems.
+Radó_T:
+  CanonicalLatin: Radó, T.
+  Cyrillic: ''
+  AllCommonVariants:
+  - Radó
+  - Rado
+  - Radó, Tibor
+  MathSciNet: Radó, Tibor
+  Suffixes: ''
+  VIAF: '22129844'
+  Comments: Complex analysis, topology, surface theory.
+Rényi_A:
+  CanonicalLatin: Rényi, A.
+  Cyrillic: ''
+  AllCommonVariants:
+  - Rényi
+  - Renyi
+  - Rényi, Alfréd
+  MathSciNet: Rényi, Alfréd
+  Suffixes: ''
+  VIAF: '108182987'
+  Comments: Probability, information theory, combinatorics, Rényi entropy.
+Sierpiński_W:
+  CanonicalLatin: Sierpiński, W.
+  Cyrillic: ''
+  AllCommonVariants:
+  - Sierpiński
+  - Sierpinski
+  - Sierpiński, Wacław
+  MathSciNet: Sierpiński, Wacław
+  Suffixes: ''
+  VIAF: '22129438'
+  Comments: Polish, but contributed to Hungarian mathematics, set theory, topology, number theory.
+Szemerédi_E:
+  CanonicalLatin: Szemerédi, E.
+  Cyrillic: ''
+  AllCommonVariants:
+  - Szemerédi
+  - Szemeredi
+  - Szemerédi, Endre
+  MathSciNet: Szemerédi, Endre
+  Suffixes: ''
+  VIAF: '109914307'
+  Comments: Combinatorics, Szemerédi's theorem.
+Szőkefalvi-Nagy_B:
+  CanonicalLatin: Szőkefalvi-Nagy, B.
+  Cyrillic: ''
+  AllCommonVariants:
+  - Szőkefalvi-Nagy
+  - Szoekefalvi-Nagy
+  - Szőkefalvi-Nagy, Béla
+  MathSciNet: Szőkefalvi-Nagy, Béla
+  Suffixes: ''
+  VIAF: '109759431'
+  Comments: Functional analysis, operator theory.
+Turán_P:
+  CanonicalLatin: Turán, P.
+  Cyrillic: ''
+  AllCommonVariants:
+  - Turán
+  - Turan
+  - Turán, Pál
+  MathSciNet: Turán, Pál
+  Suffixes: ''
+  VIAF: '22132016'
+  Comments: Combinatorics, number theory, Turán graph, Turán's theorem.
+Von Neumann_J:
+  CanonicalLatin: von Neumann, J.
+  Cyrillic: ''
+  AllCommonVariants:
+  - von Neumann
+  - Neumann, John von
+  - Neumann, János
+  MathSciNet: von Neumann, John
+  Suffixes: ''
+  VIAF: '64000714'
+  Comments: Foundations of quantum mechanics, game theory, mathematical logic, analysis. Born Budapest, major émigré.
+Vázsonyi_A:
+  CanonicalLatin: Vázsonyi, A.
+  Cyrillic: ''
+  AllCommonVariants:
+  - Vázsonyi
+  - Vazsonyi
+  - Vázsonyi, Andrew
+  MathSciNet: Vázsonyi, Andrew
+  Suffixes: ''
+  VIAF: ''
+  Comments: Discrete geometry, convex polytopes, emigrated to US.
+Zermelo_E:
+  CanonicalLatin: Zermelo, E.
+  Cyrillic: ''
+  AllCommonVariants:
+  - Zermelo
+  MathSciNet: Zermelo, Ernst
+  Suffixes: ''
+  VIAF: '108195538'
+  Comments: German, but frequently cited in Hungarian set theory literature.
+Zsigmondy_K:
+  CanonicalLatin: Zsigmondy, K.
+  Cyrillic: ''
+  AllCommonVariants:
+  - Zsigmondy
+  - Zsigmondy, Karl
+  MathSciNet: Zsigmondy, Karl
+  Suffixes: ''
+  VIAF: '61551091'
+  Comments: Number theory, Zsigmondy's theorem. Vienna–Budapest, Hungarian–Austrian connections.

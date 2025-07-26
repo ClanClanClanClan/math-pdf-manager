@@ -1,0 +1,4 @@
+# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/validators/math_context.py
+# hypothesis_version: 6.135.29
+
+['[a-zA-Z]\\([^)]+\\)', '[a-zA-Z]\\^\\{?\\w+\\}?', '[a-zA-Z]\\d+', '[a-zA-Z]_\\{?\\w+\\}?', '\\$', '\\$\\$', '\\\\\\(', '\\\\\\)', '\\\\\\[', '\\\\\\]', '\\\\begin\\{align\\}', '\\\\begin\\{equation\\}', '\\\\end\\{align\\}', '\\\\end\\{equation\\}', '\\d+[a-zA-Z]']

@@ -1,0 +1,8 @@
+{
+  "title": "Dynamic Mean-Variance Asset Allocation in General Incomplete Markets A Nonlocal BSDE-based Feedback Control Approach",
+  "authors": [],
+  "year": null,
+  "citation_id": null,
+  "snippet": "This paper studies dynamic mean-variance (MV) asset allocation problems in general incomplete markets. Besides of the conventional MV objective on portfolio's terminal wealth, our framework can accommodate running MV objectives with general (non-exponential) discounting factors while in general, any time-dependent preferences. We attempt the problem with a game-theoretic framework while decompose the equilibrium control policies into two parts: the first part is a myopic strategy characterized by a linear Volterra integral equation of the second kind and the second part reveals the hedging demand governed by a system of nonlocal backward stochastic differential equations. We manage to establish the well-posedness of the solutions to the two aforementioned equations in tailored Bananch spaces by the fixed-point theorem. It allows us to devise a numerical scheme for solving for the equilibrium control policy with guarantee and to conclude that the dynamic (equilibrium) mean-variance policy in general settings is well-defined. Our probabilistic approach allows us to consider a board range of stochastic factor models, such as the Chan--Karolyi--Longstaff--Sanders (CKLS) model. For which, we verify all technical assumptions and provide a sound numerical scheme. Numerical examples are provided to illustrate our framework.",
+  "source": "scholar_serpapi"
+}

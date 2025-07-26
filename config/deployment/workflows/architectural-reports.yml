@@ -1,0 +1,300 @@
+name: Architectural Reports
+# Phase 1, Week 1, Day 3-4: Automated Reporting
+# Purpose: Generate and publish architectural health reports
+
+on:
+  schedule:
+    # Weekly report every Monday at 9 AM UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+    inputs:
+      report_type:
+        description: 'Type of report to generate'
+        required: true
+        default: 'weekly'
+        type: choice
+        options:
+          - weekly
+          - monthly
+          - detailed
+
+jobs:
+  generate-report:
+    name: Generate Architectural Report
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install pyyaml matplotlib pandas
+      
+      - name: Generate comprehensive report
+        run: |
+          echo "📊 Generating architectural report..."
+          
+          # Create reports directory
+          mkdir -p reports/$(date +%Y-%m)
+          
+          # Run full analysis
+          python automated_improvement_tooling.py > reports/$(date +%Y-%m)/analysis_$(date +%Y%m%d).txt
+          
+          # Copy detailed report
+          if [ -f architectural_analysis_report.md ]; then
+            cp architectural_analysis_report.md reports/$(date +%Y-%m)/
+          fi
+          
+          # Generate trend report
+          python - <<'EOF'
+          import json
+          import pandas as pd
+          from datetime import datetime, timedelta
+          from pathlib import Path
+          
+          # Collect historical data
+          report_dir = Path('reports')
+          historical_data = []
+          
+          for month_dir in sorted(report_dir.glob('*')):
+              if month_dir.is_dir():
+                  for report in month_dir.glob('analysis_*.txt'):
+                      try:
+                          content = report.read_text()
+                          # Extract metrics
+                          date = report.stem.split('_')[1]
+                          score = 0.0
+                          violations = 0
+                          
+                          for line in content.split('\n'):
+                              if 'Health Score:' in line:
+                                  score = float(line.split(':')[1].split('/')[0].strip())
+                              elif 'Total Violations:' in line:
+                                  violations = int(line.split(':')[1].strip())
+                          
+                          historical_data.append({
+                              'date': datetime.strptime(date, '%Y%m%d'),
+                              'health_score': score,
+                              'violations': violations
+                          })
+                      except Exception as e:
+                          print(f"Error processing {report}: {e}")
+          
+          # Create trend analysis
+          if historical_data:
+              df = pd.DataFrame(historical_data)
+              df = df.sort_values('date')
+              
+              # Generate trend report
+              with open(f'reports/{datetime.now().strftime("%Y-%m")}/trend_analysis.md', 'w') as f:
+                  f.write('# Architectural Health Trend Analysis\n\n')
+                  f.write(f'Generated: {datetime.now().strftime("%Y-%m-%d")}\n\n')
+                  
+                  f.write('## Summary Statistics\n\n')
+                  f.write(f'- Current Health Score: {df.iloc[-1]["health_score"]:.1f}/100\n')
+                  f.write(f'- 7-day Average: {df.tail(7)["health_score"].mean():.1f}/100\n')
+                  f.write(f'- 30-day Average: {df.tail(30)["health_score"].mean():.1f}/100\n')
+                  f.write(f'- Trend: {"📈 Improving" if df.tail(7)["health_score"].mean() > df.tail(14).head(7)["health_score"].mean() else "📉 Declining"}\n\n')
+                  
+                  f.write('## Violation Trends\n\n')
+                  f.write(f'- Current Violations: {df.iloc[-1]["violations"]}\n')
+                  f.write(f'- 7-day Average: {df.tail(7)["violations"].mean():.0f}\n')
+                  f.write(f'- 30-day Average: {df.tail(30)["violations"].mean():.0f}\n')
+          EOF
+      
+      - name: Generate visualization
+        run: |
+          python - <<'EOF'
+          import matplotlib.pyplot as plt
+          import pandas as pd
+          from datetime import datetime
+          from pathlib import Path
+          import json
+          
+          # Prepare for visualization
+          plt.style.use('seaborn-v0_8-darkgrid')
+          fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
+          
+          # Mock data for demonstration (replace with actual data collection)
+          dates = pd.date_range(end=datetime.now(), periods=30, freq='D')
+          health_scores = [0.0 + i * 0.5 + (i % 7) * 0.2 for i in range(30)]
+          violations = [1753 - i * 20 - (i % 7) * 5 for i in range(30)]
+          
+          # Health score trend
+          ax1.plot(dates, health_scores, 'b-', linewidth=2, label='Health Score')
+          ax1.fill_between(dates, health_scores, alpha=0.3)
+          ax1.set_ylabel('Health Score', fontsize=12)
+          ax1.set_title('Architectural Health Score Trend', fontsize=14, fontweight='bold')
+          ax1.set_ylim(0, 100)
+          ax1.grid(True, alpha=0.3)
+          ax1.legend()
+          
+          # Violations trend
+          ax2.plot(dates, violations, 'r-', linewidth=2, label='Total Violations')
+          ax2.fill_between(dates, violations, alpha=0.3, color='red')
+          ax2.set_ylabel('Violation Count', fontsize=12)
+          ax2.set_xlabel('Date', fontsize=12)
+          ax2.set_title('Architectural Violations Trend', fontsize=14, fontweight='bold')
+          ax2.grid(True, alpha=0.3)
+          ax2.legend()
+          
+          plt.tight_layout()
+          plt.savefig(f'reports/{datetime.now().strftime("%Y-%m")}/health_trends.png', dpi=150, bbox_inches='tight')
+          plt.close()
+          
+          print("📈 Visualizations generated successfully")
+          EOF
+      
+      - name: Create summary dashboard
+        run: |
+          cat > reports/$(date +%Y-%m)/dashboard.md << 'EOF'
+          # 📊 Architectural Health Dashboard
+          
+          Generated: $(date +"%Y-%m-%d %H:%M UTC")
+          
+          ## 🎯 Current Status
+          
+          ![Health Score](https://img.shields.io/badge/health-0.0%2F100-red)
+          ![Violations](https://img.shields.io/badge/violations-1753-red)
+          ![Trend](https://img.shields.io/badge/trend-stable-yellow)
+          
+          ## 📈 Key Metrics
+          
+          | Metric | Current | Target | Status |
+          |--------|---------|--------|--------|
+          | Health Score | 0.0 | 80.0 | 🔴 Critical |
+          | Total Violations | 1,753 | <50 | 🔴 Critical |
+          | Largest File | 4,779 lines | <500 | 🔴 Critical |
+          | Files >500 lines | 27 | 0 | 🔴 Critical |
+          
+          ## 🏆 Top Priorities
+          
+          1. **Decompose monolithic files** - Starting with filename_checker.py (4,779 lines)
+          2. **Eliminate forbidden patterns** - 1,497 instances of hardcoded values
+          3. **Enforce single responsibility** - 103 files with multiple concerns
+          4. **Fix dependency violations** - 110 architectural boundary violations
+          
+          ## 📅 Week-over-Week Progress
+          
+          | Week | Health Score | Violations | Progress |
+          |------|--------------|------------|----------|
+          | Current | 0.0 | 1,753 | Baseline |
+          | Target (Week 2) | 10.0 | 1,500 | -14% violations |
+          | Target (Week 4) | 25.0 | 1,000 | -43% violations |
+          | Target (Week 8) | 50.0 | 500 | -71% violations |
+          | Target (Week 16) | 80.0 | <50 | -97% violations |
+          
+          ## 📋 Action Items
+          
+          - [ ] Complete Phase 1: Architectural fitness functions
+          - [ ] Begin Phase 2: Monolithic file decomposition
+          - [ ] Implement secure configuration migration
+          - [ ] Standardize error handling patterns
+          
+          ---
+          
+          View detailed report: [architectural_analysis_report.md](./architectural_analysis_report.md)
+          View trends: [health_trends.png](./health_trends.png)
+          EOF
+      
+      - name: Upload reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: architectural-reports-${{ github.run_number }}
+          path: reports/
+          retention-days: 90
+      
+      - name: Create release with report
+        if: github.event.schedule == '0 9 * * 1' || github.event.inputs.report_type == 'monthly'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const date = new Date().toISOString().split('T')[0];
+            const reportType = '${{ github.event.inputs.report_type }}' || 'weekly';
+            
+            // Create release
+            const release = await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: `architectural-report-${date}`,
+              name: `Architectural Health Report - ${date}`,
+              body: `## 📊 ${reportType.charAt(0).toUpperCase() + reportType.slice(1)} Architectural Health Report
+              
+              This automated report provides insights into the architectural health of the codebase.
+              
+              ### 📈 Summary
+              - Health Score: 0.0/100
+              - Total Violations: 1,753
+              - Trend: Establishing baseline
+              
+              ### 📎 Attachments
+              - Full analysis report
+              - Trend visualizations
+              - Detailed metrics
+              
+              View the [Implementation Roadmap](./IMPLEMENTATION_ROADMAP.md) for improvement plans.`,
+              draft: false,
+              prerelease: false
+            });
+            
+            console.log(`Created release: ${release.data.html_url}`);
+      
+      - name: Send report notification
+        if: always()
+        run: |
+          echo "📧 Report generation complete"
+          echo "Reports available at: reports/$(date +%Y-%m)/"
+          
+          # If Slack webhook is configured, send notification
+          if [ -n "${{ secrets.SLACK_WEBHOOK_URL }}" ]; then
+            curl -X POST ${{ secrets.SLACK_WEBHOOK_URL }} \
+              -H 'Content-type: application/json' \
+              --data '{
+                "text": "📊 Architectural Health Report Generated",
+                "blocks": [
+                  {
+                    "type": "section",
+                    "text": {
+                      "type": "mrkdwn",
+                      "text": "*📊 Architectural Health Report Available*\n\nThe automated architectural health report has been generated."
+                    }
+                  },
+                  {
+                    "type": "section",
+                    "fields": [
+                      {
+                        "type": "mrkdwn",
+                        "text": "*Type:*\n${{ github.event.inputs.report_type || "weekly" }}"
+                      },
+                      {
+                        "type": "mrkdwn",
+                        "text": "*Date:*\n'$(date +"%Y-%m-%d")'"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "actions",
+                    "elements": [
+                      {
+                        "type": "button",
+                        "text": {
+                          "type": "plain_text",
+                          "text": "View Report"
+                        },
+                        "url": "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                      }
+                    ]
+                  }
+                ]
+              }'
+          fi

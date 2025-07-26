@@ -1,0 +1,8 @@
+{
+  "title": "Representation of forward performance criteria with random endowment via FBSDE and application to forward optimized certainty equivalent",
+  "authors": [],
+  "year": null,
+  "citation_id": null,
+  "snippet": "We extend the notion of forward performance criteria to settings with random endowment in incomplete markets. Building on these results, we introduce and develop the novel concept of forward optimized certainty equivalent (forward OCE), which offers a genuinely dynamic valuation mechanism that accommodates progressively adaptive market model updates, stochastic risk preferences, and incoming claims with arbitrary maturities. In parallel, we develop a new methodology to analyze the emerging stochastic optimization problems by directly studying the candidate optimal control processes for both the primal and dual problems. Specifically, we derive two new systems of forward-backward stochastic differential equations (FBSDEs) and establish necessary and sufficient conditions for optimality, and various equivalences between the two problems. This new approach is general and complements the existing one based on backward stochastic partial differential equations (backward SPDEs) for the related value functions. We, also, consider representative examples for both forward performance criteria with random endowment and forward OCE, and for the case of exponential criteria, we investigate the connection between forward OCE and forward entropic risk measures.",
+  "source": "scholar_serpapi"
+}

@@ -1,0 +1,253 @@
+name: PR Architectural Checks
+# Phase 1, Week 1, Day 3-4: Pull Request Specific Checks
+# Purpose: Ensure PRs don't degrade architectural health
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  check-pr-impact:
+    name: Check PR Architectural Impact
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      
+      - name: Checkout base branch
+        run: |
+          git fetch origin ${{ github.base_ref }}:base-branch
+          git checkout base-branch
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install pyyaml
+      
+      - name: Analyze base branch
+        id: base-analysis
+        run: |
+          echo "📊 Analyzing base branch..."
+          python automated_improvement_tooling.py --score-only > base_score.txt
+          base_score=$(cat base_score.txt)
+          echo "base_score=$base_score" >> $GITHUB_OUTPUT
+          
+          # Count violations
+          python automated_improvement_tooling.py --no-report > base_analysis.txt 2>&1 || true
+          base_violations=$(grep -oP 'Total Violations: \K\d+' base_analysis.txt || echo "0")
+          echo "base_violations=$base_violations" >> $GITHUB_OUTPUT
+      
+      - name: Checkout PR branch
+        run: git checkout ${{ github.head_ref }}
+      
+      - name: Analyze PR branch
+        id: pr-analysis
+        run: |
+          echo "📊 Analyzing PR branch..."
+          python automated_improvement_tooling.py --score-only > pr_score.txt
+          pr_score=$(cat pr_score.txt)
+          echo "pr_score=$pr_score" >> $GITHUB_OUTPUT
+          
+          # Count violations
+          python automated_improvement_tooling.py --no-report > pr_analysis.txt 2>&1 || true
+          pr_violations=$(grep -oP 'Total Violations: \K\d+' pr_analysis.txt || echo "0")
+          echo "pr_violations=$pr_violations" >> $GITHUB_OUTPUT
+      
+      - name: Check specific violations in changed files
+        id: file-checks
+        run: |
+          echo "🔍 Checking violations in changed files..."
+          
+          # Get list of changed Python files
+          git diff --name-only origin/${{ github.base_ref }}...HEAD | grep '\.py$' > changed_files.txt || true
+          
+          if [ -s changed_files.txt ]; then
+            echo "Found $(wc -l < changed_files.txt) changed Python files"
+            
+            # Check file sizes
+            echo "## File Size Check" > file_violations.txt
+            cat changed_files.txt | xargs python tools/file_size_check.py >> file_violations.txt 2>&1 || true
+            
+            # Check forbidden patterns
+            echo -e "\n## Forbidden Pattern Check" >> file_violations.txt
+            cat changed_files.txt | xargs python tools/forbidden_pattern_check.py >> file_violations.txt 2>&1 || true
+            
+            # Check single responsibility
+            echo -e "\n## Single Responsibility Check" >> file_violations.txt
+            cat changed_files.txt | xargs python tools/single_responsibility_check.py >> file_violations.txt 2>&1 || true
+            
+            # Check secure config
+            echo -e "\n## Secure Configuration Check" >> file_violations.txt
+            cat changed_files.txt | xargs python tools/secure_config_check.py >> file_violations.txt 2>&1 || true
+            
+            # Count total violations
+            violation_count=$(grep -c "❌" file_violations.txt || echo "0")
+            echo "file_violations=$violation_count" >> $GITHUB_OUTPUT
+          else
+            echo "No Python files changed"
+            echo "file_violations=0" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Calculate impact
+        id: impact
+        run: |
+          base_score=${{ steps.base-analysis.outputs.base_score }}
+          pr_score=${{ steps.pr-analysis.outputs.pr_score }}
+          base_violations=${{ steps.base-analysis.outputs.base_violations }}
+          pr_violations=${{ steps.pr-analysis.outputs.pr_violations }}
+          
+          # Calculate score change
+          score_change=$(echo "$pr_score - $base_score" | bc)
+          violation_change=$(echo "$pr_violations - $base_violations" | bc)
+          
+          echo "score_change=$score_change" >> $GITHUB_OUTPUT
+          echo "violation_change=$violation_change" >> $GITHUB_OUTPUT
+          
+          # Determine impact level
+          if (( $(echo "$score_change < -5" | bc -l) )); then
+            echo "impact_level=high" >> $GITHUB_OUTPUT
+            echo "impact_emoji=🔴" >> $GITHUB_OUTPUT
+          elif (( $(echo "$score_change < 0" | bc -l) )); then
+            echo "impact_level=medium" >> $GITHUB_OUTPUT
+            echo "impact_emoji=🟡" >> $GITHUB_OUTPUT
+          elif (( $(echo "$score_change > 0" | bc -l) )); then
+            echo "impact_level=positive" >> $GITHUB_OUTPUT
+            echo "impact_emoji=🟢" >> $GITHUB_OUTPUT
+          else
+            echo "impact_level=neutral" >> $GITHUB_OUTPUT
+            echo "impact_emoji=⚪" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Post PR comment
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            
+            // Get analysis results
+            const baseScore = '${{ steps.base-analysis.outputs.base_score }}';
+            const prScore = '${{ steps.pr-analysis.outputs.pr_score }}';
+            const baseViolations = '${{ steps.base-analysis.outputs.base_violations }}';
+            const prViolations = '${{ steps.pr-analysis.outputs.pr_violations }}';
+            const scoreChange = '${{ steps.impact.outputs.score_change }}';
+            const violationChange = '${{ steps.impact.outputs.violation_change }}';
+            const impactEmoji = '${{ steps.impact.outputs.impact_emoji }}';
+            const fileViolations = '${{ steps.file-checks.outputs.file_violations }}';
+            
+            // Read file violations if they exist
+            let fileViolationDetails = '';
+            try {
+              const violations = fs.readFileSync('file_violations.txt', 'utf8');
+              if (violations && violations.includes('❌')) {
+                fileViolationDetails = `
+            <details>
+            <summary>⚠️ Violations in Changed Files</summary>
+            
+            \`\`\`
+            ${violations.substring(0, 3000)}
+            \`\`\`
+            
+            </details>`;
+              }
+            } catch (e) {
+              // No violations file
+            }
+            
+            // Format score change
+            const scoreChangeFormatted = scoreChange > 0 ? `+${scoreChange}` : scoreChange;
+            const violationChangeFormatted = violationChange > 0 ? `+${violationChange}` : violationChange;
+            
+            const comment = `## ${impactEmoji} Architectural Impact Analysis
+            
+            This PR's impact on architectural health:
+            
+            | Metric | Base Branch | This PR | Change |
+            |--------|-------------|---------|--------|
+            | **Health Score** | ${baseScore}/100 | ${prScore}/100 | ${scoreChangeFormatted} |
+            | **Total Violations** | ${baseViolations} | ${prViolations} | ${violationChangeFormatted} |
+            | **New Violations in Changed Files** | - | ${fileViolations} | - |
+            
+            ${fileViolationDetails}
+            
+            ### ${impactEmoji} Assessment
+            ${scoreChange < -5 ? '**⚠️ This PR significantly degrades architectural health!**' : 
+              scoreChange < 0 ? '**This PR slightly degrades architectural health.**' :
+              scoreChange > 0 ? '**✅ This PR improves architectural health!**' :
+              '**This PR maintains current architectural health.**'}
+            
+            ${fileViolations > 0 ? `
+            ### 🚨 Action Required
+            Please address the ${fileViolations} violation(s) in your changed files before merging.
+            ` : ''}
+            
+            ---
+            💡 Run \`pre-commit run --all-files\` locally to check for violations before pushing.`;
+            
+            // Find existing comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number
+            });
+            
+            const botComment = comments.find(comment => 
+              comment.user.type === 'Bot' && 
+              comment.body.includes('Architectural Impact Analysis')
+            );
+            
+            if (botComment) {
+              // Update existing comment
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: comment
+              });
+            } else {
+              // Create new comment
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: comment
+              });
+            }
+      
+      - name: Set PR status
+        if: always()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const scoreChange = parseFloat('${{ steps.impact.outputs.score_change }}');
+            const fileViolations = parseInt('${{ steps.file-checks.outputs.file_violations }}');
+            
+            let state = 'success';
+            let description = 'Architectural checks passed';
+            
+            if (scoreChange < -5 || fileViolations > 5) {
+              state = 'failure';
+              description = `Architectural health degraded (${scoreChange} points, ${fileViolations} violations)`;
+            } else if (scoreChange < 0 || fileViolations > 0) {
+              state = 'pending';
+              description = `Minor architectural concerns (${scoreChange} points, ${fileViolations} violations)`;
+            } else if (scoreChange > 0) {
+              description = `Architectural health improved (+${scoreChange} points)`;
+            }
+            
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.sha,
+              state: state,
+              description: description,
+              context: 'Architectural Health'
+            });

@@ -1,0 +1,4 @@
+# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/validators/validation_result.py
+# hypothesis_version: 6.135.32
+
+['error', 'info', 'warning']

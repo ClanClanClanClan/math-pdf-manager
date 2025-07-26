@@ -1,0 +1,209 @@
+#!/usr/bin/env python3
+"""
+Dependency Injection Container
+Phase 1, Week 2: Strategic Transformation
+
+A lightweight dependency injection container for managing service dependencies
+and reducing coupling between components.
+"""
+
+import inspect
+import os
+import copy
+import signal
+import time
+import threading
+from typing import Type, TypeVar, Dict, Any, Callable, Optional, Union, List
+from abc import ABC, abstractmethod
+from functools import wraps
+from core.config.secure_config import SecureConfigManager as SecureConfig
+
+T = TypeVar('T')
+
+class DIContainer:
+    """
+    Lightweight dependency injection container.
+    
+    Manages service registration, resolution, and lifecycle.
+    """
+    
+    def __init__(self):
+        self._services: Dict[str, Any] = {}
+        self._singletons: Dict[str, Any] = {}
+        self._factories: Dict[str, Callable] = {}
+        self._transients: Dict[str, Type] = {}
+        self._config = SecureConfig()
+        self._resolution_stack: List[str] = []  # Track resolution chain for circular dependency detection
+        
+    def register_singleton(self, interface: Type[T], implementation: Union[Type[T], T], name: Optional[str] = None) -> None:
+        """Register a singleton service."""
+        key = name or interface.__name__
+        
+        if inspect.isclass(implementation):
+            # Store class for lazy instantiation
+            self._singletons[key] = implementation
+        else:
+            # Store instance directly
+            self._services[key] = implementation
+            
+    def register_transient(self, interface: Type[T], implementation: Type[T], name: Optional[str] = None) -> None:
+        """Register a transient service (new instance each time)."""
+        key = name or interface.__name__
+        self._transients[key] = implementation
+        
+    def register_factory(self, interface: Union[Type[T], str], factory: Callable[[], T], name: Optional[str] = None) -> None:
+        """Register a factory function for service creation."""
+        if isinstance(interface, str):
+            key = name or interface
+        else:
+            key = name or interface.__name__
+        self._factories[key] = factory
+        
+    def resolve(self, interface: Type[T], name: Optional[str] = None) -> T:
+        """Resolve a service instance."""
+        # Handle forward references (string annotations)
+        if isinstance(interface, str):
+            key = name or interface
+        else:
+            key = name or interface.__name__
+        
+        # Check for circular dependency
+        if key in self._resolution_stack:
+            cycle = self._resolution_stack[self._resolution_stack.index(key):] + [key]
+            raise ValueError(f"Circular dependency detected: {' -> '.join(cycle)}")
+        
+        # Check if already instantiated
+        if key in self._services:
+            return self._services[key]
+            
+        # Add to resolution stack
+        self._resolution_stack.append(key)
+        
+        try:
+            # Check singletons
+            if key in self._singletons:
+                if inspect.isclass(self._singletons[key]):
+                    # Lazy instantiation with dependency injection
+                    instance = self._create_instance(self._singletons[key])
+                    self._services[key] = instance
+                    return instance
+                else:
+                    return self._singletons[key]
+                    
+            # Check factories
+            if key in self._factories:
+                if key.endswith('_singleton'):
+                    # Singleton factory
+                    if key not in self._services:
+                        self._services[key] = self._execute_factory_safely(self._factories[key])
+                    return self._services[key]
+                else:
+                    # Transient factory
+                    return self._execute_factory_safely(self._factories[key])
+                    
+            # Check transients
+            if key in self._transients:
+                return self._create_instance(self._transients[key])
+                
+            # Try to auto-wire if it's a concrete class
+            if inspect.isclass(interface) and not inspect.isabstract(interface):
+                return self._create_instance(interface)
+                
+            raise ValueError(f"Service {key} not registered and cannot be auto-wired")
+        finally:
+            # Remove from resolution stack
+            if key in self._resolution_stack:
+                self._resolution_stack.remove(key)
+        
+    def _create_instance(self, cls: Type[T]) -> T:
+        """Create an instance with dependency injection."""
+        # Get constructor signature
+        sig = inspect.signature(cls.__init__)
+        
+        # Build arguments
+        kwargs = {}
+        for param_name, param in sig.parameters.items():
+            if param_name == 'self':
+                continue
+                
+            # Try to resolve dependency
+            if param.annotation != inspect.Parameter.empty:
+                try:
+                    kwargs[param_name] = self.resolve(param.annotation)
+                except ValueError:
+                    # Check if parameter has default value
+                    if param.default == inspect.Parameter.empty:
+                        raise ValueError(f"Cannot resolve dependency {param_name}: {param.annotation}")
+                        
+        return cls(**kwargs)
+    
+    def _execute_factory_safely(self, factory: Callable) -> Any:
+        """Execute a factory function in a sandboxed environment."""
+        # Save current environment state
+        original_environ = dict(os.environ)
+        
+        try:
+            # Execute the factory - the external timeout mechanism should handle infinite loops
+            result = factory()
+            
+            # Check if environment was modified
+            if dict(os.environ) != original_environ:
+                # Restore original environment
+                os.environ.clear()
+                os.environ.update(original_environ)
+                # This allows the factory to run but prevents permanent environment modification
+            
+            return result
+        except Exception as e:
+            # Restore environment on any exception
+            os.environ.clear()
+            os.environ.update(original_environ)
+            raise e
+        
+    def configure_from_config(self, config_section: str = 'services') -> None:
+        """Configure services from configuration."""
+        services_config = self._config.get_section(config_section, {})
+        
+        for service_name, service_config in services_config.items():
+            if 'class' in service_config:
+                # Dynamic class loading (simplified)
+                class_name = service_config['class']
+                if 'singleton' in service_config and service_config['singleton']:
+                    # Would register as singleton
+                    pass
+                else:
+                    # Would register as transient
+                    pass
+
+# Global container instance
+_container = DIContainer()
+
+def get_container() -> DIContainer:
+    """Get the global DI container."""
+    return _container
+
+def inject(interface: Type[T], name: Optional[str] = None) -> Callable:
+    """Decorator for dependency injection."""
+    def decorator(func: Callable) -> Callable:
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            # Inject dependency if not provided
+            param_name = name or interface.__name__.lower()
+            if param_name not in kwargs:
+                kwargs[param_name] = get_container().resolve(interface, name)
+            return func(*args, **kwargs)
+        return wrapper
+    return decorator
+
+def service(interface: Type[T] = None, singleton: bool = True, name: Optional[str] = None) -> Callable:
+    """Decorator to automatically register a service."""
+    def decorator(cls: Type[T]) -> Type[T]:
+        target_interface = interface or cls
+        
+        if singleton:
+            get_container().register_singleton(target_interface, cls, name)
+        else:
+            get_container().register_transient(target_interface, cls, name)
+            
+        return cls
+    return decorator

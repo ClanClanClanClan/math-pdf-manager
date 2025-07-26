@@ -1,0 +1,137 @@
+COMPREHENSIVE FUNCTION MAPPING: Original -> Modular Structure
+================================================================
+
+Based on the original monolithic file with 88 functions, here's where each should be located:
+
+AUTHOR PROCESSING (filename_checker/author_processing.py):
+- author_string_is_normalized ✓ (exists)
+- author_string_is_normalized_complete ✓ (exists)
+- author_string_is_normalized_debug ✓ (exists)
+- debug_author_string ✓ (exists)
+- fix_author_block ✓ (exists)
+- fix_author_suffixes ✓ (exists)
+- fix_initial_spacing ✓ (exists)
+- normalize_author_string ✓ (exists)
+- normalize_for_comparison ✓ (exists)
+- parse_authors_and_title ✓ (exists)
+- _names_are_trivially_equivalent ❌ (MISSING)
+
+BATCH PROCESSING (filename_checker/batch_processing.py):
+- batch_check_filenames ✓ (exists)
+- batch_check_filenames_new ✓ (exists)
+- _batch_check_worker ❌ (MISSING)
+
+CORE (filename_checker/core.py):
+- check_filename ✓ (exists)
+- process_filename ✓ (exists)
+- validate_filename_format ✓ (exists)
+- format_error_message ✓ (exists)
+- load_config_file ❌ (MISSING)
+- load_word_list ❌ (MISSING)
+
+DEBUG (filename_checker/debug.py):
+- debug_print ✓ (exists)
+- disable_debug ✓ (exists)
+- enable_debug ✓ (exists)
+- debug_fixer_chain ❌ (MISSING)
+
+MATH UTILS (filename_checker/math_utils.py):
+- contains_math ✓ (exists)
+- find_math_regions ✓ (exists)
+- is_filename_math_token ✓ (exists)
+- is_mathematical_context ✓ (exists)
+- should_preserve_digit ✓ (exists)
+- check_mathematician_names ❌ (MISSING)
+- find_math_segments ❌ (MISSING)
+
+TEXT PROCESSING (filename_checker/text_processing.py):
+- convert_straight_quotes_to_proper ✓ (exists)
+- fix_and_flag_quotes ✓ (exists)
+- fix_ellipsis ✓ (exists)
+- fix_ligatures ✓ (exists)
+- fix_ligature_words ✓ (exists)
+- get_quote_positions ✓ (exists)
+- is_contraction_apostrophe ✓ (exists)
+- should_capitalize_after_quote ✓ (exists)
+- spell_out_small_numbers ✓ (exists)
+- _restore_missing_e_ff ✓ (exists)
+- check_parentheses_brackets_balance ✓ (exists)
+- fix_ascii_punctuation ✓ (exists)
+- fix_math_unicode ❌ (MISSING)
+- fix_quotes ❌ (MISSING)
+- fix_thousand_separators ❌ (MISSING)
+- get_ligature_suggestions ❌ (MISSING)
+- to_sentence_case ❌ (MISSING)
+- to_sentence_case_academic ❌ (MISSING)
+
+TOKENIZATION (filename_checker/tokenization.py):
+- enforce_ndash_between_authors ✓ (exists)
+- find_bad_dash_patterns ✓ (exists)
+- get_first_word_properly ✓ (exists)
+- normalize_token ✓ (exists)
+- robust_tokenize_with_math ✓ (exists)
+- check_dash_pairs ✓ (exists)
+- find_dash_pairs_with_positions ✓ (exists)
+- robust_phrase_tokenize ✓ (exists)
+- dash_pair_cap_checker ❌ (MISSING)
+- dash_pair_hyphen_checker ❌ (MISSING)
+
+UNICODE UTILS (filename_checker/unicode_utils.py):
+- add_spaces_after_commas ✓ (exists)
+- clean_whitelist_pairs ✓ (exists)
+- find_all_exception_spans ✓ (exists)
+- has_mathematical_greek ✓ (exists)
+- is_in_spans ✓ (exists)
+- iterate_nonmath_segments ✓ (exists)
+- iterate_nonmath_segments_flat ✓ (exists)
+- nfc ✓ (exists)
+- phrase_variants ✓ (exists)
+- sanitize_unicode_security ✓ (exists)
+- detect_language ❌ (MISSING)
+- is_canonically_equivalent ❌ (MISSING)
+- is_unicode_normalized ❌ (MISSING)
+- normalize_unicode ❌ (MISSING)
+
+VALIDATORS (validators/):
+- check_title_capitalization ✓ (exists in title_normalizer.py)
+- check_title_dashes ✓ (exists in title_normalizer.py)
+- spelling_and_format_errors ✓ (exists in title_normalizer.py)
+- is_mathematical_variable_in_context ✓ (exists in title_normalizer.py)
+- check_capitalization ❌ (MISSING)
+- check_spelling ❌ (MISSING)
+
+UTILITY FUNCTIONS (utils.py):
+- _ensure_detector_seed ✓ (exists)
+- get_language ✓ (exists)
+- is_nfc ✓ (exists)
+- timeout ✓ (exists)
+- tokenize_with_phrases ✓ (exists)
+
+SUMMARY:
+Total original functions: 88
+Functions that exist in modular structure: 66
+Functions that are MISSING: 22
+
+MISSING FUNCTIONS TO RESTORE:
+1. _batch_check_worker
+2. _names_are_trivially_equivalent
+3. check_capitalization
+4. check_mathematician_names
+5. check_spelling
+6. dash_pair_cap_checker
+7. dash_pair_hyphen_checker
+8. debug_fixer_chain
+9. detect_language
+10. find_math_segments
+11. fix_math_unicode
+12. fix_quotes
+13. fix_thousand_separators
+14. get_ligature_suggestions
+15. is_canonically_equivalent
+16. is_unicode_normalized
+17. load_config_file
+18. load_word_list
+19. normalize_unicode
+20. robust_phrase_tokenize ✓ (DONE)
+21. to_sentence_case
+22. to_sentence_case_academic

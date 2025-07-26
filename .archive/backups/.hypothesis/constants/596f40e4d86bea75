@@ -1,0 +1,4 @@
+# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/validators/__init__.py
+# hypothesis_version: 6.135.32
+
+['AuthorValidator', 'FilenameValidator', 'MATHBB_MAP', 'MathContextDetector', 'SUBSCRIPT_MAP', 'SUPERSCRIPT_MAP', 'UnicodeValidator', 'ValidationError', 'contains_math', 'debug_print', 'disable_debug', 'enable_debug', 'find_math_regions']

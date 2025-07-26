@@ -1,0 +1,8 @@
+{
+  "title": "A Global Maximum Principle for Controlled Conditional Mean-field FBSDEs with Regime Switching",
+  "authors": [],
+  "year": null,
+  "citation_id": null,
+  "snippet": "This paper is devoted to a global stochastic maximum principle for conditional mean-field forward-backward stochastic differential equations (FBSDEs, for short) with regime switching. The control domain is unnecessarily convex and the driver of backward stochastic differential equations (BSDEs, for short) could depend on . Different from the case of non-recursive utility, the first-order and second-order adjoint equations are both high-dimensional linear BSDEs. Based on the adjoint equations, we reveal the relations among the terms of the first- and second-order Taylor's expansions. A general maximum principle is proved, which develops the work of Nguyen, Yin, and Nguyen [22] to recursive utility. As applications, the linear-quadratic problem is considered and a problem with state constraint is studied.",
+  "source": "scholar_serpapi"
+}

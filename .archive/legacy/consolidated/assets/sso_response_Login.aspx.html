@@ -1,0 +1,348 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html>
+<head>
+<title>Single Sign On</title>
+<link href="/SSO/skins/default/default.css" type="text/css" rel="stylesheet"/>
+<script language="javascript">
+// <!--
+// onerror
+window.onerror = window_onerror;
+function window_onerror(message,url,lineNumber) {
+	var queryString = '?onerror_message=' + escape(message) + '&onerror_url=' + escape(url) + '&onerror_lineNumber=' + lineNumber;
+	var onerrorImage = new Image();
+	onerrorImage.src = queryString;
+	return true;
+}
+// -->
+
+</script>
+</head>
+<body>
+
+<script
+  src="https://code.jquery.com/jquery-3.6.0.min.js"
+  integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4="
+  crossorigin="anonymous"></script>
+
+<script src="https://www.recaptcha.net/recaptcha/api.js?render=6Lc4qscbAAAAAKqNk2gc5xA6VKjQYwEOrXD9Aff-"></script>
+<style>
+    .grecaptcha-badge {
+        visibility: hidden;
+    }
+</style>
+
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=PT+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+
+    body {
+      font-family: "PT Sans", sans-serif;
+      font-weight: 400;
+      font-style: normal;
+    }
+
+    .pt-sans-bold-italic {
+      font-family: "PT Sans", sans-serif;
+      font-weight: 700;
+      font-style: italic;
+    }
+
+    #SIAM_LOGO{
+	    width:auto !important;
+    }
+    table {
+        width:100%;
+        border-collapse: collapse;
+        align-self: center;
+        align-content: center;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    th, td {
+            padding-top: 5px;
+            text-align: left;
+        }
+
+    th {
+        background-color: #f2f2f2;
+    }
+
+    tbody {
+        width: auto !important;
+        align-content: center;
+        padding-left: 5px;
+        padding-right: 5px;
+        font-family: "PT Sans", sans-serif;
+        font-weight: 400;
+        font-style: normal;
+
+    }
+
+  
+    @media only screen and (max-width: 500px) {
+        #SIAM_LOGO{
+            max-width: 100% !important;
+            max-height: 100% !important;
+            background-size: 350px, 135px;
+            margin-bottom: 0px;
+            padding-bottom: 0px;
+
+        }
+
+        table {
+            width:100% !important;
+            border-collapse: collapse;
+            margin-left: auto;
+            margin-right: auto;
+
+        }
+
+        th, td {
+            display: block;
+            width: 100%;
+        }
+
+        th {
+            text-align: center;
+        }
+        div {
+            width: auto;
+        }
+        #blank_td{
+            display: none;
+        }
+    }
+
+
+    @media only screen and (max-width: 390px) {
+        #SIAM_LOGO{
+            max-width: 100% !important;
+            max-height: 100% !important;
+            background-image: url(skins/default/images/SIAM_co-branded-logo3272_square.png);
+            background-size: 200px, 200px;
+            height: 100px;
+            margin-bottom: 0px;
+            padding-bottom: 0px;
+        }
+    }
+
+
+    @media only screen and (max-width: 325px) {
+        #SIAM_LOGO{
+            max-width: 100% !important;
+            max-height: 100% !important;
+            background-size: 200px, 200px;
+            margin-bottom: 0px;
+            padding-bottom: 0px;
+        }
+    }
+
+        @media only screen and (max-width: 300px) {
+        #SIAM_LOGO{
+            max-width: 100% !important;
+            max-height: 100% !important;
+            background-size: 175px, 175px;
+            margin-bottom: 0px;
+            padding-bottom: 0px;
+        }
+    }
+
+    }
+
+</style>
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+ 
+
+<form method="post" action="LoginTemplates/DefaultLogin.aspx" onsubmit="javascript:return WebForm_OnSubmit();" id="LoginForm">
+<div class="aspNetHidden">
+<input type="hidden" name="__EVENTTARGET" id="__EVENTTARGET" value="" />
+<input type="hidden" name="__EVENTARGUMENT" id="__EVENTARGUMENT" value="" />
+<input type="hidden" name="__VIEWSTATE" id="__VIEWSTATE" value="QBtoZP7Khl2sVsVO3tvgaiSHMhaqfxepF8e7lpUSt8k18NDWWa4NbnzFvbi7t+3JcTsYQvm+k/ko9+61jnr2Us64o8tO0lCBvgB5/26g8FEJb63SEyJNC5XoUROUrEE92c0nGCpUh3dWO9gOmz+2QttOy7qX5Gf7DfmPlLaNIOYm7dLcIrncVq/KHahYPtUA1qy9kjIwdtCyLWuAw8QlC3M/cJIuZxrsx/XT9PxvcMiNsXShG1jTpOrDnQ9bfXy4NXq5jOjilDskbZxZw1MgeWo1SqU8+/w0dafxasce6twRTXdwCLNXA2CYVvaf89O28msA/VL5qm+7OtNRT7u6T0geNRAFSAs2MQYf5S8Ngb2xR+BiIoS7ejdtBNKo9k95J+wLhLXg0jBiBY9isAcB+vPceogEpC8xwG3XesG3TepKgpnt3zJYJME0FJS3W++YRp289bxcn1B97Xfl" />
+</div>
+
+<script type="text/javascript">
+//<![CDATA[
+var theForm = document.forms['LoginForm'];
+if (!theForm) {
+    theForm = document.LoginForm;
+}
+function __doPostBack(eventTarget, eventArgument) {
+    if (!theForm.onsubmit || (theForm.onsubmit() != false)) {
+        theForm.__EVENTTARGET.value = eventTarget;
+        theForm.__EVENTARGUMENT.value = eventArgument;
+        theForm.submit();
+    }
+}
+//]]>
+</script>
+
+
+<script src="/SSO/WebResource.axd?d=Nw2fvAEL66Jh9rxVmyfCYJhrYdtWVa2BOnXuK0EDobD1SoXSYLWNtoijBoPXAwkHH1mqwjsoYeUiOMVr0&amp;t=638563127773552689" type="text/javascript"></script>
+
+
+<script src="/SSO/WebResource.axd?d=9-_lMf-xPpPk7iuKHivNwQi5ID8huDxTKKcKlRZ-UJkxPTvCZn1-7mfaaz4Bu4tgjynStT67X2G7s3NXGN-1mGIlzpM1&amp;t=638563127773552689" type="text/javascript"></script>
+<script src="/SSO/WebResource.axd?d=fLIaW8IDR1hfKFwMik0nxUaxURdjZzB9YHMnP2d84l0r2wVXiFKW_MFh6MCd4IOmv3ils9jGe1_UeYr40&amp;t=638563127773552689" type="text/javascript"></script>
+<script type="text/javascript">
+//<![CDATA[
+function WebForm_OnSubmit() {
+if (typeof(ValidatorOnSubmit) == "function" && ValidatorOnSubmit() == false) return false;
+return true;
+}
+//]]>
+</script>
+
+<div class="aspNetHidden">
+
+	<input type="hidden" name="__VIEWSTATEGENERATOR" id="__VIEWSTATEGENERATOR" value="293A410C" />
+	<input type="hidden" name="__VIEWSTATEENCRYPTED" id="__VIEWSTATEENCRYPTED" value="" />
+	<input type="hidden" name="__EVENTVALIDATION" id="__EVENTVALIDATION" value="yw7jDUUpxQ9wsh6cQwU9vtgI8m+iXy7UPUHyzUdJhbYiVkDICnYLVdvNe2PmSzuP76SirCVC6oGwMMllGBGnCk51e9WgQFyRmpU9jbn5yYKw5Pg2aQYDxMiwAMxrW6UOtDxl/t6EArbY+q39BFHJxI7mgvap3MyC3ZOw6HneOogAlY7Lyy1n7/Q0RPLRmqTqJA4+HOACln7FgzbCGxz1qlyV/A3xALud9AobQw==" />
+</div>
+    <div id="LOGIN_BACKGROUND">
+
+    <table cellSpacing="5" cellPadding="5" border="0" style="align-content: center; height: auto; width: auto !important;  ">
+        <tbody style="background-color: #ffffff; vertical-align: center; padding: 15px;width: 450px; ">
+        <tr><td id="SIAM_LOGO" /></tr>
+        <tr>
+            <td colSpan="2"></td>
+        </tr>
+        <tr>
+            <td>
+            	<div class="pt-sans-bold-italic" style="font-style:italic; font-weight:bold;">SIAM credentials are required to sign in.
+                <br/>
+            	If you do not have existing SIAM credentials, create your SIAM account <a href="/SSO/Register.aspx">here</a>.</div>
+                <br/>
+                <span id="InstructionLabel" class="Label">Please log into your SIAM account to continue.</span>
+                <table cellSpacing="0" cellPadding="0" border="0" style="background-color: transparent; padding-top: 10px;">
+                    <tbody style="height: auto;" >
+                        <tr>
+                            <td><b>Username:</b></td>
+                            <td style="padding-left: 1%;">
+                                <input name="LoginTextBox" type="text" id="LoginTextBox" class="TextBox" autocomplete="off" />
+                            </td>
+                            <td>
+                                <span id="UserNameRegularExpressionValidator" class="RegularExpressionValidator" style="color:Red;display:none;">Invalid Username.</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <b>Password:</b>
+                            </td>
+                            <td style="padding-left: 1%;">
+                                <input name="PasswordTextBox" type="password" id="PasswordTextBox" class="TextBox" autocomplete="off" />
+                            </td>
+                            <td>
+                                <span id="PasswordRegularExpressionValidator" class="RegularExpressionValidator" style="color:Red;display:none;">Invalid Password.</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td id="blank_td">&nbsp;</td>
+                            <td style="text-align: right;">
+                                <input type="hidden" name="gRecaptchaResponse" id="gRecaptchaResponse" />
+                                <input type="submit" name="LoginButton" value="Login" onclick="javascript:WebForm_DoPostBackWithOptions(new WebForm_PostBackOptions(&quot;LoginButton&quot;, &quot;&quot;, true, &quot;&quot;, &quot;&quot;, false, false))" id="LoginButton" class="Button" class="g-recaptcha" />
+                                <input type="submit" name="SubmitButton" value="Login" onclick="javascript:WebForm_DoPostBackWithOptions(new WebForm_PostBackOptions(&quot;SubmitButton&quot;, &quot;&quot;, true, &quot;&quot;, &quot;&quot;, false, false))" id="SubmitButton" class="Button" style="display:none;" />
+                            </td>
+                        </tr>
+                        <tr><td><span id="Label1"></span></td></tr>
+                        
+                    </tbody>
+                </table>
+
+                <table>
+                    <tbody style="height: auto;">
+                        <tr>
+                            <td>
+                            <!--I would like to reset my password.
+                            <a id="ResetPasswordHyperLink" class="HyperLink" href="ForgotPassword.aspx?">Click here</a>.
+                            <br>
+                            I would like to update my Username.
+                            <a id="ResetUsernameHyperLink" class="HyperLink" href="ForgotUsername.aspx?">Click here</a>.
+                            <br>
+                            -->
+                                <ul>
+                                    <li>
+                                        I forgot my password.
+                                        <a id="ForgotPasswordHyperLink" class="HyperLink" href="ForgotPassword.aspx?">Click here to reset</a>
+                                    </li>
+                                    <li>
+                                        Need an account?
+                                        <a id="RegisterHyperLink" class="HyperLink" href="Register.aspx?">Click here to register</a>					
+                                    </li>
+                                    <li>
+                                        Log in to SIAM Publications Library via your <a href="https://epubs.siam.org/action/ssostart">institution</a>.
+                                    </li>
+                                    <li>
+                                        Questions? Contact SIAM at <a href="mailto:service@siam.org">service@siam.org</a>
+                                    </li>
+                                </ul>
+                               
+                                
+                            </td>
+                        </tr>
+                            <!--<span class="CheckBox"><input id="RememberMeCheckBox" type="checkbox" name="RememberMeCheckBox" /><label for="RememberMeCheckBox">Remember my login information for 90 days.</label></span>				-->
+                            <!--<div align="right"></div>-->
+                    </tbody>
+                </table>
+            </tr>
+        </tbody>
+    </table>
+    </div>
+
+<script type="text/javascript">
+//<![CDATA[
+var Page_Validators =  new Array(document.getElementById("UserNameRegularExpressionValidator"), document.getElementById("PasswordRegularExpressionValidator"));
+//]]>
+</script>
+
+<script type="text/javascript">
+//<![CDATA[
+var UserNameRegularExpressionValidator = document.all ? document.all["UserNameRegularExpressionValidator"] : document.getElementById("UserNameRegularExpressionValidator");
+UserNameRegularExpressionValidator.controltovalidate = "LoginTextBox";
+UserNameRegularExpressionValidator.display = "Dynamic";
+UserNameRegularExpressionValidator.evaluationfunction = "RegularExpressionValidatorEvaluateIsValid";
+UserNameRegularExpressionValidator.validationexpression = "^[a-zA-Z0-9 @!#$%&\'*+/=?^_`{|}~-]+(?:\\.[a-zA-Z0-9@!#$%&\'*+/=?^_`{|}~-]+)*";
+var PasswordRegularExpressionValidator = document.all ? document.all["PasswordRegularExpressionValidator"] : document.getElementById("PasswordRegularExpressionValidator");
+PasswordRegularExpressionValidator.controltovalidate = "PasswordTextBox";
+PasswordRegularExpressionValidator.display = "Dynamic";
+PasswordRegularExpressionValidator.evaluationfunction = "RegularExpressionValidatorEvaluateIsValid";
+PasswordRegularExpressionValidator.validationexpression = "^[a-zA-Z0-9 @!#$%&\'*+/=?^_`{|}~-]+(?:\\.[a-zA-Z0-9@!#$%&\'*+/=?^_`{|}~-]+)*";
+//]]>
+</script>
+
+
+<script type="text/javascript">
+//<![CDATA[
+
+var Page_ValidationActive = false;
+if (typeof(ValidatorOnLoad) == "function") {
+    ValidatorOnLoad();
+}
+
+function ValidatorOnSubmit() {
+    if (Page_ValidationActive) {
+        return ValidatorCommonOnSubmit();
+    }
+    else {
+        return true;
+    }
+}
+        WebForm_AutoFocus('LoginTextBox');//]]>
+</script>
+</form>
+
+<script>
+   $(document).ready(function () {
+       $('#LoginButton').click(function () {
+           SubmitButton.click();
+           return false;
+       });
+   });
+
+   grecaptcha.ready(function () {
+       grecaptcha.execute('6Lc4qscbAAAAAKqNk2gc5xA6VKjQYwEOrXD9Aff-', { action: 'sso_login' }).then(
+           function (token) {
+               document.getElementById("gRecaptchaResponse").value = token;
+           });
+   });
+</script>
+</body>
+</html>

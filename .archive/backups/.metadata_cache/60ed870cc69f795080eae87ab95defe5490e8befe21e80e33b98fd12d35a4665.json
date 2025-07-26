@@ -1,0 +1,8 @@
+{
+  "title": "Measuring Financial Resilience Using Backward Stochastic Differential Equations",
+  "authors": [],
+  "year": null,
+  "citation_id": null,
+  "snippet": "We propose the resilience rate as a measure of financial resilience. It captures the rate at which a dynamic risk evaluation recovers, i.e., bounces back, after the risk-acceptance set is breached. We develop the associated stochastic calculus by establishing representation theorems of a suitable time-derivative of solutions to backward stochastic differential equations (BSDEs) with jumps, evaluated at stopping times. These results reveal that our resilience rate can be represented as an expectation of the generator of the BSDE. We also introduce resilience-acceptance sets and study their properties in relation to both the resilience rate and the dynamic risk measure. We illustrate our results in several examples.",
+  "source": "scholar_serpapi"
+}

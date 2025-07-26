@@ -1,0 +1,8 @@
+{
+  "title": "A Class of Degenerate Mean Field Games, Associated FBSDEs and Master Equations",
+  "authors": [],
+  "year": null,
+  "citation_id": null,
+  "snippet": "In this paper, we study a class of degenerate mean field games (MFGs) with state-distribution dependent and unbounded functional diffusion coefficients. With a probabilistic method, we study the well-posedness of the forward-backward stochastic differential equations (FBSDEs) associated with the MFG and arising from the maximum principle, and estimate the corresponding Jacobian and Hessian flows. We further establish the classical regularity of the value functional ; in particular, we show that when the cost function is in the spatial and control variables and in the distribution argument, then the value functional is in time and in the spatial and distribution variables. As a consequence, the value functional is the unique classical solution of the degenerate MFG master equation. The typical linear-quadratic examples are studied.",
+  "source": "scholar_serpapi"
+}

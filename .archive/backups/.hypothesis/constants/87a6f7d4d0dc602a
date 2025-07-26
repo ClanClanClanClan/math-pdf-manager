@@ -1,0 +1,4 @@
+# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/src/auth/store.py
+# hypothesis_version: 6.135.32
+
+[b'academic_papers_salt', 384, 100000, '.academic_papers', '.key', 'academic_papers', 'auth', 'auth_config.json', 'password', 'r', 'rb', 'username', 'w', 'wb']

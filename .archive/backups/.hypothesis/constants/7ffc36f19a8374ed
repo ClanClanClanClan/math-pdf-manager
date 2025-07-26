@@ -1,0 +1,4 @@
+# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/core/text_processing/unicode_utils.py
+# hypothesis_version: 6.135.32
+
+[500, 1000, 1114111, 'A', 'B', 'C', 'E', 'H', 'K', 'M', 'NFC', 'O', 'P', 'T', 'X', 'Y', '[<>:"/\\\\|?*]', '\\s+', '_', 'a', 'c', 'categories', 'character', 'config', 'confusable', 'e', 'has_combining_chars', 'has_control_chars', 'has_emoji', 'has_zero_width', 'homoglyph_cache_info', 'homoglyph_mappings', 'homoglyphs', 'is_safe', 'length', 'normalization_form', 'normalize_cache_info', 'o', 'p', 'position', 'warning', 'x', 'y', 'А', 'В', 'Е', 'К', 'М', 'Н', 'О', 'Р', 'С', 'Т', 'У', 'Х', 'а', 'е', 'о', 'р', 'с', 'у', 'х']

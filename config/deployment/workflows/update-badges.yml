@@ -1,0 +1,247 @@
+name: Update Architectural Badges
+# Phase 1, Week 1, Day 3-4: Badge Generation
+# Purpose: Generate and update architectural health badges
+
+on:
+  workflow_run:
+    workflows: ["Architectural Health Check"]
+    types: [completed]
+  workflow_dispatch:
+
+jobs:
+  update-badges:
+    name: Update Health Badges
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install pyyaml
+      
+      - name: Generate health metrics
+        id: metrics
+        run: |
+          # Run analysis to get current metrics
+          health_score=$(python automated_improvement_tooling.py --score-only)
+          
+          # Get violation count
+          python automated_improvement_tooling.py --ci-mode > temp_analysis.txt 2>&1 || true
+          violations=$(grep -oP 'Total Violations: \K\d+' temp_analysis.txt || echo "0")
+          
+          # Get largest file size
+          largest_file=$(python -c "
+          from pathlib import Path
+          files = list(Path('.').rglob('*.py'))
+          if files:
+              sizes = [(f, len(f.read_text().splitlines())) for f in files if f.is_file() and '.venv' not in str(f)]
+              largest = max(sizes, key=lambda x: x[1])
+              print(f'{largest[1]}')
+          else:
+              print('0')
+          ")
+          
+          # Determine badge colors
+          if (( $(echo "$health_score >= 80" | bc -l) )); then
+            health_color="brightgreen"
+          elif (( $(echo "$health_score >= 60" | bc -l) )); then
+            health_color="green"
+          elif (( $(echo "$health_score >= 40" | bc -l) )); then
+            health_color="yellow"
+          elif (( $(echo "$health_score >= 20" | bc -l) )); then
+            health_color="orange"
+          else
+            health_color="red"
+          fi
+          
+          if [ "$violations" -lt 50 ]; then
+            violations_color="brightgreen"
+          elif [ "$violations" -lt 100 ]; then
+            violations_color="green"
+          elif [ "$violations" -lt 500 ]; then
+            violations_color="yellow"
+          elif [ "$violations" -lt 1000 ]; then
+            violations_color="orange"
+          else
+            violations_color="red"
+          fi
+          
+          # Output metrics
+          echo "health_score=$health_score" >> $GITHUB_OUTPUT
+          echo "health_color=$health_color" >> $GITHUB_OUTPUT
+          echo "violations=$violations" >> $GITHUB_OUTPUT
+          echo "violations_color=$violations_color" >> $GITHUB_OUTPUT
+          echo "largest_file=$largest_file" >> $GITHUB_OUTPUT
+      
+      - name: Create badge JSON files
+        run: |
+          mkdir -p .github/badges
+          
+          # Health score badge
+          cat > .github/badges/health-score.json << EOF
+          {
+            "schemaVersion": 1,
+            "label": "architectural health",
+            "message": "${{ steps.metrics.outputs.health_score }}/100",
+            "color": "${{ steps.metrics.outputs.health_color }}"
+          }
+          EOF
+          
+          # Violations badge
+          cat > .github/badges/violations.json << EOF
+          {
+            "schemaVersion": 1,
+            "label": "violations",
+            "message": "${{ steps.metrics.outputs.violations }}",
+            "color": "${{ steps.metrics.outputs.violations_color }}"
+          }
+          EOF
+          
+          # Code quality badge
+          cat > .github/badges/code-quality.json << EOF
+          {
+            "schemaVersion": 1,
+            "label": "code quality",
+            "message": "monitored",
+            "color": "blue"
+          }
+          EOF
+      
+      - name: Update README badges
+        run: |
+          # Check if README exists
+          if [ -f README.md ]; then
+            # Check if badges section exists
+            if ! grep -q "## Architectural Health" README.md; then
+              # Add badges section
+              cat >> README.md << 'EOF'
+
+## Architectural Health
+
+![Architectural Health](https://img.shields.io/badge/architectural%20health-0.0%2F100-red)
+![Violations](https://img.shields.io/badge/violations-1753-red)
+![Code Quality](https://img.shields.io/badge/code%20quality-monitored-blue)
+
+These badges reflect the current architectural health of the codebase. See [IMPLEMENTATION_ROADMAP.md](./IMPLEMENTATION_ROADMAP.md) for improvement plans.
+EOF
+            else
+              # Update existing badges
+              python - << 'PYTHON_EOF'
+          import re
+          
+          health_score = "${{ steps.metrics.outputs.health_score }}"
+          health_color = "${{ steps.metrics.outputs.health_color }}"
+          violations = "${{ steps.metrics.outputs.violations }}"
+          violations_color = "${{ steps.metrics.outputs.violations_color }}"
+          
+          with open('README.md', 'r') as f:
+              content = f.read()
+          
+          # Update health badge
+          content = re.sub(
+              r'!\[Architectural Health\]\(https://img\.shields\.io/badge/architectural%20health-[\d.]+%2F100-\w+\)',
+              f'![Architectural Health](https://img.shields.io/badge/architectural%20health-{health_score}%2F100-{health_color})',
+              content
+          )
+          
+          # Update violations badge
+          content = re.sub(
+              r'!\[Violations\]\(https://img\.shields\.io/badge/violations-\d+-\w+\)',
+              f'![Violations](https://img.shields.io/badge/violations-{violations}-{violations_color})',
+              content
+          )
+          
+          with open('README.md', 'w') as f:
+              f.write(content)
+          PYTHON_EOF
+            fi
+          fi
+      
+      - name: Generate status shield
+        run: |
+          # Create a comprehensive status shield
+          cat > .github/badges/status-shield.md << 'EOF'
+          # Architectural Status Shield
+          
+          ```
+          ┌─────────────────────────────────────┐
+          │   ARCHITECTURAL HEALTH MONITOR      │
+          ├─────────────────────────────────────┤
+          │ Health Score: ${{ steps.metrics.outputs.health_score }}/100              │
+          │ Violations:   ${{ steps.metrics.outputs.violations }}                │
+          │ Largest File: ${{ steps.metrics.outputs.largest_file }} lines       │
+          │ Status:       🔴 Critical           │
+          └─────────────────────────────────────┘
+          ```
+          
+          Last Updated: $(date -u +"%Y-%m-%d %H:%M UTC")
+          EOF
+      
+      - name: Commit badge updates
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          
+          # Add changes
+          git add .github/badges/ README.md || true
+          
+          # Check if there are changes
+          if git diff --staged --quiet; then
+            echo "No badge updates needed"
+          else
+            git commit -m "🤖 Update architectural health badges
+            
+            - Health Score: ${{ steps.metrics.outputs.health_score }}/100
+            - Violations: ${{ steps.metrics.outputs.violations }}
+            - Largest File: ${{ steps.metrics.outputs.largest_file }} lines
+            
+            Generated by GitHub Actions"
+            
+            git push
+          fi
+      
+      - name: Create badge gist
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GIST_TOKEN || secrets.GITHUB_TOKEN }}
+          script: |
+            const badges = {
+              'health-score.json': JSON.stringify({
+                schemaVersion: 1,
+                label: 'architectural health',
+                message: '${{ steps.metrics.outputs.health_score }}/100',
+                color: '${{ steps.metrics.outputs.health_color }}'
+              }, null, 2),
+              'violations.json': JSON.stringify({
+                schemaVersion: 1,
+                label: 'violations',
+                message: '${{ steps.metrics.outputs.violations }}',
+                color: '${{ steps.metrics.outputs.violations_color }}'
+              }, null, 2)
+            };
+            
+            try {
+              // Create or update gist
+              const gist = await github.rest.gists.create({
+                description: 'Architectural Health Badges',
+                public: true,
+                files: badges
+              });
+              
+              console.log(`Badge gist created: ${gist.data.html_url}`);
+            } catch (error) {
+              console.log('Gist creation skipped (requires GIST_TOKEN)');
+            }

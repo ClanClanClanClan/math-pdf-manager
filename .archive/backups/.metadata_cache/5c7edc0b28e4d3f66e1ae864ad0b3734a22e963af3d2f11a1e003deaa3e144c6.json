@@ -1,0 +1,8 @@
+{
+  "title": "Quadratic BSDEs with Singular Generators and Unbounded Terminal Conditions: Theory and Applications",
+  "authors": [],
+  "year": null,
+  "citation_id": null,
+  "snippet": "We investigate a class of quadratic backward stochastic differential equations (BSDEs) with generators singular in . First, we establish the existence of solutions and a comparison theorem, thereby extending results in the literature. Additionally, we analyze the stability property and the Feynman-Kac formula, and prove the uniqueness of viscosity solutions for the corresponding singular semilinear partial differential equations (PDEs). Finally, we demonstrate applications in the context of robust control linked to stochastic differential utility and certainty equivalent based on -expectation. In these applications, the coefficient of the quadratic term in the generator captures the level of ambiguity aversion and the coefficient of absolute risk aversion, respectively.",
+  "source": "scholar_serpapi"
+}

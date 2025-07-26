@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PDF Filename & Metadata Audit Report</title>
+
+<style>
+:root{
+  --bg:#f6f8fa;--surf:#fff;--sh:0 2px 6px rgba(0,0,0,.06);
+  --txt:#222;--pri:#0066cc;--err:#c00;--warn:#b66900;
+  --code:#eef1f4;--muted:#555;--r:8px;--pad:.9rem;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+     background:var(--bg);color:var(--txt);line-height:1.45;-webkit-font-smoothing:antialiased;}
+header{background:var(--pri);color:#fff;padding:var(--pad) calc(2*var(--pad));box-shadow:var(--sh)}
+h1{font-size:1.55rem;margin-bottom:.35rem;font-weight:600}
+.bar{display:flex;flex-wrap:wrap;gap:.5rem;font-size:.85rem;margin-bottom:.55rem}
+.bar code{background:rgba(255,255,255,.17);border-radius:4px;padding:.14rem .5rem}
+.ctrls{display:flex;gap:.55rem;margin-top:.25rem}
+.ctrls button{cursor:pointer;border:none;background:#fff;color:var(--pri);padding:.32rem .85rem;
+              border-radius:4px;font-size:.79rem;box-shadow:var(--sh)}
+.ctrls button:hover{background:#e3ecf9}
+.dry{background:var(--warn);padding:.25rem .6rem;border-radius:4px;color:#fff;font-size:.8rem}
+
+.wrap{max-width:1100px;margin:2rem auto;padding:0 calc(var(--pad)*1.2)}
+.card{background:var(--surf);border-radius:var(--r);box-shadow:var(--sh);padding:var(--pad);margin-bottom:1rem}
+.card details[open]>summary::marker{content:"▼ "}
+summary{cursor:pointer;font-weight:600}
+
+.err{color:var(--err)} .sugg{color:var(--warn)}
+ul{padding-left:1.2rem;margin:.28rem 0}
+.meta{margin-top:.6rem;background:var(--code);padding:.6rem;border-radius:4px;overflow-x:auto;font-size:.87rem}
+.meta table{border-collapse:collapse;width:100%}
+.meta th{text-align:left;color:var(--muted);padding-right:.45rem;font-weight:600;white-space:nowrap}
+.meta td{padding:.15rem .2rem}
+
+pre{display:none}
+</style>
+
+<script>
+function dl(id,f){
+  const d=document.getElementById(id).textContent;if(!d)return;
+  const b=new Blob([d],{type:id==='csvdata'?'text/csv':'application/json'});
+  const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=f;
+  document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(u);
+}
+</script>
+</head>
+<body>
+<header>
+  <h1>PDF Filename & Metadata Audit Report</h1>
+  <div class="bar">
+    <code>Files: 0</code>
+    <code>Errors: 0</code>
+    <code>Suggestions: 0</code>
+    <code>Duplicates: 0</code>
+    <code>Generated: 2025-07-13 09:16 UTC</code>
+    <code>Config: default</code>
+    <code>Version: n/a</code>
+    <code>User: unknown</code>
+  </div>
+  
+  <div class="ctrls">
+    <button onclick="dl('csvdata','report.csv')"  >⬇ CSV</button>
+    <button onclick="dl('jsondata','report.json')" >⬇ JSON</button>
+  </div>
+</header>
+
+<div class="wrap">
+
+
+
+
+
+
+
+<pre id="csvdata">filename,fixed_filename,errors,suggestions
+</pre>
+<pre id="jsondata">[]</pre>
+</div>
+</body>
+</html>

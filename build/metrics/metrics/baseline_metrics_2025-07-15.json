@@ -1,0 +1,93 @@
+{
+  "date": "2025-07-15",
+  "phase": "Phase 1, Week 1, Day 5",
+  "summary": {
+    "health_score": 0.0,
+    "total_files_analyzed": 135,
+    "total_violations": 1753,
+    "total_python_files": 403,
+    "total_lines_of_code": 153440
+  },
+  "violations_by_type": {
+    "FORBIDDEN_PATTERN": 1497,
+    "DEPENDENCY_VIOLATION": 110,
+    "MULTIPLE_RESPONSIBILITIES": 103,
+    "FILE_TOO_LARGE": 27,
+    "TOO_MANY_FUNCTIONS": 16
+  },
+  "file_size_analysis": {
+    "files_over_500_lines": 27,
+    "files_over_1000_lines": 9,
+    "files_over_2000_lines": 6,
+    "largest_file": {
+      "name": "filename_checker.py",
+      "lines": 4779,
+      "responsibilities": 10
+    },
+    "top_5_largest": [
+      {"name": "filename_checker.py", "lines": 4779},
+      {"name": "modules/unicode_utils", "lines": 3721},
+      {"name": "unicode_constants.py", "lines": 3678},
+      {"name": "pdf_parser.py", "lines": 2575},
+      {"name": "auth_manager.py", "lines": 2306}
+    ]
+  },
+  "forbidden_patterns_detail": {
+    "print_statements": 5392,
+    "hardcoded_env_defaults": 44,
+    "estimated_hardcoded_secrets": 250,
+    "estimated_hardcoded_paths": 200,
+    "estimated_broad_exceptions": 1000
+  },
+  "architectural_debt": {
+    "files_with_multiple_responsibilities": 103,
+    "circular_dependencies": 110,
+    "average_file_size": 380.9,
+    "median_file_size": 150,
+    "complexity_hotspots": 15
+  },
+  "team_metrics": {
+    "pre_commit_hooks_installed": true,
+    "ci_cd_integration": true,
+    "automated_analysis": true,
+    "team_training_needed": true,
+    "estimated_fix_time_weeks": 16
+  },
+  "quality_gates": {
+    "pre_commit_hooks": {
+      "file_size_check": "active",
+      "forbidden_patterns": "active",
+      "single_responsibility": "active",
+      "dependency_rules": "active",
+      "secure_config": "active"
+    },
+    "ci_cd_checks": {
+      "health_threshold": 10,
+      "pr_degradation_limit": 5,
+      "daily_monitoring": "scheduled",
+      "weekly_reports": "scheduled"
+    }
+  },
+  "targets": {
+    "week_2": {
+      "health_score": 10,
+      "violations": 1500,
+      "files_over_500_lines": 25
+    },
+    "week_4": {
+      "health_score": 25,
+      "violations": 1000,
+      "files_over_500_lines": 20
+    },
+    "week_8": {
+      "health_score": 50,
+      "violations": 500,
+      "files_over_500_lines": 10
+    },
+    "week_16": {
+      "health_score": 80,
+      "violations": 50,
+      "files_over_500_lines": 0
+    }
+  }
+}

@@ -1,0 +1,4 @@
+# Known words for testing
+mathematics
+physics
+science

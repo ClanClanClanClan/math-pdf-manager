@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Project specific
+downloads/
+logs/
+*.log
+*.png
+*.jpg
+*.pdf
+credentials.enc
+.DS_Store
+
+# Temporary
+temp/
+tmp/
+*.tmp

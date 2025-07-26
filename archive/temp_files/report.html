@@ -1,0 +1,2086 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PDF Filename & Metadata Audit Report</title>
+
+<style>
+:root{
+  --bg:#f6f8fa;--surf:#fff;--sh:0 2px 6px rgba(0,0,0,.06);
+  --txt:#222;--pri:#0066cc;--err:#c00;--warn:#b66900;
+  --code:#eef1f4;--muted:#555;--r:8px;--pad:.9rem;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+     background:var(--bg);color:var(--txt);line-height:1.45;-webkit-font-smoothing:antialiased;}
+header{background:var(--pri);color:#fff;padding:var(--pad) calc(2*var(--pad));box-shadow:var(--sh)}
+h1{font-size:1.55rem;margin-bottom:.35rem;font-weight:600}
+.bar{display:flex;flex-wrap:wrap;gap:.5rem;font-size:.85rem;margin-bottom:.55rem}
+.bar code{background:rgba(255,255,255,.17);border-radius:4px;padding:.14rem .5rem}
+.ctrls{display:flex;gap:.55rem;margin-top:.25rem}
+.ctrls button{cursor:pointer;border:none;background:#fff;color:var(--pri);padding:.32rem .85rem;
+              border-radius:4px;font-size:.79rem;box-shadow:var(--sh)}
+.ctrls button:hover{background:#e3ecf9}
+.dry{background:var(--warn);padding:.25rem .6rem;border-radius:4px;color:#fff;font-size:.8rem}
+
+.wrap{max-width:1100px;margin:2rem auto;padding:0 calc(var(--pad)*1.2)}
+.card{background:var(--surf);border-radius:var(--r);box-shadow:var(--sh);padding:var(--pad);margin-bottom:1rem}
+.card details[open]>summary::marker{content:"▼ "}
+summary{cursor:pointer;font-weight:600}
+
+.err{color:var(--err)} .sugg{color:var(--warn)}
+ul{padding-left:1.2rem;margin:.28rem 0}
+.meta{margin-top:.6rem;background:var(--code);padding:.6rem;border-radius:4px;overflow-x:auto;font-size:.87rem}
+.meta table{border-collapse:collapse;width:100%}
+.meta th{text-align:left;color:var(--muted);padding-right:.45rem;font-weight:600;white-space:nowrap}
+.meta td{padding:.15rem .2rem}
+
+pre{display:none}
+</style>
+
+<script>
+function dl(id,f){
+  const d=document.getElementById(id).textContent;if(!d)return;
+  const b=new Blob([d],{type:id==='csvdata'?'text/csv':'application/json'});
+  const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=f;
+  document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(u);
+}
+</script>
+</head>
+<body>
+<header>
+  <h1>PDF Filename & Metadata Audit Report</h1>
+  <div class="bar">
+    <code>Files: 69</code>
+    <code>Errors: 69</code>
+    <code>Suggestions: 0</code>
+    <code>Duplicates: 0</code>
+    <code>Generated: 2025-07-15 15:27 UTC</code>
+    <code>Config: default</code>
+    <code>Version: n/a</code>
+    <code>User: unknown</code>
+  </div>
+  <span class="dry">DRY-RUN – no filesystem writes</span>
+  <div class="ctrls">
+    <button onclick="dl('csvdata','report.csv')"  >⬇ CSV</button>
+    <button onclick="dl('jsondata','report.json')" >⬇ JSON</button>
+  </div>
+</header>
+
+<div class="wrap">
+
+
+
+
+
+
+  <div class="card">
+    <details open>
+      <summary>📄 NoDashHere.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 springer_authenticated_paper.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 ieee_getpdf_downloaded.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 affiliation-guidelines.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 GuidelinesTrainingData.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 sample.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 sample.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 sample.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 ZNC-1988-43c-0065.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 ZFN-A-054-0304-0272.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 submission_161.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 submission_363.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 test_Grobid_2_05982691.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 two_pages.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 1001._0908.0054.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 MullenJSSv18i03.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 Wang-paperAVE2008.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 ZNC-1988-43c-0034.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 0807.3577.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 submission_355.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 test_Grobid_1_05452615.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 dehypenisation1.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 dehypenisation2.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 samplePdf.segmentation.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 sample-1.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 sample.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 test.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 gadr.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 sample.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 sample.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 sample.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 sample.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 compressed.tracemonkey-pldi-09.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 GROBID.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 grobid-04-2015.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 affiliation-guidelines.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 GuidelinesTrainingData.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 sample.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 sample.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 sample.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 ZNC-1988-43c-0065.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 ZFN-A-054-0304-0272.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 submission_161.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 submission_363.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 test_Grobid_2_05982691.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 two_pages.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 1001._0908.0054.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 MullenJSSv18i03.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 Wang-paperAVE2008.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 ZNC-1988-43c-0034.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 0807.3577.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 submission_355.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 test_Grobid_1_05452615.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 dehypenisation1.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 dehypenisation2.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 samplePdf.segmentation.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 sample-1.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 sample.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 test.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 compressed.tracemonkey-pldi-09.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 gadr.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 sample.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 sample.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 sample.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 sample.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 compressed.tracemonkey-pldi-09.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 GROBID.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 grobid-04-2015.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+  <div class="card">
+    <details open>
+      <summary>📄 test.pdf</summary>
+
+      
+
+      
+        <ul class="err"><li>Missing &#39; - &#39; between authors and title</li></ul>
+      
+      
+
+      
+    </details>
+  </div>
+
+
+<pre id="csvdata">filename,fixed_filename,errors,suggestions
+NoDashHere.pdf,,Missing &#39; - &#39; between authors and title,
+springer_authenticated_paper.pdf,,Missing &#39; - &#39; between authors and title,
+ieee_getpdf_downloaded.pdf,,Missing &#39; - &#39; between authors and title,
+affiliation-guidelines.pdf,,Missing &#39; - &#39; between authors and title,
+GuidelinesTrainingData.pdf,,Missing &#39; - &#39; between authors and title,
+sample.pdf,,Missing &#39; - &#39; between authors and title,
+sample.pdf,,Missing &#39; - &#39; between authors and title,
+sample.pdf,,Missing &#39; - &#39; between authors and title,
+ZNC-1988-43c-0065.pdf,,Missing &#39; - &#39; between authors and title,
+ZFN-A-054-0304-0272.pdf,,Missing &#39; - &#39; between authors and title,
+submission_161.pdf,,Missing &#39; - &#39; between authors and title,
+submission_363.pdf,,Missing &#39; - &#39; between authors and title,
+test_Grobid_2_05982691.pdf,,Missing &#39; - &#39; between authors and title,
+two_pages.pdf,,Missing &#39; - &#39; between authors and title,
+1001._0908.0054.pdf,,Missing &#39; - &#39; between authors and title,
+MullenJSSv18i03.pdf,,Missing &#39; - &#39; between authors and title,
+Wang-paperAVE2008.pdf,,Missing &#39; - &#39; between authors and title,
+ZNC-1988-43c-0034.pdf,,Missing &#39; - &#39; between authors and title,
+0807.3577.pdf,,Missing &#39; - &#39; between authors and title,
+submission_355.pdf,,Missing &#39; - &#39; between authors and title,
+test_Grobid_1_05452615.pdf,,Missing &#39; - &#39; between authors and title,
+dehypenisation1.pdf,,Missing &#39; - &#39; between authors and title,
+dehypenisation2.pdf,,Missing &#39; - &#39; between authors and title,
+samplePdf.segmentation.pdf,,Missing &#39; - &#39; between authors and title,
+sample-1.pdf,,Missing &#39; - &#39; between authors and title,
+sample.pdf,,Missing &#39; - &#39; between authors and title,
+test.pdf,,Missing &#39; - &#39; between authors and title,
+gadr.pdf,,Missing &#39; - &#39; between authors and title,
+sample.pdf,,Missing &#39; - &#39; between authors and title,
+sample.pdf,,Missing &#39; - &#39; between authors and title,
+sample.pdf,,Missing &#39; - &#39; between authors and title,
+sample.pdf,,Missing &#39; - &#39; between authors and title,
+compressed.tracemonkey-pldi-09.pdf,,Missing &#39; - &#39; between authors and title,
+GROBID.pdf,,Missing &#39; - &#39; between authors and title,
+grobid-04-2015.pdf,,Missing &#39; - &#39; between authors and title,
+affiliation-guidelines.pdf,,Missing &#39; - &#39; between authors and title,
+GuidelinesTrainingData.pdf,,Missing &#39; - &#39; between authors and title,
+sample.pdf,,Missing &#39; - &#39; between authors and title,
+sample.pdf,,Missing &#39; - &#39; between authors and title,
+sample.pdf,,Missing &#39; - &#39; between authors and title,
+ZNC-1988-43c-0065.pdf,,Missing &#39; - &#39; between authors and title,
+ZFN-A-054-0304-0272.pdf,,Missing &#39; - &#39; between authors and title,
+submission_161.pdf,,Missing &#39; - &#39; between authors and title,
+submission_363.pdf,,Missing &#39; - &#39; between authors and title,
+test_Grobid_2_05982691.pdf,,Missing &#39; - &#39; between authors and title,
+two_pages.pdf,,Missing &#39; - &#39; between authors and title,
+1001._0908.0054.pdf,,Missing &#39; - &#39; between authors and title,
+MullenJSSv18i03.pdf,,Missing &#39; - &#39; between authors and title,
+Wang-paperAVE2008.pdf,,Missing &#39; - &#39; between authors and title,
+ZNC-1988-43c-0034.pdf,,Missing &#39; - &#39; between authors and title,
+0807.3577.pdf,,Missing &#39; - &#39; between authors and title,
+submission_355.pdf,,Missing &#39; - &#39; between authors and title,
+test_Grobid_1_05452615.pdf,,Missing &#39; - &#39; between authors and title,
+dehypenisation1.pdf,,Missing &#39; - &#39; between authors and title,
+dehypenisation2.pdf,,Missing &#39; - &#39; between authors and title,
+samplePdf.segmentation.pdf,,Missing &#39; - &#39; between authors and title,
+sample-1.pdf,,Missing &#39; - &#39; between authors and title,
+sample.pdf,,Missing &#39; - &#39; between authors and title,
+test.pdf,,Missing &#39; - &#39; between authors and title,
+compressed.tracemonkey-pldi-09.pdf,,Missing &#39; - &#39; between authors and title,
+gadr.pdf,,Missing &#39; - &#39; between authors and title,
+sample.pdf,,Missing &#39; - &#39; between authors and title,
+sample.pdf,,Missing &#39; - &#39; between authors and title,
+sample.pdf,,Missing &#39; - &#39; between authors and title,
+sample.pdf,,Missing &#39; - &#39; between authors and title,
+compressed.tracemonkey-pldi-09.pdf,,Missing &#39; - &#39; between authors and title,
+GROBID.pdf,,Missing &#39; - &#39; between authors and title,
+grobid-04-2015.pdf,,Missing &#39; - &#39; between authors and title,
+test.pdf,,Missing &#39; - &#39; between authors and title,
+</pre>
+<pre id="jsondata">[
+  {
+    &#34;filename&#34;: &#34;NoDashHere.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/NoDashHere.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;springer_authenticated_paper.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/springer_authenticated_paper.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;ieee_getpdf_downloaded.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/ieee_getpdf_downloaded.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;affiliation-guidelines.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-trainer/doc/affiliation-guidelines.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-trainer/doc&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;GuidelinesTrainingData.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-trainer/doc/GuidelinesTrainingData.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-trainer/doc&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;sample.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-core/src/test/resources/sample2/sample.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-core/src/test/resources/sample2&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;sample.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-core/src/test/resources/sample3/sample.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-core/src/test/resources/sample3&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;sample.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-core/src/test/resources/sample4/sample.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-core/src/test/resources/sample4&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;ZNC-1988-43c-0065.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-core/src/test/resources/test/ZNC-1988-43c-0065.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-core/src/test/resources/test&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;ZFN-A-054-0304-0272.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-core/src/test/resources/test/ZFN-A-054-0304-0272.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-core/src/test/resources/test&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;submission_161.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-core/src/test/resources/test/submission_161.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-core/src/test/resources/test&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;submission_363.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-core/src/test/resources/test/submission_363.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-core/src/test/resources/test&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;test_Grobid_2_05982691.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-core/src/test/resources/test/test_Grobid_2_05982691.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-core/src/test/resources/test&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;two_pages.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-core/src/test/resources/test/two_pages.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-core/src/test/resources/test&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;1001._0908.0054.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-core/src/test/resources/test/1001._0908.0054.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-core/src/test/resources/test&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;MullenJSSv18i03.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-core/src/test/resources/test/MullenJSSv18i03.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-core/src/test/resources/test&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;Wang-paperAVE2008.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-core/src/test/resources/test/Wang-paperAVE2008.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-core/src/test/resources/test&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;ZNC-1988-43c-0034.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-core/src/test/resources/test/ZNC-1988-43c-0034.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-core/src/test/resources/test&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;0807.3577.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-core/src/test/resources/test/0807.3577.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-core/src/test/resources/test&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;submission_355.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-core/src/test/resources/test/submission_355.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-core/src/test/resources/test&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;test_Grobid_1_05452615.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-core/src/test/resources/test/test_Grobid_1_05452615.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-core/src/test/resources/test&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;dehypenisation1.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-core/src/test/resources/org/grobid/core/utilities/dehypenisation1.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-core/src/test/resources/org/grobid/core/utilities&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;dehypenisation2.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-core/src/test/resources/org/grobid/core/utilities/dehypenisation2.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-core/src/test/resources/org/grobid/core/utilities&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;samplePdf.segmentation.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-core/src/test/resources/org/grobid/core/engines/samplePdf.segmentation.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-core/src/test/resources/org/grobid/core/engines&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;sample-1.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-core/src/test/resources/org/grobid/core/engines/patent/ReferenceExtractor/sample-1.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-core/src/test/resources/org/grobid/core/engines/patent/ReferenceExtractor&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;sample.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-core/src/test/resources/sample1/sample.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-core/src/test/resources/sample1&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;test.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-core/src/test/resources/footnotes/test.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-core/src/test/resources/footnotes&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;gadr.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-service/src/test/resources/sample5/gadr.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-service/src/test/resources/sample5&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;sample.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-service/src/test/resources/sample2/sample.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-service/src/test/resources/sample2&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;sample.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-service/src/test/resources/sample3/sample.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-service/src/test/resources/sample3&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;sample.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-service/src/test/resources/sample4/sample.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-service/src/test/resources/sample4&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;sample.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-service/src/test/resources/sample1/sample.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-service/src/test/resources/sample1&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;compressed.tracemonkey-pldi-09.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-service/src/main/resources/web/resources/pdf.js/web/compressed.tracemonkey-pldi-09.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/grobid-service/src/main/resources/web/resources/pdf.js/web&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;GROBID.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/doc/GROBID.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/doc&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;grobid-04-2015.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/doc/grobid-04-2015.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-0.8.0/doc&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;affiliation-guidelines.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-trainer/doc/affiliation-guidelines.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-trainer/doc&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;GuidelinesTrainingData.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-trainer/doc/GuidelinesTrainingData.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-trainer/doc&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;sample.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-core/src/test/resources/sample2/sample.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-core/src/test/resources/sample2&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;sample.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-core/src/test/resources/sample3/sample.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-core/src/test/resources/sample3&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;sample.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-core/src/test/resources/sample4/sample.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-core/src/test/resources/sample4&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;ZNC-1988-43c-0065.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-core/src/test/resources/test/ZNC-1988-43c-0065.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-core/src/test/resources/test&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;ZFN-A-054-0304-0272.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-core/src/test/resources/test/ZFN-A-054-0304-0272.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-core/src/test/resources/test&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;submission_161.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-core/src/test/resources/test/submission_161.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-core/src/test/resources/test&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;submission_363.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-core/src/test/resources/test/submission_363.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-core/src/test/resources/test&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;test_Grobid_2_05982691.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-core/src/test/resources/test/test_Grobid_2_05982691.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-core/src/test/resources/test&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;two_pages.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-core/src/test/resources/test/two_pages.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-core/src/test/resources/test&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;1001._0908.0054.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-core/src/test/resources/test/1001._0908.0054.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-core/src/test/resources/test&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;MullenJSSv18i03.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-core/src/test/resources/test/MullenJSSv18i03.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-core/src/test/resources/test&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;Wang-paperAVE2008.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-core/src/test/resources/test/Wang-paperAVE2008.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-core/src/test/resources/test&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;ZNC-1988-43c-0034.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-core/src/test/resources/test/ZNC-1988-43c-0034.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-core/src/test/resources/test&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;0807.3577.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-core/src/test/resources/test/0807.3577.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-core/src/test/resources/test&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;submission_355.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-core/src/test/resources/test/submission_355.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-core/src/test/resources/test&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;test_Grobid_1_05452615.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-core/src/test/resources/test/test_Grobid_1_05452615.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-core/src/test/resources/test&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;dehypenisation1.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-core/src/test/resources/org/grobid/core/utilities/dehypenisation1.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-core/src/test/resources/org/grobid/core/utilities&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;dehypenisation2.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-core/src/test/resources/org/grobid/core/utilities/dehypenisation2.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-core/src/test/resources/org/grobid/core/utilities&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;samplePdf.segmentation.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-core/src/test/resources/org/grobid/core/engines/samplePdf.segmentation.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-core/src/test/resources/org/grobid/core/engines&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;sample-1.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-core/src/test/resources/org/grobid/core/engines/patent/ReferenceExtractor/sample-1.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-core/src/test/resources/org/grobid/core/engines/patent/ReferenceExtractor&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;sample.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-core/src/test/resources/sample1/sample.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-core/src/test/resources/sample1&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;test.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-core/src/test/resources/footnotes/test.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-core/src/test/resources/footnotes&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;compressed.tracemonkey-pldi-09.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-service/build/resources/main/web/resources/pdf.js/web/compressed.tracemonkey-pldi-09.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-service/build/resources/main/web/resources/pdf.js/web&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;gadr.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-service/src/test/resources/sample5/gadr.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-service/src/test/resources/sample5&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;sample.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-service/src/test/resources/sample2/sample.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-service/src/test/resources/sample2&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;sample.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-service/src/test/resources/sample3/sample.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-service/src/test/resources/sample3&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;sample.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-service/src/test/resources/sample4/sample.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-service/src/test/resources/sample4&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;sample.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-service/src/test/resources/sample1/sample.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-service/src/test/resources/sample1&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;compressed.tracemonkey-pldi-09.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-service/src/main/resources/web/resources/pdf.js/web/compressed.tracemonkey-pldi-09.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/grobid-service/src/main/resources/web/resources/pdf.js/web&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;GROBID.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/doc/GROBID.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/doc&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;grobid-04-2015.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/doc/grobid-04-2015.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/tools/grobid/doc&#34;
+  },
+  {
+    &#34;filename&#34;: &#34;test.pdf&#34;,
+    &#34;messages&#34;: [
+      &#34;Message(level=&#39;error&#39;, code=&#39;NO_SEPARATOR&#39;, text=\&#34;Missing &#39; - &#39; between authors and title\&#34;, pos=None)&#34;
+    ],
+    &#34;errors&#34;: [
+      &#34;Missing &#39; - &#39; between authors and title&#34;
+    ],
+    &#34;suggestions&#34;: [],
+    &#34;fixed_filename&#34;: &#34;&#34;,
+    &#34;path&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/pdf_test/test.pdf&#34;,
+    &#34;folder&#34;: &#34;/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/pdf_test&#34;
+  }
+]</pre>
+</div>
+</body>
+</html>

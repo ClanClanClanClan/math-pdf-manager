@@ -1,0 +1,8 @@
+{
+  "title": "Continuity problem for BSDE and IPDE with singular terminal condition",
+  "authors": [],
+  "year": null,
+  "citation_id": null,
+  "snippet": "We study the behavior at the terminal time of the minimal supersolution of backward stochastic differential equation with singular terminal condition by using the associated integro-partial differential equation. We prove that if there are jumps (i.e. the operator of the PDE is non local), we observe a propagation of the singularity, contrary to the continuous case (local operator). We distinguish different cases of driver and terminal condition. The Riccati case is central because for quadratic and subquadratic generators the associated solution is not continuous at the terminal time, while the solutions for stronger non linearity are continuous. Finally we study the consequence for the numerical scheme.",
+  "source": "scholar_serpapi"
+}

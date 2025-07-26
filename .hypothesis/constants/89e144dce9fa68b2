@@ -1,0 +1,4 @@
+# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/src/async_metadata_fetcher.py
+# hypothesis_version: 6.135.32
+
+[0.0, 0.5, 1.0, 2.0, 15.0, 200, 300, '\n3. Streaming test:', '.', '1912.05372', '2003.12345', '2101.00001', 'Accept', 'All providers failed', 'DOI', 'User-Agent', '__main__', 'api_errors', 'arxiv', 'async_cache_hit_rate', 'async_success_rate', 'async_time', 'author', 'authors', 'avg_request_time', 'cache', 'cache_hit_rate', 'cache_hits', 'crossref', 'date-parts', 'doi', 'doi:', 'family', 'given', 'http://dx.doi.org/', 'https://doi.org/', 'items', 'message', 'name', 'published', 'published-online', 'published-print', 'queries', 'query', 'relevance', 'rows', 'scholarly', 'select', 'sort', 'success_rate', 'successful_requests', 'title', 'total_requests', 'total_time', 'year', '✓', '✗']

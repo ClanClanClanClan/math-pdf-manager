@@ -1,0 +1,4 @@
+# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/src/validators/filename_checker/batch_processing.py
+# hypothesis_version: 6.135.32
+
+[' - ', 'SpellChecker', 'UNKNOWN', 'check_author_format', 'compound_terms', 'config', 'errors', 'exceptions', 'filename', 'fixed_author', 'fixed_filename', 'folder', 'known_words', 'message', 'messages', 'multiword_surnames', 'name', 'path', 'suggestions', 'type', 'verbose']

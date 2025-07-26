@@ -1,0 +1,8 @@
+{
+  "title": "Mokobodzki's intervals: an approach to Dynkin games when value process is not a semimartingale",
+  "authors": [],
+  "year": null,
+  "citation_id": null,
+  "snippet": "We study Dynkin games governed by a nonlinear -expectation on a finite interval , with payoff c\\`adl\\`ag processes of class (D) which are not imposed to satisfy (weak) Mokobodzki's condition - the existence of a c\\`adl\\`ag semimartingale between the barriers. For that purpose we introduce the notion of Mokobodzki's stochastic intervals (roughly speaking, maximal stochastic interval on which Mokobodzki's condition is satisfied when starting from the stopping time ) and the notion of reflected BSDEs without Mokobodzki's condition (this is a generalization and modification of the notion introduced by Hamad\\'ene and Hassani (2005)). We prove an existence and uniqueness result for RBSDEs with driver that is non-increasing with respect to the value variable (no restrictions on the growth) and Lipschitz continuous with respect to the control variable, and with data in spaces. Next, by using RBSDEs, we show numerous results on Dynkin games: existence of the value process, saddle points, and convergence of the penalty scheme. We also show that the game is not played beyond , when starting from .",
+  "source": "scholar_serpapi"
+}

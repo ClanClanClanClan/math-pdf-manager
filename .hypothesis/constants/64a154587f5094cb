@@ -1,0 +1,4 @@
+# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/src/publishers/__init__.py
+# hypothesis_version: 6.135.32
+
+['AuthenticationConfig', 'DownloadResult', 'PublisherInterface', 'PublisherRegistry', 'publisher_registry']

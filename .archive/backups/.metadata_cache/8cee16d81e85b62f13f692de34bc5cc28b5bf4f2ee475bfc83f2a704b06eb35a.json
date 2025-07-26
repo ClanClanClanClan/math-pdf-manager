@@ -1,0 +1,8 @@
+{
+  "title": "Cash non-additive risk measures: horizon risk and generalized entropy",
+  "authors": [],
+  "year": null,
+  "citation_id": null,
+  "snippet": "Horizon risk (see arXiv:2301.04971) is studied in the context of cash non-additive fully-dynamic risk measures induced by BSDEs. Furthermore, we introduce a risk measure based on generalized Tsallis entropy which can dynamically evaluate the riskiness of losses considering both horizon risk and interest rate uncertainty. The new q-entropic risk measure on losses can be used as a quantification of capital requirement.",
+  "source": "scholar_serpapi"
+}

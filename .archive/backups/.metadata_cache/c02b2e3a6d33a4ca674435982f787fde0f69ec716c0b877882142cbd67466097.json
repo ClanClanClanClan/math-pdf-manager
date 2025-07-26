@@ -1,0 +1,8 @@
+{
+  "title": "Fractional backward stochastic differential equations with delayed generator",
+  "authors": [],
+  "year": null,
+  "citation_id": null,
+  "snippet": "In this paper, we focus on the solvability of a class of fractional backward stochastic differential equations (BSDEs, for short) with delayed generator. In this class of equations, the generator includes not only the values of the solutions of the present but also the past. Under Lipschitz condition, the existence and uniqueness of such BSDEs are established. A comparison theorem for this class of BSDEs is also obtained.",
+  "source": "scholar_serpapi"
+}

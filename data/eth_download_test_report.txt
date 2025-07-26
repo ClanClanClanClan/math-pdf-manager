@@ -1,0 +1,40 @@
+================================================================================
+ETH INSTITUTIONAL DOWNLOAD TEST REPORT
+================================================================================
+Generated: 2025-07-14 22:12:48
+
+SUMMARY
+----------------------------------------
+Total Tests: 13
+Successful: 4
+Failed: 9
+Success Rate: 30.8%
+
+METADATA_FETCHING
+----------------------------------------
+  ieee: ❌ FAIL
+  springer: ❌ FAIL
+  acm: ❌ FAIL
+  elsevier: ❌ FAIL
+
+OPEN_ACCESS_DOWNLOADS
+----------------------------------------
+  arxiv: ❌ FAIL
+  plos: ✅ PASS
+
+ETH_AUTHENTICATION
+----------------------------------------
+  ieee: ✅ PASS
+  springer: ✅ PASS
+  acm: ✅ PASS
+
+INSTITUTIONAL_DOWNLOADS
+----------------------------------------
+  ieee: ❌ FAIL
+    Error: fetch_metadata_all_sources() got an unexpected keyword argument 'auth_service'
+  springer: ❌ FAIL
+    Error: fetch_metadata_all_sources() got an unexpected keyword argument 'auth_service'
+  acm: ❌ FAIL
+    Error: fetch_metadata_all_sources() got an unexpected keyword argument 'auth_service'
+  elsevier: ❌ FAIL
+    Error: fetch_metadata_all_sources() got an unexpected keyword argument 'auth_service'

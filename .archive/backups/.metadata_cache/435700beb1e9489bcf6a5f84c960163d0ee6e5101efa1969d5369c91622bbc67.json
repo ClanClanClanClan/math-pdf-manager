@@ -1,0 +1,8 @@
+{
+  "title": "The Optimal Control Problem of Fully Coupled FBSDEs Driven by Sub-diffusion with Applications",
+  "authors": [],
+  "year": null,
+  "citation_id": null,
+  "snippet": "This paper is devoted to an optimal control problem of fully coupled forward-backward stochastic differential equations driven by sub-diffusion, whose solutions are not Markov processes. The stochastic maximum principle is obtained, where the control domain may not be convex and the diffusion term is independent of the control variable. Additionally, problem with state constraint is researched by using Ekeland's variational principle. The theoretical results obtained are applied to a cash management optimization problem in bear market, and the optimal strategy is derived.",
+  "source": "scholar_serpapi"
+}

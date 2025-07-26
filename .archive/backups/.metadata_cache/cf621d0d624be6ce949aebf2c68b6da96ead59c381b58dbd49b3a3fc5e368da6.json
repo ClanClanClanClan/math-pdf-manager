@@ -1,0 +1,8 @@
+{
+  "title": "Mean-field reflected BSDEs driven by a marked point process",
+  "authors": [],
+  "year": null,
+  "citation_id": null,
+  "snippet": "In this paper, we study a class of mean-field reflected backward stochastic differential equations (MFRBSDEs) driven by a marked point process. Based on a g-expectation representation lemma, we give the existence and uniqueness of MFRBSDEs driven by a marked point process under Lipschitz generator conditions. Besides, the well-posedness of this kind of BSDEs with exponential growth generator and unbounded terminal is also provided by -method.",
+  "source": "scholar_serpapi"
+}

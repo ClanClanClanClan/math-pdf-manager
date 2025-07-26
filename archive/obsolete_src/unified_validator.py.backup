@@ -1,0 +1,630 @@
+"""
+Unified Validation Service
+
+Consolidates all validation functionality from across the project into a single,
+comprehensive service. This replaces multiple scattered validation modules.
+"""
+
+import os
+import re
+import ipaddress
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Union, Set
+from urllib.parse import urlparse
+
+from .interfaces import IValidationService
+
+
+class UnifiedValidationService(IValidationService):
+    """
+    Comprehensive validation service that consolidates all validation systems.
+    
+    Integrates functionality from:
+    - src/validators/core_validation.py (CLI validation)
+    - src/core/security/input_validation.py (security validation) 
+    - src/validators/validation_utils.py (content validation)
+    - src/validators/filename_checker/ (filename validation)
+    - Various scattered validation utilities
+    """
+    
+    def __init__(self):
+        """Initialize the unified validation service."""
+        self._setup_patterns()
+        self._setup_security_rules()
+        self._setup_mathematical_patterns()
+    
+    def _setup_patterns(self):
+        """Initialize compiled regex patterns for performance."""
+        # Path traversal detection
+        self.PATH_TRAVERSAL_PATTERN = re.compile(r'\.\.(/|\\)')
+        
+        # Dangerous characters in filenames
+        self.DANGEROUS_FILENAME_CHARS = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
+        
+        # Email validation
+        self.EMAIL_PATTERN = re.compile(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
+        
+        # URL validation
+        self.URL_PATTERN = re.compile(r'^https?://[^\s/$.?#].[^\s]*$', re.IGNORECASE)
+        
+        # Academic author patterns
+        self.AUTHOR_PATTERN = re.compile(r'\b[A-Z][a-z]+\s+[A-Z][a-z]+\b')
+        
+        # Mathematical notation patterns
+        self.MATH_PATTERNS = [
+            re.compile(r'\$[^$]+\$'),           # Inline math
+            re.compile(r'\$\$[^$]+\$\$'),       # Display math
+            re.compile(r'\\begin\{[^}]+\}'),    # LaTeX environments
+            re.compile(r'\\[a-zA-Z]+\{[^}]*\}'), # LaTeX commands
+        ]
+    
+    def _setup_security_rules(self):
+        """Setup security validation rules."""
+        self.MAX_PATH_LENGTH = 1000
+        self.MAX_FILENAME_LENGTH = 255
+        self.MAX_TEXT_LENGTH = 1_000_000
+        
+        # Blocked path components
+        self.BLOCKED_PATH_COMPONENTS = {
+            '..', '.', 'CON', 'PRN', 'AUX', 'NUL',
+            'COM1', 'COM2', 'COM3', 'COM4', 'COM5', 'COM6', 'COM7', 'COM8', 'COM9',
+            'LPT1', 'LPT2', 'LPT3', 'LPT4', 'LPT5', 'LPT6', 'LPT7', 'LPT8', 'LPT9'
+        }
+        
+        # Dangerous Unicode characters
+        self.DANGEROUS_UNICODE = {
+            '\u202e', '\u202d', '\u202a', '\u202b', '\u202c',  # Direction override
+            '\u200b', '\u200c', '\u200d', '\u200e', '\u200f',  # Zero-width chars
+            '\ufeff', '\u2060', '\u2061', '\u2062', '\u2063', '\u2064', '\u202f'
+        }
+    
+    def _setup_mathematical_patterns(self):
+        """Setup mathematical content detection patterns."""
+        # Common mathematical terms
+        self.MATH_TERMS = {
+            'theorem', 'lemma', 'proof', 'corollary', 'proposition',
+            'equation', 'formula', 'algorithm', 'matrix', 'vector',
+            'differential', 'integral', 'derivative', 'limit', 'convergence',
+            'topology', 'algebra', 'geometry', 'analysis', 'statistics'
+        }
+        
+        # Mathematical symbols
+        self.MATH_SYMBOLS = {
+            '∞', '∑', '∏', '∫', '∂', '∇', '∆', '≤', '≥', '≠', '≈', '∝',
+            'α', 'β', 'γ', 'δ', 'ε', 'ζ', 'η', 'θ', 'λ', 'μ', 'π', 'σ', 'φ', 'ψ', 'ω'
+        }
+    
+    def validate_cli_inputs(self, args: Any) -> bool:
+        """
+        Validate command-line arguments for safety and correctness.
+        
+        Args:
+            args: Parsed command-line arguments
+            
+        Returns:
+            True if all arguments are valid, False otherwise
+        """
+        try:
+            # Validate root path
+            if hasattr(args, 'root') and args.root:
+                if not self.validate_directory_path(args.root):
+                    return False
+            
+            # Validate output paths
+            for output_attr in ['output', 'csv_output']:
+                if hasattr(args, output_attr):
+                    output_path = getattr(args, output_attr, None)
+                    if output_path and not self._validate_output_path(output_path):
+                        return False
+            
+            # Validate exceptions file
+            if hasattr(args, 'exceptions_file') and args.exceptions_file:
+                if not self.validate_file_path(args.exceptions_file):
+                    return False
+            
+            # Validate template directory
+            if hasattr(args, 'template_dir') and args.template_dir:
+                if not self.validate_directory_path(args.template_dir):
+                    return False
+            
+            # Validate numeric arguments
+            if hasattr(args, 'max_files') and args.max_files is not None:
+                if not isinstance(args.max_files, int) or args.max_files < 1 or args.max_files > 1_000_000:
+                    return False
+            
+            return True
+            
+        except Exception:
+            return False
+    
+    def validate_file_path(self, path: Union[str, Path]) -> bool:
+        """
+        Validate file path for security and accessibility.
+        
+        Args:
+            path: File path to validate
+            
+        Returns:
+            True if path is valid and safe, False otherwise
+        """
+        try:
+            if not path:
+                return False
+            
+            path_str = str(path)
+            
+            # Check length
+            if len(path_str) > self.MAX_PATH_LENGTH:
+                return False
+            
+            # Check for path traversal
+            if self._has_path_traversal(path_str):
+                return False
+            
+            # Check for dangerous Unicode
+            if self._has_dangerous_unicode(path_str):
+                return False
+            
+            # Resolve and validate the path
+            resolved_path = Path(path).expanduser().resolve()
+            
+            # Check if resolved path is safe
+            if not self._is_safe_resolved_path(resolved_path):
+                return False
+            
+            return True
+            
+        except (OSError, ValueError, OverflowError):
+            return False
+    
+    def validate_directory_path(self, path: Union[str, Path]) -> bool:
+        """
+        Validate directory path for security and accessibility.
+        
+        Args:
+            path: Directory path to validate
+            
+        Returns:
+            True if path is valid and safe, False otherwise
+        """
+        if not self.validate_file_path(path):
+            return False
+        
+        try:
+            path_obj = Path(path).expanduser().resolve()
+            
+            # For directory validation, it should exist and be a directory
+            if path_obj.exists() and not path_obj.is_dir():
+                return False
+            
+            return True
+            
+        except (OSError, ValueError):
+            return False
+    
+    def sanitize_filename(self, filename: str) -> str:
+        """
+        Sanitize filename for safe filesystem usage.
+        
+        Args:
+            filename: Original filename
+            
+        Returns:
+            Sanitized filename safe for filesystem use
+        """
+        if not filename:
+            return 'untitled'
+        
+        # Remove dangerous Unicode characters
+        sanitized = ''.join(char for char in filename if char not in self.DANGEROUS_UNICODE)
+        
+        # Replace dangerous filename characters
+        sanitized = self.DANGEROUS_FILENAME_CHARS.sub('_', sanitized)
+        
+        # Remove leading/trailing dots and spaces
+        sanitized = sanitized.strip('. ')
+        
+        # Check for reserved names
+        name_upper = sanitized.upper()
+        if name_upper in self.BLOCKED_PATH_COMPONENTS:
+            sanitized = f'{sanitized}_file'
+        
+        # Ensure reasonable length
+        if len(sanitized) > self.MAX_FILENAME_LENGTH:
+            name, ext = os.path.splitext(sanitized)
+            max_name_len = self.MAX_FILENAME_LENGTH - len(ext)
+            sanitized = name[:max_name_len] + ext
+        
+        # Ensure not empty
+        if not sanitized:
+            sanitized = 'untitled'
+        
+        return sanitized
+    
+    def validate_mathematical_content(self, text: str) -> Dict[str, Any]:
+        """
+        Validate and analyze mathematical content in text.
+        
+        Args:
+            text: Text to analyze
+            
+        Returns:
+            Dictionary with analysis results
+        """
+        if not text or len(text) > self.MAX_TEXT_LENGTH:
+            return {'valid': False, 'reason': 'Invalid text input'}
+        
+        results = {
+            'valid': True,
+            'has_math': False,
+            'math_notation_count': 0,
+            'math_terms_found': [],
+            'math_symbols_found': [],
+            'complexity_score': 0,
+            'has_greek_letters': False,
+            'has_superscripts': False,
+            'has_subscripts': False
+        }
+        
+        text_lower = text.lower()
+        
+        # Check for mathematical terms
+        for term in self.MATH_TERMS:
+            if term in text_lower:
+                results['math_terms_found'].append(term)
+        
+        # Check for mathematical symbols
+        for symbol in self.MATH_SYMBOLS:
+            if symbol in text:
+                results['math_symbols_found'].append(symbol)
+        
+        # Check for LaTeX math notation
+        for pattern in self.MATH_PATTERNS:
+            matches = pattern.findall(text)
+            results['math_notation_count'] += len(matches)
+        
+        # Enhanced mathematical pattern detection
+        greek_pattern = re.compile(r'[αβγδεζηθικλμνξοπρστυφχψωΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩ]')
+        superscript_pattern = re.compile(r'[⁰¹²³⁴⁵⁶⁷⁸⁹]')
+        subscript_pattern = re.compile(r'[₀₁₂₃₄₅₆₇₈₉]')
+        
+        results['has_greek_letters'] = bool(greek_pattern.search(text))
+        results['has_superscripts'] = bool(superscript_pattern.search(text))
+        results['has_subscripts'] = bool(subscript_pattern.search(text))
+        
+        # Determine if text has mathematical content
+        results['has_math'] = (
+            len(results['math_terms_found']) > 0 or
+            len(results['math_symbols_found']) > 0 or
+            results['math_notation_count'] > 0 or
+            results['has_greek_letters'] or
+            results['has_superscripts'] or
+            results['has_subscripts']
+        )
+        
+        # Calculate complexity score
+        results['complexity_score'] = (
+            len(results['math_terms_found']) * 2 +
+            len(results['math_symbols_found']) +
+            results['math_notation_count'] * 3 +
+            (5 if results['has_greek_letters'] else 0) +
+            (3 if results['has_superscripts'] else 0) +
+            (3 if results['has_subscripts'] else 0)
+        )
+        
+        return results
+    
+    def validate_academic_text(self, text: str) -> Dict[str, Any]:
+        """
+        Validate and analyze academic text content.
+        
+        Args:
+            text: Academic text to analyze
+            
+        Returns:
+            Dictionary with validation and analysis results
+        """
+        if not text or len(text) > self.MAX_TEXT_LENGTH:
+            return {'valid': False, 'reason': 'Invalid text input'}
+        
+        results = {
+            'valid': True,
+            'word_count': 0,
+            'sentence_count': 0,
+            'paragraph_count': 0,
+            'potential_authors': [],
+            'has_citations': False,
+            'academic_score': 0
+        }
+        
+        # Basic text statistics
+        words = text.split()
+        results['word_count'] = len(words)
+        results['sentence_count'] = len(re.findall(r'[.!?]+', text))
+        results['paragraph_count'] = len([p for p in text.split('\n\n') if p.strip()])
+        
+        # Find potential author names
+        author_matches = self.AUTHOR_PATTERN.findall(text)
+        results['potential_authors'] = list(set(author_matches))
+        
+        # Check for citations
+        citation_patterns = [
+            r'\[[0-9, -]+\]',      # [1], [1-3], [1, 2, 3]
+            r'\([^)]*[0-9]{4}[^)]*\)',  # (Author, 2023)
+            r'et al\.',             # et al.
+        ]
+        
+        for pattern in citation_patterns:
+            if re.search(pattern, text):
+                results['has_citations'] = True
+                break
+        
+        # Calculate academic score
+        academic_indicators = [
+            'abstract', 'introduction', 'conclusion', 'references',
+            'methodology', 'results', 'discussion', 'figure', 'table'
+        ]
+        
+        text_lower = text.lower()
+        academic_word_count = sum(1 for word in academic_indicators if word in text_lower)
+        
+        results['academic_score'] = (
+            min(results['word_count'] / 100, 10) +  # Length factor (max 10)
+            len(results['potential_authors']) * 2 +   # Author mentions
+            (5 if results['has_citations'] else 0) +  # Citations
+            academic_word_count                       # Academic vocabulary
+        )
+        
+        return results
+    
+    def detect_security_issues(self, content: str) -> List[Dict[str, Any]]:
+        """
+        Detect potential security issues in content.
+        
+        Args:
+            content: Content to analyze for security issues
+            
+        Returns:
+            List of detected security issues
+        """
+        issues = []
+        
+        if not content:
+            return issues
+        
+        # Check for dangerous Unicode characters
+        for char in self.DANGEROUS_UNICODE:
+            if char in content:
+                issues.append({
+                    'type': 'dangerous_unicode',
+                    'severity': 'high',
+                    'description': f'Dangerous Unicode character detected: {repr(char)}',
+                    'char': char
+                })
+        
+        # Check for path traversal attempts
+        if self.PATH_TRAVERSAL_PATTERN.search(content):
+            issues.append({
+                'type': 'path_traversal',
+                'severity': 'high',
+                'description': 'Potential path traversal pattern detected'
+            })
+        
+        # Check for suspicious patterns
+        suspicious_patterns = [
+            (r'<script[^>]*>', 'script_tag'),
+            (r'javascript:', 'javascript_protocol'),
+            (r'on\w+\s*=', 'event_handler'),
+            (r'eval\s*\(', 'eval_call'),
+            (r'exec\s*\(', 'exec_call'),
+        ]
+        
+        for pattern, issue_type in suspicious_patterns:
+            if re.search(pattern, content, re.IGNORECASE):
+                issues.append({
+                    'type': issue_type,
+                    'severity': 'medium',
+                    'description': f'Suspicious pattern detected: {issue_type}'
+                })
+        
+        return issues
+    
+    def _has_path_traversal(self, path_str: str) -> bool:
+        """Check if path contains path traversal patterns."""
+        return (
+            '..' in path_str or
+            self.PATH_TRAVERSAL_PATTERN.search(path_str) is not None
+        )
+    
+    def _has_dangerous_unicode(self, text: str) -> bool:
+        """Check if text contains dangerous Unicode characters."""
+        return any(char in text for char in self.DANGEROUS_UNICODE)
+    
+    def _is_safe_resolved_path(self, resolved_path: Path) -> bool:
+        """Check if resolved path is safe."""
+        path_str = str(resolved_path)
+        
+        # Check for path traversal in resolved path
+        if '..' in path_str:
+            return False
+        
+        # Check path components
+        for component in resolved_path.parts:
+            if component.upper() in self.BLOCKED_PATH_COMPONENTS:
+                return False
+        
+        return True
+    
+    def _validate_output_path(self, output_path: str) -> bool:
+        """Validate output file path."""
+        if not output_path:
+            return False
+        
+        try:
+            path = Path(output_path)
+            
+            # Check if parent directory exists or can be created
+            parent = path.parent
+            if not parent.exists():
+                # For validation, we just check if the path structure is valid
+                # We don't actually create directories here
+                pass
+            
+            # Check filename
+            filename = path.name
+            if not filename or len(filename) > self.MAX_FILENAME_LENGTH:
+                return False
+            
+            # Validate the path itself
+            return self.validate_file_path(output_path)
+            
+        except (OSError, ValueError):
+            return False
+    
+    # Additional validation methods to complete the interface
+    
+    def validate_string(self, value: str, min_length: int = 0, max_length: int = 1000, 
+                       allowed_chars: Optional[Set[str]] = None) -> str:
+        """
+        Validate and sanitize string input.
+        
+        Args:
+            value: String to validate
+            min_length: Minimum allowed length
+            max_length: Maximum allowed length
+            allowed_chars: Set of allowed characters
+            
+        Returns:
+            Validated string
+        """
+        if not isinstance(value, str):
+            raise ValueError(f"Expected string, got {type(value).__name__}")
+        
+        # Check length
+        if len(value) < min_length:
+            raise ValueError(f"String too short (min: {min_length})")
+        if len(value) > max_length:
+            raise ValueError(f"String too long (max: {max_length})")
+        
+        # Check allowed characters
+        if allowed_chars:
+            invalid_chars = set(value) - allowed_chars
+            if invalid_chars:
+                raise ValueError(f"Invalid characters: {invalid_chars}")
+        
+        return value
+    
+    def validate_email(self, email: str) -> str:
+        """Validate email address format."""
+        email = email.strip().lower()
+        if not self.EMAIL_PATTERN.match(email):
+            raise ValueError(f"Invalid email address: {email}")
+        return email
+    
+    def validate_url(self, url: str, allowed_schemes: List[str] = None) -> str:
+        """Validate URL format and scheme."""
+        if allowed_schemes is None:
+            allowed_schemes = ['http', 'https']
+        
+        url = url.strip()
+        
+        # Basic pattern check
+        if not self.URL_PATTERN.match(url):
+            raise ValueError(f"Invalid URL format: {url}")
+        
+        # Parse and validate components
+        parsed = urlparse(url)
+        
+        if parsed.scheme not in allowed_schemes:
+            raise ValueError(f"URL scheme not allowed: {parsed.scheme}")
+        
+        if not parsed.netloc:
+            raise ValueError("URL missing network location")
+        
+        return url
+    
+    def validate_ip_address(self, ip: str, version: Optional[int] = None) -> str:
+        """Validate IP address."""
+        try:
+            ip_obj = ipaddress.ip_address(ip)
+            
+            if version == 4 and not isinstance(ip_obj, ipaddress.IPv4Address):
+                raise ValueError(f"Expected IPv4 address, got IPv6")
+            elif version == 6 and not isinstance(ip_obj, ipaddress.IPv6Address):
+                raise ValueError(f"Expected IPv6 address, got IPv4")
+            
+            return str(ip_obj)
+        except ValueError:
+            raise ValueError(f"Invalid IP address: {ip}")
+    
+    def validate_file_extension(self, filename: str, allowed_extensions: Optional[Set[str]] = None,
+                               file_type: Optional[str] = None) -> str:
+        """Validate file extension against allowed types."""
+        # Define default allowed extensions
+        default_extensions = {
+            'document': {'.pdf', '.txt', '.md', '.tex', '.doc', '.docx'},
+            'image': {'.jpg', '.jpeg', '.png', '.gif', '.bmp', '.svg'},
+            'data': {'.json', '.yaml', '.yml', '.csv', '.xml'},
+        }
+        
+        if file_type and file_type in default_extensions:
+            allowed_extensions = default_extensions[file_type]
+        
+        if not allowed_extensions:
+            return filename
+        
+        ext = Path(filename).suffix.lower()
+        if ext not in allowed_extensions:
+            raise ValueError(
+                f"File extension {ext} not allowed. "
+                f"Allowed: {', '.join(sorted(allowed_extensions))}"
+            )
+        
+        return filename
+    
+    def validate_integer(self, value: Any, min_value: Optional[int] = None, 
+                        max_value: Optional[int] = None) -> int:
+        """Validate integer input with optional bounds."""
+        try:
+            int_value = int(value)
+        except (ValueError, TypeError):
+            raise ValueError(f"Invalid integer: {value}")
+        
+        if min_value is not None and int_value < min_value:
+            raise ValueError(f"Value too small (min: {min_value})")
+        
+        if max_value is not None and int_value > max_value:
+            raise ValueError(f"Value too large (max: {max_value})")
+        
+        return int_value
+    
+    def detect_language(self, text: str) -> str:
+        """
+        Detect language of academic/mathematical text.
+        """
+        text_lower = text.lower()
+        
+        # Language indicators
+        language_indicators = {
+            'fr': {'français', 'française', 'initiation', 'théorie', 'algèbre',
+                   'géométrie', 'analyse', 'probabilités', 'topologie'},
+            'de': {'mathematik', 'algebra', 'geometrie', 'analysis', 'wahrscheinlichkeit',
+                   'topologie', 'funktionen', 'einführung', 'grundlagen'},
+            'es': {'matemáticas', 'álgebra', 'geometría', 'análisis', 'probabilidad',
+                   'topología', 'funciones', 'introducción'}
+        }
+        
+        # Quick language detection based on indicators
+        for lang, indicators in language_indicators.items():
+            if any(indicator in text_lower for indicator in indicators):
+                return lang
+        
+        # Try to use langdetect if available
+        try:
+            from langdetect import detect
+            detected = detect(text)
+            return detected
+        except ImportError:
+            return "en"  # Default to English
+        except Exception:
+            return "en"  # Default to English for any langdetect errors

@@ -1,0 +1,8 @@
+{
+  "title": "Reflected stochastic recursive control problems with jumps: dynamic programming and stochastic verification theorems",
+  "authors": [],
+  "year": null,
+  "citation_id": null,
+  "snippet": "This paper mainly investigates reflected stochastic recursive control problems governed by jump-diffusion dynamics. The system's state evolution is described by a stochastic differential equation driven by both Brownian motion and Poisson random measures, while the recursive cost functional is formulated via the solution process Y of a reflected backward stochastic differential equation driven by the same dual stochastic sources. By establishing the dynamic programming principle, we provide the probabilistic interpretation of an obstacle problem for partial integro-differential equations of Hamilton-Jacobi-Bellman type in the viscosity solution sense through our control problem's value function. Furthermore, the value function is proved to inherit the semi-concavity and joint Lipschitz continuity in state and time coordinates, which play key roles in deriving stochastic verification theorems of control problem within the framework of viscosity solutions. We remark that some restrictions in previous study are eliminated, such as the frozen of the reflected processes in time and state, and the independence of the driver from diffusion variables.",
+  "source": "scholar_serpapi"
+}

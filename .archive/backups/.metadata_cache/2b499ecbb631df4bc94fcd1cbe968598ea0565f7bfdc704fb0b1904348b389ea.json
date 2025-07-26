@@ -1,0 +1,8 @@
+{
+  "title": "Time-reversal solution of BSDEs in stochastic optimal control: a linear quadratic study",
+  "authors": [],
+  "year": null,
+  "citation_id": null,
+  "snippet": "This paper addresses the numerical solution of backward stochastic differential equations (BSDEs) arising in stochastic optimal control. Specifically, we investigate two BSDEs: one derived from the Hamilton-Jacobi-Bellman equation and the other from the stochastic maximum principle. For both formulations, we analyze and compare two numerical methods. The first utilizes the least-squares Monte-Carlo (LSMC) approach for approximating conditional expectations, while the second leverages a time-reversal (TR) of diffusion processes. Although both methods extend to nonlinear settings, our focus is on the linear-quadratic case, where analytical solutions provide a benchmark. Numerical results demonstrate the superior accuracy and efficiency of the TR approach across both BSDE representations, highlighting its potential for broader applications in stochastic control.",
+  "source": "scholar_serpapi"
+}

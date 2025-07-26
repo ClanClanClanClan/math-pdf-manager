@@ -1,0 +1,8 @@
+{
+  "title": "BSDE-based stochastic control for optimal reinsurance in a dynamic contagion model",
+  "authors": [],
+  "year": null,
+  "citation_id": null,
+  "snippet": "We investigate the optimal reinsurance problem in the risk model with jump clustering features introduced in [7]. This modeling framework is inspired by the concept initially proposed in [15], combining Hawkes and Cox processes with shot noise intensity models. Specifically, these processes describe self-exciting and externally excited jumps in the claim arrival intensity, respectively. The insurer aims to maximize the expected exponential utility of terminal wealth for general reinsurance contracts and reinsurance premiums. We discuss two different methodologies: the classical stochastic control approach based on the Hamilton-Jacobi-Bellman (HJB) equation and a backward stochastic differential equation (BSDE) approach. In a Markovian setting, differently from the classical HJB-approach, the BSDE method enables us to solve the problem without imposing any requirements for regularity on the associated value function. We provide a Verification Theorem in terms of a suitable BSDE driven by a two-dimensional marked point process and we prove an existence result relaying on the theory developed in [27] for stochastic Lipschitz generators. After discussing the optimal strategy for general reinsurance contracts and reinsurance premiums, we provide more explicit results in some relevant cases. Finally, we provide comparison results that highlight the heightened risk stemming from the self-exciting component in contrast to the externally-excited counterpart and discuss the monotonicity property of the value function.",
+  "source": "scholar_serpapi"
+}

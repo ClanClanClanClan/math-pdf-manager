@@ -1,0 +1,16 @@
+{
+  "title": "IRKC: An IMEX solver for stiff diffusion\u2013reaction PDEs",
+  "authors": [
+    "Shampine, L.F.",
+    "Sommeijer, B.P.",
+    "Verwer, J.G."
+  ],
+  "DOI": "10.1016/j.cam.2005.09.014",
+  "published": [
+    [
+      2006,
+      11
+    ]
+  ],
+  "source": "crossref"
+}

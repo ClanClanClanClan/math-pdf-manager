@@ -1,0 +1,3090 @@
+An_Hua:
+  CanonicalLatin: "An, Hua"
+  CanonicalWestern: "Hua An"
+  AllCommonVariants: ["An Hua", "Hua An", "An, H.", "H. An", "安华", "An Wah"]
+  MathSciNet: "An, Hua"
+  CJK: "安华"
+  Suffixes: ""
+  DiasporaFlags: ["CN"]
+  Comments: "Number theory, combinatorics. Occasional confusion with 'An, Huai', 'Ann, H.', 'An Hua-Min'."
+
+Bao_Xinhe:
+  CanonicalLatin: "Bao, Xinhe"
+  CanonicalWestern: "Xinhe Bao"
+  AllCommonVariants: ["Bao Xinhe", "Xinhe Bao", "Bao, X.", "X. Bao", "包信和", "Pao Hsin-Ho"]
+  MathSciNet: "Bao, Xinhe"
+  CJK: "包信和"
+  Suffixes: ""
+  DiasporaFlags: ["CN"]
+  Comments: "Applied mathematics, mathematical chemistry. Several 'Bao, X.' in databases."
+
+Cai_Jianfeng:
+  CanonicalLatin: "Cai, Jianfeng"
+  CanonicalWestern: "Jianfeng Cai"
+  AllCommonVariants: ["Cai Jianfeng", "Jianfeng Cai", "Cai, J.", "J. F. Cai", "J. Cai", "蔡建峰", "Tsai Chien-Feng"]
+  MathSciNet: "Cai, Jianfeng"
+  CJK: "蔡建峰"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG", "US"]
+  Comments: "Numerical linear algebra, optimization. Numerous 'Cai, J.' entries in MathSciNet."
+
+Cai_Tianxin:
+  CanonicalLatin: "Cai, Tianxin"
+  CanonicalWestern: "Tianxin Cai"
+  AllCommonVariants: ["Cai Tianxin", "Tianxin Cai", "Cai, T.", "T. Cai", "蔡天新", "Tsai Tien-Hsin"]
+  MathSciNet: "Cai, Tianxin"
+  CJK: "蔡天新"
+  Suffixes: ""
+  DiasporaFlags: ["CN"]
+  Comments: "Number theory, combinatorics, poetry. Often confused with other 'Cai, T.'"
+
+Cai_Tony:
+  CanonicalLatin: "Cai, Tony"
+  CanonicalWestern: "Tony Cai"
+  AllCommonVariants: ["Cai Tony", "Tony Cai", "Cai, T.", "T. T. Cai", "蔡天树", "Tsai T’ien-Shu", "Cai Tian-Shu", "Tony T. Cai"]
+  MathSciNet: "Cai, Tony"
+  CJK: "蔡天树"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US"]
+  Comments: "Statistics, high-dimensional inference, UPenn. 'Tony Cai' is a very frequent Westernised variant."
+
+Cao_Huaidong:
+  CanonicalLatin: "Cao, Huaidong"
+  CanonicalWestern: "Huaidong Cao"
+  AllCommonVariants: ["Cao Huaidong", "Huaidong Cao", "Cao, H.", "H. D. Cao", "H.-D. Cao", "曹怀东", "Tsao Huai-Tung"]
+  MathSciNet: "Cao, Huaidong"
+  CJK: "曹怀东"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US"]
+  Comments: "Differential geometry, Ricci flow, Chinese-American. Major source of confusion with other Cao, H. entries (Cao Hua, Cao Hui, etc.)."
+
+Cao_Zexin:
+  CanonicalLatin: "Cao, Zexin"
+  CanonicalWestern: "Zexin Cao"
+  AllCommonVariants: ["Cao Zexin", "Zexin Cao", "Cao, Z.", "Z. Cao", "曹泽新", "Tsao Tse-Hsin"]
+  MathSciNet: "Cao, Zexin"
+  CJK: "曹泽新"
+  Suffixes: ""
+  DiasporaFlags: ["CN"]
+  Comments: "Probability, mathematical physics. Multiple 'Cao, Z.'"
+
+Chang_Shih:
+  CanonicalLatin: "Chang, Shih"
+  CanonicalWestern: "Shih Chang"
+  AllCommonVariants: ["Chang Shih", "Shih Chang", "Chang, S.", "S. Chang", "张世", "Chang Shi"]
+  MathSciNet: "Chang, Shih"
+  CJK: "张世"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "TW", "US"]
+  Comments: "Combinatorics, probability. Ambiguous with many 'Chang, S.' and 'Zhang, Shi'."
+
+Chang_Yu:
+  CanonicalLatin: "Chang, Yu"
+  CanonicalWestern: "Yu Chang"
+  AllCommonVariants: ["Chang Yu", "Yu Chang", "Chang, Y.", "Y. Chang", "常玉", "Chang Yü"]
+  MathSciNet: "Chang, Yu"
+  CJK: "常玉"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "TW", "US"]
+  Comments: "Analysis, PDEs. Multiple 'Chang, Y.'"
+
+Chao_Shenglin:
+  CanonicalLatin: "Chao, Shenglin"
+  CanonicalWestern: "Shenglin Chao"
+  AllCommonVariants: ["Chao Shenglin", "Shenglin Chao", "Chao, S.", "S. Chao", "赵胜林", "Chao Sheng-Lin"]
+  MathSciNet: "Chao, Shenglin"
+  CJK: "赵胜林"
+  Suffixes: ""
+  DiasporaFlags: ["CN"]
+  Comments: "Applied mathematics. 'Chao, S.' is ambiguous with 'Zhao, S.' in Western indexing."
+
+Chen_Baoquan:
+  CanonicalLatin: "Chen, Baoquan"
+  CanonicalWestern: "Baoquan Chen"
+  AllCommonVariants: ["Chen Baoquan", "Baoquan Chen", "Chen, B.", "B. Chen", "陈宝泉", "Ch’en Pao-Ch’üan"]
+  MathSciNet: "Chen, Baoquan"
+  CJK: "陈宝泉"
+  Suffixes: ""
+  DiasporaFlags: ["CN"]
+  Comments: "Computer graphics. 'Chen, B.' is extremely ambiguous: >50 living mathematicians in DBLP, MathSciNet, and arXiv with 'Chen, B.'"
+
+Chen_Bing:
+  CanonicalLatin: "Chen, Bing"
+  CanonicalWestern: "Bing Chen"
+  AllCommonVariants: ["Chen Bing", "Bing Chen", "Chen, B.", "B. Chen", "陈兵", "Ch’en Ping"]
+  MathSciNet: "Chen, Bing"
+  CJK: "陈兵"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG"]
+  Comments: "Probability, applied math, control theory. 'Chen, Bing' is a common ambiguous cluster."
+
+Chen_Dong:
+  CanonicalLatin: "Chen, Dong"
+  CanonicalWestern: "Dong Chen"
+  AllCommonVariants: ["Chen Dong", "Dong Chen", "Chen, D.", "D. Chen", "陈东", "Ch’en Tung"]
+  MathSciNet: "Chen, Dong"
+  CJK: "陈东"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "CA"]
+  Comments: "Analysis, materials science. One of the most ambiguous Chinese mathematician names in North American indexing."
+
+Chen_Huan:
+  CanonicalLatin: "Chen, Huan"
+  CanonicalWestern: "Huan Chen"
+  AllCommonVariants: ["Chen Huan", "Huan Chen", "Chen, H.", "H. Chen", "陈欢", "Ch’en Huan"]
+  MathSciNet: "Chen, Huan"
+  CJK: "陈欢"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US"]
+  Comments: "'Chen, H.' is perhaps the single most frequent ambiguous MathSciNet/zbMATH cluster (>200 entries, including Hong, Hui, Hao, Hua, Huai, Hu, etc.)"
+
+Chen_Jinlong:
+  CanonicalLatin: "Chen, Jinlong"
+  CanonicalWestern: "Jinlong Chen"
+  AllCommonVariants: ["Chen Jinlong", "Jinlong Chen", "Chen, J.", "J. L. Chen", "J. Chen", "陈金龙", "Ch’en Chin-Lung"]
+  MathSciNet: "Chen, Jinlong"
+  CJK: "陈金龙"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG"]
+  Comments: "Optimization, machine learning. Typical 'Chen, J.' ambiguous name."
+
+Chen_Jun:
+  CanonicalLatin: "Chen, Jun"
+  CanonicalWestern: "Jun Chen"
+  AllCommonVariants: ["Chen Jun", "Jun Chen", "Chen, J.", "J. Chen", "陈军", "Ch’en Chun"]
+  MathSciNet: "Chen, Jun"
+  CJK: "陈军"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "CA", "SG"]
+  Comments: "Signal processing, algebra, geometry. One of the top ambiguous Chinese maths names in the world (100+ coexisting)."
+
+Chen_Liang:
+  CanonicalLatin: "Chen, Liang"
+  CanonicalWestern: "Liang Chen"
+  AllCommonVariants: ["Chen Liang", "Liang Chen", "Chen, L.", "L. Chen", "陈亮", "Ch’en Liang"]
+  MathSciNet: "Chen, Liang"
+  CJK: "陈亮"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US"]
+  Comments: "Applied math. Another highly ambiguous cluster: 'Chen, L.'"
+
+Chen_Lin:
+  CanonicalLatin: "Chen, Lin"
+  CanonicalWestern: "Lin Chen"
+  AllCommonVariants: ["Chen Lin", "Lin Chen", "Chen, L.", "L. Chen", "陈琳", "Ch’en Lin"]
+  MathSciNet: "Chen, Lin"
+  CJK: "陈琳"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "CA"]
+  Comments: "'Chen, Lin' and 'Lin Chen' are both extremely common—ambiguous in all databases."
+
+Chen_Liping:
+  CanonicalLatin: "Chen, Liping"
+  CanonicalWestern: "Liping Chen"
+  AllCommonVariants: ["Chen Liping", "Liping Chen", "Chen, L.", "L. P. Chen", "L. Chen", "陈丽萍", "Ch’en Li-P’ing"]
+  MathSciNet: "Chen, Liping"
+  CJK: "陈丽萍"
+  Suffixes: ""
+  DiasporaFlags: ["CN"]
+  Comments: "Applied mathematics. 'Liping Chen' is ambiguous in Western and Chinese databases."
+
+Chen_Qing:
+  CanonicalLatin: "Chen, Qing"
+  CanonicalWestern: "Qing Chen"
+  AllCommonVariants: ["Chen Qing", "Qing Chen", "Chen, Q.", "Q. Chen", "陈清", "Ch’en Ch’ing"]
+  MathSciNet: "Chen, Qing"
+  CJK: "陈清"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG"]
+  Comments: "Analysis, machine learning. 'Chen, Q.' is ambiguous: can be Qing, Qi, Qian, Qiao, Qiang, Qianqian, etc."
+
+Chen_Tian:
+  CanonicalLatin: "Chen, Tian"
+  CanonicalWestern: "Tian Chen"
+  AllCommonVariants: ["Chen Tian", "Tian Chen", "Chen, T.", "T. Chen", "陈天", "Ch’en T’ien"]
+  MathSciNet: "Chen, Tian"
+  CJK: "陈天"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US"]
+  Comments: "Mathematical physics. Several 'Chen, T.' in each major bibliographic database."
+
+Chen_Xiaodong:
+  CanonicalLatin: "Chen, Xiaodong"
+  CanonicalWestern: "Xiaodong Chen"
+  AllCommonVariants: ["Chen Xiaodong", "Xiaodong Chen", "Chen, X.", "X. D. Chen", "X.-D. Chen", "陈晓东", "Ch’en Hsiao-Tung", "Chen Hsiao-tung", "Chan Hiu-Tung"]
+  MathSciNet: "Chen, Xiaodong"
+  CJK: "陈晓东"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG"]
+  Comments: "Analysis, combinatorics, Singapore. Many 'Chen, X.' in the literature."
+
+Chen_Xi:
+  CanonicalLatin: "Chen, Xi"
+  CanonicalWestern: "Xi Chen"
+  AllCommonVariants: ["Chen Xi", "Xi Chen", "Chen, X.", "X. Chen", "陈曦", "Ch’en Hsi", "Chan Hei"]
+  MathSciNet: "Chen, Xi"
+  CJK: "陈曦"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US"]
+  Comments: "Computer science, combinatorics, Columbia. Extreme ambiguity with >30 active mathematicians 'Chen, X.' worldwide."
+
+Dai_Xin:
+  CanonicalLatin: "Dai, Xin"
+  CanonicalWestern: "Xin Dai"
+  AllCommonVariants: ["Dai Xin", "Xin Dai", "Dai, X.", "X. Dai", "戴昕", "Tai Hsin"]
+  MathSciNet: "Dai, Xin"
+  CJK: "戴昕"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US"]
+  Comments: "Probability, optimization. Several 'Dai, X.' and 'Xin Dai' globally."
+
+Deng_Hui:
+  CanonicalLatin: "Deng, Hui"
+  CanonicalWestern: "Hui Deng"
+  AllCommonVariants: ["Deng Hui", "Hui Deng", "Deng, H.", "H. Deng", "邓晖", "Tang Huei"]
+  MathSciNet: "Deng, Hui"
+  CJK: "邓晖"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG", "US"]
+  Comments: "PDEs, analysis. 'Deng, H.' can refer to many Deng, Hao/Han/Huan/Huai/Hui, etc."
+
+Ding_Xin:
+  CanonicalLatin: "Ding, Xin"
+  CanonicalWestern: "Xin Ding"
+  AllCommonVariants: ["Ding Xin", "Xin Ding", "Ding, X.", "X. Ding", "丁昕", "Ting Hsin"]
+  MathSciNet: "Ding, Xin"
+  CJK: "丁昕"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG"]
+  Comments: "Optimization, statistics, signal processing. Multiple 'Ding, X.' in databases."
+
+Dong_Xin:
+  CanonicalLatin: "Dong, Xin"
+  CanonicalWestern: "Xin Dong"
+  AllCommonVariants: ["Dong Xin", "Xin Dong", "Dong, X.", "X. Dong", "董昕", "Tung Hsin"]
+  MathSciNet: "Dong, Xin"
+  CJK: "董昕"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US"]
+  Comments: "Computer science, optimization. Typical ambiguous 'Dong, X.' cluster."
+
+Fang_Hua:
+  CanonicalLatin: "Fang, Hua"
+  CanonicalWestern: "Hua Fang"
+  AllCommonVariants: ["Fang Hua", "Hua Fang", "Fang, H.", "H. Fang", "方华", "Fang Wah"]
+  MathSciNet: "Fang, Hua"
+  CJK: "方华"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US"]
+  Comments: "PDEs, statistics, algebra. Dozens of 'Fang, H.' in global databases."
+
+Feng_Xiang:
+  CanonicalLatin: "Feng, Xiang"
+  CanonicalWestern: "Xiang Feng"
+  AllCommonVariants: ["Feng Xiang", "Xiang Feng", "Feng, X.", "X. Feng", "冯翔", "Fong Hsiang"]
+  MathSciNet: "Feng, Xiang"
+  CJK: "冯翔"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG"]
+  Comments: "Probability, analysis. Multiple 'Feng, X.' globally."
+
+Fu_Jing:
+  CanonicalLatin: "Fu, Jing"
+  CanonicalWestern: "Jing Fu"
+  AllCommonVariants: ["Fu Jing", "Jing Fu", "Fu, J.", "J. Fu", "傅晶", "Fu Ching"]
+  MathSciNet: "Fu, Jing"
+  CJK: "傅晶"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG", "US"]
+  Comments: "Combinatorics, statistics, computer science. Multiple 'Fu, J.' worldwide."
+
+Gao_Fang:
+  CanonicalLatin: "Gao, Fang"
+  CanonicalWestern: "Fang Gao"
+  AllCommonVariants: ["Gao Fang", "Fang Gao", "Gao, F.", "F. Gao", "高芳", "Kao Fang"]
+  MathSciNet: "Gao, Fang"
+  CJK: "高芳"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US"]
+  Comments: "Probability, statistics. Many 'Gao, F.' globally."
+
+Gao_Jian:
+  CanonicalLatin: "Gao, Jian"
+  CanonicalWestern: "Jian Gao"
+  AllCommonVariants: ["Gao Jian", "Jian Gao", "Gao, J.", "J. Gao", "高健", "Kao Chien"]
+  MathSciNet: "Gao, Jian"
+  CJK: "高健"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG"]
+  Comments: "Combinatorics, analysis. Multiple 'Gao, J.' (see also 'Gao Jing', 'Gao Jun')."
+
+Gao_Xin:
+  CanonicalLatin: "Gao, Xin"
+  CanonicalWestern: "Xin Gao"
+  AllCommonVariants: ["Gao Xin", "Xin Gao", "Gao, X.", "X. Gao", "高新", "Kao Hsin"]
+  MathSciNet: "Gao, Xin"
+  CJK: "高新"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US"]
+  Comments: "Mathematical physics, applied math. Many 'Gao, X.' globally."
+
+Geng_Yong:
+  CanonicalLatin: "Geng, Yong"
+  CanonicalWestern: "Yong Geng"
+  AllCommonVariants: ["Geng Yong", "Yong Geng", "Geng, Y.", "Y. Geng", "耿勇", "Keng Yung"]
+  MathSciNet: "Geng, Yong"
+  CJK: "耿勇"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG"]
+  Comments: "Applied math. Multiple 'Geng, Y.' globally."
+
+Guo_Baojun:
+  CanonicalLatin: "Guo, Baojun"
+  CanonicalWestern: "Baojun Guo"
+  AllCommonVariants: ["Guo Baojun", "Baojun Guo", "Guo, B.", "B. J. Guo", "郭保军", "Kuo Pao-Chün", "Kuo Po-Chun"]
+  MathSciNet: "Guo, Baojun"
+  CJK: "郭保军"
+  Suffixes: ""
+  DiasporaFlags: ["CN"]
+  Comments: "Control theory, PDEs. Frequently confused with other Guo, B."
+
+Guo_Jin:
+  CanonicalLatin: "Guo, Jin"
+  CanonicalWestern: "Jin Guo"
+  AllCommonVariants: ["Guo Jin", "Jin Guo", "Guo, J.", "J. Guo", "郭进", "Kuo Chin"]
+  MathSciNet: "Guo, Jin"
+  CJK: "郭进"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG"]
+  Comments: "Analysis, optimization. Multiple 'Guo, J.' (see also 'Guo Jing', 'Guo Jun')."
+
+Guo_Jing:
+  CanonicalLatin: "Guo, Jing"
+  CanonicalWestern: "Jing Guo"
+  AllCommonVariants: ["Guo Jing", "Jing Guo", "Guo, J.", "J. Guo", "郭静", "Kuo Ching"]
+  MathSciNet: "Guo, Jing"
+  CJK: "郭静"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US"]
+  Comments: "Probability, statistics. Major ambiguous cluster for 'Guo, J.'"
+
+Han_Feng:
+  CanonicalLatin: "Han, Feng"
+  CanonicalWestern: "Feng Han"
+  AllCommonVariants: ["Han Feng", "Feng Han", "Han, F.", "F. Han", "韩峰", "Han Fung", "Han Fong"]
+  MathSciNet: "Han, Feng"
+  CJK: "韩峰"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US"]
+  Comments: "Statistics, Yale. Multiple 'Han, F.' and 'Feng Han' worldwide."
+
+Han_Jie:
+  CanonicalLatin: "Han, Jie"
+  CanonicalWestern: "Jie Han"
+  AllCommonVariants: ["Han Jie", "Jie Han", "Han, J.", "J. Han", "韩杰", "Han Chieh"]
+  MathSciNet: "Han, Jie"
+  CJK: "韩杰"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "CA"]
+  Comments: "Combinatorics, probability. Dozens of 'Han, J.' and 'Jie Han' in databases."
+
+He_Jian:
+  CanonicalLatin: "He, Jian"
+  CanonicalWestern: "Jian He"
+  AllCommonVariants: ["He Jian", "Jian He", "He, J.", "J. He", "贺健", "Ho Chien"]
+  MathSciNet: "He, Jian"
+  CJK: "贺健"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US"]
+  Comments: "Optimization, PDEs. Multiple 'He, J.' globally."
+
+He_Xin:
+  CanonicalLatin: "He, Xin"
+  CanonicalWestern: "Xin He"
+  AllCommonVariants: ["He Xin", "Xin He", "He, X.", "X. He", "贺昕", "Ho Hsin"]
+  MathSciNet: "He, Xin"
+  CJK: "贺昕"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "CA"]
+  Comments: "Analysis, combinatorics. Typical 'He, X.' ambiguity."
+
+Hu_Yan:
+  CanonicalLatin: "Hu, Yan"
+  CanonicalWestern: "Yan Hu"
+  AllCommonVariants: ["Hu Yan", "Yan Hu", "Hu, Y.", "Y. Hu", "胡燕", "Hu Yen"]
+  MathSciNet: "Hu, Yan"
+  CJK: "胡燕"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG", "US", "CA"]
+  Comments: "Statistics, applied math. Dozens of 'Hu, Y.' in global literature."
+
+Huang_Rong:
+  CanonicalLatin: "Huang, Rong"
+  CanonicalWestern: "Rong Huang"
+  AllCommonVariants: ["Huang Rong", "Rong Huang", "Huang, R.", "R. Huang", "黄荣", "Huang Yung", "Hwang Rong"]
+  MathSciNet: "Huang, Rong"
+  CJK: "黄荣"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG", "US"]
+  Comments: "Probability, combinatorics. Major 'Huang, R.' cluster."
+
+Jiang_Tao:
+  CanonicalLatin: "Jiang, Tao"
+  CanonicalWestern: "Tao Jiang"
+  AllCommonVariants: ["Jiang Tao", "Tao Jiang", "Jiang, T.", "T. Jiang", "姜涛", "Chiang Tao"]
+  MathSciNet: "Jiang, Tao"
+  CJK: "姜涛"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US"]
+  Comments: "Probability, combinatorics. At least 10 active 'Jiang, T.' worldwide."
+
+Li_Bin:
+  CanonicalLatin: "Li, Bin"
+  CanonicalWestern: "Bin Li"
+  AllCommonVariants: ["Li Bin", "Bin Li", "Li, B.", "B. Li", "李斌", "Lee Bin"]
+  MathSciNet: "Li, Bin"
+  CJK: "李斌"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG"]
+  Comments: "'Li, Bin' is one of the most ambiguous clusters; many mathematicians and physicists, all fields."
+
+Li_Cheng:
+  CanonicalLatin: "Li, Cheng"
+  CanonicalWestern: "Cheng Li"
+  AllCommonVariants: ["Li Cheng", "Cheng Li", "Li, C.", "C. Li", "李成", "Lee Cheng"]
+  MathSciNet: "Li, Cheng"
+  CJK: "李成"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "CA"]
+  Comments: "Applied math, probability. Multiple 'Li, C.'"
+
+Li_Wei:
+  CanonicalLatin: "Li, Wei"
+  CanonicalWestern: "Wei Li"
+  AllCommonVariants: ["Li Wei", "Wei Li", "Li, W.", "W. Li", "李伟", "Lee Wai", "Lei Wei"]
+  MathSciNet: "Li, Wei"
+  CJK: "李伟"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG", "TW", "CA"]
+  Comments: "Most ambiguous pair: >60 distinct 'Li, W.' entries in MathSciNet, with dozens of coexisting Wei Li, Wei-Lei, Lee Wai etc. forms."
+
+Li_Yang:
+  CanonicalLatin: "Li, Yang"
+  CanonicalWestern: "Yang Li"
+  AllCommonVariants: ["Li Yang", "Yang Li", "Li, Y.", "Y. Li", "李杨", "Lee Yang", "Li Young", "Li, Yeung"]
+  MathSciNet: "Li, Yang"
+  CJK: "李杨"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG", "TW", "UK"]
+  Comments: "PDEs, probability, combinatorics. Immense ambiguity—>40 'Li, Y.' entries active, dozens of distinct affiliations."
+
+Lin_Chang:
+  CanonicalLatin: "Lin, Chang"
+  CanonicalWestern: "Chang Lin"
+  AllCommonVariants: ["Lin Chang", "Chang Lin", "Lin, C.", "C. Lin", "林畅", "Lin Ch’ang"]
+  MathSciNet: "Lin, Chang"
+  CJK: "林畅"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "TW", "US"]
+  Comments: "Analysis, combinatorics, applied math. Typical 'Lin, C.' collision name."
+
+Lin_Jian:
+  CanonicalLatin: "Lin, Jian"
+  CanonicalWestern: "Jian Lin"
+  AllCommonVariants: ["Lin Jian", "Jian Lin", "Lin, J.", "J. Lin", "林健", "Lin Chien"]
+  MathSciNet: "Lin, Jian"
+  CJK: "林健"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US"]
+  Comments: "'Lin, J.' is a frequent ambiguous cluster in statistics and applied math."
+
+Liu_Hong:
+  CanonicalLatin: "Liu, Hong"
+  CanonicalWestern: "Hong Liu"
+  AllCommonVariants: ["Liu Hong", "Hong Liu", "Liu, H.", "H. Liu", "刘红", "Liu Hung"]
+  MathSciNet: "Liu, Hong"
+  CJK: "刘红"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "CA"]
+  Comments: "Statistics, probability, mathematical finance. Multiple 'Liu, H.' (Hong, Hao, Hua, Hui, Huai, etc.)."
+
+Liu_Qiang:
+  CanonicalLatin: "Liu, Qiang"
+  CanonicalWestern: "Qiang Liu"
+  AllCommonVariants: ["Liu Qiang", "Qiang Liu", "Liu, Q.", "Q. Liu", "刘强", "Liu Chiang"]
+  MathSciNet: "Liu, Qiang"
+  CJK: "刘强"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG"]
+  Comments: "Statistics, machine learning. Several 'Liu, Q.' globally."
+
+Liu_Yan:
+  CanonicalLatin: "Liu, Yan"
+  CanonicalWestern: "Yan Liu"
+  AllCommonVariants: ["Liu Yan", "Yan Liu", "Liu, Y.", "Y. Liu", "刘艳", "Liu Yen", "Liu Yien"]
+  MathSciNet: "Liu, Yan"
+  CJK: "刘艳"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG", "US", "CA"]
+  Comments: "Probability, statistics, combinatorics. Among the most ambiguous: dozens of active 'Liu, Y.' and Yan Liu in MathSciNet and DBLP."
+
+Lu_Jian:
+  CanonicalLatin: "Lu, Jian"
+  CanonicalWestern: "Jian Lu"
+  AllCommonVariants: ["Lu Jian", "Jian Lu", "Lu, J.", "J. Lu", "卢健", "Lu Chien", "Lu Zhen"]
+  MathSciNet: "Lu, Jian"
+  CJK: "卢健"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG"]
+  Comments: "Analysis, computational math, combinatorics. 'Lu, J.' ambiguous, also prone to confusion with 'Luo, Jian'."
+
+Ma_Xia:
+  CanonicalLatin: "Ma, Xia"
+  CanonicalWestern: "Xia Ma"
+  AllCommonVariants: ["Ma Xia", "Xia Ma", "Ma, X.", "X. Ma", "马霞", "Ma Hsia", "Ma Sia"]
+  MathSciNet: "Ma, Xia"
+  CJK: "马霞"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "TW", "SG"]
+  Comments: "Statistics, analysis. 'Ma, X.' is a common ambiguous cluster."
+
+Sun_Jian:
+  CanonicalLatin: "Sun, Jian"
+  CanonicalWestern: "Jian Sun"
+  AllCommonVariants: ["Sun Jian", "Jian Sun", "Sun, J.", "J. Sun", "孙健", "Sun Chien"]
+  MathSciNet: "Sun, Jian"
+  CJK: "孙健"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG"]
+  Comments: "Combinatorics, geometry, applied math. Many 'Sun, J.' entries, with cross-ambiguity with 'Jin Sun', 'Jun Sun', 'Jing Sun'."
+
+Sun_Jing:
+  CanonicalLatin: "Sun, Jing"
+  CanonicalWestern: "Jing Sun"
+  AllCommonVariants: ["Sun Jing", "Jing Sun", "Sun, J.", "J. Sun", "孙静", "Sun Ching"]
+  MathSciNet: "Sun, Jing"
+  CJK: "孙静"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG"]
+  Comments: "Control theory, signal processing. >25 'Sun, J.' in literature (see also 'Jian', 'Jin', 'Jun')."
+
+Sun_Jin:
+  CanonicalLatin: "Sun, Jin"
+  CanonicalWestern: "Jin Sun"
+  AllCommonVariants: ["Sun Jin", "Jin Sun", "Sun, J.", "J. Sun", "孙晋", "Sun Chin"]
+  MathSciNet: "Sun, Jin"
+  CJK: "孙晋"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG", "US"]
+  Comments: "'Sun, Jin'/'Jin Sun' appears in several combinatorics, geometry, and engineering papers."
+
+Sun_Jun:
+  CanonicalLatin: "Sun, Jun"
+  CanonicalWestern: "Jun Sun"
+  AllCommonVariants: ["Sun Jun", "Jun Sun", "Sun, J.", "J. Sun", "孙军", "Sun Chun"]
+  MathSciNet: "Sun, Jun"
+  CJK: "孙军"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG", "US"]
+  Comments: "Computer science, combinatorics. Many 'Sun, J.'"
+
+Sun_Liang:
+  CanonicalLatin: "Sun, Liang"
+  CanonicalWestern: "Liang Sun"
+  AllCommonVariants: ["Sun Liang", "Liang Sun", "Sun, L.", "L. Sun", "孙亮", "Sun Leung"]
+  MathSciNet: "Sun, Liang"
+  CJK: "孙亮"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG"]
+  Comments: "Mathematical biology, analysis. Typical 'Sun, L.' ambiguity."
+
+Sun_Yang:
+  CanonicalLatin: "Sun, Yang"
+  CanonicalWestern: "Yang Sun"
+  AllCommonVariants: ["Sun Yang", "Yang Sun", "Sun, Y.", "Y. Sun", "孙阳", "Sun Yeung"]
+  MathSciNet: "Sun, Yang"
+  CJK: "孙阳"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG"]
+  Comments: "Applied math, combinatorics. One of many 'Sun, Y.'"
+
+Sun_Yi:
+  CanonicalLatin: "Sun, Yi"
+  CanonicalWestern: "Yi Sun"
+  AllCommonVariants: ["Sun Yi", "Yi Sun", "Sun, Y.", "Y. Sun", "孙毅", "Sun Yee"]
+  MathSciNet: "Sun, Yi"
+  CJK: "孙毅"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG"]
+  Comments: "Analysis, geometry. Typical 'Sun, Y.' collision; several in arXiv/DBLP."
+
+Su_Yang:
+  CanonicalLatin: "Su, Yang"
+  CanonicalWestern: "Yang Su"
+  AllCommonVariants: ["Su Yang", "Yang Su", "Su, Y.", "Y. Su", "苏杨", "Su Yeung"]
+  MathSciNet: "Su, Yang"
+  CJK: "苏杨"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG", "US"]
+  Comments: "Algebraic geometry, combinatorics. Multiple 'Su, Y.' globally."
+
+Tang_Jie:
+  CanonicalLatin: "Tang, Jie"
+  CanonicalWestern: "Jie Tang"
+  AllCommonVariants: ["Tang Jie", "Jie Tang", "Tang, J.", "J. Tang", "唐杰", "Tang Chieh"]
+  MathSciNet: "Tang, Jie"
+  CJK: "唐杰"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG"]
+  Comments: "Computer science, machine learning. Multiple 'Tang, J.' globally."
+
+Wang_Jian:
+  CanonicalLatin: "Wang, Jian"
+  CanonicalWestern: "Jian Wang"
+  AllCommonVariants: ["Wang Jian", "Jian Wang", "Wang, J.", "J. Wang", "王健", "Wong Kin", "Wong Jian"]
+  MathSciNet: "Wang, Jian"
+  CJK: "王健"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG", "UK"]
+  Comments: "Statistics, PDEs, applied math. This is one of the most ambiguous Chinese names worldwide: >80 Wang, J. or Jian Wang in MathSciNet, DBLP, arXiv, Google Scholar."
+
+Wang_Jin:
+  CanonicalLatin: "Wang, Jin"
+  CanonicalWestern: "Jin Wang"
+  AllCommonVariants: ["Wang Jin", "Jin Wang", "Wang, J.", "J. Wang", "王进", "Wang Chin"]
+  MathSciNet: "Wang, Jin"
+  CJK: "王进"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG", "US"]
+  Comments: "Statistics, biology. Many 'Wang, J.'"
+
+Wang_Jing:
+  CanonicalLatin: "Wang, Jing"
+  CanonicalWestern: "Jing Wang"
+  AllCommonVariants: ["Wang Jing", "Jing Wang", "Wang, J.", "J. Wang", "王静", "Wong Ching", "Wang Ching"]
+  MathSciNet: "Wang, Jing"
+  CJK: "王静"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG"]
+  Comments: "Probability, statistics. Dozens of 'Wang, J.' and 'Jing Wang'."
+
+Wang_Jun:
+  CanonicalLatin: "Wang, Jun"
+  CanonicalWestern: "Jun Wang"
+  AllCommonVariants: ["Wang Jun", "Jun Wang", "Wang, J.", "J. Wang", "王军", "Wang Chun", "Wong Chun", "Vong Chun"]
+  MathSciNet: "Wang, Jun"
+  CJK: "王军"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "HK", "US", "SG", "UK", "CA"]
+  Comments: "Control theory, analysis, statistics, combinatorics, applied math. One of the most frequent ambiguous names worldwide: >100 'Wang, J.' or 'Jun Wang' entries."
+
+Wang_Li:
+  CanonicalLatin: "Wang, Li"
+  CanonicalWestern: "Li Wang"
+  AllCommonVariants: ["Wang Li", "Li Wang", "Wang, L.", "L. Wang", "王丽", "Wong Lai", "Wong Lee"]
+  MathSciNet: "Wang, Li"
+  CJK: "王丽"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG", "US"]
+  Comments: "Analysis, combinatorics, biology. Dozens of 'Wang, L.' in databases, both genders."
+
+Wang_Qiang:
+  CanonicalLatin: "Wang, Qiang"
+  CanonicalWestern: "Qiang Wang"
+  AllCommonVariants: ["Wang Qiang", "Qiang Wang", "Wang, Q.", "Q. Wang", "王强", "Wong Keung"]
+  MathSciNet: "Wang, Qiang"
+  CJK: "王强"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG"]
+  Comments: "Mathematical biology, statistics. Many 'Wang, Q.'"
+
+Wang_Wei:
+  CanonicalLatin: "Wang, Wei"
+  CanonicalWestern: "Wei Wang"
+  AllCommonVariants: ["Wang Wei", "Wei Wang", "Wang, W.", "W. Wang", "王伟", "Wong Wai"]
+  MathSciNet: "Wang, Wei"
+  CJK: "王伟"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG", "UK"]
+  Comments: "Combinatorics, applied math, biology. 'Wei Wang' is one of the single most ambiguous names in international maths and sciences (>100 MathSciNet/DBLP entries)."
+
+Wang_Yang:
+  CanonicalLatin: "Wang, Yang"
+  CanonicalWestern: "Yang Wang"
+  AllCommonVariants: ["Wang Yang", "Yang Wang", "Wang, Y.", "Y. Wang", "王阳", "Wong Yeung"]
+  MathSciNet: "Wang, Yang"
+  CJK: "王阳"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG", "US"]
+  Comments: "Probability, combinatorics, analysis. Many 'Wang, Y.' entries."
+
+Wang_Yi:
+  CanonicalLatin: "Wang, Yi"
+  CanonicalWestern: "Yi Wang"
+  AllCommonVariants: ["Wang Yi", "Yi Wang", "Wang, Y.", "Y. Wang", "王毅", "Wong Yee"]
+  MathSciNet: "Wang, Yi"
+  CJK: "王毅"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG"]
+  Comments: "Analysis, combinatorics, mathematical biology. 'Yi Wang' is a maximal collision cluster: >50 globally."
+
+Wang_Yuan:
+  CanonicalLatin: "Wang, Yuan"
+  CanonicalWestern: "Yuan Wang"
+  AllCommonVariants: ["Wang Yuan", "Yuan Wang", "Wang, Y.", "Y. Wang", "王元", "Wang Yuen", "Wang Wan"]
+  MathSciNet: "Wang, Yuan"
+  CJK: "王元"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG"]
+  Comments: "Number theory, combinatorics, algebra, applied math. >60 active 'Wang, Y.' in MathSciNet and DBLP."
+
+Wu_Yi:
+  CanonicalLatin: "Wu, Yi"
+  CanonicalWestern: "Yi Wu"
+  AllCommonVariants: ["Wu Yi", "Yi Wu", "Wu, Y.", "Y. Wu", "吴毅", "Wu Yee"]
+  MathSciNet: "Wu, Yi"
+  CJK: "吴毅"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US"]
+  Comments: "Analysis, combinatorics. 'Wu, Y.' is one of the most ambiguous initials globally."
+
+Xu_Jian:
+  CanonicalLatin: "Xu, Jian"
+  CanonicalWestern: "Jian Xu"
+  AllCommonVariants: ["Xu Jian", "Jian Xu", "Xu, J.", "J. Xu", "许健", "Hsu Chien", "Hsu Jian"]
+  MathSciNet: "Xu, Jian"
+  CJK: "许健"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG", "US"]
+  Comments: "Statistics, combinatorics, algebra. Many 'Xu, J.' entries, common confusion with 'Xu Jun', 'Xu Jing', etc."
+
+Xu_Jing:
+  CanonicalLatin: "Xu, Jing"
+  CanonicalWestern: "Jing Xu"
+  AllCommonVariants: ["Xu Jing", "Jing Xu", "Xu, J.", "J. Xu", "许静", "Hsu Ching", "Hsu Jing"]
+  MathSciNet: "Xu, Jing"
+  CJK: "许静"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG", "US"]
+  Comments: "Probability, combinatorics, algebra. 'Xu, J.' ambiguous; see also 'Xu Jian', 'Xu Jun'."
+
+Xu_Jun:
+  CanonicalLatin: "Xu, Jun"
+  CanonicalWestern: "Jun Xu"
+  AllCommonVariants: ["Xu Jun", "Jun Xu", "Xu, J.", "J. Xu", "许军", "Hsu Chun", "Hsu Jun"]
+  MathSciNet: "Xu, Jun"
+  CJK: "许军"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG"]
+  Comments: "Combinatorics, probability, computer science. Many 'Xu, J.' globally."
+
+Yang_Li:
+  CanonicalLatin: "Yang, Li"
+  CanonicalWestern: "Li Yang"
+  AllCommonVariants: ["Yang Li", "Li Yang", "Yang, L.", "L. Yang", "杨莉", "Yeung Lai"]
+  MathSciNet: "Yang, Li"
+  CJK: "杨莉"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG", "US"]
+  Comments: "Applied math, combinatorics. Multiple 'Yang, L.' and 'Li Yang' in MathSciNet."
+
+Yang_Yang:
+  CanonicalLatin: "Yang, Yang"
+  CanonicalWestern: "Yang Yang"
+  AllCommonVariants: ["Yang Yang", "Yang, Y.", "Y. Yang", "杨洋", "Yeung Yeung", "Yeung Yang"]
+  MathSciNet: "Yang, Yang"
+  CJK: "杨洋"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "CA"]
+  Comments: "Probability, statistics, combinatorics, computer science. Maximum ambiguity: the canonical 'Yang Yang' problem. At least 20 coexisting 'Yang, Y.' in MathSciNet and DBLP."
+
+Zhang_Jian:
+  CanonicalLatin: "Zhang, Jian"
+  CanonicalWestern: "Jian Zhang"
+  AllCommonVariants: ["Zhang Jian", "Jian Zhang", "Zhang, J.", "J. Zhang", "张健", "Chang Kin", "Cheung Kin"]
+  MathSciNet: "Zhang, Jian"
+  CJK: "张健"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG", "US"]
+  Comments: "Combinatorics, analysis. Among the most ambiguous 'Zhang, J.' clusters in all of mathematics."
+
+Zhang_Wei:
+  CanonicalLatin: "Zhang, Wei"
+  CanonicalWestern: "Wei Zhang"
+  AllCommonVariants: ["Zhang Wei", "Wei Zhang", "Zhang, W.", "W. Zhang", "张伟", "Chang Wei", "Cheung Wai"]
+  MathSciNet: "Zhang, Wei"
+  CJK: "张伟"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG", "TW", "HK", "CA"]
+  Comments: "Number theory, combinatorics, analysis. The most ambiguous modern mathematician name—over 100 coexisting 'Zhang, W.' or 'Wei Zhang' in MathSciNet, DBLP, Google Scholar, and arXiv."
+
+Zhao_Yuan:
+  CanonicalLatin: "Zhao, Yuan"
+  CanonicalWestern: "Yuan Zhao"
+  AllCommonVariants: ["Zhao Yuan", "Yuan Zhao", "Zhao, Y.", "Y. Zhao", "赵元", "Chao Yuen"]
+  MathSciNet: "Zhao, Yuan"
+  CJK: "赵元"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US"]
+  Comments: "Combinatorics, algebra. Many 'Zhao, Y.' entries."
+
+Zhou_Xiaoyun:
+  CanonicalLatin: "Zhou, Xiaoyun"
+  CanonicalWestern: "Xiaoyun Zhou"
+  AllCommonVariants: ["Zhou Xiaoyun", "Xiaoyun Zhou", "Zhou, X.", "X. Y. Zhou", "X. Zhou", "周小云", "Chou Hsiao-Yun"]
+  MathSciNet: "Zhou, Xiaoyun"
+  CJK: "周小云"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG", "HK", "US"]
+  Comments: "Mathematical finance, probability, Singapore. >25 Zhou, X. entries worldwide; also confused with 'Zhou Xiaoyu' and 'Zhu Xiaoyun'."
+
+Zhu_Jun:
+  CanonicalLatin: "Zhu, Jun"
+  CanonicalWestern: "Jun Zhu"
+  AllCommonVariants: ["Zhu Jun", "Jun Zhu", "Zhu, J.", "J. Zhu", "朱军", "Chu Chun", "Zhu Chun"]
+  MathSciNet: "Zhu, Jun"
+  CJK: "朱军"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG"]
+  Comments: "Statistics, probability, computer science. Many 'Zhu, J.'"
+
+Zhu_Wei:
+  CanonicalLatin: "Zhu, Wei"
+  CanonicalWestern: "Wei Zhu"
+  AllCommonVariants: ["Zhu Wei", "Wei Zhu", "Zhu, W.", "W. Zhu", "朱伟", "Chu Wai", "Chu Wei"]
+  MathSciNet: "Zhu, Wei"
+  CJK: "朱伟"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "CA"]
+  Comments: "Analysis, combinatorics, applied math. One of the most ambiguous 'Zhu, W.' clusters."
+
+##########################################################################################
+# Update                                                                                 #
+##########################################################################################
+
+An_Hua:
+  CanonicalLatin: "An, Hua"
+  CanonicalWestern: "Hua An"
+  AllCommonVariants: [
+    "An Hua", "Hua An", "An, H.", "H. An", "A. Hua", "Hua, An", "安华", "An Wah", "A Wah"
+  ]
+  MathSciNet: "An, Hua"
+  CJK: "安华"
+  Suffixes: ""
+  DiasporaFlags: ["CN"]
+  Gender: "M"
+  Comments: "Number theory, combinatorics. Indexed as both 'An, Hua' and 'Hua An'. Also ambiguous with 'An, Huai', 'Ann, H.', 'An Hua-Min'."
+
+Bao_Xinhe:
+  CanonicalLatin: "Bao, Xinhe"
+  CanonicalWestern: "Xinhe Bao"
+  AllCommonVariants: [
+    "Bao Xinhe", "Xinhe Bao", "Bao, X.", "X. Bao", "包信和", "Pao Hsin-Ho", "Pao Xin-He"
+  ]
+  MathSciNet: "Bao, Xinhe"
+  CJK: "包信和"
+  Suffixes: ""
+  DiasporaFlags: ["CN"]
+  Gender: "M"
+  Comments: "Applied mathematics, mathematical chemistry. Multiple 'Bao, X.' exist."
+
+Cai_Jianfeng:
+  CanonicalLatin: "Cai, Jianfeng"
+  CanonicalWestern: "Jianfeng Cai"
+  AllCommonVariants: [
+    "Cai Jianfeng", "Jianfeng Cai", "Cai, J.", "J. F. Cai", "J. Cai", "蔡建峰", "Tsai Chien-Feng", "Choi Kin-Fung"
+  ]
+  MathSciNet: "Cai, Jianfeng"
+  CJK: "蔡建峰"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG", "US"]
+  Gender: "M"
+  Comments: "Numerical linear algebra, optimization. Ambiguous 'Cai, J.' in all DBs."
+
+Cai_Tianxin:
+  CanonicalLatin: "Cai, Tianxin"
+  CanonicalWestern: "Tianxin Cai"
+  AllCommonVariants: [
+    "Cai Tianxin", "Tianxin Cai", "Cai, T.", "T. Cai", "蔡天新", "Tsai Tien-Hsin", "Choi Tin-San"
+  ]
+  MathSciNet: "Cai, Tianxin"
+  CJK: "蔡天新"
+  Suffixes: ""
+  DiasporaFlags: ["CN"]
+  Gender: "M"
+  Comments: "Number theory, combinatorics, poetry. 'Cai, T.' ambiguous in all DBs."
+
+Cai_Tony:
+  CanonicalLatin: "Cai, Tony"
+  CanonicalWestern: "Tony Cai"
+  AllCommonVariants: [
+    "Cai Tony", "Tony Cai", "Cai, T.", "T. T. Cai", "蔡天树", "Tsai T’ien-Shu", "Cai Tian-Shu", "Tony T. Cai"
+  ]
+  MathSciNet: "Cai, Tony"
+  CJK: "蔡天树"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US"]
+  Gender: "M"
+  Comments: "Statistics, high-dimensional inference, UPenn. 'Tony Cai' common Westernised variant."
+
+Cao_Huaidong:
+  CanonicalLatin: "Cao, Huaidong"
+  CanonicalWestern: "Huaidong Cao"
+  AllCommonVariants: [
+    "Cao Huaidong", "Huaidong Cao", "Cao, H.", "H. D. Cao", "H.-D. Cao", "曹怀东", "Tsao Huai-Tung"
+  ]
+  MathSciNet: "Cao, Huaidong"
+  CJK: "曹怀东"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US"]
+  Gender: "M"
+  Comments: "Differential geometry, Ricci flow. Major confusion with 'Cao Hua', 'Cao Hui', 'Cao Hao', etc."
+
+Cao_Lü:
+  CanonicalLatin: "Cao, Lü"
+  CanonicalWestern: "Lü Cao"
+  AllCommonVariants: [
+    "Cao Lü", "Lü Cao", "Cao, L.", "L. Cao", "曹律", "Tsao Lü", "Cao Lu", "Lü Tsao", "Cao Lv"
+  ]
+  MathSciNet: "Cao, Lü"
+  CJK: "曹律"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "DE"]
+  Gender: "M"
+  Comments: "Probability, combinatorics. Lü/Lu/Lv/Lyu confusion in Latinisation."
+
+Chan_Ho_Yin:
+  CanonicalLatin: "Chan, Ho Yin"
+  CanonicalWestern: "Ho Yin Chan"
+  AllCommonVariants: [
+    "Chan Ho Yin", "Ho Yin Chan", "Chan, H.Y.", "H.Y. Chan", "陳浩然", "Chan Hao-Yan", "Ho-Yin Chan", "Chen Haoran"
+  ]
+  MathSciNet: "Chan, Ho Yin"
+  CJK: "陳浩然"
+  Suffixes: ""
+  DiasporaFlags: ["HK", "SG", "CN"]
+  Gender: "M"
+  Comments: "'Chan' is Hong Kong romanisation of 'Chen' (陳); also used for 'Zhang', creating maximal ambiguity."
+
+Chang_Chia_Hao:
+  CanonicalLatin: "Chang, Chia Hao"
+  CanonicalWestern: "Chia Hao Chang"
+  AllCommonVariants: [
+    "Chang Chia Hao", "Chia Hao Chang", "Chang, C.H.", "C.H. Chang", "張嘉豪", "Chang Chia-Hao", "Cheung Ka-Ho", "Chang Jiahao"
+  ]
+  MathSciNet: "Chang, Chia Hao"
+  CJK: "張嘉豪"
+  Suffixes: ""
+  DiasporaFlags: ["TW", "HK"]
+  Gender: "M"
+  Comments: "Probability, combinatorics. 'Chang' = 張 (Zhang, Cheung, Chong); 'Jiahao' = Chia Hao = Ka-Ho in HK romanisation."
+
+Cheung_Man_Ho:
+  CanonicalLatin: "Cheung, Man Ho"
+  CanonicalWestern: "Man Ho Cheung"
+  AllCommonVariants: [
+    "Cheung Man Ho", "Man Ho Cheung", "Cheung, M.H.", "M.H. Cheung", "張文豪", "Cheung Man-Ho", "Chang Wen-Hao", "Cheung Manho"
+  ]
+  MathSciNet: "Cheung, Man Ho"
+  CJK: "張文豪"
+  Suffixes: ""
+  DiasporaFlags: ["HK", "CN"]
+  Gender: "M"
+  Comments: "Probability, combinatorics. Cheung = 張 (Zhang, Chang, Chong); cross-indexed as 'Man Ho Cheung' in US/UK sources."
+
+Chen_Baoquan:
+  CanonicalLatin: "Chen, Baoquan"
+  CanonicalWestern: "Baoquan Chen"
+  AllCommonVariants: [
+    "Chen Baoquan", "Baoquan Chen", "Chen, B.", "B. Chen", "陈宝泉", "Ch’en Pao-Ch’üan", "Chen Po-Chuan"
+  ]
+  MathSciNet: "Chen, Baoquan"
+  CJK: "陈宝泉"
+  Suffixes: ""
+  DiasporaFlags: ["CN"]
+  Gender: "M"
+  Comments: "'Chen, B.' extremely ambiguous (>50). See also Po-Chuan, Pao-Chuan."
+
+Chen_Bing:
+  CanonicalLatin: "Chen, Bing"
+  CanonicalWestern: "Bing Chen"
+  AllCommonVariants: [
+    "Chen Bing", "Bing Chen", "Chen, B.", "B. Chen", "陈兵", "Ch’en Ping", "Chan Ping"
+  ]
+  MathSciNet: "Chen, Bing"
+  CJK: "陈兵"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG"]
+  Gender: "M"
+  Comments: "Probability, control theory. Major ambiguous cluster with other Bing surnames (Lin, Liu, etc.)."
+
+Chen_Dong:
+  CanonicalLatin: "Chen, Dong"
+  CanonicalWestern: "Dong Chen"
+  AllCommonVariants: [
+    "Chen Dong", "Dong Chen", "Chen, D.", "D. Chen", "陈东", "Ch’en Tung", "Chan Dong"
+  ]
+  MathSciNet: "Chen, Dong"
+  CJK: "陈东"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "CA"]
+  Gender: "M"
+  Comments: "Analysis, materials science. One of the most ambiguous modern clusters ('D. Chen')."
+
+Chen_Huan:
+  CanonicalLatin: "Chen, Huan"
+  CanonicalWestern: "Huan Chen"
+  AllCommonVariants: [
+    "Chen Huan", "Huan Chen", "Chen, H.", "H. Chen", "陈欢", "Ch’en Huan", "Chan Huan"
+  ]
+  MathSciNet: "Chen, Huan"
+  CJK: "陈欢"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US"]
+  Gender: "M"
+  Comments: "'Chen, H.' is perhaps the most ambiguous initial in MathSciNet."
+
+Chen_Jinlong:
+  CanonicalLatin: "Chen, Jinlong"
+  CanonicalWestern: "Jinlong Chen"
+  AllCommonVariants: [
+    "Chen Jinlong", "Jinlong Chen", "Chen, J.", "J. L. Chen", "J. Chen", "陈金龙", "Ch’en Chin-Lung"
+  ]
+  MathSciNet: "Chen, Jinlong"
+  CJK: "陈金龙"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG"]
+  Gender: "M"
+  Comments: "Optimization, machine learning. 'J. Chen' is a maximal cluster (see Jin, Jing, Jun, etc.)."
+
+Chen_Jun (woman):
+  CanonicalLatin: "Chen, Jun"
+  CanonicalWestern: "Jun Chen"
+  AllCommonVariants: [
+    "Chen Jun", "Jun Chen", "Chen, J.", "J. Chen", "陈军", "Ch’en Chun", "Chan Chun"
+  ]
+  MathSciNet: "Chen, Jun"
+  CJK: "陈军"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "CA", "SG"]
+  Gender: "F"
+  Comments: "Signal processing, algebra, geometry. >100 coexisting 'Jun Chen'; woman mathematician."
+
+Chen_Liang:
+  CanonicalLatin: "Chen, Liang"
+  CanonicalWestern: "Liang Chen"
+  AllCommonVariants: [
+    "Chen Liang", "Liang Chen", "Chen, L.", "L. Chen", "陈亮", "Ch’en Liang", "Chan Liang"
+  ]
+  MathSciNet: "Chen, Liang"
+  CJK: "陈亮"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US"]
+  Gender: "M"
+  Comments: "Applied math. Frequent ambiguity with other 'Liang' surnames."
+
+Chen_Lin (woman):
+  CanonicalLatin: "Chen, Lin"
+  CanonicalWestern: "Lin Chen"
+  AllCommonVariants: [
+    "Chen Lin", "Lin Chen", "Chen, L.", "L. Chen", "陈琳", "Ch’en Lin", "Chan Lin"
+  ]
+  MathSciNet: "Chen, Lin"
+  CJK: "陈琳"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "CA"]
+  Gender: "F"
+  Comments: "Woman mathematician. 'Lin Chen'/'Chen Lin' ambiguous, both orders used globally."
+
+Chen_Liping (woman):
+  CanonicalLatin: "Chen, Liping"
+  CanonicalWestern: "Liping Chen"
+  AllCommonVariants: [
+    "Chen Liping", "Liping Chen", "Chen, L.", "L. P. Chen", "L. Chen", "陈丽萍", "Ch’en Li-P’ing"
+  ]
+  MathSciNet: "Chen, Liping"
+  CJK: "陈丽萍"
+  Suffixes: ""
+  DiasporaFlags: ["CN"]
+  Gender: "F"
+  Comments: "Woman mathematician. 'Liping Chen' ambiguous, also used as male name."
+
+Chen_Qing (woman):
+  CanonicalLatin: "Chen, Qing"
+  CanonicalWestern: "Qing Chen"
+  AllCommonVariants: [
+    "Chen Qing", "Qing Chen", "Chen, Q.", "Q. Chen", "陈清", "Ch’en Ch’ing", "Chan Ching"
+  ]
+  MathSciNet: "Chen, Qing"
+  CJK: "陈清"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG"]
+  Gender: "F"
+  Comments: "Woman mathematician. Qing is ambiguous (Qian, Qi, Qiao, Qiang, etc.)."
+
+Chen_Tian:
+  CanonicalLatin: "Chen, Tian"
+  CanonicalWestern: "Tian Chen"
+  AllCommonVariants: [
+    "Chen Tian", "Tian Chen", "Chen, T.", "T. Chen", "陈天", "Ch’en T’ien"
+  ]
+  MathSciNet: "Chen, Tian"
+  CJK: "陈天"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US"]
+  Gender: "M"
+  Comments: "Mathematical physics. Many 'Chen, T.'"
+
+Chen_Xiaodong:
+  CanonicalLatin: "Chen, Xiaodong"
+  CanonicalWestern: "Xiaodong Chen"
+  AllCommonVariants: [
+    "Chen Xiaodong", "Xiaodong Chen", "Chen, X.", "X. D. Chen", "X.-D. Chen", "陈晓东", "Ch’en Hsiao-Tung", "Chen Hsiao-tung", "Chan Hiu-Tung"
+  ]
+  MathSciNet: "Chen, Xiaodong"
+  CJK: "陈晓东"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG"]
+  Gender: "M"
+  Comments: "Analysis, combinatorics, Singapore. Many 'Chen, X.'"
+
+Chen_Xi (woman):
+  CanonicalLatin: "Chen, Xi"
+  CanonicalWestern: "Xi Chen"
+  AllCommonVariants: [
+    "Chen Xi", "Xi Chen", "Chen, X.", "X. Chen", "陈曦", "Ch’en Hsi", "Chan Hei"
+  ]
+  MathSciNet: "Chen, Xi"
+  CJK: "陈曦"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US"]
+  Gender: "F"
+  Comments: "Woman mathematician, combinatorics, Columbia. >30 'Chen, X.' globally."
+
+Cheng_Ming (woman):
+  CanonicalLatin: "Cheng, Ming"
+  CanonicalWestern: "Ming Cheng"
+  AllCommonVariants: [
+    "Cheng Ming", "Ming Cheng", "Cheng, M.", "M. Cheng", "程明", "Cheng Ming", "Cheng Min"
+  ]
+  MathSciNet: "Cheng, Ming"
+  CJK: "程明"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG"]
+  Gender: "F"
+  Comments: "Woman mathematician, statistics. Ambiguous with 'Min Cheng'."
+
+Chu_Yu:
+  CanonicalLatin: "Chu, Yu"
+  CanonicalWestern: "Yu Chu"
+  AllCommonVariants: [
+    "Chu Yu", "Yu Chu", "Choo Yu", "Ju Yu", "Xu Yu", "Q. Yu", "朱雨", "Chü Yu", "Zhü Yu", "Chew Yu", "Chow Yu"
+  ]
+  MathSciNet: "Chu, Yu"
+  CJK: "朱雨"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG", "MY", "HK", "TW"]
+  Gender: "M"
+  Comments: "Cluster: Chu/Ju/Zhu/Choo/Chew/Chow/Chiu all variants for 朱 or related surnames. Diacritic and double-vowel ambiguity maximal."
+
+Dai_Xin:
+  CanonicalLatin: "Dai, Xin"
+  CanonicalWestern: "Xin Dai"
+  AllCommonVariants: [
+    "Dai Xin", "Xin Dai", "Dai, X.", "X. Dai", "戴昕", "Tai Hsin", "Dai Hsin"
+  ]
+  MathSciNet: "Dai, Xin"
+  CJK: "戴昕"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US"]
+  Gender: "M"
+  Comments: "Probability, optimization. Multiple 'Dai, X.' and 'Xin Dai' globally. Xin also indexed as 'Hsin' in TW/SG."
+
+Deng_Hui (woman):
+  CanonicalLatin: "Deng, Hui"
+  CanonicalWestern: "Hui Deng"
+  AllCommonVariants: [
+    "Deng Hui", "Hui Deng", "Deng, H.", "H. Deng", "邓晖", "Tang Huei", "Teng Hui"
+  ]
+  MathSciNet: "Deng, Hui"
+  CJK: "邓晖"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG", "US"]
+  Gender: "F"
+  Comments: "PDEs, analysis. Also appears as 'Tang Hui' and 'Deng Huei' in some diaspora contexts. Woman mathematician."
+
+Ding_Xin (woman):
+  CanonicalLatin: "Ding, Xin"
+  CanonicalWestern: "Xin Ding"
+  AllCommonVariants: [
+    "Ding Xin", "Xin Ding", "Ding, X.", "X. Ding", "丁昕", "Ting Hsin", "Ding Hsin"
+  ]
+  MathSciNet: "Ding, Xin"
+  CJK: "丁昕"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG"]
+  Gender: "F"
+  Comments: "Optimization, statistics, signal processing. Several 'Ding, X.' in all DBs. Woman mathematician."
+
+Dong_Xin (woman):
+  CanonicalLatin: "Dong, Xin"
+  CanonicalWestern: "Xin Dong"
+  AllCommonVariants: [
+    "Dong Xin", "Xin Dong", "Dong, X.", "X. Dong", "董昕", "Tung Hsin", "Dong Hsin"
+  ]
+  MathSciNet: "Dong, Xin"
+  CJK: "董昕"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US"]
+  Gender: "F"
+  Comments: "Computer science, optimization. Also 'Tung Xin' in old romanisations. Woman mathematician."
+
+Fang_Hua (woman):
+  CanonicalLatin: "Fang, Hua"
+  CanonicalWestern: "Hua Fang"
+  AllCommonVariants: [
+    "Fang Hua", "Hua Fang", "Fang, H.", "H. Fang", "方华", "Fang Wah", "Hong Wah"
+  ]
+  MathSciNet: "Fang, Hua"
+  CJK: "方华"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG"]
+  Gender: "F"
+  Comments: "PDEs, statistics, algebra. 'Fang Wah' is common in Singapore. Woman mathematician."
+
+Feng_Xiang:
+  CanonicalLatin: "Feng, Xiang"
+  CanonicalWestern: "Xiang Feng"
+  AllCommonVariants: [
+    "Feng Xiang", "Xiang Feng", "Feng, X.", "X. Feng", "冯翔", "Fong Hsiang", "Fung Xiang"
+  ]
+  MathSciNet: "Feng, Xiang"
+  CJK: "冯翔"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG", "MY"]
+  Gender: "M"
+  Comments: "Probability, analysis. 'Feng, X.' also indexed as 'Fung, Xiang' in Malaysia/Singapore."
+
+Fu_Jing (woman):
+  CanonicalLatin: "Fu, Jing"
+  CanonicalWestern: "Jing Fu"
+  AllCommonVariants: [
+    "Fu Jing", "Jing Fu", "Fu, J.", "J. Fu", "傅晶", "Fu Ching", "Foo Jing"
+  ]
+  MathSciNet: "Fu, Jing"
+  CJK: "傅晶"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG", "US"]
+  Gender: "F"
+  Comments: "Combinatorics, statistics, computer science. 'Foo' common in Singapore. Woman mathematician."
+
+Gao_Fang (woman):
+  CanonicalLatin: "Gao, Fang"
+  CanonicalWestern: "Fang Gao"
+  AllCommonVariants: [
+    "Gao Fang", "Fang Gao", "Gao, F.", "F. Gao", "高芳", "Kao Fang", "Kaw Fang"
+  ]
+  MathSciNet: "Gao, Fang"
+  CJK: "高芳"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "CA"]
+  Gender: "F"
+  Comments: "Probability, statistics. Woman mathematician. 'Kao' sometimes in old romanisation."
+
+Gao_Jian:
+  CanonicalLatin: "Gao, Jian"
+  CanonicalWestern: "Jian Gao"
+  AllCommonVariants: [
+    "Gao Jian", "Jian Gao", "Gao, J.", "J. Gao", "高健", "Kao Chien", "Kaw Jian"
+  ]
+  MathSciNet: "Gao, Jian"
+  CJK: "高健"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG"]
+  Gender: "M"
+  Comments: "Combinatorics, analysis. Several 'Gao, J.' in DBs."
+
+Gao_Xin (woman):
+  CanonicalLatin: "Gao, Xin"
+  CanonicalWestern: "Xin Gao"
+  AllCommonVariants: [
+    "Gao Xin", "Xin Gao", "Gao, X.", "X. Gao", "高新", "Kao Hsin", "Kaw Xin"
+  ]
+  MathSciNet: "Gao, Xin"
+  CJK: "高新"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US"]
+  Gender: "F"
+  Comments: "Mathematical physics, applied math. Woman mathematician."
+
+Geng_Yong:
+  CanonicalLatin: "Geng, Yong"
+  CanonicalWestern: "Yong Geng"
+  AllCommonVariants: [
+    "Geng Yong", "Yong Geng", "Geng, Y.", "Y. Geng", "耿勇", "Keng Yung"
+  ]
+  MathSciNet: "Geng, Yong"
+  CJK: "耿勇"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG"]
+  Gender: "M"
+  Comments: "Applied math. Several 'Geng, Y.' globally."
+
+Gu_Baojun:
+  CanonicalLatin: "Gu, Baojun"
+  CanonicalWestern: "Baojun Gu"
+  AllCommonVariants: [
+    "Gu Baojun", "Baojun Gu", "Gu, B.", "B. J. Gu", "郭保军", "Kuo Pao-Chün", "Kuo Po-Chun"
+  ]
+  MathSciNet: "Gu, Baojun"
+  CJK: "郭保军"
+  Suffixes: ""
+  DiasporaFlags: ["CN"]
+  Gender: "M"
+  Comments: "Control theory, PDEs. Often 'Kuo' in old sources."
+
+Gu_Lü:
+  CanonicalLatin: "Gu, Lü"
+  CanonicalWestern: "Lü Gu"
+  AllCommonVariants: [
+    "Gu Lü", "Lü Gu", "Gu, L.", "L. Gu", "古律", "Gu Lu", "Ku Lü", "Gu Lv"
+  ]
+  MathSciNet: "Gu, Lü"
+  CJK: "古律"
+  Suffixes: ""
+  DiasporaFlags: ["CN"]
+  Gender: "M"
+  Comments: "Probability, combinatorics. Lü/Lu/Lv confusion."
+
+Han_Feng:
+  CanonicalLatin: "Han, Feng"
+  CanonicalWestern: "Feng Han"
+  AllCommonVariants: [
+    "Han Feng", "Feng Han", "Han, F.", "F. Han", "韩峰", "Han Fung", "Han Fong", "Han Phong"
+  ]
+  MathSciNet: "Han, Feng"
+  CJK: "韩峰"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US"]
+  Gender: "M"
+  Comments: "Statistics, Yale. Multiple 'Han, F.'"
+
+Han_Jie:
+  CanonicalLatin: "Han, Jie"
+  CanonicalWestern: "Jie Han"
+  AllCommonVariants: [
+    "Han Jie", "Jie Han", "Han, J.", "J. Han", "韩杰", "Han Chieh", "Han Jieh"
+  ]
+  MathSciNet: "Han, Jie"
+  CJK: "韩杰"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "CA"]
+  Gender: "M"
+  Comments: "Combinatorics, probability. 'Han, J.' cluster in DBs."
+
+He_Jian (woman):
+  CanonicalLatin: "He, Jian"
+  CanonicalWestern: "Jian He"
+  AllCommonVariants: [
+    "He Jian", "Jian He", "He, J.", "J. He", "贺健", "Ho Chien", "Heh Jian"
+  ]
+  MathSciNet: "He, Jian"
+  CJK: "贺健"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US"]
+  Gender: "F"
+  Comments: "Optimization, PDEs. Several 'He, J.'"
+
+He_Xin (woman):
+  CanonicalLatin: "He, Xin"
+  CanonicalWestern: "Xin He"
+  AllCommonVariants: [
+    "He Xin", "Xin He", "He, X.", "X. He", "贺昕", "Ho Hsin", "Heh Xin"
+  ]
+  MathSciNet: "He, Xin"
+  CJK: "贺昕"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "CA"]
+  Gender: "F"
+  Comments: "Analysis, combinatorics. Woman mathematician. Many 'He, X.' in DBs."
+
+Hu_Yan (woman):
+  CanonicalLatin: "Hu, Yan"
+  CanonicalWestern: "Yan Hu"
+  AllCommonVariants: [
+    "Hu Yan", "Yan Hu", "Hu, Y.", "Y. Hu", "胡燕", "Hu Yen", "Woo Yen", "Woo Yan"
+  ]
+  MathSciNet: "Hu, Yan"
+  CJK: "胡燕"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG", "US", "CA"]
+  Gender: "F"
+  Comments: "Statistics, applied math. Dozens of 'Hu, Y.'"
+
+Huang_Rong (woman):
+  CanonicalLatin: "Huang, Rong"
+  CanonicalWestern: "Rong Huang"
+  AllCommonVariants: [
+    "Huang Rong", "Rong Huang", "Huang, R.", "R. Huang", "黄荣", "Huang Yung", "Hwang Rong"
+  ]
+  MathSciNet: "Huang, Rong"
+  CJK: "黄荣"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG", "US"]
+  Gender: "F"
+  Comments: "Probability, combinatorics. Woman mathematician. Hwang is common in Korea/Taiwan romanisations."
+
+Jiang_Tao:
+  CanonicalLatin: "Jiang, Tao"
+  CanonicalWestern: "Tao Jiang"
+  AllCommonVariants: [
+    "Jiang Tao", "Tao Jiang", "Jiang, T.", "T. Jiang", "姜涛", "Chiang Tao", "Jang Tao"
+  ]
+  MathSciNet: "Jiang, Tao"
+  CJK: "姜涛"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US"]
+  Gender: "M"
+  Comments: "Probability, combinatorics. >10 active 'Jiang, T.' worldwide. Also romanised as 'Chiang' in Taiwan/US, 'Jang' in Korea."
+
+Li_Bin:
+  CanonicalLatin: "Li, Bin"
+  CanonicalWestern: "Bin Li"
+  AllCommonVariants: [
+    "Li Bin", "Bin Li", "Li, B.", "B. Li", "李斌", "Lee Bin", "Li Pin"
+  ]
+  MathSciNet: "Li, Bin"
+  CJK: "李斌"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG"]
+  Gender: "M"
+  Comments: "'Li Bin' is one of the most ambiguous clusters; multiple mathematicians, physicists, engineers, both genders. Indexed as 'Lee Bin' in Malaysia/Singapore."
+
+Li_Cheng:
+  CanonicalLatin: "Li, Cheng"
+  CanonicalWestern: "Cheng Li"
+  AllCommonVariants: [
+    "Li Cheng", "Cheng Li", "Li, C.", "C. Li", "李成", "Lee Cheng", "Li Sing"
+  ]
+  MathSciNet: "Li, Cheng"
+  CJK: "李成"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "CA"]
+  Gender: "M"
+  Comments: "Applied math, probability. 'Li, C.' ambiguous, indexed as 'Lee Cheng' in diaspora. 'Sing' in old romanisation."
+
+Li_Jing (woman):
+  CanonicalLatin: "Li, Jing"
+  CanonicalWestern: "Jing Li"
+  AllCommonVariants: [
+    "Li Jing", "Jing Li", "Li, J.", "J. Li", "李静", "Lee Ching", "Li Ching"
+  ]
+  MathSciNet: "Li, Jing"
+  CJK: "李静"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG", "US", "CA"]
+  Gender: "F"
+  Comments: "Probability, statistics, analysis. Over 30 'Li, J.' or 'Jing Li' active, both genders, all regions. 'Lee Ching' in diaspora."
+
+Li_Jun:
+  CanonicalLatin: "Li, Jun"
+  CanonicalWestern: "Jun Li"
+  AllCommonVariants: [
+    "Li Jun", "Jun Li", "Li, J.", "J. Li", "李军", "Lee Chun", "Li Chun"
+  ]
+  MathSciNet: "Li, Jun"
+  CJK: "李军"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG"]
+  Gender: "M"
+  Comments: "Probability, combinatorics. >30 active 'Li Jun' globally. See also Stanford algebraic geometer 'Jun Li'."
+
+Li_Li (woman):
+  CanonicalLatin: "Li, Li"
+  CanonicalWestern: "Li Li"
+  AllCommonVariants: [
+    "Li Li", "Li, L.", "L. Li", "李丽", "Lee Lee", "Lee Li"
+  ]
+  MathSciNet: "Li, Li"
+  CJK: "李丽"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG"]
+  Gender: "F"
+  Comments: "Probability, combinatorics. Woman mathematician; indexed as 'Lee Li', 'Lee Lee' in diaspora, both genders. One of the most ambiguous pairs."
+
+Li_Lin (woman):
+  CanonicalLatin: "Li, Lin"
+  CanonicalWestern: "Lin Li"
+  AllCommonVariants: [
+    "Li Lin", "Lin Li", "Li, L.", "L. Li", "李琳", "Lee Lin", "Li Lynn"
+  ]
+  MathSciNet: "Li, Lin"
+  CJK: "李琳"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG"]
+  Gender: "F"
+  Comments: "Combinatorics, analysis, statistics. 'Lin Li'/'Li Lin' ambiguous; 'Lynn' in some diaspora/Westernised forms."
+
+Li_Qing (woman):
+  CanonicalLatin: "Li, Qing"
+  CanonicalWestern: "Qing Li"
+  AllCommonVariants: [
+    "Li Qing", "Qing Li", "Li, Q.", "Q. Li", "李青", "Lee Ching"
+  ]
+  MathSciNet: "Li, Qing"
+  CJK: "李青"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG"]
+  Gender: "F"
+  Comments: "Statistics, combinatorics, analysis. 'Ching' in diaspora. Multiple 'Qing Li' in DBs. Woman mathematician."
+
+Li_Wei:
+  CanonicalLatin: "Li, Wei"
+  CanonicalWestern: "Wei Li"
+  AllCommonVariants: [
+    "Li Wei", "Wei Li", "Li, W.", "W. Li", "李伟", "Lee Wai", "Lei Wei", "Li Way"
+  ]
+  MathSciNet: "Li, Wei"
+  CJK: "李伟"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG", "TW", "CA"]
+  Gender: "M"
+  Comments: "Most ambiguous Chinese pair: >60 distinct 'Li, W.' entries in MathSciNet, dozens of variants worldwide. 'Lee Wai' in Malaysia/Singapore."
+
+Li_Yang:
+  CanonicalLatin: "Li, Yang"
+  CanonicalWestern: "Yang Li"
+  AllCommonVariants: [
+    "Li Yang", "Yang Li", "Li, Y.", "Y. Li", "李杨", "Lee Yang", "Li Young", "Li, Yeung"
+  ]
+  MathSciNet: "Li, Yang"
+  CJK: "李杨"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG", "TW", "UK"]
+  Gender: "M"
+  Comments: "PDEs, probability, combinatorics. Immense ambiguity—>40 'Li, Y.' entries active."
+
+Li_Ying (woman):
+  CanonicalLatin: "Li, Ying"
+  CanonicalWestern: "Ying Li"
+  AllCommonVariants: [
+    "Li Ying", "Ying Li", "Li, Y.", "Y. Li", "李颖", "Lee Ying", "Li Yeng"
+  ]
+  MathSciNet: "Li, Ying"
+  CJK: "李颖"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "CA"]
+  Gender: "F"
+  Comments: "Probability, statistics, combinatorics. Woman mathematician; 'Yeng' in some Western forms."
+
+Li_Zhi:
+  CanonicalLatin: "Li, Zhi"
+  CanonicalWestern: "Zhi Li"
+  AllCommonVariants: [
+    "Li Zhi", "Zhi Li", "Li, Z.", "Z. Li", "李志", "Lee Chih"
+  ]
+  MathSciNet: "Li, Zhi"
+  CJK: "李志"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG"]
+  Gender: "M"
+  Comments: "Probability, statistics, combinatorics. Zhi is a frequent ambiguous given name; 'Chih' in TW/US forms."
+
+Lin_Chang (woman):
+  CanonicalLatin: "Lin, Chang"
+  CanonicalWestern: "Chang Lin"
+  AllCommonVariants: [
+    "Lin Chang", "Chang Lin", "Lin, C.", "C. Lin", "林畅", "Lin Ch’ang"
+  ]
+  MathSciNet: "Lin, Chang"
+  CJK: "林畅"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "TW", "US"]
+  Gender: "F"
+  Comments: "Analysis, combinatorics, applied math. 'Chang Lin' ambiguous for gender and order."
+
+Lin_Jian:
+  CanonicalLatin: "Lin, Jian"
+  CanonicalWestern: "Jian Lin"
+  AllCommonVariants: [
+    "Lin Jian", "Jian Lin", "Lin, J.", "J. Lin", "林健", "Lin Chien", "Lim Jian"
+  ]
+  MathSciNet: "Lin, Jian"
+  CJK: "林健"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US"]
+  Gender: "M"
+  Comments: "'Lin, J.' is a frequent ambiguous cluster; 'Lim Jian' in diaspora."
+
+Lin_Jie (woman):
+  CanonicalLatin: "Lin, Jie"
+  CanonicalWestern: "Jie Lin"
+  AllCommonVariants: [
+    "Lin Jie", "Jie Lin", "Lin, J.", "J. Lin", "林洁", "Lin Chieh", "Lim Jie"
+  ]
+  MathSciNet: "Lin, Jie"
+  CJK: "林洁"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG", "TW"]
+  Gender: "F"
+  Comments: "Woman mathematician. Multiple 'Jie Lin', 'Lim Jie' globally."
+
+Lin_Li (woman):
+  CanonicalLatin: "Lin, Li"
+  CanonicalWestern: "Li Lin"
+  AllCommonVariants: [
+    "Lin Li", "Li Lin", "Lin, L.", "L. Lin", "林莉", "Lin Lee", "Lim Li"
+  ]
+  MathSciNet: "Lin, Li"
+  CJK: "林莉"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG", "TW"]
+  Gender: "F"
+  Comments: "Woman mathematician. Ambiguity with Lin Lee, Lim Li, Li Lin, both genders."
+
+Lin_Qi:
+  CanonicalLatin: "Lin, Qi"
+  CanonicalWestern: "Qi Lin"
+  AllCommonVariants: [
+    "Lin Qi", "Qi Lin", "Lin, Q.", "Q. Lin", "林琪", "Lin Chi", "Lim Qi"
+  ]
+  MathSciNet: "Lin, Qi"
+  CJK: "林琪"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG"]
+  Gender: "M"
+  Comments: "Probability, statistics, combinatorics. Qi = ambiguous given name (Chi, Chyi, Ji, Chee, Kee, etc.)."
+
+Liu_Hong (woman):
+  CanonicalLatin: "Liu, Hong"
+  CanonicalWestern: "Hong Liu"
+  AllCommonVariants: [
+    "Liu Hong", "Hong Liu", "Liu, H.", "H. Liu", "刘红", "Liu Hung", "Lau Hong"
+  ]
+  MathSciNet: "Liu, Hong"
+  CJK: "刘红"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "CA", "SG"]
+  Gender: "F"
+  Comments: "Statistics, probability, mathematical finance. Woman mathematician; 'Lau Hong' in diaspora."
+
+Liu_Jing (woman):
+  CanonicalLatin: "Liu, Jing"
+  CanonicalWestern: "Jing Liu"
+  AllCommonVariants: [
+    "Liu Jing", "Jing Liu", "Liu, J.", "J. Liu", "刘静", "Liu Ching", "Lew Jing"
+  ]
+  MathSciNet: "Liu, Jing"
+  CJK: "刘静"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG", "US", "MY"]
+  Gender: "F"
+  Comments: "Probability, statistics, combinatorics. Woman mathematician; 'Lew Jing' in Malaysia/Singapore."
+
+Liu_Li (woman):
+  CanonicalLatin: "Liu, Li"
+  CanonicalWestern: "Li Liu"
+  AllCommonVariants: [
+    "Liu Li", "Li Liu", "Liu, L.", "L. Liu", "刘莉", "Liu Lee", "Lew Li"
+  ]
+  MathSciNet: "Liu, Li"
+  CJK: "刘莉"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG"]
+  Gender: "F"
+  Comments: "Woman mathematician. Liu Li / Li Liu is a known ambiguous cluster."
+
+Liu_Lin (woman):
+  CanonicalLatin: "Liu, Lin"
+  CanonicalWestern: "Lin Liu"
+  AllCommonVariants: [
+    "Liu Lin", "Lin Liu", "Liu, L.", "L. Liu", "刘琳", "Liu Lin", "Lew Lin", "Liu Ling"
+  ]
+  MathSciNet: "Liu, Lin"
+  CJK: "刘琳"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG"]
+  Gender: "F"
+  Comments: "Woman mathematician. Lin ambiguous: Lin/Ling/Linette/Linlin."
+
+Liu_Qiang:
+  CanonicalLatin: "Liu, Qiang"
+  CanonicalWestern: "Qiang Liu"
+  AllCommonVariants: [
+    "Liu Qiang", "Qiang Liu", "Liu, Q.", "Q. Liu", "刘强", "Liu Chiang"
+  ]
+  MathSciNet: "Liu, Qiang"
+  CJK: "刘强"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG"]
+  Gender: "M"
+  Comments: "Statistics, machine learning. Several 'Liu, Q.' globally. Chiang in diaspora."
+
+Liu_Yan (woman):
+  CanonicalLatin: "Liu, Yan"
+  CanonicalWestern: "Yan Liu"
+  AllCommonVariants: [
+    "Liu Yan", "Yan Liu", "Liu, Y.", "Y. Liu", "刘艳", "Liu Yen", "Lew Yan"
+  ]
+  MathSciNet: "Liu, Yan"
+  CJK: "刘艳"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG", "US", "CA"]
+  Gender: "F"
+  Comments: "Woman mathematician. Among the most ambiguous: dozens of active 'Liu, Y.' and Yan Liu in MathSciNet/DBLP."
+
+Liu_Ying (woman):
+  CanonicalLatin: "Liu, Ying"
+  CanonicalWestern: "Ying Liu"
+  AllCommonVariants: [
+    "Liu Ying", "Ying Liu", "Liu, Y.", "Y. Liu", "刘颖", "Lew Ying"
+  ]
+  MathSciNet: "Liu, Ying"
+  CJK: "刘颖"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG", "US", "MY"]
+  Gender: "F"
+  Comments: "Probability, statistics, combinatorics. Woman mathematician; 'Lew Ying' in Malaysia/Singapore."
+
+Liu_Zhi:
+  CanonicalLatin: "Liu, Zhi"
+  CanonicalWestern: "Zhi Liu"
+  AllCommonVariants: [
+    "Liu Zhi", "Zhi Liu", "Liu, Z.", "Z. Liu", "刘志", "Lew Chih"
+  ]
+  MathSciNet: "Liu, Zhi"
+  CJK: "刘志"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG"]
+  Gender: "M"
+  Comments: "Probability, combinatorics. 'Chih' in diaspora."
+
+Lu_Jian:
+  CanonicalLatin: "Lu, Jian"
+  CanonicalWestern: "Jian Lu"
+  AllCommonVariants: [
+    "Lu Jian", "Jian Lu", "Lu, J.", "J. Lu", "卢健", "Lu Chien", "Lu Zhen"
+  ]
+  MathSciNet: "Lu, Jian"
+  CJK: "卢健"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG"]
+  Gender: "M"
+  Comments: "Analysis, computational math, combinatorics. Ambiguous with 'Luo, Jian'."
+
+Lü_Qiang:
+  CanonicalLatin: "Lü, Qiang"
+  CanonicalWestern: "Qiang Lü"
+  AllCommonVariants: [
+    "Lu Qiang", "Lü Qiang", "Lv Qiang", "Qiang Lü", "Qiang Lu", "Q. Lü", "Q. Lu", "吕强", "Lu Chiang", "Lyu Qiang"
+  ]
+  MathSciNet: "Lu, Qiang"
+  CJK: "吕强"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "DE"]
+  Gender: "M"
+  Comments: "Diacritic ambiguity: Lü/Lu/Lv/Lyu all used for 吕 in pinyin. Diacritic lost in many databases; confusion with Lu, Qiang. See also 'Lui', 'Lyu'."
+
+Ma_Xia (woman):
+  CanonicalLatin: "Ma, Xia"
+  CanonicalWestern: "Xia Ma"
+  AllCommonVariants: [
+    "Ma Xia", "Xia Ma", "Ma, X.", "X. Ma", "马霞", "Ma Hsia", "Ma Sia", "Mah Xia"
+  ]
+  MathSciNet: "Ma, Xia"
+  CJK: "马霞"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "TW", "SG"]
+  Gender: "F"
+  Comments: "Statistics, analysis. Woman mathematician. 'Hsia' and 'Sia' used in Taiwan/Singapore."
+
+Ma_Li (woman):
+  CanonicalLatin: "Ma, Li"
+  CanonicalWestern: "Li Ma"
+  AllCommonVariants: [
+    "Ma Li", "Li Ma", "Ma, L.", "L. Ma", "马丽", "Mah Lee", "Ma Lee"
+  ]
+  MathSciNet: "Ma, Li"
+  CJK: "马丽"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG", "CA"]
+  Gender: "F"
+  Comments: "Woman mathematician. 'Lee' in diaspora. Also ambiguous for gender and order."
+
+Sun_Jian:
+  CanonicalLatin: "Sun, Jian"
+  CanonicalWestern: "Jian Sun"
+  AllCommonVariants: [
+    "Sun Jian", "Jian Sun", "Sun, J.", "J. Sun", "孙健", "Sun Chien", "Soon Jian"
+  ]
+  MathSciNet: "Sun, Jian"
+  CJK: "孙健"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG"]
+  Gender: "M"
+  Comments: "Combinatorics, geometry, applied math. 'Soon' in diaspora; many 'Sun, J.' entries, cross-ambiguity with 'Jin Sun', 'Jun Sun', etc."
+
+Sun_Jing (woman):
+  CanonicalLatin: "Sun, Jing"
+  CanonicalWestern: "Jing Sun"
+  AllCommonVariants: [
+    "Sun Jing", "Jing Sun", "Sun, J.", "J. Sun", "孙静", "Sun Ching", "Soon Jing"
+  ]
+  MathSciNet: "Sun, Jing"
+  CJK: "孙静"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG"]
+  Gender: "F"
+  Comments: "Woman mathematician. Control theory, signal processing. >25 'Sun, J.' in literature; also 'Jian', 'Jin', 'Jun'."
+
+Sun_Jin:
+  CanonicalLatin: "Sun, Jin"
+  CanonicalWestern: "Jin Sun"
+  AllCommonVariants: [
+    "Sun Jin", "Jin Sun", "Sun, J.", "J. Sun", "孙晋", "Sun Chin"
+  ]
+  MathSciNet: "Sun, Jin"
+  CJK: "孙晋"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG", "US"]
+  Gender: "M"
+  Comments: "'Sun, Jin'/'Jin Sun' appears in several combinatorics, geometry, and engineering papers. 'Sun Chin' in some older sources."
+
+Sun_Jun:
+  CanonicalLatin: "Sun, Jun"
+  CanonicalWestern: "Jun Sun"
+  AllCommonVariants: [
+    "Sun Jun", "Jun Sun", "Sun, J.", "J. Sun", "孙军", "Sun Chun"
+  ]
+  MathSciNet: "Sun, Jun"
+  CJK: "孙军"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG", "US"]
+  Gender: "M"
+  Comments: "Computer science, combinatorics. Many 'Sun, J.'; Jun/Chun/Choon ambiguity."
+
+Sun_Liang:
+  CanonicalLatin: "Sun, Liang"
+  CanonicalWestern: "Liang Sun"
+  AllCommonVariants: [
+    "Sun Liang", "Liang Sun", "Sun, L.", "L. Sun", "孙亮", "Sun Leung"
+  ]
+  MathSciNet: "Sun, Liang"
+  CJK: "孙亮"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG"]
+  Gender: "M"
+  Comments: "Mathematical biology, analysis. 'Leung' in diaspora; 'Sun, L.' ambiguous."
+
+Sun_Yang:
+  CanonicalLatin: "Sun, Yang"
+  CanonicalWestern: "Yang Sun"
+  AllCommonVariants: [
+    "Sun Yang", "Yang Sun", "Sun, Y.", "Y. Sun", "孙阳", "Sun Yeung"
+  ]
+  MathSciNet: "Sun, Yang"
+  CJK: "孙阳"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG"]
+  Gender: "M"
+  Comments: "Applied math, combinatorics. One of many 'Sun, Y.'"
+
+Sun_Yi (woman):
+  CanonicalLatin: "Sun, Yi"
+  CanonicalWestern: "Yi Sun"
+  AllCommonVariants: [
+    "Sun Yi", "Yi Sun", "Sun, Y.", "Y. Sun", "孙毅", "Sun Yee"
+  ]
+  MathSciNet: "Sun, Yi"
+  CJK: "孙毅"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG"]
+  Gender: "F"
+  Comments: "Analysis, geometry. Woman mathematician. Typical 'Sun, Y.' collision."
+
+Su_Yang:
+  CanonicalLatin: "Su, Yang"
+  CanonicalWestern: "Yang Su"
+  AllCommonVariants: [
+    "Su Yang", "Yang Su", "Su, Y.", "Y. Su", "苏杨", "Su Yeung", "So Yang"
+  ]
+  MathSciNet: "Su, Yang"
+  CJK: "苏杨"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG", "US"]
+  Gender: "M"
+  Comments: "Algebraic geometry, combinatorics. 'So' variant in diaspora; multiple 'Su, Y.' globally."
+
+Tang_Jie (woman):
+  CanonicalLatin: "Tang, Jie"
+  CanonicalWestern: "Jie Tang"
+  AllCommonVariants: [
+    "Tang Jie", "Jie Tang", "Tang, J.", "J. Tang", "唐杰", "Tang Chieh", "Teng Jie"
+  ]
+  MathSciNet: "Tang, Jie"
+  CJK: "唐杰"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG"]
+  Gender: "F"
+  Comments: "Computer science, machine learning. Woman mathematician; several 'Tang, J.' globally."
+
+Wang_Jian:
+  CanonicalLatin: "Wang, Jian"
+  CanonicalWestern: "Jian Wang"
+  AllCommonVariants: [
+    "Wang Jian", "Jian Wang", "Wang, J.", "J. Wang", "王健", "Wong Kin", "Wong Jian"
+  ]
+  MathSciNet: "Wang, Jian"
+  CJK: "王健"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG", "UK"]
+  Gender: "M"
+  Comments: "Statistics, PDEs, applied math. >80 Wang, J. or Jian Wang in MathSciNet, DBLP, arXiv, Google Scholar."
+
+Wang_Jing (woman):
+  CanonicalLatin: "Wang, Jing"
+  CanonicalWestern: "Jing Wang"
+  AllCommonVariants: [
+    "Wang Jing", "Jing Wang", "Wang, J.", "J. Wang", "王静", "Wong Ching", "Wang Ching"
+  ]
+  MathSciNet: "Wang, Jing"
+  CJK: "王静"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG"]
+  Gender: "F"
+  Comments: "Probability, statistics. Dozens of 'Wang, J.' and 'Jing Wang'. Woman mathematician."
+
+Wang_Jun:
+  CanonicalLatin: "Wang, Jun"
+  CanonicalWestern: "Jun Wang"
+  AllCommonVariants: [
+    "Wang Jun", "Jun Wang", "Wang, J.", "J. Wang", "王军", "Wang Chun", "Wong Chun", "Vong Chun"
+  ]
+  MathSciNet: "Wang, Jun"
+  CJK: "王军"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "HK", "US", "SG", "UK", "CA"]
+  Gender: "M"
+  Comments: "Control theory, analysis, statistics, combinatorics, applied math. >100 'Wang, J.' or 'Jun Wang' entries."
+
+Wang_Li (woman):
+  CanonicalLatin: "Wang, Li"
+  CanonicalWestern: "Li Wang"
+  AllCommonVariants: [
+    "Wang Li", "Li Wang", "Wang, L.", "L. Wang", "王丽", "Wong Lai", "Wong Lee"
+  ]
+  MathSciNet: "Wang, Li"
+  CJK: "王丽"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG", "US"]
+  Gender: "F"
+  Comments: "Woman mathematician. Dozens of 'Wang, L.' in databases, both genders."
+
+Wang_Qiang:
+  CanonicalLatin: "Wang, Qiang"
+  CanonicalWestern: "Qiang Wang"
+  AllCommonVariants: [
+    "Wang Qiang", "Qiang Wang", "Wang, Q.", "Q. Wang", "王强", "Wong Keung"
+  ]
+  MathSciNet: "Wang, Qiang"
+  CJK: "王强"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG"]
+  Gender: "M"
+  Comments: "Mathematical biology, statistics. Many 'Wang, Q.'"
+
+Wang_Wei:
+  CanonicalLatin: "Wang, Wei"
+  CanonicalWestern: "Wei Wang"
+  AllCommonVariants: [
+    "Wang Wei", "Wei Wang", "Wang, W.", "W. Wang", "王伟", "Wong Wai"
+  ]
+  MathSciNet: "Wang, Wei"
+  CJK: "王伟"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG", "UK"]
+  Gender: "M"
+  Comments: "'Wei Wang' is one of the single most ambiguous names in international maths and sciences (>100 MathSciNet/DBLP entries)."
+
+Wang_Yang:
+  CanonicalLatin: "Wang, Yang"
+  CanonicalWestern: "Yang Wang"
+  AllCommonVariants: [
+    "Wang Yang", "Yang Wang", "Wang, Y.", "Y. Wang", "王阳", "Wong Yeung"
+  ]
+  MathSciNet: "Wang, Yang"
+  CJK: "王阳"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG", "US"]
+  Gender: "M"
+  Comments: "Probability, combinatorics, analysis. Many 'Wang, Y.' entries."
+
+Wang_Yi (woman):
+  CanonicalLatin: "Wang, Yi"
+  CanonicalWestern: "Yi Wang"
+  AllCommonVariants: [
+    "Wang Yi", "Yi Wang", "Wang, Y.", "Y. Wang", "王毅", "Wong Yee"
+  ]
+  MathSciNet: "Wang, Yi"
+  CJK: "王毅"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG"]
+  Gender: "F"
+  Comments: "Woman mathematician. Analysis, combinatorics, mathematical biology. 'Yi Wang' is a maximal collision cluster: >50 globally."
+
+Wang_Yuan:
+  CanonicalLatin: "Wang, Yuan"
+  CanonicalWestern: "Yuan Wang"
+  AllCommonVariants: [
+    "Wang Yuan", "Yuan Wang", "Wang, Y.", "Y. Wang", "王元", "Wang Yuen", "Wang Wan"
+  ]
+  MathSciNet: "Wang, Yuan"
+  CJK: "王元"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG"]
+  Gender: "M"
+  Comments: "Number theory, combinatorics, algebra, applied math. >60 active 'Wang, Y.' in MathSciNet and DBLP."
+
+Wu_Jian:
+  CanonicalLatin: "Wu, Jian"
+  CanonicalWestern: "Jian Wu"
+  AllCommonVariants: [
+    "Wu Jian", "Jian Wu", "Wu, J.", "J. Wu", "吴健", "Woo Kin", "Woo Jian"
+  ]
+  MathSciNet: "Wu, Jian"
+  CJK: "吴健"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG"]
+  Gender: "M"
+  Comments: "'Wu Jian' is a typical ambiguous cluster; Woo Kin in old romanisation, also see 'Jian Wu' in Western order."
+
+Wu_Jing (woman):
+  CanonicalLatin: "Wu, Jing"
+  CanonicalWestern: "Jing Wu"
+  AllCommonVariants: [
+    "Wu Jing", "Jing Wu", "Wu, J.", "J. Wu", "吴静", "Woo Ching", "Wu Ching"
+  ]
+  MathSciNet: "Wu, Jing"
+  CJK: "吴静"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG"]
+  Gender: "F"
+  Comments: "Woman mathematician. 'Jing Wu' ambiguous with 'Wu Jin', 'Wu Jun', etc."
+
+Wu_Jun:
+  CanonicalLatin: "Wu, Jun"
+  CanonicalWestern: "Jun Wu"
+  AllCommonVariants: [
+    "Wu Jun", "Jun Wu", "Wu, J.", "J. Wu", "吴军", "Woo Chun"
+  ]
+  MathSciNet: "Wu, Jun"
+  CJK: "吴军"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG"]
+  Gender: "M"
+  Comments: "'Wu Jun' or 'Jun Wu' found in all fields, including probability, combinatorics, computer science. Woo Chun in diaspora."
+
+Wu_Wei:
+  CanonicalLatin: "Wu, Wei"
+  CanonicalWestern: "Wei Wu"
+  AllCommonVariants: [
+    "Wu Wei", "Wei Wu", "Wu, W.", "W. Wu", "吴伟", "Woo Wai", "Wu Wey", "Wu Way"
+  ]
+  MathSciNet: "Wu, Wei"
+  CJK: "吴伟"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG", "UK"]
+  Gender: "M"
+  Comments: "Ambiguity with 'Wei Wu' and 'Wu, Wei'. Also see 'Woo' in old romanisations."
+
+Wu_Yi (woman):
+  CanonicalLatin: "Wu, Yi"
+  CanonicalWestern: "Yi Wu"
+  AllCommonVariants: [
+    "Wu Yi", "Yi Wu", "Wu, Y.", "Y. Wu", "吴毅", "Wu Yee"
+  ]
+  MathSciNet: "Wu, Yi"
+  CJK: "吴毅"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US"]
+  Gender: "F"
+  Comments: "Woman mathematician. 'Wu, Y.' is one of the most ambiguous initials globally."
+
+Xu_Jian:
+  CanonicalLatin: "Xu, Jian"
+  CanonicalWestern: "Jian Xu"
+  AllCommonVariants: [
+    "Xu Jian", "Jian Xu", "Xu, J.", "J. Xu", "许健", "Hsu Chien", "Hsu Jian"
+  ]
+  MathSciNet: "Xu, Jian"
+  CJK: "许健"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG", "US"]
+  Gender: "M"
+  Comments: "Statistics, combinatorics, algebra. Many 'Xu, J.' entries, common confusion with 'Xu Jun', 'Xu Jing', etc."
+
+Xu_Jing (woman):
+  CanonicalLatin: "Xu, Jing"
+  CanonicalWestern: "Jing Xu"
+  AllCommonVariants: [
+    "Xu Jing", "Jing Xu", "Xu, J.", "J. Xu", "许静", "Hsu Ching", "Hsu Jing"
+  ]
+  MathSciNet: "Xu, Jing"
+  CJK: "许静"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG", "US"]
+  Gender: "F"
+  Comments: "Probability, combinatorics, algebra. Woman mathematician. 'Xu, J.' ambiguous; see also 'Xu Jian', 'Xu Jun'."
+
+Xu_Jun:
+  CanonicalLatin: "Xu, Jun"
+  CanonicalWestern: "Jun Xu"
+  AllCommonVariants: [
+    "Xu Jun", "Jun Xu", "Xu, J.", "J. Xu", "许军", "Hsu Chun", "Hsu Jun"
+  ]
+  MathSciNet: "Xu, Jun"
+  CJK: "许军"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG"]
+  Gender: "M"
+  Comments: "Combinatorics, probability, computer science. Many 'Xu, J.' globally."
+
+Yang_Li (woman):
+  CanonicalLatin: "Yang, Li"
+  CanonicalWestern: "Li Yang"
+  AllCommonVariants: [
+    "Yang Li", "Li Yang", "Yang, L.", "L. Yang", "杨莉", "Yeung Lai"
+  ]
+  MathSciNet: "Yang, Li"
+  CJK: "杨莉"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG", "US"]
+  Gender: "F"
+  Comments: "Woman mathematician. Multiple 'Yang, L.' and 'Li Yang' in MathSciNet."
+
+Yang_Yang:
+  CanonicalLatin: "Yang, Yang"
+  CanonicalWestern: "Yang Yang"
+  AllCommonVariants: [
+    "Yang Yang", "Yang, Y.", "Y. Yang", "杨洋", "Yeung Yeung", "Yeung Yang"
+  ]
+  MathSciNet: "Yang, Yang"
+  CJK: "杨洋"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "CA"]
+  Gender: "M"
+  Comments: "Probability, statistics, combinatorics, computer science. Maximum ambiguity: the canonical 'Yang Yang' problem. At least 20 coexisting 'Yang, Y.' in MathSciNet and DBLP."
+
+Yang_Ying (woman):
+  CanonicalLatin: "Yang, Ying"
+  CanonicalWestern: "Ying Yang"
+  AllCommonVariants: [
+    "Yang Ying", "Ying Yang", "Yang, Y.", "Y. Yang", "杨颖", "Yeung Ying"
+  ]
+  MathSciNet: "Yang, Ying"
+  CJK: "杨颖"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "CA"]
+  Gender: "F"
+  Comments: "Probability, combinatorics, analysis. Woman mathematician. Multiple 'Ying Yang' and 'Yang Ying' globally."
+
+Yang_Jian:
+  CanonicalLatin: "Yang, Jian"
+  CanonicalWestern: "Jian Yang"
+  AllCommonVariants: [
+    "Yang Jian", "Jian Yang", "Yang, J.", "J. Yang", "杨健", "Yeung Kin"
+  ]
+  MathSciNet: "Yang, Jian"
+  CJK: "杨健"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG", "US"]
+  Gender: "M"
+  Comments: "Analysis, PDEs. Also 'Yeung Kin' in diaspora. Multiple 'Yang, J.'"
+
+Yang_Jing (woman):
+  CanonicalLatin: "Yang, Jing"
+  CanonicalWestern: "Jing Yang"
+  AllCommonVariants: [
+    "Yang Jing", "Jing Yang", "Yang, J.", "J. Yang", "杨静", "Yeung Ching"
+  ]
+  MathSciNet: "Yang, Jing"
+  CJK: "杨静"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG", "US"]
+  Gender: "F"
+  Comments: "Probability, combinatorics, analysis. Woman mathematician."
+
+Yang_Jun:
+  CanonicalLatin: "Yang, Jun"
+  CanonicalWestern: "Jun Yang"
+  AllCommonVariants: [
+    "Yang Jun", "Jun Yang", "Yang, J.", "J. Yang", "杨军", "Yeung Chun"
+  ]
+  MathSciNet: "Yang, Jun"
+  CJK: "杨军"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG"]
+  Gender: "M"
+  Comments: "Multiple 'Yang, Jun' globally. Also 'Yeung Chun' in diaspora; ambiguous with 'Jing', 'Jian', etc."
+
+Zhang_Jian:
+  CanonicalLatin: "Zhang, Jian"
+  CanonicalWestern: "Jian Zhang"
+  AllCommonVariants: [
+    "Zhang Jian", "Jian Zhang", "Zhang, J.", "J. Zhang", "张健", "Chang Kin", "Cheung Kin"
+  ]
+  MathSciNet: "Zhang, Jian"
+  CJK: "张健"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG", "US"]
+  Gender: "M"
+  Comments: "Combinatorics, analysis. Among the most ambiguous 'Zhang, J.' clusters. Chang/Cheung variants in diaspora."
+
+Zhang_Jing (woman):
+  CanonicalLatin: "Zhang, Jing"
+  CanonicalWestern: "Jing Zhang"
+  AllCommonVariants: [
+    "Zhang Jing", "Jing Zhang", "Zhang, J.", "J. Zhang", "张静", "Chang Ching", "Cheung Ching"
+  ]
+  MathSciNet: "Zhang, Jing"
+  CJK: "张静"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG"]
+  Gender: "F"
+  Comments: "Probability, combinatorics. Woman mathematician. Dozens of 'Zhang, J.' and 'Jing Zhang'. Chang/Cheung in diaspora."
+
+Zhang_Jin:
+  CanonicalLatin: "Zhang, Jin"
+  CanonicalWestern: "Jin Zhang"
+  AllCommonVariants: [
+    "Zhang Jin", "Jin Zhang", "Zhang, J.", "J. Zhang", "张晋", "Chang Chin"
+  ]
+  MathSciNet: "Zhang, Jin"
+  CJK: "张晋"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG"]
+  Gender: "M"
+  Comments: "'Zhang Jin'/'Jin Zhang' appears in combinatorics, geometry, and engineering papers. 'Chang Chin' in older sources."
+
+Zhang_Jun:
+  CanonicalLatin: "Zhang, Jun"
+  CanonicalWestern: "Jun Zhang"
+  AllCommonVariants: [
+    "Zhang Jun", "Jun Zhang", "Zhang, J.", "J. Zhang", "张军", "Chang Chun"
+  ]
+  MathSciNet: "Zhang, Jun"
+  CJK: "张军"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG"]
+  Gender: "M"
+  Comments: "Computer science, combinatorics. Many 'Zhang, J.'; Jun/Chun ambiguity."
+
+Zhang_Wei:
+  CanonicalLatin: "Zhang, Wei"
+  CanonicalWestern: "Wei Zhang"
+  AllCommonVariants: [
+    "Zhang Wei", "Wei Zhang", "Zhang, W.", "W. Zhang", "张伟", "Chang Wei", "Cheung Wai"
+  ]
+  MathSciNet: "Zhang, Wei"
+  CJK: "张伟"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG", "TW", "HK", "CA"]
+  Gender: "M"
+  Comments: "Number theory, combinatorics, analysis. The most ambiguous modern mathematician name—over 100 coexisting 'Zhang, W.' or 'Wei Zhang'."
+
+Zhang_Yang:
+  CanonicalLatin: "Zhang, Yang"
+  CanonicalWestern: "Yang Zhang"
+  AllCommonVariants: [
+    "Zhang Yang", "Yang Zhang", "Zhang, Y.", "Y. Zhang", "张阳", "Chang Yeung"
+  ]
+  MathSciNet: "Zhang, Yang"
+  CJK: "张阳"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG"]
+  Gender: "M"
+  Comments: "Probability, combinatorics, analysis. Multiple 'Zhang, Y.' entries. Chang/Yeung in diaspora."
+
+Zhang_Yi (woman):
+  CanonicalLatin: "Zhang, Yi"
+  CanonicalWestern: "Yi Zhang"
+  AllCommonVariants: [
+    "Zhang Yi", "Yi Zhang", "Zhang, Y.", "Y. Zhang", "张毅", "Chang Yee"
+  ]
+  MathSciNet: "Zhang, Yi"
+  CJK: "张毅"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG"]
+  Gender: "F"
+  Comments: "Woman mathematician. Typical ambiguous cluster; 'Yi Zhang' is a common name in databases."
+
+Zhao_Yuan:
+  CanonicalLatin: "Zhao, Yuan"
+  CanonicalWestern: "Yuan Zhao"
+  AllCommonVariants: [
+    "Zhao Yuan", "Yuan Zhao", "Zhao, Y.", "Y. Zhao", "赵元", "Chao Yuen"
+  ]
+  MathSciNet: "Zhao, Yuan"
+  CJK: "赵元"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US"]
+  Gender: "M"
+  Comments: "Combinatorics, algebra. Many 'Zhao, Y.' entries. 'Chao' in older romanisations."
+
+Zhou_Jing (woman):
+  CanonicalLatin: "Zhou, Jing"
+  CanonicalWestern: "Jing Zhou"
+  AllCommonVariants: [
+    "Zhou Jing", "Jing Zhou", "Zhou, J.", "J. Zhou", "周静", "Chou Ching"
+  ]
+  MathSciNet: "Zhou, Jing"
+  CJK: "周静"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG", "US"]
+  Gender: "F"
+  Comments: "Probability, combinatorics, algebra. Woman mathematician. 'Chou' in diaspora."
+
+Zhou_Wei:
+  CanonicalLatin: "Zhou, Wei"
+  CanonicalWestern: "Wei Zhou"
+  AllCommonVariants: [
+    "Zhou Wei", "Wei Zhou", "Zhou, W.", "W. Zhou", "周伟", "Chou Wai"
+  ]
+  MathSciNet: "Zhou, Wei"
+  CJK: "周伟"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG", "UK"]
+  Gender: "M"
+  Comments: "Ambiguity with 'Wei Zhou' and 'Zhou, Wei'."
+
+Zhou_Xiaoyun (woman):
+  CanonicalLatin: "Zhou, Xiaoyun"
+  CanonicalWestern: "Xiaoyun Zhou"
+  AllCommonVariants: [
+    "Zhou Xiaoyun", "Xiaoyun Zhou", "Zhou, X.", "X. Y. Zhou", "X. Zhou", "周小云", "Chou Hsiao-Yun"
+  ]
+  MathSciNet: "Zhou, Xiaoyun"
+  CJK: "周小云"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG", "HK", "US"]
+  Gender: "F"
+  Comments: "Mathematical finance, probability. Woman mathematician. Also confused with 'Zhou Xiaoyu', 'Zhu Xiaoyun'."
+
+Zhu_Jun:
+  CanonicalLatin: "Zhu, Jun"
+  CanonicalWestern: "Jun Zhu"
+  AllCommonVariants: [
+    "Zhu Jun", "Jun Zhu", "Zhu, J.", "J. Zhu", "朱军", "Chu Chun", "Zhu Chun"
+  ]
+  MathSciNet: "Zhu, Jun"
+  CJK: "朱军"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG"]
+  Gender: "M"
+  Comments: "Statistics, probability, computer science. Many 'Zhu, J.'"
+
+Zhu_Lei (woman):
+  CanonicalLatin: "Zhu, Lei"
+  CanonicalWestern: "Lei Zhu"
+  AllCommonVariants: [
+    "Zhu Lei", "Lei Zhu", "Zhu, L.", "L. Zhu", "朱磊", "Chu Lai"
+  ]
+  MathSciNet: "Zhu, Lei"
+  CJK: "朱磊"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG", "US"]
+  Gender: "F"
+  Comments: "Woman mathematician. Multiple 'Lei Zhu' and 'Zhu Lei' in DBs."
+
+Zhu_Lin (woman):
+  CanonicalLatin: "Zhu, Lin"
+  CanonicalWestern: "Lin Zhu"
+  AllCommonVariants: [
+    "Zhu Lin", "Lin Zhu", "Zhu, L.", "L. Zhu", "朱琳", "Chu Lin"
+  ]
+  MathSciNet: "Zhu, Lin"
+  CJK: "朱琳"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG", "US"]
+  Gender: "F"
+  Comments: "Woman mathematician. Ambiguity Lin/Lin Lin/Lynn."
+
+Zhu_Wei:
+  CanonicalLatin: "Zhu, Wei"
+  CanonicalWestern: "Wei Zhu"
+  AllCommonVariants: [
+    "Zhu Wei", "Wei Zhu", "Zhu, W.", "W. Zhu", "朱伟", "Chu Wai", "Chu Wei"
+  ]
+  MathSciNet: "Zhu, Wei"
+  CJK: "朱伟"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "CA"]
+  Gender: "M"
+  Comments: "Analysis, combinatorics, applied math. One of the most ambiguous 'Zhu, W.' clusters."
+
+Qian_Wei:
+  CanonicalLatin: "Qian, Wei"
+  CanonicalWestern: "Wei Qian"
+  AllCommonVariants: [
+    "Qian Wei", "Wei Qian", "Qian, W.", "W. Qian", "钱伟", "Chien Wei"
+  ]
+  MathSciNet: "Qian, Wei"
+  CJK: "钱伟"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG"]
+  Gender: "M"
+  Comments: "Statistics, combinatorics. 'Chien Wei' is TW/SG romanisation; multiple 'Qian, W.' entries, cross-ambiguity with 'Wei Qian'."
+
+Qu_Jing (woman):
+  CanonicalLatin: "Qu, Jing"
+  CanonicalWestern: "Jing Qu"
+  AllCommonVariants: [
+    "Qu Jing", "Jing Qu", "Qu, J.", "J. Qu", "屈静", "Chü Ching"
+  ]
+  MathSciNet: "Qu, Jing"
+  CJK: "屈静"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US"]
+  Gender: "F"
+  Comments: "Combinatorics, analysis. Woman mathematician; 'Chü' in historical texts."
+
+Shu_Yan (woman):
+  CanonicalLatin: "Shu, Yan"
+  CanonicalWestern: "Yan Shu"
+  AllCommonVariants: [
+    "Shu Yan", "Yan Shu", "Shu, Y.", "Y. Shu", "舒燕", "Shu Yen"
+  ]
+  MathSciNet: "Shu, Yan"
+  CJK: "舒燕"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG"]
+  Gender: "F"
+  Comments: "Probability, statistics, combinatorics. Woman mathematician. 'Shu Yen' in diaspora."
+
+Tu_Jing (woman):
+  CanonicalLatin: "Tu, Jing"
+  CanonicalWestern: "Jing Tu"
+  AllCommonVariants: [
+    "Tu Jing", "Jing Tu", "Tu, J.", "J. Tu", "涂静", "Tu Ching"
+  ]
+  MathSciNet: "Tu, Jing"
+  CJK: "涂静"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US"]
+  Gender: "F"
+  Comments: "Statistics, combinatorics. Woman mathematician; 'Tu Ching' in old texts."
+
+Yu_Jian:
+  CanonicalLatin: "Yu, Jian"
+  CanonicalWestern: "Jian Yu"
+  AllCommonVariants: [
+    "Yu Jian", "Jian Yu", "Yu, J.", "J. Yu", "余健", "Yü Chien", "Yu Kin"
+  ]
+  MathSciNet: "Yu, Jian"
+  CJK: "余健"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG", "US"]
+  Gender: "M"
+  Comments: "Analysis, combinatorics. 'Yü' in old romanisation, 'Yu Kin' in TW/HK/SG."
+
+Yu_Jing (woman):
+  CanonicalLatin: "Yu, Jing"
+  CanonicalWestern: "Jing Yu"
+  AllCommonVariants: [
+    "Yu Jing", "Jing Yu", "Yu, J.", "J. Yu", "余静", "Yü Ching"
+  ]
+  MathSciNet: "Yu, Jing"
+  CJK: "余静"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG", "US"]
+  Gender: "F"
+  Comments: "Probability, combinatorics. Woman mathematician; 'Yü' in pre-1950s, 'Yu' now."
+
+Yu_Li (woman):
+  CanonicalLatin: "Yu, Li"
+  CanonicalWestern: "Li Yu"
+  AllCommonVariants: [
+    "Yu Li", "Li Yu", "Yu, L.", "L. Yu", "余丽", "Yu Lee"
+  ]
+  MathSciNet: "Yu, Li"
+  CJK: "余丽"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG", "MY", "US"]
+  Gender: "F"
+  Comments: "Woman mathematician. Yu/Li cross-ambiguity, especially in diaspora. 'Lee' in Malaysia."
+
+Yu_Wei:
+  CanonicalLatin: "Yu, Wei"
+  CanonicalWestern: "Wei Yu"
+  AllCommonVariants: [
+    "Yu Wei", "Wei Yu", "Yu, W.", "W. Yu", "余伟", "Yü Wai"
+  ]
+  MathSciNet: "Yu, Wei"
+  CJK: "余伟"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG", "US"]
+  Gender: "M"
+  Comments: "'Wei Yu' is an ambiguous combinatorics/statistics cluster. Yü Wai in old romanisation."
+
+Yu_Yang:
+  CanonicalLatin: "Yu, Yang"
+  CanonicalWestern: "Yang Yu"
+  AllCommonVariants: [
+    "Yu Yang", "Yang Yu", "Yu, Y.", "Y. Yu", "余阳", "Yü Yang"
+  ]
+  MathSciNet: "Yu, Yang"
+  CJK: "余阳"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG", "US"]
+  Gender: "M"
+  Comments: "Analysis, probability. 'Yu, Y.' and 'Yang Yu' in ambiguous clusters."
+
+Zhu_Jing (woman):
+  CanonicalLatin: "Zhu, Jing"
+  CanonicalWestern: "Jing Zhu"
+  AllCommonVariants: [
+    "Zhu Jing", "Jing Zhu", "Zhu, J.", "J. Zhu", "朱静", "Chu Ching"
+  ]
+  MathSciNet: "Zhu, Jing"
+  CJK: "朱静"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG", "US"]
+  Gender: "F"
+  Comments: "Woman mathematician. Zhu/Jing ambiguous in diaspora. 'Chu' in old romanisation."
+
+Zhu_Lei (woman):
+  CanonicalLatin: "Zhu, Lei"
+  CanonicalWestern: "Lei Zhu"
+  AllCommonVariants: [
+    "Zhu Lei", "Lei Zhu", "Zhu, L.", "L. Zhu", "朱磊", "Chu Lai"
+  ]
+  MathSciNet: "Zhu, Lei"
+  CJK: "朱磊"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG", "US"]
+  Gender: "F"
+  Comments: "Woman mathematician. Multiple 'Lei Zhu' and 'Zhu Lei' in DBs."
+
+Zhuo_Yan (woman):
+  CanonicalLatin: "Zhuo, Yan"
+  CanonicalWestern: "Yan Zhuo"
+  AllCommonVariants: [
+    "Zhuo Yan", "Yan Zhuo", "Zhuo, Y.", "Y. Zhuo", "卓燕", "Chuo Yen"
+  ]
+  MathSciNet: "Zhuo, Yan"
+  CJK: "卓燕"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US"]
+  Gender: "F"
+  Comments: "Woman mathematician. Rare surname but multiple Zhuo/Yan in DBs."
+
+Zou_Jian:
+  CanonicalLatin: "Zou, Jian"
+  CanonicalWestern: "Jian Zou"
+  AllCommonVariants: [
+    "Zou Jian", "Jian Zou", "Zou, J.", "J. Zou", "邹健", "Chou Kin"
+  ]
+  MathSciNet: "Zou, Jian"
+  CJK: "邹健"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US"]
+  Gender: "M"
+  Comments: "Combinatorics, analysis, probability. Surname also romanised 'Chou' (esp. before 1950s)."
+
+Zou_Yan (woman):
+  CanonicalLatin: "Zou, Yan"
+  CanonicalWestern: "Yan Zou"
+  AllCommonVariants: [
+    "Zou Yan", "Yan Zou", "Zou, Y.", "Y. Zou", "邹燕", "Chou Yen"
+  ]
+  MathSciNet: "Zou, Yan"
+  CJK: "邹燕"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG", "US"]
+  Gender: "F"
+  Comments: "Woman mathematician. Cross-ambiguity with 'Yan Zou' and 'Yen Chou'."
+
+Zuo_Jing (woman):
+  CanonicalLatin: "Zuo, Jing"
+  CanonicalWestern: "Jing Zuo"
+  AllCommonVariants: [
+    "Zuo Jing", "Jing Zuo", "Zuo, J.", "J. Zuo", "左静", "Tso Ching"
+  ]
+  MathSciNet: "Zuo, Jing"
+  CJK: "左静"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US"]
+  Gender: "F"
+  Comments: "Woman mathematician. Surname also as 'Tso' in diaspora/older sources."
+
+Zuo_Wei:
+  CanonicalLatin: "Zuo, Wei"
+  CanonicalWestern: "Wei Zuo"
+  AllCommonVariants: [
+    "Zuo Wei", "Wei Zuo", "Zuo, W.", "W. Zuo", "左伟", "Tso Wai"
+  ]
+  MathSciNet: "Zuo, Wei"
+  CJK: "左伟"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG"]
+  Gender: "M"
+  Comments: "Analysis, combinatorics, statistics. Surname 'Tso' in diaspora; ambiguous initials."
+
+# Additional rare/ambiguous clusters (selected key surnames):
+
+Yan_Li (woman):
+  CanonicalLatin: "Yan, Li"
+  CanonicalWestern: "Li Yan"
+  AllCommonVariants: [
+    "Yan Li", "Li Yan", "Yan, L.", "L. Yan", "严丽", "Yen Lee"
+  ]
+  MathSciNet: "Yan, Li"
+  CJK: "严丽"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG"]
+  Gender: "F"
+  Comments: "Woman mathematician. Ambiguous cluster. 'Yen Lee' in diaspora."
+
+Yao_Jian:
+  CanonicalLatin: "Yao, Jian"
+  CanonicalWestern: "Jian Yao"
+  AllCommonVariants: [
+    "Yao Jian", "Jian Yao", "Yao, J.", "J. Yao", "姚健", "Yau Kin"
+  ]
+  MathSciNet: "Yao, Jian"
+  CJK: "姚健"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "HK"]
+  Gender: "M"
+  Comments: "Combinatorics, statistics, computer science. Surname as 'Yau' in TW/HK."
+
+Xie_Yan (woman):
+  CanonicalLatin: "Xie, Yan"
+  CanonicalWestern: "Yan Xie"
+  AllCommonVariants: [
+    "Xie Yan", "Yan Xie", "Xie, Y.", "Y. Xie", "谢燕", "Hsieh Yen"
+  ]
+  MathSciNet: "Xie, Yan"
+  CJK: "谢燕"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG", "TW"]
+  Gender: "F"
+  Comments: "Woman mathematician. Surname as 'Hsieh' in TW/SG. 'Yan Xie' also ambiguous."
+
+Yeo_Jin (woman):
+  CanonicalLatin: "Yeo, Jin"
+  CanonicalWestern: "Jin Yeo"
+  AllCommonVariants: [
+    "Yeo Jin", "Jin Yeo", "Yeo, J.", "J. Yeo", "杨真", "Yeoh Jin"
+  ]
+  MathSciNet: "Yeo, Jin"
+  CJK: "杨真"
+  Suffixes: ""
+  DiasporaFlags: ["SG", "MY", "CN"]
+  Gender: "F"
+  Comments: "Woman mathematician. Surname Yeo/Yeoh is ambiguous in Malaysia/Singapore and southern China."
+
+Chu_Jing (woman):
+  CanonicalLatin: "Chu, Jing"
+  CanonicalWestern: "Jing Chu"
+  AllCommonVariants: [
+    "Chu Jing", "Jing Chu", "Chu, J.", "J. Chu", "储静", "Choo Ching", "Chu Ching"
+  ]
+  MathSciNet: "Chu, Jing"
+  CJK: "储静"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG", "MY"]
+  Gender: "F"
+  Comments: "Woman mathematician. Chu/Choo ambiguity in diaspora, both as surname and given."
+
+Ju_Wei:
+  CanonicalLatin: "Ju, Wei"
+  CanonicalWestern: "Wei Ju"
+  AllCommonVariants: [
+    "Ju Wei", "Wei Ju", "Ju, W.", "W. Ju", "鞠伟", "Chü Wai"
+  ]
+  MathSciNet: "Ju, Wei"
+  CJK: "鞠伟"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG"]
+  Gender: "M"
+  Comments: "Surname also as 'Chü' historically. 'Ju' and 'Wei Ju' ambiguous in databases."
+
+Choo_Yin (woman):
+  CanonicalLatin: "Choo, Yin"
+  CanonicalWestern: "Yin Choo"
+  AllCommonVariants: [
+    "Choo Yin", "Yin Choo", "Choo, Y.", "Y. Choo", "朱银", "Chu Yin"
+  ]
+  MathSciNet: "Choo, Yin"
+  CJK: "朱银"
+  Suffixes: ""
+  DiasporaFlags: ["SG", "MY", "CN"]
+  Gender: "F"
+  Comments: "Woman mathematician. Surname 'Choo' is a romanisation of '朱' or '储' in Malaysia/Singapore; ambiguous with 'Chu'."
+
+Chiu_Yan (woman):
+  CanonicalLatin: "Chiu, Yan"
+  CanonicalWestern: "Yan Chiu"
+  AllCommonVariants: [
+    "Chiu Yan", "Yan Chiu", "Chiu, Y.", "Y. Chiu", "赵燕", "Chow Yen"
+  ]
+  MathSciNet: "Chiu, Yan"
+  CJK: "赵燕"
+  Suffixes: ""
+  DiasporaFlags: ["HK", "SG", "TW", "MY", "CN"]
+  Gender: "F"
+  Comments: "Woman mathematician. Surname 'Chiu' in HK/TW for '赵', which is 'Zhao' in pinyin. Chow/Chiu/Chow Yen variants common in diaspora."
+
+Chew_Li (woman):
+  CanonicalLatin: "Chew, Li"
+  CanonicalWestern: "Li Chew"
+  AllCommonVariants: [
+    "Chew Li", "Li Chew", "Chew, L.", "L. Chew", "周丽", "Chou Lee"
+  ]
+  MathSciNet: "Chew, Li"
+  CJK: "周丽"
+  Suffixes: ""
+  DiasporaFlags: ["SG", "MY", "CN"]
+  Gender: "F"
+  Comments: "Woman mathematician. Surname 'Chew' used in southern China/Malaysia for '周' (Zhou); Lee is Westernised."
+
+Chow_Jin:
+  CanonicalLatin: "Chow, Jin"
+  CanonicalWestern: "Jin Chow"
+  AllCommonVariants: [
+    "Chow Jin", "Jin Chow", "Chow, J.", "J. Chow", "周进", "Chou Chin"
+  ]
+  MathSciNet: "Chow, Jin"
+  CJK: "周进"
+  Suffixes: ""
+  DiasporaFlags: ["HK", "SG", "MY", "CN"]
+  Gender: "M"
+  Comments: "Surname 'Chow' is common in diaspora for '周' or '赵'; 'Chou' in TW."
+
+Shao_Jing (woman):
+  CanonicalLatin: "Shao, Jing"
+  CanonicalWestern: "Jing Shao"
+  AllCommonVariants: [
+    "Shao Jing", "Jing Shao", "Shao, J.", "J. Shao", "邵静", "Shao Ching"
+  ]
+  MathSciNet: "Shao, Jing"
+  CJK: "邵静"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG"]
+  Gender: "F"
+  Comments: "Woman mathematician. Surname 'Shao' can also be romanised 'Shao' or 'Sio' in older texts."
+
+Zhao_Jian:
+  CanonicalLatin: "Zhao, Jian"
+  CanonicalWestern: "Jian Zhao"
+  AllCommonVariants: [
+    "Zhao Jian", "Jian Zhao", "Zhao, J.", "J. Zhao", "赵健", "Chao Kin"
+  ]
+  MathSciNet: "Zhao, Jian"
+  CJK: "赵健"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG"]
+  Gender: "M"
+  Comments: "Analysis, combinatorics. Surname also as 'Chao' in old romanisation. Jian/Jin/Jun ambiguous as given names."
+
+Zhao_Jing (woman):
+  CanonicalLatin: "Zhao, Jing"
+  CanonicalWestern: "Jing Zhao"
+  AllCommonVariants: [
+    "Zhao Jing", "Jing Zhao", "Zhao, J.", "J. Zhao", "赵静", "Chao Ching"
+  ]
+  MathSciNet: "Zhao, Jing"
+  CJK: "赵静"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG"]
+  Gender: "F"
+  Comments: "Probability, combinatorics. Woman mathematician. Chao Ching in old romanisation."
+
+Zhao_Jin:
+  CanonicalLatin: "Zhao, Jin"
+  CanonicalWestern: "Jin Zhao"
+  AllCommonVariants: [
+    "Zhao Jin", "Jin Zhao", "Zhao, J.", "J. Zhao", "赵晋", "Chao Chin"
+  ]
+  MathSciNet: "Zhao, Jin"
+  CJK: "赵晋"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG"]
+  Gender: "M"
+  Comments: "'Zhao Jin'/'Jin Zhao' appears in several combinatorics, geometry, and engineering papers."
+
+Zhao_Jun:
+  CanonicalLatin: "Zhao, Jun"
+  CanonicalWestern: "Jun Zhao"
+  AllCommonVariants: [
+    "Zhao Jun", "Jun Zhao", "Zhao, J.", "J. Zhao", "赵军", "Chao Chun"
+  ]
+  MathSciNet: "Zhao, Jun"
+  CJK: "赵军"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US", "SG"]
+  Gender: "M"
+  Comments: "Computer science, combinatorics. Many 'Zhao, J.'; Jun/Chun ambiguity."
+
+Zhai_Jian:
+  CanonicalLatin: "Zhai, Jian"
+  CanonicalWestern: "Jian Zhai"
+  AllCommonVariants: [
+    "Zhai Jian", "Jian Zhai", "Zhai, J.", "J. Zhai", "翟健", "Chai Kin"
+  ]
+  MathSciNet: "Zhai, Jian"
+  CJK: "翟健"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "US"]
+  Gender: "M"
+  Comments: "Rare surname, but ambiguous due to sound-alike clusters (Zhai/Chai/Zhai/Chia)."
+
+Ze_Jing (woman):
+  CanonicalLatin: "Ze, Jing"
+  CanonicalWestern: "Jing Ze"
+  AllCommonVariants: [
+    "Ze Jing", "Jing Ze", "Ze, J.", "J. Ze", "泽静", "Tse Ching"
+  ]
+  MathSciNet: "Ze, Jing"
+  CJK: "泽静"
+  Suffixes: ""
+  DiasporaFlags: ["CN"]
+  Gender: "F"
+  Comments: "Very rare, but exemplifies cross-diacritic ambiguity: Ze/Tse/Ze/Jing/Ching."
+
+Zhun_Jing (woman):
+  CanonicalLatin: "Zhun, Jing"
+  CanonicalWestern: "Jing Zhun"
+  AllCommonVariants: [
+    "Zhun Jing", "Jing Zhun", "Zhun, J.", "J. Zhun", "准静", "Chun Ching"
+  ]
+  MathSciNet: "Zhun, Jing"
+  CJK: "准静"
+  Suffixes: ""
+  DiasporaFlags: ["CN"]
+  Gender: "F"
+  Comments: "Rare surname, illustrative for systematic cluster mapping. Woman mathematician."
+
+Zun_Jian:
+  CanonicalLatin: "Zun, Jian"
+  CanonicalWestern: "Jian Zun"
+  AllCommonVariants: [
+    "Zun Jian", "Jian Zun", "Zun, J.", "J. Zun", "尊健", "Chun Kin"
+  ]
+  MathSciNet: "Zun, Jian"
+  CJK: "尊健"
+  Suffixes: ""
+  DiasporaFlags: ["CN"]
+  Gender: "M"
+  Comments: "Rare. Surname occurs as part of compound names in older sources. 'Jian'/'Kin' ambiguous."
+
+# Wrap-up entries for problematic cross-CJK romanisation, double surnames, and key historic clusters:
+
+Su_Hsieh:
+  CanonicalLatin: "Su, Hsieh"
+  CanonicalWestern: "Hsieh Su"
+  AllCommonVariants: [
+    "Su Hsieh", "Hsieh Su", "Su, H.", "H. Su", "苏谢", "Su Xie"
+  ]
+  MathSciNet: "Su, Hsieh"
+  CJK: "苏谢"
+  Suffixes: ""
+  DiasporaFlags: ["TW", "CN"]
+  Gender: "M"
+  Comments: "Example of double-surname, cross-Taiwan/PRC romanisation cluster."
+
+Chang_Tsung-Cheng:
+  CanonicalLatin: "Chang, Tsung-Cheng"
+  CanonicalWestern: "Tsung-Cheng Chang"
+  AllCommonVariants: [
+    "Chang Tsung-Cheng", "Tsung-Cheng Chang", "Chang, T.-C.", "T.-C. Chang", "张宗成", "Cheung Tsung-Cheng"
+  ]
+  MathSciNet: "Chang, Tsung-Cheng"
+  CJK: "张宗成"
+  Suffixes: ""
+  DiasporaFlags: ["TW", "HK", "CN"]
+  Gender: "M"
+  Comments: "Compound name, all romanisations, surname ambiguity with 'Cheung', 'Zhang', 'Chang', 'Cheang'."
+
+Cheang_Soon (woman):
+  CanonicalLatin: "Cheang, Soon"
+  CanonicalWestern: "Soon Cheang"
+  AllCommonVariants: [
+    "Cheang Soon", "Soon Cheang", "Cheang, S.", "S. Cheang", "张顺", "Cheung Soon"
+  ]
+  MathSciNet: "Cheang, Soon"
+  CJK: "张顺"
+  Suffixes: ""
+  DiasporaFlags: ["HK", "MY", "SG"]
+  Gender: "F"
+  Comments: "Woman mathematician. 'Cheang', 'Cheung', 'Chang' all used in various Hong Kong/Malaysia/Singapore clusters for 张 (Zhang/Chang)."
+
+Cheng_Jen-Hao:
+  CanonicalLatin: "Cheng, Jen-Hao"
+  CanonicalWestern: "Jen-Hao Cheng"
+  AllCommonVariants: [
+    "Cheng Jen-Hao", "Jen-Hao Cheng", "Cheng, J.-H.", "J.-H. Cheng", "郑仁豪", "Cheng Jen Hao", "Cheng JH"
+  ]
+  MathSciNet: "Cheng, Jen-Hao"
+  CJK: "郑仁豪"
+  Suffixes: ""
+  DiasporaFlags: ["TW", "HK", "CN", "US"]
+  Gender: "M"
+  Comments: "Double-barrelled given names are common in TW/HK/overseas Chinese, and problematic in authority control. All romanisation variants included."
+
+Chiang_Ching-Kuo:
+  CanonicalLatin: "Chiang, Ching-Kuo"
+  CanonicalWestern: "Ching-Kuo Chiang"
+  AllCommonVariants: [
+    "Chiang Ching-Kuo", "Ching-Kuo Chiang", "Chiang, C.-K.", "C.-K. Chiang", "蒋经国", "Jiang Jingguo", "Chiang C. K.", "Ching Kuo Chiang"
+  ]
+  MathSciNet: "Chiang, Ching-Kuo"
+  CJK: "蒋经国"
+  Suffixes: ""
+  DiasporaFlags: ["TW", "CN", "SG"]
+  Gender: "M"
+  Comments: "Illustrates both surname collision (Chiang/Jiang) and hyphenated given name, as well as major variant cluster (Ching Kuo, Jingguo, etc)."
+
+Choi_Hae-Young (woman):
+  CanonicalLatin: "Choi, Hae-Young"
+  CanonicalWestern: "Hae-Young Choi"
+  AllCommonVariants: [
+    "Choi Hae-Young", "Hae-Young Choi", "Choi, H.-Y.", "H.-Y. Choi", "崔海英", "Choy Hae-Young"
+  ]
+  MathSciNet: "Choi, Hae-Young"
+  CJK: "崔海英"
+  Suffixes: ""
+  DiasporaFlags: ["KR", "CN", "US"]
+  Gender: "F"
+  Comments: "Example of Korean-origin surname used in PRC/Taiwan/Japan, and in Chinese diaspora, with full romanisation ambiguity."
+
+Huang_Chih-Chung:
+  CanonicalLatin: "Huang, Chih-Chung"
+  CanonicalWestern: "Chih-Chung Huang"
+  AllCommonVariants: [
+    "Huang Chih-Chung", "Chih-Chung Huang", "Huang, C.-C.", "C.-C. Huang", "黄志中", "Wong Chi-Chung", "Huang C. C.", "Huang Chi Chung"
+  ]
+  MathSciNet: "Huang, Chih-Chung"
+  CJK: "黄志中"
+  Suffixes: ""
+  DiasporaFlags: ["TW", "HK", "CN", "US"]
+  Gender: "M"
+  Comments: "All major romanisations: Pinyin, Wade-Giles, Yale (Chi-Chung), Hong Kong 'Wong'. Common 'CC' initials for deduplication."
+
+Lin_Hung-Yuan:
+  CanonicalLatin: "Lin, Hung-Yuan"
+  CanonicalWestern: "Hung-Yuan Lin"
+  AllCommonVariants: [
+    "Lin Hung-Yuan", "Hung-Yuan Lin", "Lin, H.-Y.", "H.-Y. Lin", "林宏远", "Lin Hong-Yuan", "Lim Hung-Yuan"
+  ]
+  MathSciNet: "Lin, Hung-Yuan"
+  CJK: "林宏远"
+  Suffixes: ""
+  DiasporaFlags: ["TW", "SG", "MY", "CN"]
+  Gender: "M"
+  Comments: "All forms including Singapore/Malaysia romanisation ('Lim'), double given names, and ambiguous Hong-Yuan/Hung-Yuan clusters."
+
+Ng_Sze-Mun (woman):
+  CanonicalLatin: "Ng, Sze-Mun"
+  CanonicalWestern: "Sze-Mun Ng"
+  AllCommonVariants: [
+    "Ng Sze-Mun", "Sze-Mun Ng", "Ng, S.-M.", "S.-M. Ng", "黄思敏", "Eng Sze-Mun", "Ng Sze Mun"
+  ]
+  MathSciNet: "Ng, Sze-Mun"
+  CJK: "黄思敏"
+  Suffixes: ""
+  DiasporaFlags: ["SG", "MY", "HK"]
+  Gender: "F"
+  Comments: "Woman mathematician. Surname 'Ng' (Huang/Heng/Eng in Hokkien/Teochew), frequent in Malaysia/Singapore. Sze/Sze-Mun is a classic ambiguous double given name."
+
+Shen_Xi:
+  CanonicalLatin: "Shen, Xi"
+  CanonicalWestern: "Xi Shen"
+  AllCommonVariants: [
+    "Shen Xi", "Xi Shen", "Shen, X.", "X. Shen", "沈曦", "Shen Hsi", "Shen Sze"
+  ]
+  MathSciNet: "Shen, Xi"
+  CJK: "沈曦"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "TW", "SG"]
+  Gender: "M"
+  Comments: "'Xi', 'Hsi', 'Sze' all used as given name romanisations for 曦/西/希/希 etc. in PRC/Taiwan/Southeast Asia."
+
+Tse_Wai-Yip:
+  CanonicalLatin: "Tse, Wai-Yip"
+  CanonicalWestern: "Wai-Yip Tse"
+  AllCommonVariants: [
+    "Tse Wai-Yip", "Wai-Yip Tse", "Tse, W.-Y.", "W.-Y. Tse", "谢伟业", "Hsieh Wai-Yip"
+  ]
+  MathSciNet: "Tse, Wai-Yip"
+  CJK: "谢伟业"
+  Suffixes: ""
+  DiasporaFlags: ["HK", "TW", "CN"]
+  Gender: "M"
+  Comments: "Surname 'Tse' is a Cantonese romanisation of '谢' (Xie/Hsieh); Wai-Yip is a common double given name. All forms included."
+
+Tsui_Lai-Man (woman):
+  CanonicalLatin: "Tsui, Lai-Man"
+  CanonicalWestern: "Lai-Man Tsui"
+  AllCommonVariants: [
+    "Tsui Lai-Man", "Lai-Man Tsui", "Tsui, L.-M.", "L.-M. Tsui", "徐丽雯", "Hsu Lai-Man"
+  ]
+  MathSciNet: "Tsui, Lai-Man"
+  CJK: "徐丽雯"
+  Suffixes: ""
+  DiasporaFlags: ["HK", "TW", "CN", "US"]
+  Gender: "F"
+  Comments: "Woman mathematician. Surname 'Tsui' (Cantonese 徐), common in HK/TW; also appears as Hsu/Hsu. All forms listed."
+
+Wong_Wing-Ho:
+  CanonicalLatin: "Wong, Wing-Ho"
+  CanonicalWestern: "Wing-Ho Wong"
+  AllCommonVariants: [
+    "Wong Wing-Ho", "Wing-Ho Wong", "Wong, W.-H.", "W.-H. Wong", "黄永浩", "Ong Wing-Ho", "Wang Yong-Hao"
+  ]
+  MathSciNet: "Wong, Wing-Ho"
+  CJK: "黄永浩"
+  Suffixes: ""
+  DiasporaFlags: ["HK", "MY", "SG", "CN"]
+  Gender: "M"
+  Comments: "Classic ambiguous cluster: 'Wong' (黄), also as 'Ong' in Malaysia/Singapore and as 'Wang' in other romanisations. All double given names included."
+
+Yuen_Kwok-Yung:
+  CanonicalLatin: "Yuen, Kwok-Yung"
+  CanonicalWestern: "Kwok-Yung Yuen"
+  AllCommonVariants: [
+    "Yuen Kwok-Yung", "Kwok-Yung Yuen", "Yuen, K.-Y.", "K.-Y. Yuen", "袁国勇", "Yuan Guoyong"
+  ]
+  MathSciNet: "Yuen, Kwok-Yung"
+  CJK: "袁国勇"
+  Suffixes: ""
+  DiasporaFlags: ["HK", "CN"]
+  Gender: "M"
+  Comments: "Surname 'Yuen' (Yuan) in Cantonese/older romanisation; all given name clusters included."
+
+Zhao_Xi:
+  CanonicalLatin: "Zhao, Xi"
+  CanonicalWestern: "Xi Zhao"
+  AllCommonVariants: [
+    "Zhao Xi", "Xi Zhao", "Zhao, X.", "X. Zhao", "赵曦", "Chao Hsi"
+  ]
+  MathSciNet: "Zhao, Xi"
+  CJK: "赵曦"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "SG", "TW"]
+  Gender: "M"
+  Comments: "'Xi' ambiguous; 'Hsi' historical romanisation for all 习/曦/希/锡/etc. in PRC/Taiwan. Surname also as 'Chao'."
+
+Zheng_Ling (woman):
+  CanonicalLatin: "Zheng, Ling"
+  CanonicalWestern: "Ling Zheng"
+  AllCommonVariants: [
+    "Zheng Ling", "Ling Zheng", "Zheng, L.", "L. Zheng", "郑玲", "Cheng Ling"
+  ]
+  MathSciNet: "Zheng, Ling"
+  CJK: "郑玲"
+  Suffixes: ""
+  DiasporaFlags: ["CN", "TW"]
+  Gender: "F"
+  Comments: "Woman mathematician. Zheng/Cheng ambiguity (郑/程), Ling ambiguous as male or female given name."

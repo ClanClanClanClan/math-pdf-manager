@@ -1,0 +1,43 @@
+{
+  "metadata_fetching": {
+    "ieee": false,
+    "springer": false,
+    "acm": false,
+    "elsevier": false
+  },
+  "open_access_downloads": {
+    "arxiv": false,
+    "plos": true
+  },
+  "eth_authentication": {
+    "ieee": true,
+    "springer": true,
+    "acm": true
+  },
+  "institutional_downloads": {
+    "ieee": {
+      "success": false,
+      "file_size": 0,
+      "error": "fetch_metadata_all_sources() got an unexpected keyword argument 'auth_service'",
+      "attempts": []
+    },
+    "springer": {
+      "success": false,
+      "file_size": 0,
+      "error": "fetch_metadata_all_sources() got an unexpected keyword argument 'auth_service'",
+      "attempts": []
+    },
+    "acm": {
+      "success": false,
+      "file_size": 0,
+      "error": "fetch_metadata_all_sources() got an unexpected keyword argument 'auth_service'",
+      "attempts": []
+    },
+    "elsevier": {
+      "success": false,
+      "file_size": 0,
+      "error": "fetch_metadata_all_sources() got an unexpected keyword argument 'auth_service'",
+      "attempts": []
+    }
+  }
+}

@@ -1,0 +1,4 @@
+# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/validators/filename_validator.py
+# hypothesis_version: 6.135.32
+
+[5000, '(', ')', '.pdf', 'AUTHOR', 'Author formatting', 'Capitalization', 'FORMAT', 'MAX_LENGTH', 'NFC', 'TITLE', 'UNICODE', '[', ']', 'multiple-hyphens', '{', '}']

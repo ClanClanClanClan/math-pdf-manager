@@ -1,0 +1,8 @@
+{
+  "title": "Well-posedness of quadratic RBSDEs and BSDEs with one-sided growth restrictions",
+  "authors": [],
+  "year": null,
+  "citation_id": null,
+  "snippet": "In this paper, we study the existence, uniqueness and comparison theorem for the bounded solutions and unbounded solutions of reflected backward stochastic differential equations (RBSDEs) and backward stochastic differential equations (BSDEs), whose generators have a one-sided growth restriction on and have a general quadratic growth in , and whose solutions (and obstacles) take values in with . We provide a method for the uniqueness of solutions of such RBSDEs and BSDEs, whose generators satisfy a -domination condition. This condition contains the generators which are convex in or are (locally) Lipschitz in and convex in , and the generators which are locally Lipschitz in . Our method relies on the -difference technique and a comparison argument based on RBSDEs. We also provide a method to study the comparison theorem for such RBSDEs and BSDEs.",
+  "source": "scholar_serpapi"
+}

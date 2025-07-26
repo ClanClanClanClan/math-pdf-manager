@@ -1,0 +1,8 @@
+{
+  "title": "Worst-Case Optimal Investment in Incomplete Markets",
+  "authors": [],
+  "year": null,
+  "citation_id": null,
+  "snippet": "We study and solve the worst-case optimal portfolio problem as pioneered by Korn and Wilmott (2002) of an investor with logarithmic preferences facing the possibility of a market crash with stochastic market coefficients by enhancing the martingale approach developed by Seifried in 2010. With the help of backward stochastic differential equations (BSDEs), we are able to characterize the resulting indifference optimal strategies in a fairly general setting. We also deal with the question of existence of those indifference strategies for market models with an unbounded market price of risk. We therefore solve the corresponding BSDEs via solving their associated PDEs using a utility crash-exposure transformation. Our approach is subsequently demonstrated for Heston's stochastic volatility model, Bates' stochastic volatility model including jumps, and Kim-Omberg's model for a stochastic excess return.",
+  "source": "scholar_serpapi"
+}

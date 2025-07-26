@@ -1,0 +1,10 @@
+{
+  "scan_time": "2025-07-19T19:24:36.869693",
+  "stats": {
+    "files_scanned": 34,
+    "duplicates_found": 0,
+    "space_wasted": 0
+  },
+  "duplicate_groups": 0,
+  "patterns": {}
+}

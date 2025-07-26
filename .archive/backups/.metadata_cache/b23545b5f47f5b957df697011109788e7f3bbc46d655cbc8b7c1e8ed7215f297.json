@@ -1,0 +1,8 @@
+{
+  "title": "Dynamic Coalition Portfolio Selection with Recursive Utility",
+  "authors": [],
+  "year": null,
+  "citation_id": null,
+  "snippet": "In this paper, we consider a dynamic coalition portfolio selection problem, with each agent's objective given by an Epstein--Zin recursive utility. To find a Pareto optimum, the coalition's problem is formulated as an optimization problem evolved by a multi-dimensional forward-backward SDE. Since the evolution system has a forward-backward structure, the problem is intrinsically time-inconsistent. With the dynamic-game point of view, we rigorously develop an approach to finding the equilibrium Pareto investment-consumption strategy. We find that the relationship between risk aversion and EIS has more influence on the coalition's problem than that on the one-agent problem. More interestingly, we show that the equilibrium Pareto consumption strategy associated with the recursive utility is much more effective than that associated with the CRRA expected utility, which highlights the feature of recursive utilities that the marginal benefit of consumption can depend on the future consumption.",
+  "source": "scholar_serpapi"
+}
