@@ -4,9 +4,10 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable, List, Optional
+import os
 
 import httpx
 
@@ -26,13 +27,33 @@ class InstitutionalCredentials:
     headless: bool = True
     timeout_ms: int = 120000
 
+    @staticmethod
+    def from_env() -> Optional['InstitutionalCredentials']:
+        username = os.getenv("INSTITUTIONAL_USERNAME")
+        password = os.getenv("INSTITUTIONAL_PASSWORD")
+        if not username or not password:
+            return None
+        publisher = os.getenv("INSTITUTIONAL_PUBLISHER")
+        headless = os.getenv("INSTITUTIONAL_HEADLESS", "true").lower() != "false"
+        try:
+            timeout_ms = int(os.getenv("INSTITUTIONAL_TIMEOUT_MS", "120000"))
+        except ValueError:
+            timeout_ms = 120000
+        return InstitutionalCredentials(
+            username=username,
+            password=password,
+            publisher=publisher,
+            headless=headless,
+            timeout_ms=timeout_ms,
+        )
+
 
 @dataclass
 class AcquisitionConfig:
     download_dir: Path = Path("downloads")
     unpaywall_email: Optional[str] = None
     allow_alternative_sources: bool = False
-    institutional_credentials: Optional[InstitutionalCredentials] = None
+    institutional_credentials: Optional[InstitutionalCredentials] = field(default_factory=InstitutionalCredentials.from_env)
 
 
 @dataclass
