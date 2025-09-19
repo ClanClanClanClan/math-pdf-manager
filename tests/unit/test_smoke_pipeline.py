@@ -27,6 +27,8 @@ def test_process_files_empty_directory(tmp_path):
     assert summary["total_candidate_files"] == 0
     assert summary["processed"] == 0
     assert summary["failed"] == 0
+    assert summary["organization"] == []
+    assert summary["duplicates"] == {}
 
 
 def test_process_files_single_pdf(tmp_path):
@@ -42,6 +44,7 @@ def test_process_files_single_pdf(tmp_path):
     assert summary["total_candidate_files"] == 1
     assert summary["processed"] == 1
     assert summary["failed"] == 0
+    assert len(summary["organization"]) == 1
 
 
 def test_create_args_parser_exposes_expected_options():

@@ -14,6 +14,8 @@ from pathlib import Path
 from typing import Dict, Any, Optional, List, Tuple
 import logging
 
+from organization.system import OrganizationSystem
+
 logger = logging.getLogger(__name__)
 
 
@@ -328,6 +330,8 @@ def process_files(
             "results": [],
             "dry_run": dry_run,
             "parallel_workers": parallel_workers,
+            "organization": [],
+            "duplicates": {},
         }
 
     config = get_default_config()
@@ -356,6 +360,21 @@ def process_files(
         metrics_service.increment_counter("processed_files_failed", len(failures))
         metrics_service.record_timing("processing_duration_ms", duration * 1000)
 
+    base_folder = Path(config_data.config.get('base_maths_folder', root_directory)).expanduser()
+    organization_system = OrganizationSystem(base_folder, dry_run=dry_run)
+    organization_reports = []
+
+    for result in successes:
+        metadata = result.get('metadata', {}).copy()
+        metadata.setdefault('title', metadata.get('title') or Path(result['file_path']).stem)
+        metadata.setdefault('authors', metadata.get('authors', []))
+        metadata.setdefault('doi', metadata.get('doi'))
+        metadata.setdefault('arxiv_id', metadata.get('arxiv_id'))
+        report = organization_system.organize(Path(result['file_path']), metadata)
+        organization_reports.append(report)
+
+    duplicate_map = organization_system.find_duplicates(Path(res['file_path']) for res in successes)
+
     if failures:
         log.warning(f"{len(failures)} file(s) failed to process")
     else:
@@ -370,6 +389,17 @@ def process_files(
         "results": results,
         "dry_run": dry_run,
         "parallel_workers": parallel_workers,
+        "organization": [
+            {
+                'file': str(report.file_path),
+                'destination': str(report.destination),
+                'actions': report.actions,
+                'subjects': report.subjects,
+                'status': report.publication_status,
+            }
+            for report in organization_reports
+        ],
+        "duplicates": {digest: [str(path) for path in paths] for digest, paths in duplicate_map.items()},
     }
 
     return summary

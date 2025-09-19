@@ -1,0 +1,73 @@
+# Core
+PyYAML
+requests
+tqdm
+PyMuPDF
+pdfplumber
+jinja2
+
+# Fuzzy matching / NLP
+rapidfuzz
+spacy
+en_core_web_sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.1/en_core_web_sm-3.7.1-py3-none-any.whl
+
+# Spellcheck/grammar
+pyspellchecker
+language_tool_python
+
+# LLM/AI
+transformers
+torch
+
+# OCR fallback
+pytesseract
+Pillow
+pdf2image
+
+# Browser automation (optional advanced download)
+playwright
+selenium
+
+# Google Scholar
+scholarly
+
+# Testing
+pytest
+pytest-cov
+
+# Async and performance optimization
+aiohttp
+aiofiles
+lz4
+
+# Performance monitoring
+memory_profiler
+psutil
+
+# Security and encryption
+cryptography
+certifi
+
+# HTML parsing
+beautifulsoup4
+
+# API server
+fastapi
+uvicorn[standard]
+
+# Missing dependencies from audit
+httpx
+tenacity
+backoff
+sentence-transformers
+opencv-python
+defusedxml
+regex
+
+# Testing dependencies
+pytest-benchmark
+
+# Enhanced Acquisition Engine dependencies
+jsonschema>=4.0.0  # Configuration validation
+asyncio-throttle>=1.0.0  # Rate limiting for async operations
+urllib3>=1.26.0  # HTTP client improvements

@@ -22,6 +22,7 @@ try:
     from publishers import DownloadResult
     from publishers.unified_downloader import UnifiedDownloader
     from core.validation.comprehensive_validator import ComprehensiveUnifiedValidationService
+    from discovery import DiscoveryEngine, PaperCandidate
     from arxivbot.pipeline.optimized_harvester import ProductionOptimizedHarvester, OptimizedHarvesterConfig
     from arxivbot.monitoring.service import MonitoringService, MonitoringServiceConfig, initialize_monitoring_service
 except ImportError as e:  # pragma: no cover - fallback only exercised in constrained environments
@@ -60,6 +61,22 @@ except ImportError as e:  # pragma: no cover - fallback only exercised in constr
         def sanitize_filename(self, filename: str) -> str:
             return filename
 
+    class DiscoveryEngine:  # type: ignore
+        async def search_by_query(self, query: str, *, max_results: int = 10):
+            print(f"STUB: Discovery query '{query}'")
+            return []
+
+        async def search_by_doi(self, doi: str):
+            print(f"STUB: DOI lookup '{doi}'")
+            return None
+
+        async def search_by_authors(self, authors, year_range=None, *, max_results: int = 10):
+            print(f"STUB: Author search {authors}")
+            return []
+
+        async def close(self):
+            return None
+
 logger = logging.getLogger(__name__)
 
 
@@ -80,6 +97,7 @@ class DiscoveryIntegration:
         self.downloader = UnifiedDownloader()
         self.validator = ComprehensiveUnifiedValidationService()
         self.monitoring = None
+        self.discovery_engine = DiscoveryEngine()
         
         logger.info("Discovery integration initialized")
     
@@ -115,10 +133,10 @@ class DiscoveryIntegration:
             logger.error(f"Failed to initialize discovery system: {e}")
             return False
     
-    async def discover_papers(self, 
-                            categories: List[str], 
-                            max_papers_per_category: int = 50,
-                            relevance_threshold: float = 0.25) -> List[Dict[str, Any]]:
+    async def discover_papers(self,
+                              categories: List[str],
+                              max_papers_per_category: int = 50,
+                              relevance_threshold: float = 0.25) -> List[PaperCandidate]:
         """
         Discover relevant papers from specified categories
         
@@ -130,55 +148,49 @@ class DiscoveryIntegration:
         Returns:
             List of relevant papers with metadata
         """
-        if not self.harvester:
-            raise RuntimeError("Discovery system not initialized. Call initialize() first.")
-        
-        # Allow callers to adjust relevance threshold dynamically.
-        if hasattr(self.harvester, 'config'):
-            try:
-                self.harvester.config.score_threshold = relevance_threshold
-            except Exception as exc:  # pragma: no cover - defensive only
-                logger.warning(f"Unable to update harvester threshold: {exc}")
+        aggregated: List[PaperCandidate] = []
 
-        all_papers = []
-        
         for category in categories:
-            logger.info(f"Discovering papers in category: {category}")
-            
+            logger.info("Running discovery search for category %s", category)
+            query = f"cat:{category}" if ':' not in category else category
             try:
-                results = await self.harvester.process_category(
-                    category=category,
-                    max_papers=max_papers_per_category
-                )
-                
-                if 'error' not in results:
-                    papers_found = results['papers_accepted']
-                    logger.info(f"Found {papers_found} relevant papers in {category}")
-                    
-                    # Get actual paper data from the harvester
-                    # Since the harvester doesn't currently return the actual papers,
-                    # we'll use the metadata we have available
-                    avg_score = results.get('avg_score', 0.3)
-                    
-                    # Create paper entries with available data
-                    for i in range(papers_found):
-                        paper = {
-                            'category': category,
-                            'title': f"Relevant paper {i+1} from {category}",
-                            'authors': ['Author 1', 'Author 2'],  # Would be real authors from arXiv
-                            'abstract': f"Abstract for relevant paper {i+1} (score: {avg_score:.2f})",
-                            'relevance_score': avg_score,
-                            'source': 'arxiv',
-                            'id': f"{category}_{i+1}"  # Would be real arXiv ID
-                        }
-                        all_papers.append(paper)
-                else:
-                    logger.error(f"Failed to discover papers in {category}: {results['error']}")
-                    
-            except Exception as e:
-                logger.error(f"Error discovering papers in {category}: {e}")
-        
-        return all_papers
+                results = await self.discovery_engine.search_by_query(query, max_results=max_papers_per_category)
+                aggregated.extend(results)
+            except Exception as exc:
+                logger.error("Discovery query failed for %s: %s", category, exc)
+
+        # Include harvester data if available and initialized.
+        if self.harvester:
+            if hasattr(self.harvester, 'config'):
+                try:
+                    self.harvester.config.score_threshold = relevance_threshold
+                except Exception as exc:  # pragma: no cover
+                    logger.warning("Unable to update harvester threshold: %s", exc)
+
+            for category in categories:
+                try:
+                    harvester_results = await self.harvester.process_category(
+                        category=category,
+                        max_papers=max_papers_per_category
+                    )
+                    papers_found = harvester_results.get('papers_accepted', 0)
+                    avg_score = harvester_results.get('avg_score', relevance_threshold)
+                    logger.info("Harvester accepted %s papers for %s", papers_found, category)
+                    # Harvester currently returns aggregate metrics; append placeholders with metadata.
+                    if papers_found:
+                        aggregated.extend([
+                            PaperCandidate(
+                                title=f"{category} candidate",
+                                authors=["Unknown"],
+                                source="arxiv-harvester",
+                                metadata={"avg_score": avg_score, "category": category}
+                            )
+                            for _ in range(min(papers_found, max_papers_per_category))
+                        ])
+                except Exception as exc:
+                    logger.warning("Harvester processing failed for %s: %s", category, exc)
+
+        return aggregated
     
     def generate_filename(self, paper: Dict[str, Any]) -> str:
         """
@@ -190,7 +202,7 @@ class DiscoveryIntegration:
             # Extract title and clean it up
             title = paper.get('title', 'unknown')
             authors = paper.get('authors', [])
-            paper_id = paper.get('id', '')
+            paper_id = paper.get('id') or paper.get('doi') or paper.get('arxiv_id') or paper.get('title', '')
             
             # Create a safe filename using the existing pattern
             base_name = title
@@ -253,7 +265,7 @@ class DiscoveryIntegration:
             return await self.downloader.download_best_match(title, authors=authors, download_dir=downloads_dir)
 
         return DownloadResult(False, error_message="Insufficient metadata to perform download")
-    
+
     async def discover_and_download(self, 
                                   categories: List[str],
                                   max_papers_per_category: int = 50,
@@ -274,22 +286,23 @@ class DiscoveryIntegration:
         logger.info(f"Starting discovery workflow for categories: {categories}")
         
         # Step 1: Discover papers
-        papers = await self.discover_papers(
+        candidates = await self.discover_papers(
             categories=categories,
             max_papers_per_category=max_papers_per_category,
             relevance_threshold=relevance_threshold
         )
-        
+
         results = {
-            'papers_discovered': len(papers),
+            'papers_discovered': len(candidates),
             'categories_processed': len(categories),
             'papers_downloaded': 0,
             'download_errors': 0,
             'papers': []
         }
-        
+
         # Step 2: Process each paper
-        for paper in papers:
+        for candidate in candidates:
+            paper = self._candidate_to_dict(candidate)
             try:
                 # Generate filename using existing validator
                 filename = self.generate_filename(paper)
@@ -297,8 +310,11 @@ class DiscoveryIntegration:
                 paper_result = {
                     'title': paper['title'],
                     'filename': filename,
-                    'relevance_score': paper['relevance_score'],
-                    'category': paper['category']
+                    'relevance_score': paper.get('relevance_score', relevance_threshold),
+                    'category': paper.get('category', 'unknown'),
+                    'source': paper.get('source'),
+                    'doi': paper.get('doi'),
+                    'arxiv_id': paper.get('arxiv_id'),
                 }
                 
                 # Step 3: Download if requested
@@ -325,13 +341,18 @@ class DiscoveryIntegration:
                    f"{results['papers_downloaded']} downloaded")
         
         return results
-    
+
     async def shutdown(self):
         """Clean shutdown"""
         if self.harvester:
             await self.harvester.shutdown()
         if self.monitoring:
             await self.monitoring.shutdown()
+        if hasattr(self.discovery_engine, 'close'):
+            try:
+                await self.discovery_engine.close()
+            except Exception as exc:  # pragma: no cover - defensive guard
+                logger.debug("Discovery engine close failed: %s", exc)
         if hasattr(self.downloader, 'logout_all'):
             try:
                 await self.downloader.logout_all()  # type: ignore[arg-type]
@@ -340,6 +361,29 @@ class DiscoveryIntegration:
                 self.downloader.logout_all()  # type: ignore[attr-defined]
         
         logger.info("Discovery integration shutdown complete")
+
+    def _candidate_to_dict(self, candidate: PaperCandidate) -> Dict[str, Any]:
+        metadata = candidate.metadata or {}
+        return {
+            'title': candidate.title,
+            'authors': candidate.authors,
+            'doi': candidate.doi,
+            'arxiv_id': candidate.arxiv_id,
+            'source': candidate.source,
+            'url': candidate.url,
+            'published_year': candidate.published_year,
+            'metadata': metadata,
+            'category': metadata.get('category', self._infer_category(candidate)),
+            'relevance_score': metadata.get('avg_score', 0.0),
+        }
+
+    def _infer_category(self, candidate: PaperCandidate) -> str:
+        if candidate.arxiv_id and ':' in candidate.arxiv_id:
+            return candidate.arxiv_id.split(':', 1)[0]
+        subjects = candidate.metadata.get('subject') if isinstance(candidate.metadata, dict) else None
+        if isinstance(subjects, list) and subjects:
+            return subjects[0]
+        return 'unknown'
 
 
 # Convenience function for CLI usage
