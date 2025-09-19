@@ -27,7 +27,7 @@ This document maps the requirements in `docs/SYSTEM_SPECIFICATIONS_1.md` against
 | Requirement | Status | Notes |
 |-------------|:------:|-------|
 | Existing multi-provider metadata fetch | ⚠️ | `metadata_fetcher.py` covers several providers but is tightly coupled; enrichment hooks in spec absent. |
-| Topic enrichment, subject classification, journal assessment | ❌ | No enrichment layer or subject classifiers are implemented. |
+| Topic enrichment, subject classification, journal assessment | ⚠️ | `metadata.enrichment` provides heuristic topics/quality scoring; advanced models outstanding. |
 | External data integrations (OpenAlex, Unpaywall, DOAJ, impact factors) | ❌ | No calls or adapters exist. |
 | Relationship & consistency validation | ❌ | Duplicate/version relationships not analysed; metadata validation limited to filename checks. |
 
@@ -35,11 +35,11 @@ This document maps the requirements in `docs/SYSTEM_SPECIFICATIONS_1.md` against
 
 | Requirement | Status | Notes |
 |-------------|:------:|-------|
-| Strategy-based acquisition (Open Access → Institutional → Publisher → Preprint → Alternative) | ❌ | `UnifiedDownloader` handles single downloads; no strategy pipeline or ranked fallbacks. |
-| Unpaywall integration | ❌ | Not present. |
-| Institutional proxy/Shibboleth automation | ⚠️ | `src/publishers/institutional/` contains ETH login logic, but integration into acquisition flow is incomplete. |
-| Publisher-specific downloaders (Springer, Elsevier, IEEE, ACM, Wiley, …) | ⚠️ | Some Playwright scripts exist, but they are ad-hoc; no unified API. |
-| Preprint and alternative source handling | ❌ | No automated fallback beyond manual scripts. |
+| Strategy-based acquisition (Open Access → Institutional → Publisher → Preprint → Alternative) | ⚠️ | `src/acquisition/engine.py` coordinates strategies; institutional/alternative layers still to be implemented. |
+| Unpaywall integration | ⚠️ | Implemented in `OpenAccessStrategy`; requires configuration. |
+| Institutional proxy/Shibboleth automation | ⚠️ | Institutional Playwright flows exist but not wired into the new engine. |
+| Publisher-specific downloaders (Springer, Elsevier, IEEE, ACM, Wiley, …) | ⚠️ | `PublisherStrategy` now delegates to `UnifiedDownloader`; robust adapters pending. |
+| Preprint and alternative source handling | ⚠️ | arXiv handled; other preprint/alternative sources not yet automated. |
 | Download queue/monitoring | ❌ | No job queue or persistent acquisition state. |
 
 ## 4. Validation Pipeline
@@ -47,26 +47,26 @@ This document maps the requirements in `docs/SYSTEM_SPECIFICATIONS_1.md` against
 | Requirement | Status | Notes |
 |-------------|:------:|-------|
 | Filename validation (existing) | ✅ | Production-grade and widely tested. |
-| Content validation (PDF integrity, metadata matching) | ❌ | No PDF content validator. |
-| Duplicate detection (hash/content/versions) | ❌ | Only stub analytics; no implemented duplicate detector. |
+| Content validation (PDF integrity, metadata matching) | ⚠️ | PDF signature checks in place; deep metadata validation pending. |
+| Duplicate detection (hash/content/versions) | ⚠️ | Exact duplicate hashing implemented; semantic/version comparisons outstanding. |
 | Metadata validation | ⚠️ | Limited to config sanity warnings added recently; full spec not met. |
 
 ## 5. Smart Organization System
 
 | Requirement | Status | Notes |
 |-------------|:------:|-------|
-| Subject classification & routing | ❌ | No classifier or folder router; `process_files` returns mock metadata. |
-| Publication status detection | ❌ | Not implemented. |
-| Version management | ❌ | No mechanism to correlate versions or merge metadata. |
-| Collection reorganization | ❌ | Absent. |
+| Subject classification & routing | ⚠️ | `OrganizationSystem` uses heuristic classifier/router. |
+| Publication status detection | ⚠️ | Basic status detection implemented. |
+| Version management | ⚠️ | Metadata tagged with version keys; reconciliation still needed. |
+| Collection reorganization | ❌ | Full reorganization process not yet built. |
 
 ## 6. Maintenance & Monitoring
 
 | Requirement | Status | Notes |
 |-------------|:------:|-------|
-| Scheduler integration (TaskScheduler, UpdateMonitor, QualityAuditor) | ❌ | No scheduler or long-running maintenance jobs. |
-| Update sweeps & quality reports | ❌ | Some audit scripts exist but are manual and static. |
-| ArXiv version monitoring | ❌ | No automated process. |
+| Scheduler integration (TaskScheduler, UpdateMonitor, QualityAuditor) | ⚠️ | `maintenance.system` provides async scheduler and monitors; periodic execution wiring pending. |
+| Update sweeps & quality reports | ⚠️ | Automated sweeps produce reports; integration with CLI/DB outstanding. |
+| ArXiv version monitoring | ❌ | Specific version polling still to be implemented. |
 
 ## 7. Data Layer & Persistence
 
@@ -80,7 +80,7 @@ This document maps the requirements in `docs/SYSTEM_SPECIFICATIONS_1.md` against
 
 | Requirement | Status | Notes |
 |-------------|:------:|-------|
-| REST/GraphQL API server exposing core operations | ❌ | No backend service implemented (`api/` is empty). |
+| REST/GraphQL API server exposing core operations | ⚠️ | FastAPI server exposes health, discovery, and acquisition endpoints; expanded coverage required. |
 | Web dashboard with monitoring | ⚠️ | React frontend scaffold exists but backend APIs and live data are missing. |
 | CLI parity with specification | ⚠️ | CLI now runs basic processing and arXiv discovery but lacks most advanced flags/workflows described in specs. |
 
@@ -96,11 +96,10 @@ This document maps the requirements in `docs/SYSTEM_SPECIFICATIONS_1.md` against
 
 ## Immediate Priorities
 
-1. **Environment Readiness** – ensure all runtime dependencies (e.g., PyYAML for config, Playwright browsers, aiohttp) are installed and working; establish reproducible setup scripts.  
-2. **Discovery Engine MVP** – factor existing arXiv harvester into a pluggable discovery interface; add at least one additional source (Crossref) and DOI/author search endpoints.  
-3. **Acquisition Strategy Pipeline** – design and implement the strategy orchestration layer, integrating existing institutional automations and adding Unpaywall/open-access checks.  
-4. **Validation & Organization Foundations** – build real metadata ingestion and PDF validation so filenames, metadata, and database records stay in sync.  
-5. **Persistence & APIs** – wire the SQLite backend into CLI/processors and surface operations through a consistent API layer to unlock frontend/automation work.
+1. **Institutional Strategy Integration** – connect ETH Playwright flows to the acquisition engine and persist session handling.  
+2. **Advanced Metadata & Validation** – enhance enrichment with ML classifiers and deep PDF/content validation.  
+3. **Database & Automation** – wire results into the SQLite backend and schedule maintenance routines via CLI/API.  
+4. **API Surface Expansion** – expose additional endpoints (organization, maintenance reports) and link the React frontend.  
+5. **Monitoring & Deployment** – integrate tracing/metrics, provide deployment scripts, and ensure cron/queue orchestration.
 
 Each of these tracks will require significant architectural work; see the Implementation Roadmap (to be produced) for detailed milestones.
-

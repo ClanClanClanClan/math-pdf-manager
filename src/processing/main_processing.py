@@ -15,6 +15,7 @@ from typing import Dict, Any, Optional, List, Tuple
 import logging
 
 from organization.system import OrganizationSystem
+from metadata.enrichment import enrich_metadata
 
 logger = logging.getLogger(__name__)
 
@@ -370,6 +371,9 @@ def process_files(
         metadata.setdefault('authors', metadata.get('authors', []))
         metadata.setdefault('doi', metadata.get('doi'))
         metadata.setdefault('arxiv_id', metadata.get('arxiv_id'))
+        enrichment = enrich_metadata(metadata)
+        metadata['topics'] = enrichment.topics
+        metadata['subject_area'] = enrichment.subject_area
         report = organization_system.organize(Path(result['file_path']), metadata)
         organization_reports.append(report)
 
