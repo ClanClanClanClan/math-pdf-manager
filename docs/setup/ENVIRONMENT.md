@@ -59,6 +59,26 @@ scripts/run_scheduler.py
 ```
 Adjust the interval via `MAINTENANCE_INTERVAL_SECONDS` as needed.
 
+## 6. Frontend Integration
+
+The React frontend expects an API base URL. Configure it before running the UI:
+
+```bash
+export REACT_APP_API_URL="http://localhost:8000"
+cd frontend
+npm start
+```
+
+The API now exposes:
+- `POST /discovery/query`
+- `POST /acquisition/acquire`
+- `POST /maintenance/run`
+- `GET /collection/summary`
+- `GET /organization/duplicates`
+- `GET /metrics`
+
+Feel free to add additional components consuming these endpoints.
+
 ---
 
 For automated setup, see `scripts/bootstrap_env.sh`.

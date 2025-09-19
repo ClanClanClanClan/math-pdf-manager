@@ -7,6 +7,12 @@ import re
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
+try:  # Optional heavy dependency for richer enrichment
+    import spacy
+    _NLP = spacy.load("en_core_web_sm")
+except Exception:  # pragma: no cover - spaCy or model may be unavailable
+    _NLP = None
+
 
 TOPIC_KEYWORDS = {
     "probability": {"probability", "stochastic", "random"},
@@ -40,6 +46,16 @@ def enrich_metadata(metadata: Dict[str, any]) -> EnrichmentResult:
     subject = _classify_subject_area(metadata)
     journal_quality = _assess_journal_quality(journal)
     math_concepts = _extract_mathematical_concepts(text)
+    if _NLP is not None:
+        try:
+            doc = _NLP(text)
+            topics.extend(_extract_topics_spacy(doc))
+            math_concepts.extend(_extract_spacy_entities(doc))
+        except Exception:
+            pass
+
+    topics = sorted(set(topics))
+    math_concepts = sorted(set(math_concepts))
 
     metadata.setdefault('topics', topics)
     metadata.setdefault('subject_area', subject)
@@ -88,8 +104,17 @@ def _extract_mathematical_concepts(text: str) -> List[str]:
         'fourier transform': r'fourier',
         'markov chain': r'markov',
     }
-    concepts = [name for name, pattern in patterns.items() if re.search(pattern, text)]
-    return concepts
+    return [name for name, pattern in patterns.items() if re.search(pattern, text)]
+
+
+def _extract_topics_spacy(doc) -> List[str]:
+    ranked = {token.lemma_.lower() for token in doc if token.pos_ in {"NOUN", "PROPN"} and len(token) > 3}
+    return sorted(ranked)
+
+
+def _extract_spacy_entities(doc) -> List[str]:
+    labels = {"ORG", "LAW", "NORP", "FAC"}
+    return [ent.text for ent in doc.ents if ent.label_ in labels]
 
 
 __all__ = ["enrich_metadata", "EnrichmentResult"]

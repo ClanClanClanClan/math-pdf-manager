@@ -42,7 +42,8 @@ async def run_once(database: AsyncPaperDatabase, maintenance: MaintenanceSystem)
 
 async def main() -> None:
     interval = int(os.getenv("MAINTENANCE_INTERVAL_SECONDS", DEFAULT_INTERVAL))
-    database = AsyncPaperDatabase()
+    db_path = os.getenv("DATABASE_PATH", "papers.db")
+    database = AsyncPaperDatabase(db_path)
     maintenance = MaintenanceSystem()
 
     while True:

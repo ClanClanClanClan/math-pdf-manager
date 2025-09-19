@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional
 
 try:
     from fastapi import FastAPI, HTTPException
+    from fastapi.middleware.cors import CORSMiddleware
     from fastapi.responses import Response
     from pydantic import BaseModel, Field
 except ImportError as exc:  # pragma: no cover
@@ -22,6 +23,12 @@ from core.database import AsyncPaperDatabase
 from prometheus_client import Counter, CONTENT_TYPE_LATEST, generate_latest
 
 app = FastAPI(title="Academic Paper Manager API", version="0.1.0")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 DISCOVERY_COUNTER = Counter("discovery_requests_total", "Total discovery requests")
 ACQUISITION_COUNTER = Counter("acquisition_requests_total", "Total acquisition requests")
@@ -46,6 +53,13 @@ class AcquisitionResponse(BaseModel):
     strategy: str
     file_path: Optional[str]
     message: Optional[str]
+
+
+class CollectionSummaryResponse(BaseModel):
+    total_papers: int
+    by_type: Dict[str, int]
+    recent_additions: int
+    total_duplicates: int
 
 
 @app.on_event("startup")
@@ -150,6 +164,18 @@ async def organization_duplicates() -> Dict[str, Any]:
 @app.get("/metrics")
 async def metrics() -> Response:
     return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
+
+@app.get("/collection/summary", response_model=CollectionSummaryResponse)
+async def collection_summary() -> CollectionSummaryResponse:
+    db: AsyncPaperDatabase = app.state.database
+    stats = await db.get_statistics()
+    return CollectionSummaryResponse(
+        total_papers=stats.get('total_papers', 0),
+        by_type=stats.get('by_type', {}),
+        recent_additions=stats.get('recent_additions', 0),
+        total_duplicates=stats.get('total_duplicates', 0),
+    )
 
 
 __all__ = ["app"]

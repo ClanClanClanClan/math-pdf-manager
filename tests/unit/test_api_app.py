@@ -150,3 +150,21 @@ def test_metrics_endpoint(client):
     response = client.get("/metrics")
     assert response.status_code == 200
     assert 'process_start_time_seconds' in response.text or response.content
+
+
+def test_collection_summary_endpoint(client, monkeypatch):
+    class DummyDB(DummyDatabase):
+        async def get_statistics(self):
+            return {
+                'total_papers': 5,
+                'by_type': {'published': 3},
+                'recent_additions': 2,
+                'total_duplicates': 1,
+            }
+
+    app.state.database = DummyDB()
+    response = client.get("/collection/summary")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload['total_papers'] == 5
+    assert payload['total_duplicates'] == 1
