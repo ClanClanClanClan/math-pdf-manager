@@ -10,11 +10,13 @@ import os
 import hashlib
 import json
 import time
+import asyncio
 from pathlib import Path
 from typing import Dict, Any, Optional, List, Tuple
 import logging
 
 from organization.system import OrganizationSystem
+from core.database import AsyncPaperDatabase, PaperRecord
 from metadata.enrichment import enrich_metadata
 
 logger = logging.getLogger(__name__)
@@ -319,6 +321,9 @@ def process_files(
     log.debug(f"Collecting PDF files in {root_directory}")
 
     pdf_files = _collect_pdf_files(root_directory, max_files=max_files)
+    base_folder = Path(config_data.config.get('base_maths_folder', root_directory)).expanduser()
+    db_path = Path(config_data.config.get('database_path', base_folder / "papers.db")).expanduser()
+    database = AsyncPaperDatabase(str(db_path))
 
     if not pdf_files:
         log.info("No PDF files found – nothing to do")
@@ -333,6 +338,7 @@ def process_files(
             "parallel_workers": parallel_workers,
             "organization": [],
             "duplicates": {},
+            "database_path": str(db_path),
         }
 
     config = get_default_config()
@@ -361,7 +367,6 @@ def process_files(
         metrics_service.increment_counter("processed_files_failed", len(failures))
         metrics_service.record_timing("processing_duration_ms", duration * 1000)
 
-    base_folder = Path(config_data.config.get('base_maths_folder', root_directory)).expanduser()
     organization_system = OrganizationSystem(base_folder, dry_run=dry_run)
     organization_reports = []
 
@@ -374,8 +379,53 @@ def process_files(
         enrichment = enrich_metadata(metadata)
         metadata['topics'] = enrichment.topics
         metadata['subject_area'] = enrichment.subject_area
+        metadata['journal_quality'] = enrichment.journal_quality
+        metadata['mathematical_concepts'] = enrichment.math_concepts
         report = organization_system.organize(Path(result['file_path']), metadata)
         organization_reports.append(report)
+
+        async def upsert_metadata() -> None:
+            resolved = str(Path(result['file_path']).resolve())
+            existing = await database.get_paper_by_path(resolved)
+
+            authors = metadata.get('authors', [])
+            if isinstance(authors, list):
+                normalized_authors = [a.get('name') if isinstance(a, dict) else str(a) for a in authors]
+            else:
+                normalized_authors = [str(authors)]
+
+            keywords = metadata.get('topics', [])
+            research_areas = metadata.get('mathematical_concepts', [])
+
+            publication_date = None
+            if metadata.get('published_year'):
+                publication_date = str(metadata['published_year'])
+
+            record = PaperRecord(
+                file_path=resolved,
+                title=metadata['title'],
+                authors=json.dumps(normalized_authors),
+                publication_date=publication_date,
+                arxiv_id=metadata.get('arxiv_id'),
+                doi=metadata.get('doi'),
+                journal=metadata.get('journal'),
+                abstract=metadata.get('abstract', ''),
+                keywords=json.dumps(keywords),
+                research_areas=json.dumps(research_areas),
+                paper_type=report.publication_status,
+                source=metadata.get('source', 'local'),
+                confidence=float(result.get('confidence', 1.0)),
+                file_size=Path(resolved).stat().st_size if Path(resolved).exists() else 0,
+            )
+
+            if existing:
+                record.id = existing.id
+                record.created_at = existing.created_at
+                await database.update_paper(record)
+            else:
+                await database.add_paper(record)
+
+        asyncio.run(upsert_metadata())
 
     duplicate_map = organization_system.find_duplicates(Path(res['file_path']) for res in successes)
 
@@ -404,6 +454,7 @@ def process_files(
             for report in organization_reports
         ],
         "duplicates": {digest: [str(path) for path in paths] for digest, paths in duplicate_map.items()},
+        "database_path": str(db_path),
     }
 
     return summary

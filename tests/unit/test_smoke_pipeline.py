@@ -8,19 +8,23 @@ from processing.main_processing import process_files
 from publishers.unified_downloader import UnifiedDownloader
 
 
-def _dummy_config() -> SimpleNamespace:
+def _dummy_config(base_path: Path) -> SimpleNamespace:
+    base_path = Path(base_path)
     return SimpleNamespace(
         known_words=set(),
         capitalization_whitelist=set(),
         exceptions=set(),
-        config={}
+        config={
+            'base_maths_folder': str(base_path),
+            'database_path': str(base_path / "papers.db"),
+        }
     )
 
 
 def test_process_files_empty_directory(tmp_path):
     summary = process_files(
         tmp_path,
-        _dummy_config(),
+        _dummy_config(tmp_path),
         logger_service=logging.getLogger("test_process_files_empty"),
     )
 
@@ -37,7 +41,7 @@ def test_process_files_single_pdf(tmp_path):
 
     summary = process_files(
         tmp_path,
-        _dummy_config(),
+        _dummy_config(tmp_path),
         logger_service=logging.getLogger("test_process_files_pdf"),
     )
 
@@ -45,6 +49,30 @@ def test_process_files_single_pdf(tmp_path):
     assert summary["processed"] == 1
     assert summary["failed"] == 0
     assert len(summary["organization"]) == 1
+
+
+def test_process_files_persists_to_database(tmp_path):
+    pdf_path = tmp_path / "stored.pdf"
+    pdf_path.write_bytes(b"%PDF-1.4\n")
+
+    summary = process_files(
+        tmp_path,
+        _dummy_config(tmp_path),
+        logger_service=logging.getLogger("test_process_files_db"),
+        dry_run=False,
+    )
+
+    from core.database import AsyncPaperDatabase
+
+    db_path = Path(summary["database_path"])
+    db = AsyncPaperDatabase(str(db_path))
+
+    async def fetch():
+        return await db.get_paper_by_path(str(pdf_path.resolve()))
+
+    record = asyncio.run(fetch())
+    assert record is not None
+    assert "stored" in record.title.lower()
 
 
 def test_create_args_parser_exposes_expected_options():

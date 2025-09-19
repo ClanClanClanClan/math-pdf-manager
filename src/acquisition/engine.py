@@ -19,10 +19,20 @@ UNPAYWALL_API = "https://api.unpaywall.org/v2/"
 
 
 @dataclass
+class InstitutionalCredentials:
+    username: str
+    password: str
+    publisher: Optional[str] = None
+    headless: bool = True
+    timeout_ms: int = 120000
+
+
+@dataclass
 class AcquisitionConfig:
     download_dir: Path = Path("downloads")
     unpaywall_email: Optional[str] = None
     allow_alternative_sources: bool = False
+    institutional_credentials: Optional[InstitutionalCredentials] = None
 
 
 @dataclass
@@ -148,6 +158,62 @@ class AlternativeStrategy(BaseStrategy):
         return AcquisitionResult(False, self.name, message="No alternative strategy implemented")
 
 
+class InstitutionalStrategy(BaseStrategy):
+    name = "institutional"
+
+    def __init__(self, credentials: Optional[InstitutionalCredentials], downloader_fn=None):
+        self.credentials = credentials
+        self._custom_downloader = downloader_fn
+
+    async def try_acquire(
+        self,
+        paper: dict,
+        *,
+        client: httpx.AsyncClient,
+        downloader: UnifiedDownloader,
+        config: AcquisitionConfig,
+    ) -> AcquisitionResult:
+        if not self.credentials:
+            return AcquisitionResult(False, self.name, message="No institutional credentials configured")
+
+        publisher = (paper.get('publisher') or paper.get('source') or self.credentials.publisher)
+        doi = paper.get('doi')
+        url = paper.get('url')
+
+        if not publisher:
+            return AcquisitionResult(False, self.name, message="Institutional access requires publisher information")
+
+        download_callable = self._custom_downloader
+        if download_callable is None:
+            try:
+                from publishers.institutional.downloader import download_with_institutional_access
+                download_callable = download_with_institutional_access
+            except ImportError as exc:  # pragma: no cover
+                return AcquisitionResult(False, self.name, message=f"Institutional dependencies missing: {exc}")
+
+        output_dir = config.download_dir / "institutional" / publisher.lower().replace(' ', '_')
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        try:
+            download_path, metadata = await download_callable(
+                doi=doi,
+                url=url,
+                publisher=publisher,
+                output_dir=output_dir,
+                username=self.credentials.username,
+                password=self.credentials.password,
+                headless=self.credentials.headless,
+                timeout=self.credentials.timeout_ms,
+            )
+        except Exception as exc:  # pragma: no cover
+            return AcquisitionResult(False, self.name, message=f"Institutional download failed: {exc}")
+
+        if download_path:
+            return AcquisitionResult(True, self.name, file_path=download_path)
+
+        return AcquisitionResult(False, self.name, message="Institutional download unavailable")
+
+
 class AcquisitionEngine:
     """Coordinates strategies to download papers in priority order."""
 
@@ -165,6 +231,7 @@ class AcquisitionEngine:
             strategies
             or [
                 OpenAccessStrategy(),
+                InstitutionalStrategy(self.config.institutional_credentials),
                 PublisherStrategy(),
                 PreprintStrategy(),
                 AlternativeStrategy(),

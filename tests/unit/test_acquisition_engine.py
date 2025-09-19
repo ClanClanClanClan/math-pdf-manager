@@ -4,7 +4,13 @@ from pathlib import Path
 import httpx
 import pytest
 
-from acquisition.engine import AcquisitionConfig, AcquisitionEngine, AcquisitionResult
+from acquisition.engine import (
+    AcquisitionConfig,
+    AcquisitionEngine,
+    AcquisitionResult,
+    InstitutionalCredentials,
+    InstitutionalStrategy,
+)
 from publishers import DownloadResult
 
 
@@ -116,3 +122,32 @@ async def test_all_strategies_fail(tmp_path):
     assert result.success is False
     assert result.strategy == "none"
     assert "failed" in (result.message or "")
+
+
+@pytest.mark.asyncio
+async def test_institutional_strategy_uses_custom_downloader(tmp_path):
+    paper = {"title": "Institutional", "doi": "10.1234/institutional", "publisher": "Elsevier"}
+
+    async def fake_download_with_institutional_access(**kwargs):
+        output_dir = kwargs.get('output_dir')
+        output_dir.mkdir(parents=True, exist_ok=True)
+        path = output_dir / "institutional.pdf"
+        path.write_bytes(b"%PDF")
+        return path, {}
+
+    creds = InstitutionalCredentials(username="user", password="pass")
+
+    engine = AcquisitionEngine(
+        downloader=StubDownloader(),
+        client=httpx.AsyncClient(transport=httpx.MockTransport(lambda request: httpx.Response(404))),
+        config=AcquisitionConfig(download_dir=tmp_path, institutional_credentials=creds),
+        strategies=[InstitutionalStrategy(creds, downloader_fn=fake_download_with_institutional_access)],
+    )
+
+    try:
+        result = await engine.acquire_paper(paper)
+    finally:
+        await engine.close()
+
+    assert result.success is True
+    assert result.strategy == "institutional"

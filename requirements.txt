@@ -54,6 +54,7 @@ beautifulsoup4
 # API server
 fastapi
 uvicorn[standard]
+prometheus-client
 
 # Missing dependencies from audit
 httpx
