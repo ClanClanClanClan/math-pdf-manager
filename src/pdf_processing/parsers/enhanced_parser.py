@@ -19,9 +19,6 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-# Add parent directory to path for imports
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-
 from core.text_processing.normalizer import normalize
 from pdf_processing.models import MetadataSource, PDFMetadata
 from pdf_processing.parsers.base_parser import UltraEnhancedPDFParser as BaseParser

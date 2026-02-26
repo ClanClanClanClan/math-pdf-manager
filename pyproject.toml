@@ -79,11 +79,11 @@ Documentation = "https://math-pdf-manager.readthedocs.io"
 Repository = "https://github.com/dylanpossamai/math-pdf-manager.git"
 Issues = "https://github.com/dylanpossamai/math-pdf-manager/issues"
 
-[tool.setuptools]
-packages = ["Scripts", "Scripts.core", "Scripts.utils", "Scripts.validators"]
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [tool.setuptools.package-data]
-Scripts = ["*.yaml", "*.txt", "*.html", "*.json"]
+"*" = ["*.yaml", "*.txt", "*.html", "*.json"]
 
 [tool.black]
 line-length = 100
@@ -155,7 +155,7 @@ asyncio_mode = "auto"
 addopts = """
     -ra
     --strict-markers
-    --cov=Scripts
+    --cov=src
     --cov-report=html
     --cov-report=term-missing:skip-covered
     --timeout=300
@@ -175,7 +175,7 @@ filterwarnings = [
 
 [tool.coverage.run]
 branch = true
-source = ["Scripts"]
+source = ["src"]
 omit = [
     "*/tests/*",
     "*/test_*.py",

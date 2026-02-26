@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -274,11 +275,15 @@ class AcquisitionEngine:
             logger.debug("Strategy %s failed for '%s': %s", strategy.name, paper.get('title'), result.message)
         return AcquisitionResult(False, "none", message="All acquisition strategies failed")
 
-    async def batch_acquire(self, papers: Iterable[dict]) -> List[AcquisitionResult]:
-        results: List[AcquisitionResult] = []
-        for paper in papers:
-            results.append(await self.acquire_paper(paper))
-        return results
+    async def batch_acquire(self, papers: Iterable[dict], *, max_concurrent: int = 5) -> List[AcquisitionResult]:
+        semaphore = asyncio.Semaphore(max_concurrent)
+
+        async def _acquire_with_limit(paper: dict) -> AcquisitionResult:
+            async with semaphore:
+                return await self.acquire_paper(paper)
+
+        tasks = [_acquire_with_limit(p) for p in papers]
+        return list(await asyncio.gather(*tasks))
 
     async def close(self) -> None:
         await self.client.aclose()
