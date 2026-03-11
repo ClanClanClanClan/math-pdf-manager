@@ -51,7 +51,8 @@ try:
     from pdf_processing.parsers.metadata_quality import is_valid_embedded_title
 except ImportError:
     # Add src/ to path for direct invocation
-    _src_dir = str(Path(__file__).resolve().parent.parent.parent)
+    _project_root = Path(__file__).resolve().parent.parent.parent.parent
+    _src_dir = str(_project_root / "src")
     if _src_dir not in sys.path:
         sys.path.insert(0, _src_dir)
     from pdf_processing.parsers.metadata_quality import is_valid_embedded_title
