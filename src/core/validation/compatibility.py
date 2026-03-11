@@ -78,8 +78,10 @@ class InputValidator:
             raise ValidationError(str(e))
     
     @classmethod
-    def validate_url(cls, url: str, allowed_schemes: List[str] = ['http', 'https']) -> str:
+    def validate_url(cls, url: str, allowed_schemes: Optional[List[str]] = None) -> str:
         """Legacy URL validation."""
+        if allowed_schemes is None:
+            allowed_schemes = ['http', 'https']
         warnings.warn(
             "InputValidator.validate_url is deprecated. Use UnifiedValidationService.validate_url",
             DeprecationWarning,

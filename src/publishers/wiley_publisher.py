@@ -133,8 +133,8 @@ class WileyPublisher:
                         logger.info("Wiley: Accepting cookies")
                         await cookie_banner.click()
                         await page.wait_for_timeout(2000)
-                except:
-                    pass
+                except Exception as e:
+                    logger.debug(f"Suppressed: {e}")
                 
                 # Check if we need institutional access
                 page_content = await page.content()
@@ -154,8 +154,8 @@ class WileyPublisher:
                             logger.info("Wiley: Clicking Login/Register button to reveal options")
                             await login_button.click()
                             await page.wait_for_timeout(2000)
-                    except:
-                        pass
+                    except Exception as e:
+                        logger.debug(f"Suppressed: {e}")
                     
                     # Try INDIVIDUAL login first (avoids Cloudflare)
                     individual_selectors = [
@@ -171,7 +171,7 @@ class WileyPublisher:
                                 individual_link = element
                                 logger.info(f"Wiley: Found individual login with: {selector}")
                                 break
-                        except:
+                        except Exception:
                             continue
                     
                     if individual_link:
@@ -210,7 +210,7 @@ class WileyPublisher:
                                 institutional_link = element
                                 logger.info(f"Wiley: Found institutional access with: {selector}")
                                 break
-                        except:
+                        except Exception:
                             continue
                     
                     if institutional_link:
@@ -281,7 +281,7 @@ class WileyPublisher:
                     try:
                         search_box = await page.wait_for_selector(selector, timeout=3000)
                         if search_box:
-                            logger.info(f"Wiley: Found institution search box")
+                            logger.info("Wiley: Found institution search box")
                             await search_box.fill("ETH Zurich")
                             await page.wait_for_timeout(2000)
                             
@@ -290,7 +290,7 @@ class WileyPublisher:
                             await page.wait_for_timeout(3000)
                             search_found = True
                             break
-                    except:
+                    except Exception:
                         continue
                 
                 # Look for ETH in the institution dropdown/list
@@ -315,7 +315,7 @@ class WileyPublisher:
                             await page.wait_for_timeout(3000)
                             eth_found = True
                             break
-                    except:
+                    except Exception:
                         continue
                 
                 if not eth_found:
@@ -336,7 +336,7 @@ class WileyPublisher:
                             await continue_button.click()
                             await page.wait_for_timeout(3000)
                             break
-                    except:
+                    except Exception:
                         continue
             
             # Handle ETH-specific authentication
@@ -392,7 +392,7 @@ class WileyPublisher:
                         username_field = field
                         logger.info(f"Wiley: Found username field with: {selector}")
                         break
-                except:
+                except Exception:
                     continue
             
             # Find password field
@@ -403,7 +403,7 @@ class WileyPublisher:
                         password_field = field
                         logger.info(f"Wiley: Found password field with: {selector}")
                         break
-                except:
+                except Exception:
                     continue
             
             if username_field and password_field:
@@ -436,7 +436,7 @@ class WileyPublisher:
                             await submit_btn.click()
                             await page.wait_for_timeout(5000)
                             break
-                    except:
+                    except Exception:
                         continue
                 
                 # Check if login was successful
@@ -484,7 +484,7 @@ class WileyPublisher:
                     username_field = await page.wait_for_selector(selector, timeout=3000)
                     if username_field:
                         break
-                except:
+                except Exception:
                     continue
             
             for selector in password_selectors:
@@ -492,7 +492,7 @@ class WileyPublisher:
                     password_field = await page.wait_for_selector(selector, timeout=3000)
                     if password_field:
                         break
-                except:
+                except Exception:
                     continue
             
             if username_field and password_field:
@@ -519,7 +519,7 @@ class WileyPublisher:
                         if submit_button:
                             await submit_button.click()
                             break
-                    except:
+                    except Exception:
                         continue
                 
                 # Wait for authentication to complete
@@ -575,7 +575,7 @@ class WileyPublisher:
                             pdf_link = pdf_element
                             logger.info(f"Wiley: Found PDF link with selector: {selector}")
                             break
-                except:
+                except Exception:
                     continue
             
             if not pdf_link:
@@ -589,8 +589,8 @@ class WileyPublisher:
                             logger.info("Wiley: Found PDF in iframe")
                             # Download directly from iframe src
                             return await self._download_pdf_from_url(page, pdf_url, save_path)
-                except:
-                    pass
+                except Exception as e:
+                    logger.debug(f"Suppressed: {e}")
                 
                 return False
             

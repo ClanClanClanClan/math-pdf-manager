@@ -297,7 +297,7 @@ class IEEEPublisher(PublisherInterface):
                                     access_button = btn
                                     self.logger.info(f"Found access button via fallback: '{text}' (button {i})")
                                     break
-                            except:
+                            except Exception:
                                 continue
                     
                     if access_button:
@@ -703,8 +703,8 @@ class IEEEPublisher(PublisherInterface):
                     await self._browser_context.close()
                     delattr(self, '_browser_context')
                     delattr(self, '_browser_page')
-            except:
-                pass
+            except Exception as e:
+                self.logger.debug(f"Suppressed: {e}")
 
     def download_paper(self, identifier: str, download_path: Path) -> DownloadResult:
         """Download a paper from IEEE Xplore using authenticated session"""

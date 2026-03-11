@@ -230,7 +230,6 @@ def fix_ligature_words(text: str, regions: List[Tuple[int, int]], exceptions: Se
                 return m.group()
 
             word = m.group()
-            word.lower()
 
             debug_print(f"Checking word for ligature conversion: '{word}'")
 
@@ -654,8 +653,7 @@ def check_parentheses_brackets_balance(text: str, math_regions=None):
 def fix_ascii_punctuation(text: str, regions, _exc=None, spans=None):
     """Fix ASCII punctuation - RESTORED from original"""
     from .unicode_utils import iterate_nonmath_segments, is_in_spans
-    import re
-    
+
     spans = spans or []
     if "--" not in text and "'" not in text and '"' not in text:
         return text

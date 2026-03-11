@@ -69,7 +69,7 @@ class ConfigurationData:
         self.capitalization_whitelist.update(cfg.proper_adjectives)
         
         # Log summary (simplified)
-        print(f"✓ Loaded configuration:")
+        print("✓ Loaded configuration:")
         print(f"  Known words: {len(self.known_words)}")
         print(f"  Capitalization whitelist: {len(self.capitalization_whitelist)}")
         print(f"  Exceptions: {len(self.exceptions)}")

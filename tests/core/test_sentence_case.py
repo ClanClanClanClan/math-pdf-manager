@@ -339,6 +339,86 @@ class TestToSentenceCaseAcademic:
         assert result == "L^p spaces and the Laplacian operator"
 
 
+class TestQuotedTitleCapitalisation:
+    """Test that words starting a quoted title are capitalised."""
+
+    def test_corrigendum_quoted_title(self):
+        """Corrigendum for "A probabilistic work" — A must stay capitalised."""
+        result, _ = to_sentence_case_academic('Corrigendum for "A Probabilistic Approach"')
+        assert result == 'Corrigendum for "A probabilistic approach"'
+
+    def test_on_quoted_title(self):
+        """On "The art of mathematics" — The must stay capitalised."""
+        result, _ = to_sentence_case_academic('On "The Art of Mathematics"')
+        assert result == 'On "The art of mathematics"'
+
+    def test_closing_quote_does_not_trigger(self):
+        """the so-called "big" problem — 'big' must NOT be capitalised."""
+        result, _ = to_sentence_case_academic('The So-Called "Big" Problem')
+        assert result == 'The so-called "big" problem'
+
+    def test_two_word_scare_quotes_stay_lowercase(self):
+        """the "very big" problem — two-word scare quotes stay lowercase."""
+        result, _ = to_sentence_case_academic('The "Very Big" Problem')
+        assert result == 'The "very big" problem'
+
+    def test_unicode_opening_quote(self):
+        """Unicode opening quote \u201c should capitalise the next word."""
+        result, _ = to_sentence_case_academic('Corrigendum for \u201cA Probabilistic Approach\u201d')
+        assert result == 'Corrigendum for \u201cA probabilistic approach\u201d'
+
+    def test_review_of_quoted_title(self):
+        """Review of "Some Important Paper" — Some must stay capitalised."""
+        result, _ = to_sentence_case_academic('Review of "Some Important Paper"')
+        assert result == 'Review of "Some important paper"'
+
+    def test_erratum_for_quoted(self):
+        """Erratum for "An introduction to stochastic calculus" """
+        result, _ = to_sentence_case_academic('Erratum for "An Introduction to Stochastic Calculus"')
+        assert result == 'Erratum for "An introduction to stochastic calculus"'
+
+
+class TestPossessiveWhitelistMatching:
+    """Test that possessive forms of whitelisted names are preserved."""
+
+    def test_euler_possessive(self):
+        """Euler's theorem — Euler must stay capitalised via whitelist."""
+        result, _ = to_sentence_case_academic(
+            "Euler's Theorem on Polyhedra",
+            capitalization_whitelist=["Euler"]
+        )
+        assert result == "Euler's theorem on polyhedra"
+
+    def test_gauss_possessive(self):
+        """Gauss's law — Gauss must stay capitalised via whitelist."""
+        result, _ = to_sentence_case_academic(
+            "Gauss's Law in Electrostatics",
+            capitalization_whitelist=["Gauss"]
+        )
+        assert result == "Gauss's law in electrostatics"
+
+    def test_multiple_possessives(self):
+        """Multiple possessive whitelist names in one title."""
+        result, _ = to_sentence_case_academic(
+            "Gauss's and Euler's Theorems Revisited",
+            capitalization_whitelist=["Gauss", "Euler"]
+        )
+        assert result == "Gauss's and Euler's theorems revisited"
+
+    def test_curly_apostrophe_possessive(self):
+        """Possessive with curly apostrophe \u2019."""
+        result, _ = to_sentence_case_academic(
+            "Euler\u2019s Theorem on Polyhedra",
+            capitalization_whitelist=["Euler"]
+        )
+        assert result == "Euler\u2019s theorem on polyhedra"
+
+    def test_non_whitelist_possessive_at_start(self):
+        """Non-whitelisted name at sentence start keeps capital."""
+        result, _ = to_sentence_case_academic("Smith's Paper on Mathematics")
+        assert result == "Smith's paper on mathematics"
+
+
 class TestMathTechnicalPrefixes:
     """Test MATH_TECHNICAL_PREFIXES constant"""
     

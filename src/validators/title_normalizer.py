@@ -87,13 +87,17 @@ class TitleNormalizer:
         
         return messages
     
-    def _check_word_capitalization(self, word: str, is_first: bool, 
+    def _check_word_capitalization(self, word: str, is_first: bool,
                                   allowed_words: Set[str]) -> Optional[str]:
-        """Check if a word is properly capitalized"""
-        # Special cases in allowed words
+        """Check if a word follows SENTENCE CASE rules.
+
+        Sentence case: first word capitalized, everything else lowercase
+        EXCEPT whitelisted terms, acronyms, and special terms.
+        """
+        # Special cases in allowed words (exact match)
         if word in allowed_words:
             return None
-        
+
         # Check case-insensitive match in allowed words
         word_lower = word.lower()
         for allowed in allowed_words:
@@ -101,30 +105,26 @@ class TitleNormalizer:
                 if word != allowed:
                     return f"{word} should be '{allowed}'"
                 return None
-        
+
         # First word should be capitalized
         if is_first:
             if not word[0].isupper():
                 return f"{word} (first word should be capitalized)"
             return None
-        
-        # Check if it's a lowercase word that should stay lowercase
-        if word_lower in self.lowercase_words and word != word_lower:
-            return f"{word} should be '{word_lower}'"
-        
-        # Check if it's an abbreviation that should be uppercase
+
+        # Check if it's an abbreviation that should be uppercase (2-4 letter all-caps)
         if word.upper() in self.uppercase_abbrevs and word != word.upper():
             return f"{word} should be '{word.upper()}'"
-        
-        # Check if it's a known special term
+
+        # Check if it's a known special term (mixed-case brands)
         for special_term in self.math_terms:
             if word_lower == special_term.lower() and word != special_term:
                 return f"{word} should be '{special_term}'"
-        
-        # General rule: content words should be capitalized
-        if len(word) > 3 and word[0].islower() and word_lower not in self.lowercase_words:
-            return f"{word} should be '{word[0].upper() + word[1:]}'"
-        
+
+        # SENTENCE CASE: non-first words should be lowercase unless whitelisted
+        if word[0].isupper() and word_lower not in self.lowercase_words:
+            return f"{word} should be '{word_lower}'"
+
         return None
     
     def fix_title_capitalization(self, title: str, known_words: Set[str] = None,
@@ -164,41 +164,34 @@ class TitleNormalizer:
         
         return ''.join(result_parts)
     
-    def _fix_word_capitalization(self, word: str, is_first: bool, 
+    def _fix_word_capitalization(self, word: str, is_first: bool,
                                 allowed_words: Set[str]) -> str:
-        """Fix capitalization of a single word"""
+        """Fix capitalization of a single word (SENTENCE CASE)."""
         # Check if word has exact match in allowed words
         if word in allowed_words:
             return word
-        
+
         # Check case-insensitive match
         word_lower = word.lower()
         for allowed in allowed_words:
             if allowed.lower() == word_lower:
                 return allowed
-        
+
         # First word is always capitalized
         if is_first:
             return word[0].upper() + word[1:] if len(word) > 1 else word.upper()
-        
-        # Lowercase words
-        if word_lower in self.lowercase_words:
-            return word_lower
-        
+
         # Abbreviations
         if word.upper() in self.uppercase_abbrevs:
             return word.upper()
-        
+
         # Special terms
         for special_term in self.math_terms:
             if word_lower == special_term.lower():
                 return special_term
-        
-        # General rule: capitalize if longer than 3 characters
-        if len(word) > 3:
-            return word[0].upper() + word[1:]
-        
-        return word
+
+        # SENTENCE CASE: non-first words default to lowercase
+        return word_lower
     
     def check_title_dashes(self, title: str, known_words: Set[str]) -> List[Message]:
         """Check for dash-related issues in title"""
@@ -455,7 +448,13 @@ def spelling_and_format_errors(
 
 def is_mathematical_variable_in_context(text: str, word: str, word_start: int, word_end: int) -> bool:
     """FIXED: Check if a word is a mathematical variable in a mathematical context - RESTORED from original"""
-    MATHEMATICAL_OPERATORS = {'+', '-', '*', '/', '=', '<', '>', '≤', '≥', '≠', '≈', '∈', '∉', '⊂', '⊆', '∪', '∩', '∅', '∞', '∂', '∇', '∫', '∑', '∏', '√', '∼', '≡', '⊕', '⊗', '∧', '∨', '¬', '→', '↔', '∀', '∃', '∝', '∴', '∵', '°', '±', '∓', '×', '÷', '·', '∘', '∆', '∇', '∂', '∫', '∮', '∑', '∏', '∐', '∪', '∩', '∁', '∖', '∆', '∇', '∂', '∫', '∮', '∑', '∏', '∐', '∪', '∩', '∁', '∖'}
+    MATHEMATICAL_OPERATORS = {
+        '+', '-', '*', '/', '=', '<', '>', '≤', '≥', '≠', '≈',
+        '∈', '∉', '⊂', '⊆', '∪', '∩', '∅', '∞', '∂', '∇',
+        '∫', '∮', '∑', '∏', '∐', '√', '∼', '≡', '⊕', '⊗',
+        '∧', '∨', '¬', '→', '↔', '∀', '∃', '∝', '∴', '∵',
+        '°', '±', '∓', '×', '÷', '·', '∘', '∆', '∁', '∖',
+    }
     
     # Only consider single-letter words as potential mathematical variables
     if len(word) != 1 or not word.isalpha():
@@ -506,13 +505,13 @@ def is_mathematical_variable_in_context(text: str, word: str, word_start: int, w
         "scheme", "variety", "affine", "projective", "elliptic", "parabolic",
         "hyperbolic", "euclidean", "non-euclidean", "riemannian", "lorentzian",
         "minkowski", "hilbert", "banach", "sobolev", "hardy", "bergman", "fock",
-        "schwartz", "tempered", "distribution", "generalized", "classical",
+        "schwartz", "tempered", "generalized", "classical",
         "quantum", "statistical", "thermodynamic", "mechanical", "dynamical",
         "stochastic", "deterministic", "chaotic", "periodic", "aperiodic",
         "stable", "unstable", "attracting", "repelling", "fixed", "critical",
-        "saddle", "node", "focus", "center", "spiral", "limit", "cycle",
+        "saddle", "node", "focus", "center", "spiral", "cycle",
         "bifurcation", "catastrophe", "singularity", "regularity", "smoothness",
-        "analyticity", "holomorphic", "meromorphic", "entire", "rational"
+        "analyticity", "holomorphic", "meromorphic", "entire"
     }
     
     # Check if any mathematical context words are present

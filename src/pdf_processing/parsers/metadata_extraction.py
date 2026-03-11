@@ -14,13 +14,62 @@ from ..constants import PDFConstants
 # Get logger
 logger = logging.getLogger(__name__)
 
+# Try to import the layout analyzer (created in Phase 3)
+try:
+    from .advanced_layout_analyzer import AdvancedLayoutAnalyzer, TextElement
+    _LAYOUT_ANALYZER = AdvancedLayoutAnalyzer()
+    _LAYOUT_AVAILABLE = True
+except ImportError:
+    _LAYOUT_AVAILABLE = False
+
+
+def _text_blocks_have_font_metrics(text_blocks: List[TextBlock]) -> bool:
+    """Check whether text blocks contain real font-size data.
+
+    If all blocks have ``font_size == 12.0`` and ``font_name == ""``, the data
+    is placeholder (from the old extraction path) and layout analysis would be
+    meaningless.
+    """
+    if not text_blocks or len(text_blocks) < 3:
+        return False
+
+    distinct_sizes = set()
+    for b in text_blocks[:30]:
+        distinct_sizes.add(round(b.font_size, 1))
+        if b.font_name and b.font_name.strip():
+            return True  # real font name → real data
+
+    # At least 2 distinct sizes means real extraction
+    return len(distinct_sizes) >= 2
+
+
+def _blocks_to_text_elements(text_blocks: List[TextBlock]) -> List[TextElement]:
+    """Convert TextBlock objects to TextElement objects for the layout analyzer."""
+    elements = []
+    for i, b in enumerate(text_blocks):
+        flags = 0
+        if b.is_bold:
+            flags |= 16
+        if b.is_italic:
+            flags |= 2
+        elements.append(TextElement(
+            text=b.text,
+            bbox=(b.x, b.y, b.x + b.width, b.y + b.height),
+            font_name=b.font_name,
+            font_size=b.font_size,
+            font_flags=flags,
+            page_number=b.page_num,
+            line_number=i,
+        ))
+    return elements
+
 
 def extract_title_multi_method(
-    full_text: str, text_blocks: List[TextBlock], structure: DocumentStructure, 
+    full_text: str, text_blocks: List[TextBlock], structure: DocumentStructure,
     repository_extractors: Dict[str, Any], normalise_title_func
 ) -> Tuple[str, float]:
     """Extract title using multiple methods with better reliability"""
-    
+
     logger.debug(f"Extracting title from text preview: {full_text[:100]}...")
 
     # Method 1: Repository-specific extractor
@@ -44,7 +93,20 @@ def extract_title_multi_method(
         except Exception as e:
             logger.debug(f"Repository extractor error: {e}")
 
-    # Method 2: Heuristic title extraction
+    # Method 2: Layout-based title extraction (when we have real font metrics)
+    if _LAYOUT_AVAILABLE and _text_blocks_have_font_metrics(text_blocks):
+        try:
+            elements = _blocks_to_text_elements(text_blocks)
+            layout = _LAYOUT_ANALYZER.analyze_layout(elements)
+            if layout.title_candidates and layout.confidence_score > 0.5:
+                title = " ".join(t.text for t in layout.title_candidates)
+                title = normalise_title_func(title)
+                logger.debug(f"Layout analyzer found title: {title} (conf: {layout.confidence_score})")
+                return title, layout.confidence_score
+        except Exception as e:
+            logger.debug(f"Layout-based title extraction failed: {e}")
+
+    # Method 3: Heuristic title extraction (text-line scanning fallback)
     title, confidence = extract_title_heuristic(full_text, text_blocks)
     if title and confidence > 0.4:
         title = normalise_title_func(title)
@@ -73,7 +135,20 @@ def extract_authors_multi_method(
         except Exception as e:
             logger.debug(f"Repository extractor error: {e}")
 
-    # Method 2: Heuristic author extraction
+    # Method 2: Layout-based author extraction (when we have real font metrics)
+    if _LAYOUT_AVAILABLE and _text_blocks_have_font_metrics(text_blocks):
+        try:
+            elements = _blocks_to_text_elements(text_blocks)
+            layout = _LAYOUT_ANALYZER.analyze_layout(elements)
+            if layout.author_candidates:
+                authors = "; ".join(a.text for a in layout.author_candidates)
+                confidence = min(0.8, layout.confidence_score + 0.1)
+                logger.debug(f"Layout analyzer found authors: {authors} (conf: {confidence})")
+                return authors, confidence
+        except Exception as e:
+            logger.debug(f"Layout-based author extraction failed: {e}")
+
+    # Method 3: Heuristic author extraction (text-line scanning fallback)
     authors, confidence = extract_authors_heuristic(full_text)
     if authors and confidence > 0.4:
         return authors, confidence

@@ -417,20 +417,10 @@ class Downloader:
     
     def download(self, identifier: str) -> DownloadResult:
         """Sync download."""
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-        
-        return loop.run_until_complete(self.async_downloader.download(identifier))
-    
+        from src.core.utils.async_compat import run_sync
+        return run_sync(self.async_downloader.download(identifier))
+
     def close(self):
         """Close downloader."""
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop() 
-            asyncio.set_event_loop(loop)
-        
-        loop.run_until_complete(self.async_downloader.close())
+        from src.core.utils.async_compat import run_sync
+        run_sync(self.async_downloader.close())

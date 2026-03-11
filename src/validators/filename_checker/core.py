@@ -130,7 +130,7 @@ def check_filename(
     if debug or _DEBUG_ENABLED:
         enable_debug()
 
-    spellchecker or SpellChecker()
+    spellchecker = spellchecker or SpellChecker()
     raw = filename
 
     debug_print(f"=== CHECKING FILENAME: '{filename}' ===")
@@ -254,9 +254,28 @@ def check_filename(
     title_after = current
     debug_print(f"After fixers: '{title_after}'")
 
-    # Placeholder for additional validation checks
-    # (bracket balance, dash patterns, capitalization, etc.)
-    # These would be implemented as we continue the extraction
+    # ── Empty title check ──────────────────────────────────────────────
+    if not title_after or not title_after.strip():
+        result.add_message("error", "Title is empty or whitespace-only")
+
+    # ── Dash pattern validation ────────────────────────────────────────
+    # Check for bad dash patterns: space-hyphen-space, double hyphens, etc.
+    _bad_dash_re = re.compile(
+        r'(?P<shs>\s+-\s+)'        # space-hyphen-space (should be em-dash)
+        r'|(?P<multi>-{2,})'       # multiple consecutive hyphens
+    )
+    for m in _bad_dash_re.finditer(title_after):
+        if m.group('shs'):
+            result.add_message(
+                "warning",
+                f"Dash pattern: space-hyphen-space at position {m.start()} "
+                "(consider em-dash or en-dash)"
+            )
+        elif m.group('multi'):
+            result.add_message(
+                "warning",
+                f"Dash pattern: multiple consecutive hyphens at position {m.start()}"
+            )
 
     # Enhanced author normalization check
     ok, authors_fixed = author_string_is_normalized(authors_raw)
@@ -275,9 +294,23 @@ def check_filename(
         enforce_ndash_between_authors(authors_clean, whitelist_pairs)
     )
 
-    # Sentence case processing (simplified)
+    # Sentence case processing
     if sentence_case:
-        sent_case = title_after  # Placeholder - would apply sentence case rules
+        try:
+            from core.sentence_case import to_sentence_case_academic
+            sent_case, sent_changed = to_sentence_case_academic(
+                title_after,
+                capitalization_whitelist=capitalization_whitelist,
+                name_dash_whitelist=name_dash_whitelist,
+                known_words=known_words,
+            )
+            if sent_changed:
+                result.add_message(
+                    "warning",
+                    f"Sentence case: '{title_after}' → '{sent_case}'"
+                )
+        except ImportError:
+            sent_case = title_after  # Fallback if core module unavailable
     else:
         sent_case = title_after
 

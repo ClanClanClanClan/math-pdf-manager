@@ -6,6 +6,7 @@ High-level interface for managing all download sources and strategies.
 
 import asyncio
 import logging
+import os
 from pathlib import Path
 from typing import Dict, List, Optional, Any, Union
 import json
@@ -143,8 +144,9 @@ class DownloadOrchestrator:
                 acm_creds = self.credential_manager.get_publisher_credentials('acm')
                 self.universal_downloader.strategies['acm'] = ACMDownloader(acm_creds)
             
-            # Always add enhanced Sci-Hub
-            self.universal_downloader.strategies['enhanced-sci-hub'] = EnhancedSciHubDownloader()
+            # Add Sci-Hub only when explicitly enabled via config
+            if self.config.config.get("enable_scihub", False):
+                self.universal_downloader.strategies['enhanced-sci-hub'] = EnhancedSciHubDownloader()
             
             logger.info(f"Initialized {len(self.universal_downloader.strategies)} download strategies")
             
@@ -221,15 +223,16 @@ class DownloadOrchestrator:
             if paper.source in self.universal_downloader.strategies:
                 primary_sources.append(paper.source)
         
-        # Publisher detection based on DOI or URL
+        # Publisher detection based on DOI prefix (registrant code after "10.")
         if paper.doi:
-            if '1007' in paper.doi:  # Springer
+            doi = paper.doi.strip()
+            if doi.startswith('10.1007/'):  # Springer
                 primary_sources.append('springer')
-            elif '1016' in paper.doi:  # Elsevier
+            elif doi.startswith('10.1016/'):  # Elsevier
                 primary_sources.append('elsevier')
-            elif '1002' in paper.doi or '1111' in paper.doi:  # Wiley
+            elif doi.startswith('10.1002/') or doi.startswith('10.1111/'):  # Wiley
                 primary_sources.append('wiley')
-            elif '1109' in paper.doi:  # IEEE
+            elif doi.startswith('10.1109/'):  # IEEE
                 primary_sources.append('ieee')
         
         # Add institutional sources based on availability
@@ -298,11 +301,11 @@ class DownloadOrchestrator:
                 try:
                     save_path_obj.relative_to(base_dir)
                 except ValueError:
-                    raise ValueError(f"Invalid save path: Path traversal detected")
+                    raise ValueError("Invalid save path: Path traversal detected")
                 
                 # Additional security checks
                 if '..' in str(save_path) or save_path.startswith('/etc') or save_path.startswith('/root'):
-                    raise ValueError(f"Invalid save path: Suspicious path pattern")
+                    raise ValueError("Invalid save path: Suspicious path pattern")
                 
                 save_path_obj.parent.mkdir(parents=True, exist_ok=True)
                 
@@ -345,11 +348,11 @@ class DownloadOrchestrator:
             # Ensure the directory is not in sensitive locations
             sensitive_paths = ['/etc', '/root', '/sys', '/proc', '/dev', '/var/log']
             if any(str(save_dir).startswith(path) for path in sensitive_paths):
-                raise ValueError(f"Invalid save directory: Cannot save to system directories")
+                raise ValueError("Invalid save directory: Cannot save to system directories")
             
             # Check for path traversal attempts
             if '..' in save_directory:
-                raise ValueError(f"Invalid save directory: Path traversal detected")
+                raise ValueError("Invalid save directory: Path traversal detected")
             
             save_dir.mkdir(parents=True, exist_ok=True)
         
@@ -420,7 +423,7 @@ class DownloadOrchestrator:
         )
         
         # Log summary
-        logger.info(f"Batch download complete:")
+        logger.info("Batch download complete:")
         logger.info(f"  Success rate: {batch_result.success_rate:.1%}")
         logger.info(f"  Total size: {total_size_mb:.1f} MB")
         logger.info(f"  Throughput: {batch_result.throughput_papers_per_minute:.1f} papers/min")
@@ -554,8 +557,10 @@ async def main():
     """Example orchestrator usage"""
     orchestrator = DownloadOrchestrator()
     
-    # Initialize (you'd get this password securely in real usage)
-    master_password = "your_secure_password"
+    # Initialize (password from environment variable)
+    master_password = os.environ.get('ORCHESTRATOR_MASTER_PASSWORD', '')
+    if not master_password:
+        raise RuntimeError("Set ORCHESTRATOR_MASTER_PASSWORD env var before running")
     if not await orchestrator.initialize(master_password):
         print("Failed to initialize orchestrator")
         return
@@ -569,7 +574,7 @@ async def main():
         
         # Search for papers
         queries = ["machine learning", "quantum computing"]
-        print(f"\nSearching for papers...")
+        print("\nSearching for papers...")
         papers = await orchestrator.search_papers(queries, max_results_per_query=2)
         print(f"Found {len(papers)} papers")
         
@@ -582,7 +587,7 @@ async def main():
         
         # Show statistics
         stats = orchestrator.get_statistics()
-        print(f"\nStatistics:")
+        print("\nStatistics:")
         print(f"  Total downloads: {stats['total_downloads']}")
         print(f"  Success rate: {stats['success_rate']:.1%}")
         print(f"  Available sources: {len(stats['available_sources'])}")

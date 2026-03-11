@@ -14,6 +14,7 @@ REFACTORING v21:
 
 import asyncio
 import argparse
+import json
 import logging
 import sys
 import time
@@ -106,42 +107,74 @@ async def process_existing_pdfs(pdf_files: List[Path], database: AsyncPaperDatab
 
 
 async def process_single_pdf(pdf_file: Path, database: AsyncPaperDatabase) -> bool:
-    """Process a single PDF file."""
+    """Process a single PDF file using the full extraction pipeline."""
     try:
         # Check if already in database
         existing = await database.get_paper_by_path(str(pdf_file))
         if existing:
             return False  # Skip existing
-        
-        # Extract metadata from filename (simplified for now)
-        filename = pdf_file.stem
-        
-        # Try to parse filename for author and title
-        if " - " in filename:
-            authors_part, title_part = filename.split(" - ", 1)
-            authors = [author.strip() for author in authors_part.split(" and ")]
-            title = title_part.strip()
-        else:
-            authors = []
-            title = filename
-        
-        # Create paper record
+
+        # Use the enhanced extraction facade (blocking I/O → thread pool)
+        loop = asyncio.get_event_loop()
+        try:
+            from pdf_processing.extract_metadata_facade import extract_pdf_metadata_enhanced
+            meta = await loop.run_in_executor(
+                None, lambda: extract_pdf_metadata_enhanced(pdf_file)
+            )
+        except ImportError:
+            # Fallback: filename-based extraction if facade unavailable
+            meta = _fallback_filename_metadata(pdf_file)
+
+        # Create paper record from extracted metadata
         paper = PaperRecord(
             file_path=str(pdf_file),
-            title=title,
-            authors=str(authors),
+            title=meta.get("title", pdf_file.stem),
+            authors=json.dumps(meta.get("authors", [])),
             paper_type="unknown",
-            source="filesystem",
-            confidence=0.5,
-            file_size=pdf_file.stat().st_size if pdf_file.exists() else 0
+            source=meta.get("source_method", "filesystem"),
+            confidence=meta.get("confidence", 0.2),
+            file_size=pdf_file.stat().st_size if pdf_file.exists() else 0,
+            arxiv_id=meta.get("arxiv_id"),
+            doi=meta.get("doi"),
+            abstract=meta.get("abstract", ""),
+            publication_date=str(meta["year"]) if meta.get("year") else None,
         )
-        
+
         await database.add_paper(paper)
         return True
-        
+
     except Exception as e:
         logging.getLogger("process_pdf").error(f"Failed to process {pdf_file}: {e}")
         return False
+
+
+def _fallback_filename_metadata(pdf_file: Path) -> dict:
+    """Minimal filename-based metadata when the facade is not importable."""
+    import re as _re
+    filename = pdf_file.stem
+    if " - " in filename:
+        authors_part, title_part = filename.split(" - ", 1)
+        authors = [a.strip() for a in authors_part.split(" and ")]
+        title = title_part.strip()
+    else:
+        authors = []
+        title = filename
+
+    arxiv_id = None
+    m = _re.search(r"(\d{4}\.\d{4,5}(?:v\d+)?)", filename)
+    if m:
+        arxiv_id = m.group(1)
+
+    return {
+        "title": title,
+        "authors": authors,
+        "year": None,
+        "doi": None,
+        "arxiv_id": arxiv_id,
+        "abstract": None,
+        "confidence": 0.2,
+        "source_method": "filename",
+    }
 
 
 async def download_papers_async(identifiers: List[str], downloader: SmartDownloader, logger):
@@ -176,10 +209,9 @@ async def search_papers_async(query: str, database: AsyncPaperDatabase, logger):
     if papers:
         logger.info(f"Found {len(papers)} papers:")
         for i, paper in enumerate(papers, 1):
-            import ast
             try:
-                authors = ast.literal_eval(paper.authors) if paper.authors.startswith('[') else [paper.authors]
-            except (ValueError, SyntaxError):
+                authors = json.loads(paper.authors) if paper.authors.startswith('[') else [paper.authors]
+            except (ValueError, json.JSONDecodeError):
                 authors = [paper.authors]  # Fallback to treating as single string
             authors_str = ", ".join(authors[:2])
             if len(authors) > 2:

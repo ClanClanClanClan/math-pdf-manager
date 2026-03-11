@@ -300,6 +300,7 @@ class SecureFileOperations:
         
         # Set secure permissions
         old_umask = os.umask(0o077)  # Temporarily set restrictive umask
+        tmp_file = None
         try:
             tmp_file = tempfile.NamedTemporaryFile(
                 mode=mode,
@@ -307,22 +308,23 @@ class SecureFileOperations:
                 prefix=prefix,
                 delete=False  # We'll handle deletion manually
             )
-            
+
             yield tmp_file
-            
+
         finally:
             os.umask(old_umask)  # Restore original umask
-            
-            try:
-                tmp_file.close()
-            except Exception:
-                pass
-            
-            if delete and hasattr(tmp_file, 'name'):
+
+            if tmp_file is not None:
                 try:
-                    os.unlink(tmp_file.name)
+                    tmp_file.close()
                 except Exception:
                     pass
+
+                if delete and hasattr(tmp_file, 'name'):
+                    try:
+                        os.unlink(tmp_file.name)
+                    except Exception:
+                        pass
     
     @staticmethod
     def secure_move(src: Path, dst: Path, overwrite: bool = False) -> Path:

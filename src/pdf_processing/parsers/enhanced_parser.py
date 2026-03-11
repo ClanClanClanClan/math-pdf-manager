@@ -355,6 +355,49 @@ class EnhancedPDFParser(BaseParser):
 
         return metadata
 
+    def _enhance_with_llm(self, raw_text, filename, base_metadata, auto_launch=False):
+        """Extract metadata using a local LLM with GBNF grammar constraints.
+
+        Uses ``LLMMetadataExtractor`` (llama-cpp-python + Qwen2.5) for
+        grammar-constrained JSON extraction.  Falls back gracefully when
+        llama-cpp-python is not installed.
+        """
+        try:
+            from pdf_processing.llm_extractor import LLMMetadataExtractor
+
+            if not LLMMetadataExtractor.is_available():
+                logger.info("llama-cpp-python not installed — skipping LLM extraction")
+                return None
+
+            # Lazy-init singleton (expensive: loads the GGUF model)
+            if not hasattr(self, '_llm_extractor') or self._llm_extractor is None:
+                self._llm_extractor = LLMMetadataExtractor()
+
+            # Extract first ~3 pages of text
+            text_snippet = raw_text[:8000]
+            result = self._llm_extractor.extract(text_snippet)
+
+            if not result or not result.get("title"):
+                logger.warning("LLM returned empty title")
+                return None
+
+            return PDFMetadata(
+                path=base_metadata.path if base_metadata else "",
+                filename=filename,
+                title=result["title"],
+                authors="; ".join(result.get("authors", [])),
+                source=MetadataSource.HEURISTIC,
+                confidence=0.80,
+                extraction_method="llm",
+            )
+
+        except ImportError:
+            logger.debug("LLM extractor module not available")
+            return None
+        except Exception as e:
+            logger.warning(f"LLM extraction error: {e}")
+            return None
+
     def _fetch_with_metadata_system(self, pdf_file: Path, raw_text: str) -> PDFMetadata | None:
         """Use the comprehensive metadata fetcher system to get high-quality metadata"""
         if not METADATA_FETCHER_AVAILABLE:
@@ -377,7 +420,7 @@ class EnhancedPDFParser(BaseParser):
                 arxiv_id = self.arxiv_client.extract_arxiv_id_from_filename(pdf_file.name)
                 if not arxiv_id:
                     # Use vertical detection for perfect ArXiv ID detection
-                    arxiv_id = self.arxiv_client.extract_arxiv_id_from_pdf(pdf_path)
+                    arxiv_id = self.arxiv_client.extract_arxiv_id_from_pdf(str(pdf_file))
                 if not arxiv_id:
                     # Final fallback: text extraction
                     arxiv_id = self.arxiv_client.extract_arxiv_id_from_text(raw_text)
@@ -491,15 +534,16 @@ class EnhancedPDFParser(BaseParser):
             return None
 
     def _is_garbage_extraction(self, metadata: PDFMetadata, method: str) -> bool:
-        """Detect garbage extractions, especially from LLM"""
+        """Detect garbage extractions from any method."""
+        import re
 
         if not metadata.title:
             return True
 
-        title_lower = metadata.title.lower()
+        title_lower = metadata.title.lower().strip()
         authors_lower = metadata.authors.lower() if metadata.authors else ""
 
-        # Check for LLM garbage patterns
+        # --- LLM-specific garbage patterns ---
         llm_garbage_patterns = [
             'extract the title',
             'extract title and authors',
@@ -512,48 +556,204 @@ class EnhancedPDFParser(BaseParser):
             'unknown paper',
             'example paper',
             'academic paper',
-            'research paper'
+            'research paper',
+            '<pdf text>',
+            '<|im_start|>',
+            '<|im_end|>',
+            'metadata extraction',
+            'return a json',
+            'json object',
+            'here is the',
+            'i found the following',
+            'the title of this paper',
+            'based on the text',
         ]
 
-        # LLM-specific garbage detection
         if method == "llm":
             for pattern in llm_garbage_patterns:
                 if pattern in title_lower:
                     logger.warning(f"🚫 LLM garbage detected in title: '{metadata.title}'")
                     return True
 
-        # Generic garbage patterns
-        bad_titles = [
+        # --- Generic garbage patterns (title starts with) ---
+        bad_title_starts = [
             'contents lists available',
             'sciencedirect',
             'springer',
             'elsevier',
             'ieee',
             'acm digital library',
-            'journal of',
-            'proceedings of',
-            'communicated by'
+            'communicated by',
+            'published by',
+            'available online',
+            'accepted manuscript',
+            'copyright',
+            'doi:',
+            'doi 10.',
+            'vol.',
+            'volume ',
         ]
 
-        for bad in bad_titles:
+        for bad in bad_title_starts:
             if title_lower.startswith(bad):
                 logger.warning(f"🚫 Generic garbage detected: '{metadata.title}'")
                 return True
 
-        # Check for suspiciously short or long titles
+        # --- Journal/venue header as title ---
+        journal_header_re = re.compile(
+            r'^(?:annals|journal|transactions|proceedings|bulletin|letters|reviews?)'
+            r'\s+(?:of|in|on)\s+',
+            re.IGNORECASE,
+        )
+        if journal_header_re.match(title_lower):
+            logger.warning(f"🚫 Journal header as title: '{metadata.title}'")
+            return True
+
+        # Specific venue patterns
+        venue_patterns = [
+            r'^(?:siam|ams|ieee|acm)\s+(?:j\.|journal|review|trans)',
+            r'^(?:inventiones|mathematische|communications?\s+in|advances?\s+in)\s+math',
+            r'^\d{4}\s+mathematics\s+subject\s+classification',
+            r'^(?:received|accepted|revised)\s+\d',
+        ]
+        for pat in venue_patterns:
+            if re.match(pat, title_lower):
+                logger.warning(f"🚫 Venue/header pattern as title: '{metadata.title}'")
+                return True
+
+        # --- OCR artifact detection ---
+        if len(metadata.title) > 10:
+            alpha_count = sum(1 for c in metadata.title if c.isalpha())
+            alpha_ratio = alpha_count / len(metadata.title)
+            if alpha_ratio < 0.5:
+                logger.warning(
+                    f"🚫 OCR artifacts detected (alpha ratio {alpha_ratio:.2f}): "
+                    f"'{metadata.title[:60]}'"
+                )
+                return True
+
+        # --- Title-author overlap (title IS the author string) ---
+        if metadata.authors and metadata.authors != "Unknown":
+            authors_normalized = authors_lower.strip()
+            if (len(authors_normalized) > 5 and
+                    title_lower == authors_normalized):
+                logger.warning(f"🚫 Title equals authors: '{metadata.title}'")
+                return True
+
+        # --- Truncated titles (ends with connective words) ---
+        if metadata.title and len(metadata.title) > 15:
+            title_stripped = metadata.title.rstrip()
+            last_word = title_stripped.split()[-1].lower() if title_stripped.split() else ""
+            # Only flag single-char or connective endings (not real words)
+            truncation_words = {'and', 'the', 'of', 'in', 'for', 'with', 'a', 'an', 'by', 'on', 'to'}
+            if last_word in truncation_words and not title_stripped.endswith(('.', '?', '!')):
+                logger.debug(f"Possible truncated title: '{metadata.title}'")
+                # Don't reject outright — just flag via debug. Many real titles
+                # end with "of" etc. (e.g. "A new proof of"). The scoring already
+                # penalises these (lines 662-663).
+
+        # --- Suspiciously short or long titles ---
         if len(metadata.title) < 8 or len(metadata.title) > 300:
             logger.warning(f"🚫 Suspicious title length: {len(metadata.title)} chars")
             return True
 
-        # Check for garbage authors
-        bad_authors = ['the author', 'unknown', 'extract', 'paper', 'springer', 'elsevier']
+        # --- Garbage authors ---
+        bad_authors = [
+            'the author', 'unknown', 'extract', 'paper', 'springer',
+            'elsevier', 'ieee', 'microsoft', 'admin', 'user',
+        ]
         for bad in bad_authors:
-            if bad in authors_lower and authors_lower.strip() == bad:
+            if authors_lower.strip() == bad:
                 logger.warning(f"🚫 Garbage authors detected: '{metadata.authors}'")
-                # Don't reject entire result, just mark authors as unknown
                 metadata.authors = "Unknown"
 
         return False
+
+    def _compute_consensus_bonus(self, scored_results: list) -> list:
+        """Add consensus bonus when multiple methods agree on the same title.
+
+        Uses rapidfuzz for fuzzy matching (threshold: 85% similarity).
+        Each agreeing method adds +30 points to the agreed-upon results.
+        """
+        from rapidfuzz import fuzz
+
+        n = len(scored_results)
+        if n < 2:
+            return scored_results
+
+        titles = [
+            r[2].title.lower().strip() if r[2].title else ""
+            for r in scored_results
+        ]
+        agreement_counts = [0] * n
+
+        for i in range(n):
+            if not titles[i]:
+                continue
+            for j in range(i + 1, n):
+                if not titles[j]:
+                    continue
+                similarity = fuzz.ratio(titles[i], titles[j])
+                if similarity >= 85:
+                    agreement_counts[i] += 1
+                    agreement_counts[j] += 1
+
+        adjusted = []
+        for idx, (score, method, metadata) in enumerate(scored_results):
+            if agreement_counts[idx] >= 1:
+                consensus_bonus = 30 * agreement_counts[idx]
+                logger.info(
+                    f"Consensus bonus +{consensus_bonus} for {method}: "
+                    f"{agreement_counts[idx]} other method(s) agree on "
+                    f"'{metadata.title[:40]}...'"
+                )
+                score += consensus_bonus
+            adjusted.append((score, method, metadata))
+
+        return adjusted
+
+    def _calibrate_confidence(self, metadata: PDFMetadata, method: str) -> float:
+        """Recalibrate confidence based on actual extraction quality.
+
+        Methods assign confidence before validation (e.g. ArXiv always 0.98).
+        This adjusts the score based on what was actually extracted.
+        """
+        base = metadata.confidence
+        penalties = 0.0
+
+        # Empty or very short title
+        if not metadata.title or len(metadata.title.strip()) < 10:
+            penalties += 0.3
+
+        # Title looks truncated
+        if metadata.title and metadata.title.rstrip().endswith('...'):
+            penalties += 0.15
+
+        # No authors
+        if not metadata.authors or metadata.authors == "Unknown":
+            penalties += 0.2
+
+        # Single-character / tiny authors (parsing error)
+        if metadata.authors and len(metadata.authors.strip()) < 3:
+            penalties += 0.15
+
+        # Bonuses for strong external signals
+        bonus = 0.0
+        if metadata.doi:
+            bonus += 0.05
+        if metadata.abstract and len(metadata.abstract) > 100:
+            bonus += 0.05
+
+        calibrated = max(0.0, min(1.0, base - penalties + bonus))
+
+        if abs(calibrated - base) > 0.01:
+            logger.debug(
+                f"Confidence calibrated for {method}: "
+                f"{base:.2f} -> {calibrated:.2f} "
+                f"(penalties={penalties:.2f}, bonus={bonus:.2f})"
+            )
+
+        return calibrated
 
     def _select_best_result(self, results: list[tuple]) -> PDFMetadata:
         """Select the best result from all extraction methods with garbage detection"""
@@ -634,8 +834,9 @@ class EnhancedPDFParser(BaseParser):
             if metadata.abstract and len(metadata.abstract) > 100:
                 score += 15
 
-            # Confidence bonus (up to 20 points)
-            score += metadata.confidence * 20
+            # Confidence bonus (up to 20 points) — calibrated by actual quality
+            calibrated_conf = self._calibrate_confidence(metadata, method)
+            score += calibrated_conf * 20
 
             # METHOD-SPECIFIC ADJUSTMENTS
             if method == "llm":
@@ -664,23 +865,23 @@ class EnhancedPDFParser(BaseParser):
                     score -= 20  # Moderate penalty for very high counts
                     logger.debug(f"High author count penalty: -{20} for {actual_author_count} authors in {method}")
 
-            # DIACRITIC PRESERVATION BONUS
+            # DIACRITIC PRESERVATION BONUS (capped to avoid inflating scores)
             if metadata.authors:
-                # Count diacritics in author names to prefer results that preserve them
                 import unicodedata
-                diacritic_chars = 0
-                for char in metadata.authors:
-                    if unicodedata.combining(char) or char in 'àáâãäåæçèéêëìíîïñòóôõöøùúûüýÿÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÑÒÓÔÕÖØÙÚÛÜÝŸşğıçöüâéàèùñïêôûîäëÿõúíóáéýžčńłśęĄćżźńŁŚĆŻŹĘıĞŞÇÖÜâêéèïôûüöäÿçñíóúýàåæðþßµ°':
-                        diacritic_chars += 1
-                if diacritic_chars > 0:
-                    score += diacritic_chars * 15  # Increased significantly to prioritize diacritic preservation
-                    logger.debug(f"Diacritic bonus: +{diacritic_chars * 15} for {diacritic_chars} diacritics in {method}")
-                    # Additional bonus for having ANY diacritics to overcome base method score differences
-                    score += 25  # Extra 25 points for any diacritics found
-                    logger.debug(f"Diacritic preservation bonus: +25 for having diacritics in {method}")
+                has_diacritics = any(
+                    unicodedata.combining(char) or ord(char) > 127
+                    for char in metadata.authors
+                    if char.isalpha()
+                )
+                if has_diacritics:
+                    score += 20  # Fixed bonus — enough to break ties, not override methods
+                    logger.debug(f"Diacritic bonus: +20 for preserving diacritics in {method}")
 
             scored_results.append((score, method, metadata))
             logger.debug(f"{method} score: {score:.1f} for '{metadata.title[:30]}...'")
+
+        # Apply cross-method consensus bonus
+        scored_results = self._compute_consensus_bonus(scored_results)
 
         # Return the best scoring result
         best_score, best_method, best_metadata = max(scored_results, key=lambda x: x[0])
@@ -689,41 +890,59 @@ class EnhancedPDFParser(BaseParser):
         return best_metadata
 
     def _apply_normalization(self, metadata: PDFMetadata) -> PDFMetadata:
-        """Apply ALL normalization steps to the metadata"""
+        """Apply normalization with safety rollback.
+
+        Checkpoints the original values and reverts if normalization
+        produces garbage or empty results.
+        """
+        # Checkpoint originals
+        original_title = metadata.title
+        original_authors = metadata.authors
 
         # Normalize title
         if metadata.title:
             try:
-                # Apply mathematical notation normalization first if available
                 if self.math_handler:
                     metadata.title = self.math_handler.normalize_mathematical_text(metadata.title)
 
-                # Apply all title normalizations
                 metadata.title = normalize(metadata.title)
                 metadata.title = normalize_title(metadata.title)
                 metadata.title = fix_title_capitalization(metadata.title)
+
+                # Validate: normalization must not destroy the title
+                if (not metadata.title or
+                        len(metadata.title.strip()) < 5 or
+                        metadata.title.strip().lower() in ('unknown', 'untitled', '')):
+                    logger.warning(
+                        f"Normalization destroyed title, rolling back: "
+                        f"'{metadata.title}' -> '{original_title}'"
+                    )
+                    metadata.title = original_title
             except Exception as e:
-                logger.warning(f"Title normalization failed: {e}")
-                # Basic cleanup fallback
-                metadata.title = " ".join(metadata.title.split())
+                logger.warning(f"Title normalization failed, keeping original: {e}")
+                metadata.title = original_title
 
         # Normalize authors
         if metadata.authors:
             try:
                 parser = AuthorParser()
-                # First normalize the string
                 metadata.authors = normalize(metadata.authors)
-                # Then apply author-specific normalization
                 metadata.authors = parser.normalize_author_string(metadata.authors)
-                # Fix spacing and formatting
                 metadata.authors = parser.fix_initial_spacing(metadata.authors)
                 metadata.authors = parser.fix_author_suffixes(metadata.authors)
+
+                # Validate: must still have content
+                if not metadata.authors or len(metadata.authors.strip()) < 2:
+                    logger.warning(
+                        f"Normalization destroyed authors, rolling back: "
+                        f"'{metadata.authors}' -> '{original_authors}'"
+                    )
+                    metadata.authors = original_authors
 
                 # Apply mathematician name validation if available
                 if MATHEMATICIAN_VALIDATOR_AVAILABLE:
                     try:
                         validator = MathematicianNameValidator()
-                        # Split authors and validate each one
                         author_list = [a.strip() for a in metadata.authors.split(';') if a.strip()]
                         validated_authors = []
 
@@ -732,7 +951,6 @@ class EnhancedPDFParser(BaseParser):
                             if validation_result.is_valid and validation_result.standardized_form:
                                 validated_authors.append(validation_result.standardized_form)
                             else:
-                                # Keep original if validation fails
                                 validated_authors.append(author)
 
                         if validated_authors:
@@ -742,9 +960,8 @@ class EnhancedPDFParser(BaseParser):
                         logger.debug(f"Mathematician name validation failed: {e}")
 
             except Exception as e:
-                logger.warning(f"Author normalization failed: {e}")
-                # Basic cleanup fallback
-                metadata.authors = " ".join(metadata.authors.split())
+                logger.warning(f"Author normalization failed, keeping original: {e}")
+                metadata.authors = original_authors
 
         return metadata
 

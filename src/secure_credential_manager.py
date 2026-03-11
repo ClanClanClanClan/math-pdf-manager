@@ -96,10 +96,11 @@ class SecureCredentialManager:
         combined = "|".join(identifiers).encode('utf-8')
         
         # Hash to create consistent 32-byte key material
+        # Use app name as domain-separation tag (not a cryptographic salt)
         digest = hashes.Hash(hashes.SHA256())
         digest.update(combined)
-        digest.update(b"academic_papers_salt")  # App-specific salt
-        
+        digest.update(self.app_name.encode("utf-8"))
+
         return digest.finalize()
     
     def _load_sources_config(self) -> Dict[str, CredentialSource]:

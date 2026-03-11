@@ -1,4 +1,8 @@
-"""FastAPI application exposing discovery and acquisition endpoints."""
+"""FastAPI application exposing discovery and acquisition endpoints.
+
+NOTE: This API has no authentication or authorization. Do not expose it to
+untrusted networks without adding an auth layer.
+"""
 
 from __future__ import annotations
 
@@ -24,38 +28,33 @@ from maintenance.system import MaintenanceSystem
 from core.database import AsyncPaperDatabase
 from prometheus_client import Counter, CONTENT_TYPE_LATEST, generate_latest
 
-DISCOVERY_COUNTER = Counter("discovery_requests_total", "Total discovery requests")
-ACQUISITION_COUNTER = Counter("acquisition_requests_total", "Total acquisition requests")
-MAINTENANCE_COUNTER = Counter("maintenance_runs_total", "Total maintenance runs")
-
-_ALLOWED_ORIGINS = os.environ.get(
-    "CORS_ORIGINS",
-    "http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000",
-).split(",")
+ALLOWED_ORIGINS = os.environ.get("CORS_ORIGINS", "http://localhost:3000").split(",")
 
 
 @asynccontextmanager
-async def lifespan(application: FastAPI):
-    """Manage startup and shutdown of application resources."""
+async def lifespan(app: FastAPI):
     # Startup
-    application.state.discovery_engine = DiscoveryEngine()
-    application.state.acquisition_engine = AcquisitionEngine(config=AcquisitionConfig())
-    application.state.database = AsyncPaperDatabase(str(Path("papers.db")))
-    application.state.maintenance_system = MaintenanceSystem()
+    app.state.discovery_engine = DiscoveryEngine()
+    app.state.acquisition_engine = AcquisitionEngine(config=AcquisitionConfig())
+    app.state.database = AsyncPaperDatabase(str(Path("papers.db")))
+    app.state.maintenance_system = MaintenanceSystem()
     yield
     # Shutdown
-    await application.state.discovery_engine.close()
-    await application.state.acquisition_engine.close()
-    await application.state.database.close()
+    await app.state.discovery_engine.close()
+    await app.state.acquisition_engine.close()
 
 
 app = FastAPI(title="Academic Paper Manager API", version="0.1.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=_ALLOWED_ORIGINS,
+    allow_origins=ALLOWED_ORIGINS,
     allow_methods=["GET", "POST"],
-    allow_headers=["Content-Type", "Authorization"],
+    allow_headers=["Content-Type"],
 )
+
+DISCOVERY_COUNTER = Counter("discovery_requests_total", "Total discovery requests")
+ACQUISITION_COUNTER = Counter("acquisition_requests_total", "Total acquisition requests")
+MAINTENANCE_COUNTER = Counter("maintenance_runs_total", "Total maintenance runs")
 
 
 class DiscoveryRequest(BaseModel):
@@ -83,6 +82,7 @@ class CollectionSummaryResponse(BaseModel):
     by_type: Dict[str, int]
     recent_additions: int
     total_duplicates: int
+
 
 
 @app.get("/health")

@@ -317,7 +317,7 @@ class AsyncMetadataFetcher:
                 parts = query.split('.')
                 if len(parts[0]) == 4 and parts[0].isdigit() and parts[1].isdigit():
                     arxiv_id = query
-            except:
+            except Exception:
                 pass
         
         if not arxiv_id:
@@ -475,7 +475,7 @@ class AsyncMetadataFetcher:
                     # Fill in additional details if needed
                     try:
                         filled = scholarly.fill(first_result)
-                    except:
+                    except Exception:
                         filled = first_result
                     
                     return filled

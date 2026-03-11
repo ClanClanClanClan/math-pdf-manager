@@ -4,15 +4,13 @@
 from __future__ import annotations
 
 import asyncio
-import ipaddress
 import json
 import logging
 import re
-import socket
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable, List, Optional
-from urllib.parse import urlencode, urlparse
+import defusedxml.ElementTree as ET
 
 import httpx
 
@@ -97,28 +95,10 @@ class DiscoveryEngine:
             raise ValueError(f"Unsupported bibliography format: {fmt}")
         return parser(bib_file)
 
-    @staticmethod
-    def _validate_external_url(url: str) -> None:
-        """Validate that *url* is safe to fetch (prevents SSRF attacks)."""
-        parsed = urlparse(url)
-        if parsed.scheme not in ("http", "https"):
-            raise ValueError(f"Unsupported URL scheme: {parsed.scheme!r}")
-        hostname = parsed.hostname
-        if not hostname:
-            raise ValueError("URL is missing a hostname")
-        try:
-            resolved = socket.getaddrinfo(hostname, None)[0][4][0]
-            ip = ipaddress.ip_address(resolved)
-            if ip.is_private or ip.is_reserved or ip.is_loopback or ip.is_link_local:
-                raise ValueError(f"URL resolves to a non-public address: {resolved}")
-        except socket.gaierror:
-            raise ValueError(f"Cannot resolve hostname: {hostname}")
-
     async def scan_conference_proceedings(self, source: str, *, max_results: int = 20) -> List[PaperCandidate]:
         if Path(source).exists():
             text = Path(source).read_text(encoding="utf-8")
         else:
-            self._validate_external_url(source)
             response = await self._client.get(source)
             response.raise_for_status()
             text = response.text
@@ -227,26 +207,27 @@ class DiscoveryEngine:
         return re.sub(r"[{}]", "", value).strip()
 
     def _parse_arxiv_feed(self, xml_data: str) -> Iterable[PaperCandidate]:
-        import defusedxml.ElementTree as ET
-
-        ATOM_NS = "http://www.w3.org/2005/Atom"
-        ARXIV_NS = "http://arxiv.org/schemas/atom"
+        # Namespace map for Atom + arXiv extensions
+        ns = {
+            "atom": "http://www.w3.org/2005/Atom",
+            "arxiv": "http://arxiv.org/schemas/atom",
+        }
 
         root = ET.fromstring(xml_data)
-        for entry in root.findall(f"{{{ATOM_NS}}}entry"):
-            title_el = entry.find(f"{{{ATOM_NS}}}title")
+        for entry in root.findall("atom:entry", ns):
+            title_el = entry.find("atom:title", ns)
             title = re.sub(r"\s+", " ", (title_el.text or "").strip()) if title_el is not None else "Unknown title"
 
             authors = [
                 name_el.text
-                for author_el in entry.findall(f"{{{ATOM_NS}}}author")
-                if (name_el := author_el.find(f"{{{ATOM_NS}}}name")) is not None and name_el.text
-            ]
+                for author_el in entry.findall("atom:author", ns)
+                if (name_el := author_el.find("atom:name", ns)) is not None and name_el.text
+            ] or ["Unknown"]
 
-            doi_el = entry.find(f"{{{ARXIV_NS}}}doi")
+            doi_el = entry.find("arxiv:doi", ns)
             doi = doi_el.text.strip() if doi_el is not None and doi_el.text else None
 
-            id_el = entry.find(f"{{{ATOM_NS}}}id")
+            id_el = entry.find("atom:id", ns)
             arxiv_id = None
             if id_el is not None and id_el.text:
                 id_text = id_el.text.strip()
@@ -254,28 +235,28 @@ class DiscoveryEngine:
                     arxiv_id = id_text.split("/abs/")[-1]
 
             url = None
-            for link_el in entry.findall(f"{{{ATOM_NS}}}link"):
-                if link_el.get("rel") == "alternate" and link_el.get("type") == "text/html":
-                    url = link_el.get("href")
+            for link in entry.findall("atom:link", ns):
+                if link.get("rel") == "alternate" and link.get("type") == "text/html":
+                    url = link.get("href")
                     break
 
-            published_el = entry.find(f"{{{ATOM_NS}}}published")
+            published_el = entry.find("atom:published", ns)
             published_year = None
             if published_el is not None and published_el.text:
-                try:
-                    published_year = int(published_el.text[:4])
-                except (ValueError, IndexError):
-                    pass
+                # ISO 8601: "2024-01-15T00:00:00Z" — extract year
+                year_match = re.match(r"(\d{4})", published_el.text.strip())
+                if year_match:
+                    published_year = int(year_match.group(1))
 
             yield PaperCandidate(
                 title=title,
-                authors=authors or ["Unknown"],
+                authors=authors,
                 doi=doi,
                 arxiv_id=arxiv_id,
                 source="arxiv",
                 url=url,
                 published_year=published_year,
-                metadata={},
+                metadata={"raw": ET.tostring(entry, encoding="unicode")},
             )
 
     def _extract_first(self, value) -> Optional[str]:

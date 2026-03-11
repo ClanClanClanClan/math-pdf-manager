@@ -268,10 +268,9 @@ class IEEESource(BaseSource):
         # Extract IEEE DOI or paper ID
         if '10.1109' in identifier:
             # DOI format: try direct PDF access
-            return f"https://ieeexplore.ieee.org/stampPDF/getPDF.jsp?tp=&isnumber=&arnumber=&ref="
+            return "https://ieeexplore.ieee.org/stampPDF/getPDF.jsp?tp=&isnumber=&arnumber=&ref="
         elif 'ieee' in identifier.lower():
             # Try to extract paper number
-            import re
             match = re.search(r'(\d{6,8})', identifier)
             if match:
                 paper_id = match.group(1)

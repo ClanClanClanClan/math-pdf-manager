@@ -871,7 +871,7 @@ async def main():
     
     # Enrich a paper with more data
     if results:
-        print(f"\nEnriching first paper...")
+        print("\nEnriching first paper...")
         enriched = await orchestrator.enrich_metadata(results[0])
         print(f"Abstract length: {len(enriched.abstract) if enriched.abstract else 0} chars")
         print(f"PDF URLs: {len(enriched.pdf_urls)}")
@@ -879,7 +879,7 @@ async def main():
     
     # Show statistics
     stats = orchestrator.get_statistics()
-    print(f"\nStatistics:")
+    print("\nStatistics:")
     print(f"  Queries: {stats['queries']}")
     print(f"  Semantic Scholar hits: {stats['semantic_scholar_hits']}")
     print(f"  OpenAlex hits: {stats['openalex_hits']}")

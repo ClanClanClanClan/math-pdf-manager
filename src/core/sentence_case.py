@@ -50,11 +50,12 @@ def _load_sentence_case_config() -> Dict:
     if _CONFIG_CACHE:
         return _CONFIG_CACHE
     
-    # Try to load from config.yaml in the script directory or current directory
+    # Try to load from config.yaml in known locations
     config_paths = [
+        "config/config.yaml",
         "config.yaml",
-        "Scripts/config.yaml", 
-        os.path.expanduser("~/Library/CloudStorage/Dropbox/Work/Maths/Scripts/config.yaml"),
+        "Scripts/config.yaml",
+        os.path.join(os.path.dirname(__file__), "..", "..", "config", "config.yaml"),
         os.path.join(os.path.dirname(__file__), "config.yaml"),
     ]
     
@@ -85,14 +86,36 @@ def _load_sentence_case_config() -> Dict:
         'proper_adjectives': frozenset(config_data.get('proper_adjectives', [
             'Bayesian', 'Gaussian', 'Markovian', 'Newtonian', 'Euclidean', 'Laplacian'
         ])),
-        'capitalization_whitelist': frozenset(config_data.get('exceptions', {}).get('capitalization_whitelist', [])),
+        'capitalization_whitelist': frozenset(
+            config_data.get('capitalization_whitelist', [])
+            or config_data.get('exceptions', {}).get('capitalization_whitelist', [])
+        ),
         'name_dash_whitelist': frozenset(),  # Will be loaded from file if specified
         'known_words': frozenset(),  # Will be loaded from file if specified
     }
     
+    # Load name_dash_whitelist from data file
+    dash_whitelist_paths = [
+        "data/name_dash_whitelist.txt",
+        os.path.join(os.path.dirname(__file__), "..", "..", "data", "name_dash_whitelist.txt"),
+    ]
+    for path in dash_whitelist_paths:
+        if os.path.exists(path):
+            try:
+                with open(path, "r", encoding="utf-8") as fh:
+                    names = frozenset(
+                        line.strip() for line in fh
+                        if line.strip() and not line.startswith("#")
+                    )
+                _CONFIG_CACHE['name_dash_whitelist'] = names
+                debug_print(f"Loaded {len(names)} name-dash whitelist entries from {path}")
+            except Exception:
+                pass
+            break
+
     # Add math technical prefixes to the config
     _CONFIG_CACHE['math_technical_prefixes'] = MATH_TECHNICAL_PREFIXES
-    
+
     debug_print(f"Loaded config: {len(_CONFIG_CACHE)} sections")
     return _CONFIG_CACHE
 
@@ -103,7 +126,14 @@ def extract_title_words(title: str) -> Set[str]:
     
     # Extract individual words (letters, numbers, apostrophes)
     for match in re.finditer(r"\b\w+(?:[''][a-zA-Z]+)?\b", title, re.U):
-        words.add(match.group().lower())
+        full = match.group().lower()
+        words.add(full)
+        # Also add the base word without possessive suffix so that
+        # whitelist terms like "Euler" match title words like "Euler's"
+        for poss in ("\u2019s", "'s"):
+            if full.endswith(poss):
+                words.add(full[:-2])
+                break
     
     # Extract compound terms with dashes
     for match in re.finditer(rf"\b\w+(?:[{DASH_CHARS}]\w+)+\b", title, re.U):
@@ -297,20 +327,52 @@ def to_sentence_case_academic(
                 # Check if phrase has whitelist match
                 phrase = token.value
                 exact_match = None
+                matched_via_dash_norm = False
                 for term in filtered_cap | filtered_dash:
                     if phrase.lower() == term.lower():
                         exact_match = term
                         break
                     # Check with dash normalization
-                    phrase_normalized = phrase.replace('–', '-').replace('—', '-').replace('−', '-')
-                    term_normalized = term.replace('–', '-').replace('—', '-').replace('−', '-')
+                    phrase_normalized = phrase.replace('\u2013', '-').replace('\u2014', '-').replace('\u2212', '-')
+                    term_normalized = term.replace('\u2013', '-').replace('\u2014', '-').replace('\u2212', '-')
                     if phrase_normalized.lower() == term_normalized.lower():
                         exact_match = term
+                        matched_via_dash_norm = True
                         break
-                
+
                 if exact_match:
-                    result_parts.append(exact_match)
-                    if phrase != exact_match:
+                    if matched_via_dash_norm:
+                        # Preserve the INPUT's dash characters but apply the
+                        # whitelist's capitalization pattern.  Walk both strings
+                        # and copy the letter-case from the whitelist while
+                        # keeping the original dash codepoints.
+                        out_chars = []
+                        ti = 0  # index into exact_match (whitelist term)
+                        for pc in phrase:
+                            if pc in '-\u2013\u2014\u2212':
+                                # Keep the dash character from the input
+                                out_chars.append(pc)
+                                # Advance past the corresponding dash in term
+                                while ti < len(exact_match) and exact_match[ti] in '-\u2013\u2014\u2212':
+                                    ti += 1
+                            else:
+                                if ti < len(exact_match):
+                                    # Apply case from whitelist term
+                                    wc = exact_match[ti]
+                                    if wc.isupper():
+                                        out_chars.append(pc.upper())
+                                    elif wc.islower():
+                                        out_chars.append(pc.lower())
+                                    else:
+                                        out_chars.append(pc)
+                                    ti += 1
+                                else:
+                                    out_chars.append(pc)
+                        replacement = ''.join(out_chars)
+                    else:
+                        replacement = exact_match
+                    result_parts.append(replacement)
+                    if phrase != replacement:
                         changed = True
                 else:
                     # No whitelist match, preserve exactly
@@ -327,16 +389,26 @@ def to_sentence_case_academic(
                         changed = True
                     continue
                 
-                # Check exact whitelist matches
+                # Strip possessive suffix for whitelist comparison
+                # e.g. "Euler's" → base "Euler", suffix "'s"
+                possessive_suffix = ""
+                word_base = word
+                for poss in ("\u2019s", "'s"):  # curly then straight apostrophe
+                    if word.endswith(poss):
+                        possessive_suffix = word[-2:]
+                        word_base = word[:-2]
+                        break
+
+                # Check exact whitelist matches (using base form for possessives)
                 exact_match = None
                 for term in filtered_cap | filtered_dash:
-                    if word.lower() == term.lower():
+                    if word_base.lower() == term.lower():
                         exact_match = term
                         break
-                
+
                 if exact_match:
-                    result_parts.append(exact_match)
-                    if word != exact_match:
+                    result_parts.append(exact_match + possessive_suffix)
+                    if word != exact_match + possessive_suffix:
                         changed = True
                     continue
                 
@@ -372,6 +444,9 @@ def to_sentence_case_academic(
                     continue
                 
                 # Check if this is the start of a sentence (first word or after sentence-ending punctuation)
+                # Also check for opening-quote context (quoted titles like: Corrigendum for "A probabilistic approach")
+                _UNAMBIGUOUS_OPEN_QUOTES = {'\u201c', '\u00ab', '\u201e', '\u2018', '\u201a'}  # " « „ ' ‚
+                _ALL_QUOTE_CHARS = _UNAMBIGUOUS_OPEN_QUOTES | {'"', "'"}
                 is_sentence_start = False
                 if i == 0:
                     # First word of the title
@@ -384,9 +459,9 @@ def to_sentence_case_academic(
                                 # Special case: check if this period is part of a section number
                                 if tokens[j].value == '.':
                                     # Look for number before and after the period
-                                    before_is_number = (j > 0 and tokens[j-1].kind == 'WORD' and 
+                                    before_is_number = (j > 0 and tokens[j-1].kind == 'WORD' and
                                                        tokens[j-1].value.isdigit())
-                                    after_is_number = (i < len(tokens) and tokens[i].kind == 'WORD' and 
+                                    after_is_number = (i < len(tokens) and tokens[i].kind == 'WORD' and
                                                       tokens[i].value.isdigit())
                                     if before_is_number and after_is_number:
                                         # This is likely a section number like "2.3", not a sentence end
@@ -396,6 +471,46 @@ def to_sentence_case_academic(
                         elif tokens[j].kind == 'WORD':
                             # Found a word before any punctuation, not sentence start
                             break
+
+                # Opening-quote detection: if the word is immediately after an
+                # opening quotation mark that begins a quoted title (≥3 words),
+                # capitalise the first word.  Short quoted spans (1–2 words)
+                # like the "big" problem or the "very big" problem are
+                # scare-quotes / emphasis and stay lowercase.
+                # Unambiguous Unicode openers (" « „ ' ‚) are always opening.
+                # For ASCII " we use adjacency: preceded by space → opening.
+                _QUOTED_TITLE_MIN_WORDS = 3
+                _ANY_QUOTE = _ALL_QUOTE_CHARS | {
+                    '\u201d', '\u00bb', '\u2019', '\u201f', '\u201b',
+                }
+                if not is_sentence_start and i > 0:
+                    for j in range(i - 1, -1, -1):
+                        if tokens[j].kind == 'SPACE':
+                            continue
+                        if tokens[j].kind == 'PUNCT' and tokens[j].value in _ALL_QUOTE_CHARS:
+                            qchar = tokens[j].value
+                            is_opening = False
+                            if qchar in _UNAMBIGUOUS_OPEN_QUOTES:
+                                is_opening = True
+                            elif (j > 0 and tokens[j - 1].kind == 'SPACE') or j == 0:
+                                # ASCII " or ' preceded by space → opening
+                                is_opening = True
+                            if is_opening:
+                                # Count words until the matching closing quote.
+                                # Only capitalise for quoted titles (≥3 words);
+                                # shorter spans are scare-quotes / emphasis.
+                                words_in_quote = 0
+                                found_close = False
+                                for k in range(i, len(tokens)):
+                                    if tokens[k].kind == 'WORD':
+                                        words_in_quote += 1
+                                    elif (tokens[k].kind == 'PUNCT'
+                                          and tokens[k].value in _ANY_QUOTE):
+                                        found_close = True
+                                        break
+                                if found_close and words_in_quote >= _QUOTED_TITLE_MIN_WORDS:
+                                    is_sentence_start = True
+                        break  # Only check the immediately preceding non-space token
                 
                 if is_sentence_start and word.lower() not in filtered_tech:
                     # Check if it's a number that should be converted to word

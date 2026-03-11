@@ -239,7 +239,7 @@ class SIAMPublisher(PublisherInterface):
                                 button_text = await inst_button.text_content()
                                 self.logger.info(f"Found institutional access link: '{button_text}'")
                                 break
-                        except:
+                        except Exception:
                             continue
                     
                     if inst_button:
@@ -276,7 +276,7 @@ class SIAMPublisher(PublisherInterface):
                                     if search_input:
                                         self.logger.info(f"Found institution search with selector: {selector}")
                                         break
-                                except:
+                                except Exception:
                                     continue
                             
                             if search_input:
@@ -336,7 +336,7 @@ class SIAMPublisher(PublisherInterface):
                                                 await eth_option.click()
                                                 self.logger.info("Clicked ETH Zurich link")
                                                 break
-                                        except:
+                                        except Exception:
                                             continue
                                     
                                     if not eth_option:
@@ -494,7 +494,7 @@ class SIAMPublisher(PublisherInterface):
                                                             button_text = await download_button.text_content() or ''
                                                             self.logger.info(f"Found download button: '{button_text.strip()}' with selector: {selector}")
                                                             break
-                                                    except:
+                                                    except Exception:
                                                         continue
                                                 
                                                 if download_button:

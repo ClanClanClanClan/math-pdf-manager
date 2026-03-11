@@ -175,7 +175,7 @@ class NaturePublisher:
                             if element:
                                 institutional_link = element
                                 break
-                        except:
+                        except Exception:
                             continue
                     
                     if institutional_link:
@@ -257,7 +257,7 @@ class NaturePublisher:
                         username_field = await page.wait_for_selector(selector, timeout=3000)
                         if username_field:
                             break
-                    except:
+                    except Exception:
                         continue
                 
                 for selector in password_selectors:
@@ -265,7 +265,7 @@ class NaturePublisher:
                         password_field = await page.wait_for_selector(selector, timeout=3000)
                         if password_field:
                             break
-                    except:
+                    except Exception:
                         continue
                 
                 if username_field and password_field:
@@ -292,7 +292,7 @@ class NaturePublisher:
                             if submit_button:
                                 await submit_button.click()
                                 break
-                        except:
+                        except Exception:
                             continue
                     
                     # Wait for authentication to complete
@@ -324,7 +324,7 @@ class NaturePublisher:
                             await eth_option.click()
                             await page.wait_for_timeout(3000)
                             return await self._handle_eth_authentication(page)  # Recursive call
-                    except:
+                    except Exception:
                         continue
             
             return False
@@ -357,7 +357,7 @@ class NaturePublisher:
                         pdf_link = pdf_element
                         logger.info(f"Nature: Found PDF link with selector: {selector}")
                         break
-                except:
+                except Exception:
                     continue
             
             if not pdf_link:
