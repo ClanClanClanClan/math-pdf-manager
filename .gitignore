@@ -6,7 +6,13 @@ __pycache__/
 .Python
 venv/
 .venv/
+*.egg-info/
+dist/
+eggs/
+
+# Environment
 .env
+.envrc
 
 # IDE
 .vscode/
@@ -14,7 +20,23 @@ venv/
 *.swp
 *.swo
 
-# Project specific
+# Test frameworks
+.hypothesis/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Coverage
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+
+# Caches
+.cache/
+.metadata_cache/
+
+# Project runtime output
 downloads/
 logs/
 *.log
@@ -32,3 +54,46 @@ working_eth_api_downloader.py
 temp/
 tmp/
 *.tmp
+
+# Test and debug output directories
+test_downloads/
+test_errors/
+test_institutional/
+test_store/
+test_vectors/
+test_open_vs_paywalled/
+debug_downloads/
+debug_screenshots/
+stress_test_downloads/
+final_headless_test/
+daily_batches/
+proof_downloads/
+
+# Build artifacts
+build/
+
+# Legacy/deprecated (prevent re-creation)
+elsevier_deep_ultra/
+elsevier_ultrathink/
+unicode_utils/
+migration_backups/
+.archive/
+
+# Data subdirectories (runtime, not source)
+data/downloads/
+data/scihub*/
+data/springer*/
+data/papers*/
+data/ieee*/
+data/final_systematic_test/
+data/languages/backups/
+
+# ML training data
+src/pdf-meta-llm/datasets/
+src/pdf-meta-llm/raw_data.jsonl
+
+# OS files
+Thumbs.db
+
+# Dropbox conflicts
+*conflicted copy*
