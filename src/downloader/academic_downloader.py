@@ -49,11 +49,6 @@ class InstitutionalAuth:
     def _setup_auth_manager(self):
         """Initialize the existing auth manager."""
         try:
-            # Import existing auth system
-            import sys
-            from pathlib import Path
-            sys.path.append(str(Path(__file__).parent.parent))
-            
             from auth.manager import AuthManager
             from publishers import publisher_registry, AuthenticationConfig
             self.auth_manager = AuthManager()

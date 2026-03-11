@@ -8,7 +8,7 @@ import json
 import logging
 import sys
 import traceback
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional, Union
 from functools import wraps
@@ -26,7 +26,7 @@ class StructuredFormatter(logging.Formatter):
         """Format log record as JSON."""
         # Base log data
         log_data = {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "level": record.levelname,
             "logger": record.name,
             "message": record.getMessage(),
@@ -68,12 +68,12 @@ class PerformanceLogger:
     @contextmanager
     def measure_time(self, operation: str, **extra):
         """Context manager to measure operation time."""
-        start_time = datetime.utcnow()
+        start_time = datetime.now(timezone.utc)
         
         try:
             yield
         finally:
-            duration_ms = (datetime.utcnow() - start_time).total_seconds() * 1000
+            duration_ms = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
             self.logger.info(
                 f"Performance: {operation}",
                 extra={

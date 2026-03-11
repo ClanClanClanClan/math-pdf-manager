@@ -9,15 +9,7 @@ import sys
 from pathlib import Path
 from typing import List, Tuple
 
-# Add current directory to path
-current_dir = Path(__file__).parent.resolve()
-if str(current_dir) not in sys.path:
-    sys.path.insert(0, str(current_dir))
-    
-    # Import after path modification
-    from core.config.secure_config import get_config_manager
-else:
-    from core.config.secure_config import get_config_manager
+from core.config.secure_config import get_config_manager
 
 def demonstrate_insecure_patterns():
     """Show examples of insecure patterns that need to be replaced."""

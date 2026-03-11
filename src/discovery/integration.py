@@ -13,10 +13,6 @@ import logging
 import re
 from pathlib import Path
 from typing import List, Dict, Any, Optional
-import sys
-
-# Add parent directory to path for existing imports
-sys.path.insert(0, str(Path(__file__).parent.parent))
 
 try:
     from publishers import DownloadResult

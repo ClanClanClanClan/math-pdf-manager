@@ -109,22 +109,32 @@ def register_instance(interface: Type[T], instance: T) -> None:
 
 
 def setup_services() -> None:
-    """Setup default services - called once at application startup."""
+    """Setup default services - called once at application startup.
+
+    Services are constructed manually to satisfy constructor dependencies,
+    since ServiceRegistry does not support auto-wiring.
+    """
     from core.dependency_injection.interfaces import (
-        IConfigurationService, ILoggingService, IFileService, 
-        IMetricsService, INotificationService
+        IConfigurationService, ILoggingService, IFileService,
+        IMetricsService, INotificationService, IValidationService,
     )
     from core.dependency_injection.implementations import (
         ConfigurationService, LoggingService, FileService,
-        MetricsService, NotificationService
+        MetricsService, NotificationService,
     )
-    
-    # Register available services as singletons
-    register_singleton(IConfigurationService, ConfigurationService)
-    register_singleton(ILoggingService, LoggingService) 
-    register_singleton(IFileService, FileService)
-    register_singleton(IMetricsService, MetricsService)
-    register_singleton(INotificationService, NotificationService)
+    from core.dependency_injection.validation_service import UnifiedValidationService
+
+    # Build the dependency chain manually
+    config_svc = ConfigurationService()
+    register_instance(IConfigurationService, config_svc)
+
+    logging_svc = LoggingService(config_svc)
+    register_instance(ILoggingService, logging_svc)
+
+    register_instance(IFileService, FileService(logging_svc))
+    register_instance(IMetricsService, MetricsService(logging_svc))
+    register_instance(INotificationService, NotificationService(logging_svc))
+    register_instance(IValidationService, UnifiedValidationService(logging_svc))
 
 
 def clear_services() -> None:

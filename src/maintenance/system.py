@@ -6,7 +6,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Iterable, List, Optional
 
@@ -62,7 +62,7 @@ class UpdateMonitor:
         for item in metadata_list:
             if not item.get('doi') and item.get('arxiv_id'):
                 added_at = self._parse_datetime(item.get('added_at'))
-                if added_at and datetime.utcnow() - added_at > self.max_age:
+                if added_at and datetime.now(timezone.utc) - added_at > self.max_age:
                     candidates.append(item['arxiv_id'])
         return candidates
 
@@ -105,25 +105,31 @@ class MaintenanceSystem:
         self.quality_auditor = QualityAuditor()
 
     async def run_update_sweep(self, metadata_list: Iterable[dict], files: Iterable[Path]) -> UpdateReport:
+        metadata_list = list(metadata_list)
+        files = list(files)
         publication_updates = self.update_monitor.check_working_papers_for_publication(metadata_list)
         missing_files = self.update_monitor.detect_missing_files(files)
         return UpdateReport(
-            checked_papers=len(list(metadata_list)),
+            checked_papers=len(metadata_list),
             publication_updates=publication_updates,
             missing_files=missing_files,
         )
 
     async def audit_collection_quality(self, files: Iterable[Path], duplicate_map: dict[str, List[Path]]) -> QualityReport:
+        files = list(files)
         invalid_files = self.quality_auditor.find_invalid_files(files)
         duplicate_groups = [[str(path) for path in paths] for paths in duplicate_map.values() if len(paths) > 1]
         return QualityReport(
-            total_files=len(list(files)),
+            total_files=len(files),
             invalid_files=invalid_files,
             duplicate_groups=duplicate_groups,
         )
 
     async def run_maintenance(self, metadata_list: Iterable[dict], files: Iterable[Path],
                               duplicate_map: dict[str, List[Path]]) -> MaintenanceSummary:
+        # Materialize iterables to prevent double-consumption across tasks
+        metadata_list = list(metadata_list)
+        files = list(files)
         update_task = self.scheduler.schedule(
             self.run_update_sweep(metadata_list, files),
             name="update_sweep",

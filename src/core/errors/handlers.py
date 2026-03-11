@@ -8,7 +8,7 @@ import sys
 import traceback
 from typing import Any, Callable, Dict, Optional, Type, TypeVar, Union
 from functools import wraps
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
 
 T = TypeVar('T')
@@ -29,7 +29,7 @@ class BaseError(Exception):
         self.code = code or self.__class__.__name__
         self.details = details or {}
         self.cause = cause
-        self.timestamp = datetime.utcnow()
+        self.timestamp = datetime.now(timezone.utc)
         
         # Capture stack trace
         self.traceback = traceback.format_exc() if sys.exc_info()[0] else None

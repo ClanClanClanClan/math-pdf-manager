@@ -76,7 +76,14 @@ class IFileService(ABC):
         pass
 
 class IValidationService(ABC):
-    """Comprehensive validation service interface consolidating all validation systems."""
+    """Comprehensive validation service interface consolidating all validation systems.
+
+    NOTE: This interface violates the Interface Segregation Principle (ISP) by
+    combining path/file, network, security, content, and configuration validation
+    into a single contract.  A future refactor should split it into focused
+    interfaces (e.g. IPathValidator, INetworkValidator, IContentValidator,
+    IConfigValidator) so that consumers only depend on the slice they need.
+    """
     
     # === Core Path & File Validation ===
     @abstractmethod
