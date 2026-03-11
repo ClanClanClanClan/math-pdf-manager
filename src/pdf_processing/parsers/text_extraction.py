@@ -83,40 +83,64 @@ def multi_engine_extraction(pdf_file: Path, config: dict, **kwargs) -> List[Dict
 
 
 def extract_with_pymupdf(pdf_file: Path, config: dict) -> Optional[Tuple[str, List[TextBlock], int]]:
-    """Extract using PyMuPDF with better error handling"""
+    """Extract using PyMuPDF with REAL font metrics from ``get_text("dict")``.
+
+    Returns ``TextBlock`` objects with accurate font_size, font_name,
+    is_bold, is_italic, and bounding-box (x, y, width, height) data.
+    Adjacent spans on the same logical line are merged so that downstream
+    heuristics receive one block per visible line of text.
+    """
     if not PDF_LIBRARIES["pymupdf"]:
         return None
 
     try:
         doc = PDF_LIBRARIES["pymupdf"].open(str(pdf_file))
-        text_blocks = []
-        all_text = []
+        raw_spans: List[TextBlock] = []
+        all_text: List[str] = []
 
         max_pages = min(config.get("extraction", {}).get("max_pages", 10), len(doc))
 
         for page_num in range(max_pages):
             page = doc[page_num]
 
-            # Extract plain text
+            # Also grab the plain text for the full-text string
             page_text = page.get_text()
             if page_text:
                 all_text.append(page_text)
 
-                # Create simple text blocks
-                lines = page_text.split("\n")
-                for i, line in enumerate(lines):
-                    if line.strip():
-                        text_block = TextBlock(
-                            text=line.strip(),
-                            x=0,
-                            y=800 - i * 15,  # Approximate y position
-                            width=500,
-                            height=12,
+            # Extract spans with full font metrics via the "dict" output
+            try:
+                page_dict = page.get_text("dict")
+            except Exception:
+                continue
+
+            for block in page_dict.get("blocks", []):
+                if block.get("type") != 0:  # text blocks only
+                    continue
+                for line in block.get("lines", []):
+                    for span in line.get("spans", []):
+                        text = span.get("text", "").strip()
+                        if not text:
+                            continue
+                        bbox = span.get("bbox", (0, 0, 0, 0))
+                        flags = span.get("flags", 0)
+                        raw_spans.append(TextBlock(
+                            text=text,
+                            x=bbox[0],
+                            y=bbox[1],
+                            width=bbox[2] - bbox[0],
+                            height=bbox[3] - bbox[1],
+                            font_size=span.get("size", 12.0),
+                            font_name=span.get("font", ""),
+                            is_bold=bool(flags & 16),    # bit 4 = bold
+                            is_italic=bool(flags & 2),   # bit 1 = italic
                             page_num=page_num,
-                        )
-                        text_blocks.append(text_block)
+                        ))
 
         doc.close()
+
+        # Merge adjacent spans into logical lines
+        text_blocks = _merge_spans_into_lines(raw_spans)
 
         full_text = "\n".join(all_text)
         full_text = clean_text_advanced(full_text)
@@ -126,6 +150,79 @@ def extract_with_pymupdf(pdf_file: Path, config: dict) -> Optional[Tuple[str, Li
     except Exception as e:
         logger.debug(f"PyMuPDF extraction error: {e}")
         return None
+
+
+def _merge_spans_into_lines(
+    spans: List[TextBlock],
+    y_tolerance: float = 3.0,
+) -> List[TextBlock]:
+    """Merge consecutive spans on the same visual line into single TextBlocks.
+
+    PyMuPDF returns one span per font-change.  For layout analysis we want
+    one TextBlock per visible line with the *dominant* font size / bold state.
+
+    Two spans are considered to be on the same line if:
+    - They are on the same page, AND
+    - Their y-coordinates differ by at most *y_tolerance* points.
+
+    For each merged line the dominant font size is the size of the span that
+    contributes the most characters.  Bold/italic are set when the dominant
+    span has those flags.
+    """
+    if not spans:
+        return []
+
+    # Sort by (page_num, y, x) so that left-to-right reading order is stable
+    sorted_spans = sorted(spans, key=lambda s: (s.page_num, s.y, s.x))
+
+    merged: List[TextBlock] = []
+    current_group: List[TextBlock] = [sorted_spans[0]]
+
+    for span in sorted_spans[1:]:
+        prev = current_group[-1]
+        same_page = span.page_num == prev.page_num
+        same_line = abs(span.y - current_group[0].y) <= y_tolerance
+
+        if same_page and same_line:
+            current_group.append(span)
+        else:
+            merged.append(_merge_group(current_group))
+            current_group = [span]
+
+    # Don't forget the last group
+    merged.append(_merge_group(current_group))
+    return merged
+
+
+def _merge_group(group: List[TextBlock]) -> TextBlock:
+    """Merge a list of same-line spans into a single TextBlock."""
+    if len(group) == 1:
+        return group[0]
+
+    # Concatenate text with spaces between spans
+    merged_text = " ".join(s.text for s in group)
+
+    # Bounding box: union of all spans
+    x0 = min(s.x for s in group)
+    y0 = min(s.y for s in group)
+    x1 = max(s.x + s.width for s in group)
+    y1 = max(s.y + s.height for s in group)
+
+    # Dominant font: the span contributing the most characters
+    dominant = max(group, key=lambda s: len(s.text))
+
+    return TextBlock(
+        text=merged_text,
+        x=x0,
+        y=y0,
+        width=x1 - x0,
+        height=y1 - y0,
+        font_size=dominant.font_size,
+        font_name=dominant.font_name,
+        is_bold=dominant.is_bold,
+        is_italic=dominant.is_italic,
+        page_num=group[0].page_num,
+    )
 
 
 def extract_with_pdfplumber(pdf_file: Path, config: dict) -> Optional[Tuple[str, List[TextBlock], int]]:
@@ -291,5 +388,6 @@ __all__ = [
     'extract_with_pdfplumber',
     'extract_with_pdfminer',
     'extract_as_text_file',
-    'calculate_text_quality'
+    'calculate_text_quality',
+    '_merge_spans_into_lines',
 ]

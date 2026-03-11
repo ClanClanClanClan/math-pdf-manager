@@ -149,17 +149,16 @@ class DatabaseSchema:
            
         """CREATE TRIGGER papers_fts_update AFTER UPDATE ON papers
            BEGIN
-               UPDATE papers_fts SET 
-                   title = new.title,
-                   authors = new.authors, 
-                   abstract = new.abstract,
-                   keywords = new.keywords
-               WHERE rowid = new.id;
+               INSERT INTO papers_fts(papers_fts, rowid, title, authors, abstract, keywords)
+               VALUES ('delete', old.id, old.title, old.authors, old.abstract, old.keywords);
+               INSERT INTO papers_fts(rowid, title, authors, abstract, keywords)
+               VALUES (new.id, new.title, new.authors, new.abstract, new.keywords);
            END""",
-           
+
         """CREATE TRIGGER papers_fts_delete AFTER DELETE ON papers
            BEGIN
-               DELETE FROM papers_fts WHERE rowid = old.id;
+               INSERT INTO papers_fts(papers_fts, rowid, title, authors, abstract, keywords)
+               VALUES ('delete', old.id, old.title, old.authors, old.abstract, old.keywords);
            END"""
     ]
 
@@ -359,6 +358,19 @@ class AsyncPaperDatabase:
             ))
             await db.commit()
     
+    async def list_papers(self, limit: int = 100, offset: int = 0) -> List[PaperRecord]:
+        """List papers with pagination."""
+        await self._ensure_initialized()
+
+        async with aiosqlite.connect(self.db_path) as db:
+            db.row_factory = aiosqlite.Row
+            async with db.execute(
+                "SELECT * FROM papers ORDER BY created_at DESC LIMIT ? OFFSET ?",
+                (limit, offset),
+            ) as cursor:
+                rows = await cursor.fetchall()
+                return [self._row_to_paper(row) for row in rows]
+
     async def get_statistics(self) -> Dict[str, Any]:
         """Get database statistics."""
         await self._ensure_initialized()
@@ -389,16 +401,24 @@ class AsyncPaperDatabase:
             
             return stats
     
+    # Column order for positional (tuple) rows — must match CREATE TABLE.
+    _PAPER_COLUMNS = (
+        "id", "file_path", "title", "authors", "publication_date",
+        "arxiv_id", "doi", "journal", "volume", "pages", "abstract",
+        "keywords", "research_areas", "paper_type", "source", "confidence",
+        "file_size", "file_hash", "created_at", "updated_at",
+    )
+
     def _row_to_paper(self, row) -> PaperRecord:
-        """Convert database row to PaperRecord."""
-        return PaperRecord(
-            id=row[0], file_path=row[1], title=row[2], authors=row[3],
-            publication_date=row[4], arxiv_id=row[5], doi=row[6], journal=row[7],
-            volume=row[8], pages=row[9], abstract=row[10], keywords=row[11],
-            research_areas=row[12], paper_type=row[13], source=row[14],
-            confidence=row[15], file_size=row[16], file_hash=row[17],
-            created_at=row[18], updated_at=row[19]
-        )
+        """Convert database row to PaperRecord.
+
+        Accepts both ``aiosqlite.Row`` (dict-like) objects and plain tuples.
+        """
+        # If the row supports dict-style key access use column names directly.
+        if hasattr(row, "keys"):
+            return PaperRecord(**{col: row[col] for col in self._PAPER_COLUMNS if col in row.keys()})
+        # Fall back to positional mapping for plain tuples.
+        return PaperRecord(**dict(zip(self._PAPER_COLUMNS, row)))
 
 
 class PaperDatabase:
@@ -406,37 +426,31 @@ class PaperDatabase:
     
     def __init__(self, db_path: str = "papers.db"):
         self.async_db = AsyncPaperDatabase(db_path)
-        self._loop = None
-    
-    def _get_loop(self):
-        """Get or create event loop."""
-        try:
-            return asyncio.get_running_loop()
-        except RuntimeError:
-            if self._loop is None:
-                self._loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(self._loop)
-            return self._loop
-    
+
     def add_paper(self, paper: PaperRecord) -> int:
         """Sync version of add_paper."""
-        loop = self._get_loop()
-        return loop.run_until_complete(self.async_db.add_paper(paper))
-    
+        from src.core.utils.async_compat import run_sync
+        return run_sync(self.async_db.add_paper(paper))
+
     def get_paper(self, paper_id: int) -> Optional[PaperRecord]:
         """Sync version of get_paper."""
-        loop = self._get_loop()
-        return loop.run_until_complete(self.async_db.get_paper(paper_id))
-    
+        from src.core.utils.async_compat import run_sync
+        return run_sync(self.async_db.get_paper(paper_id))
+
     def search_papers(self, query: str, limit: int = 50) -> List[PaperRecord]:
         """Sync version of search_papers."""
-        loop = self._get_loop()
-        return loop.run_until_complete(self.async_db.search_papers(query, limit))
-    
+        from src.core.utils.async_compat import run_sync
+        return run_sync(self.async_db.search_papers(query, limit))
+
+    def list_papers(self, limit: int = 100, offset: int = 0) -> List[PaperRecord]:
+        """Sync version of list_papers."""
+        from src.core.utils.async_compat import run_sync
+        return run_sync(self.async_db.list_papers(limit, offset))
+
     def get_statistics(self) -> Dict[str, Any]:
         """Sync version of get_statistics."""
-        loop = self._get_loop()
-        return loop.run_until_complete(self.async_db.get_statistics())
+        from src.core.utils.async_compat import run_sync
+        return run_sync(self.async_db.get_statistics())
 
 
 # Example usage

@@ -15,18 +15,23 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional
 import sys
 
-# Add parent directory to path for existing imports
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
 try:
-    from publishers import DownloadResult
-    from publishers.unified_downloader import UnifiedDownloader
-    from core.validation.comprehensive_validator import ComprehensiveUnifiedValidationService
-    from discovery import DiscoveryEngine, PaperCandidate
-    from arxivbot.pipeline.optimized_harvester import ProductionOptimizedHarvester, OptimizedHarvesterConfig
-    from arxivbot.monitoring.service import MonitoringService, MonitoringServiceConfig, initialize_monitoring_service
-except ImportError as e:  # pragma: no cover - fallback only exercised in constrained environments
-    logging.warning(f"Import failed: {e}. Some features may not work.")
+    from src.publishers import DownloadResult
+    from src.publishers.unified_downloader import UnifiedDownloader
+    from src.core.validation.comprehensive_validator import ComprehensiveUnifiedValidationService
+    from src.discovery import DiscoveryEngine, PaperCandidate
+    from src.arxivbot.pipeline.optimized_harvester import ProductionOptimizedHarvester, OptimizedHarvesterConfig
+    from src.arxivbot.monitoring.service import MonitoringService, MonitoringServiceConfig, initialize_monitoring_service
+except ImportError:
+    try:
+        from publishers import DownloadResult
+        from publishers.unified_downloader import UnifiedDownloader
+        from core.validation.comprehensive_validator import ComprehensiveUnifiedValidationService
+        from discovery import DiscoveryEngine, PaperCandidate
+        from arxivbot.pipeline.optimized_harvester import ProductionOptimizedHarvester, OptimizedHarvesterConfig
+        from arxivbot.monitoring.service import MonitoringService, MonitoringServiceConfig, initialize_monitoring_service
+    except ImportError as e:  # pragma: no cover
+        logging.warning(f"Import failed: {e}. Some features may not work.")
 
     from dataclasses import dataclass
 

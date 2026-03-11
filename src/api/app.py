@@ -1,7 +1,13 @@
-"""FastAPI application exposing discovery and acquisition endpoints."""
+"""FastAPI application exposing discovery and acquisition endpoints.
+
+NOTE: This API has no authentication or authorization. Do not expose it to
+untrusted networks without adding an auth layer.
+"""
 
 from __future__ import annotations
 
+import os
+from contextlib import asynccontextmanager
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -22,12 +28,28 @@ from maintenance.system import MaintenanceSystem
 from core.database import AsyncPaperDatabase
 from prometheus_client import Counter, CONTENT_TYPE_LATEST, generate_latest
 
-app = FastAPI(title="Academic Paper Manager API", version="0.1.0")
+ALLOWED_ORIGINS = os.environ.get("CORS_ORIGINS", "http://localhost:3000").split(",")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    app.state.discovery_engine = DiscoveryEngine()
+    app.state.acquisition_engine = AcquisitionEngine(config=AcquisitionConfig())
+    app.state.database = AsyncPaperDatabase(str(Path("papers.db")))
+    app.state.maintenance_system = MaintenanceSystem()
+    yield
+    # Shutdown
+    await app.state.discovery_engine.close()
+    await app.state.acquisition_engine.close()
+
+
+app = FastAPI(title="Academic Paper Manager API", version="0.1.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=ALLOWED_ORIGINS,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type"],
 )
 
 DISCOVERY_COUNTER = Counter("discovery_requests_total", "Total discovery requests")
@@ -61,20 +83,6 @@ class CollectionSummaryResponse(BaseModel):
     recent_additions: int
     total_duplicates: int
 
-
-@app.on_event("startup")
-async def startup_event() -> None:
-    app.state.discovery_engine = DiscoveryEngine()
-    app.state.acquisition_engine = AcquisitionEngine(config=AcquisitionConfig())
-    app.state.database = AsyncPaperDatabase(str(Path("papers.db")))
-    app.state.maintenance_system = MaintenanceSystem()
-
-
-@app.on_event("shutdown")
-async def shutdown_event() -> None:
-    await app.state.discovery_engine.close()
-    await app.state.acquisition_engine.close()
-    # AsyncPaperDatabase uses on-demand connections; nothing to close.
 
 
 @app.get("/health")

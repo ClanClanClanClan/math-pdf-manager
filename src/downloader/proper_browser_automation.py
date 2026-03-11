@@ -482,7 +482,7 @@ class WileyBrowserDownloader(ProperBrowserDownloader):
                 if cookie_button:
                     await cookie_button.click()
                     await self.page.wait_for_timeout(1000)
-            except:
+            except Exception:
                 pass
             
             # Click Login

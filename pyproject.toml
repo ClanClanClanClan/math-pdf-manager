@@ -67,7 +67,11 @@ ml = [
     "torch>=2.1.0",
     "sentence-transformers>=2.2.0",
 ]
-all = ["math-pdf-manager[dev,ocr,api,ml]"]
+llm = [
+    "llama-cpp-python>=0.3.0",
+    "huggingface_hub>=0.20.0",
+]
+all = ["math-pdf-manager[dev,ocr,api,ml,llm]"]
 
 [project.scripts]
 mathpdf = "main:main"
@@ -171,6 +175,10 @@ markers = [
 filterwarnings = [
     "ignore::DeprecationWarning:pdfminer.*",
     "ignore::DeprecationWarning:PyMuPDF.*",
+    "ignore:Importing 'parser.split_arg_string':DeprecationWarning",
+    "ignore:builtin type Swig:DeprecationWarning:importlib.*",
+    "ignore:builtin type swigvarlink:DeprecationWarning:importlib.*",
+    "ignore:unclosed event loop:ResourceWarning",
 ]
 
 [tool.coverage.run]

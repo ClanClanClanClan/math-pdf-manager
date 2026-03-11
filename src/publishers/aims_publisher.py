@@ -68,7 +68,7 @@ class AIMSPublisher:
             result = await self._browser_institutional_download(target_url, save_path)
             
             if result.success:
-                logger.info(f"AIMS: Successfully downloaded")
+                logger.info("AIMS: Successfully downloaded")
             else:
                 logger.warning(f"AIMS: Download failed - {result.error_message}")
             
@@ -156,7 +156,7 @@ class AIMSPublisher:
                                 institutional_link = element
                                 logger.info(f"AIMS: Found institutional access with: {selector}")
                                 break
-                        except:
+                        except Exception:
                             continue
                     
                     if institutional_link:
@@ -235,7 +235,7 @@ class AIMSPublisher:
                             await page.wait_for_timeout(3000)
                             eth_found = True
                             break
-                    except:
+                    except Exception:
                         continue
                 
                 if not eth_found:
@@ -277,12 +277,12 @@ class AIMSPublisher:
                                             await page.wait_for_timeout(3000)
                                             eth_found = True
                                             break
-                                    except:
+                                    except Exception:
                                         continue
                                 
                                 if eth_found:
                                     break
-                        except:
+                        except Exception:
                             continue
                 
                 # After selecting institution, might need to click "Continue" or "Go"
@@ -303,7 +303,7 @@ class AIMSPublisher:
                                 await continue_button.click()
                                 await page.wait_for_timeout(3000)
                                 break
-                        except:
+                        except Exception:
                             continue
             
             # Handle ETH-specific authentication
@@ -350,7 +350,7 @@ class AIMSPublisher:
                     username_field = await page.wait_for_selector(selector, timeout=3000)
                     if username_field:
                         break
-                except:
+                except Exception:
                     continue
             
             for selector in password_selectors:
@@ -358,7 +358,7 @@ class AIMSPublisher:
                     password_field = await page.wait_for_selector(selector, timeout=3000)
                     if password_field:
                         break
-                except:
+                except Exception:
                     continue
             
             if username_field and password_field:
@@ -385,7 +385,7 @@ class AIMSPublisher:
                         if submit_button:
                             await submit_button.click()
                             break
-                    except:
+                    except Exception:
                         continue
                 
                 # Wait for authentication to complete
@@ -447,7 +447,7 @@ class AIMSPublisher:
                             pdf_link = pdf_element
                             logger.info(f"AIMS: Found PDF link with selector: {selector}")
                             break
-                except:
+                except Exception:
                     continue
             
             if not pdf_link:
@@ -460,8 +460,8 @@ class AIMSPublisher:
                         if pdf_url:
                             logger.info("AIMS: Found PDF in iframe")
                             return await self._download_pdf_from_url(page, pdf_url, save_path)
-                except:
-                    pass
+                except Exception as e:
+                    logger.debug(f"Suppressed: {e}")
                 
                 return False
             

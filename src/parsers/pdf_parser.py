@@ -12,41 +12,41 @@ import types
 import importlib
 from pathlib import Path
 
-# Add current directory to path
+# Resolve current directory (for relative imports)
 current_dir = Path(__file__).parent.resolve()
-if str(current_dir) not in sys.path:
-    sys.path.insert(0, str(current_dir))
 
 # Import will be done after module setup
 
-# ---- GROBID dummy --------------------------------------------------
-stub = types.ModuleType("grobid_client")
+# ---- GROBID dummy (only if not already installed) -------------------
+try:
+    import grobid_client  # noqa: F401
+except ImportError:
+    stub = types.ModuleType("grobid_client")
 
+    class _FakeGrobidClient:  # minimal API-surface
+        def __init__(self, *_, **__): ...
+        def process_pdf(self, *_, **__):  # returns fake TEI XML
+            return "<tei><title>Dummy</title></tei>"
+        def process_fulltext_document(self, *args, **kwargs):
+            return {"title": "Sample Title", "authors": [{"first": "John", "last": "Doe"}]}
 
-class _FakeGrobidClient:  # minimal API-surface
-    def __init__(self, *_, **__): ...
-    def process_pdf(self, *_, **__):  # returns fake TEI XML
-        return "<tei><title>Dummy</title></tei>"
-    def process_fulltext_document(self, *args, **kwargs):
-        return {"title": "Sample Title", "authors": [{"first": "John", "last": "Doe"}]}
+    stub.GrobidClient = _FakeGrobidClient
+    stub.__spec__ = importlib.machinery.ModuleSpec("grobid_client", loader=None)
+    sys.modules["grobid_client"] = stub
 
+# ---- pytesseract dummy (only if not already installed) ---------------
+try:
+    import pytesseract  # noqa: F401
+except ImportError:
+    tess = types.ModuleType("pytesseract")
 
-stub.GrobidClient = _FakeGrobidClient
-stub.__spec__ = importlib.machinery.ModuleSpec("grobid_client", loader=None)
-sys.modules["grobid_client"] = stub
+    def _fake_image_to_string(*_, **__):
+        return "dummy ocr text"
 
-# ---- pytesseract dummy --------------------------------------------
-tess = types.ModuleType("pytesseract")
-
-
-def _fake_image_to_string(*_, **__):
-    return "dummy ocr text"
-
-
-tess.image_to_string = _fake_image_to_string
-tess.pytesseract = tess  # self-ref like the real lib
-tess.__spec__ = importlib.machinery.ModuleSpec("pytesseract", loader=None)
-sys.modules["pytesseract"] = tess
+    tess.image_to_string = _fake_image_to_string
+    tess.pytesseract = tess  # self-ref like the real lib
+    tess.__spec__ = importlib.machinery.ModuleSpec("pytesseract", loader=None)
+    sys.modules["pytesseract"] = tess
 
 # Import everything from the new modular structure (after module setup)
 try:

@@ -27,73 +27,115 @@ class ModelManager:
                 "name": "pdf-metadata-extractor-base",
                 "size": "1.8GB",
                 "url": "https://huggingface.co/mathpdf/metadata-extractor-base",
-                "description": "Base model for PDF metadata extraction"
+                "description": "Base model for PDF metadata extraction (Transformers)"
             },
             "finetuned_model": {
-                "name": "pdf-metadata-extractor-finetuned", 
+                "name": "pdf-metadata-extractor-finetuned",
                 "size": "300MB",
                 "url": "https://huggingface.co/mathpdf/metadata-extractor-finetuned",
-                "description": "Fine-tuned model for academic papers"
-            }
+                "description": "Fine-tuned model for academic papers (Transformers/LoRA)"
+            },
+            # GGUF models for llama-cpp-python (grammar-constrained extraction)
+            "qwen2.5-7b": {
+                "name": "qwen2.5-7b-instruct-q4_k_m",
+                "size": "4.7GB",
+                "repo_id": "Qwen/Qwen2.5-7B-Instruct-GGUF",
+                "filename": "qwen2.5-7b-instruct-q4_k_m.gguf",
+                "url": "https://huggingface.co/Qwen/Qwen2.5-7B-Instruct-GGUF",
+                "description": "Qwen2.5 7B Instruct Q4_K_M — best quality (GGUF)",
+                "format": "gguf",
+            },
+            "qwen2.5-3b": {
+                "name": "qwen2.5-3b-instruct-q4_k_m",
+                "size": "2.1GB",
+                "repo_id": "Qwen/Qwen2.5-3B-Instruct-GGUF",
+                "filename": "qwen2.5-3b-instruct-q4_k_m.gguf",
+                "url": "https://huggingface.co/Qwen/Qwen2.5-3B-Instruct-GGUF",
+                "description": "Qwen2.5 3B Instruct Q4_K_M — lightweight (GGUF)",
+                "format": "gguf",
+            },
         }
     
     def download_model(self, model_name: str) -> Path:
-        """Download model if not cached locally."""
+        """Download model if not cached locally.
+
+        For GGUF models, uses ``huggingface_hub.hf_hub_download`` for
+        robust, resumable downloads with caching.
+        """
         if model_name not in self.model_configs:
             raise ValueError(f"Unknown model: {model_name}")
-        
+
+        config = self.model_configs[model_name]
+
+        # GGUF models — download the single .gguf file
+        if config.get("format") == "gguf":
+            return self._download_gguf_model(model_name, config)
+
+        # Legacy Transformers models — placeholder approach
+        return self._download_legacy_model(model_name, config)
+
+    def _download_gguf_model(self, model_name: str, config: dict) -> Path:
+        """Download a single GGUF file via huggingface_hub."""
+        gguf_dir = self.cache_dir / "gguf"
+        gguf_dir.mkdir(parents=True, exist_ok=True)
+
+        local_path = gguf_dir / config["filename"]
+        if local_path.exists():
+            logger.info(f"GGUF model {model_name} already cached at {local_path}")
+            return local_path
+
+        logger.info(
+            f"Downloading {config['description']} "
+            f"({config['size']}) from {config['repo_id']}…"
+        )
+
+        try:
+            from huggingface_hub import hf_hub_download
+
+            downloaded = hf_hub_download(
+                repo_id=config["repo_id"],
+                filename=config["filename"],
+                cache_dir=str(gguf_dir),
+                local_dir=str(gguf_dir),
+            )
+            logger.info(f"Model downloaded to {downloaded}")
+            return Path(downloaded)
+
+        except ImportError:
+            logger.error(
+                "huggingface_hub is required for GGUF model downloads.  "
+                "Install it with:  pip install huggingface_hub"
+            )
+            raise
+        except Exception as e:
+            logger.error(f"Download failed: {e}")
+            raise
+
+    def _download_legacy_model(self, model_name: str, config: dict) -> Path:
+        """Download a legacy Transformers model (placeholder)."""
         model_dir = self.cache_dir / model_name
         config_file = model_dir / "config.json"
-        
+
         if config_file.exists():
             logger.info(f"Model {model_name} already cached")
             return model_dir
-        
+
         logger.info(f"Downloading model {model_name}...")
-        config = self.model_configs[model_name]
-        
-        # Create placeholder for now - in real implementation would download
         model_dir.mkdir(exist_ok=True)
-        
-        # Save model config
+
         with open(config_file, 'w') as f:
             json.dump(config, f, indent=2)
-        
-        # Create README with download instructions
+
         readme_file = model_dir / "README.md"
         with open(readme_file, 'w') as f:
-            f.write(f"""# {config['name']}
+            f.write(f"# {config['name']}\n\n"
+                    f"{config['description']}\n\n"
+                    f"**Size**: {config['size']}\n"
+                    f"**URL**: {config['url']}\n\n"
+                    f"See huggingface_hub documentation for download instructions.\n")
 
-{config['description']}
-
-**Size**: {config['size']}
-**URL**: {config['url']}
-
-## Manual Download Instructions
-
-1. Install huggingface-hub:
-   ```bash
-   pip install huggingface-hub
-   ```
-
-2. Download model:
-   ```python
-   from huggingface_hub import snapshot_download
-   snapshot_download(
-       repo_id="{config['url'].split('/')[-1]}",
-       local_dir="{model_dir}",
-       local_dir_use_symlinks=False
-   )
-   ```
-
-## Alternative: Use API
-
-For development, consider using the Hugging Face Inference API instead of downloading large models locally.
-""")
-        
         logger.info(f"Model config created at {model_dir}")
         logger.warning(f"Large model files not downloaded. See {readme_file} for instructions.")
-        
         return model_dir
     
     def get_model_path(self, model_name: str) -> Path:

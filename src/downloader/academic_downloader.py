@@ -50,10 +50,6 @@ class InstitutionalAuth:
         """Initialize the existing auth manager."""
         try:
             # Import existing auth system
-            import sys
-            from pathlib import Path
-            sys.path.append(str(Path(__file__).parent.parent))
-            
             from auth.manager import AuthManager
             from publishers import publisher_registry, AuthenticationConfig
             self.auth_manager = AuthManager()
@@ -452,24 +448,13 @@ class Downloader:
     
     def __init__(self, download_dir: str = "downloads"):
         self.async_downloader = AcademicDownloader(download_dir)
-        self._loop = None
-    
-    def _get_loop(self):
-        """Get or create event loop."""
-        try:
-            return asyncio.get_running_loop()
-        except RuntimeError:
-            if self._loop is None:
-                self._loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(self._loop)
-            return self._loop
-    
+
     def download(self, identifier: str, metadata: Optional[Dict] = None) -> DownloadResult:
         """Sync version of download."""
-        loop = self._get_loop()
-        return loop.run_until_complete(self.async_downloader.download(identifier, metadata))
-    
+        from src.core.utils.async_compat import run_sync
+        return run_sync(self.async_downloader.download(identifier, metadata))
+
     def close(self):
         """Close the downloader."""
-        if self._loop:
-            self._loop.run_until_complete(self.async_downloader.close())
+        from src.core.utils.async_compat import run_sync
+        run_sync(self.async_downloader.close())

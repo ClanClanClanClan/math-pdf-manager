@@ -5,10 +5,12 @@ Unicode processing, normalization, and security functions
 extracted from src.validators.filename_checker.py
 """
 
+import logging
 import re
 import unicodedata
 from typing import Tuple, List, Set, Iterable
-from src.core.validation import debug_print
+
+logger = logging.getLogger(__name__)
 
 
 class UnicodeHandler:
@@ -71,7 +73,7 @@ class UnicodeHandler:
         """Check if text contains mathematical Greek letters or terms"""
         # Check for individual Greek letters
         if any(char in self.mathematical_greek_letters for char in text):
-            debug_print(f"Found mathematical Greek letters in: {text}")
+            logger.debug(f"Found mathematical Greek letters in: {text}")
             return True
         
         # Check for common mathematical Greek terms (as standalone words)
@@ -82,7 +84,6 @@ class UnicodeHandler:
         }
         
         # Use word boundaries to avoid false positives like "beta test" or "alphabet"
-        import re
         text_lower = text.lower()
         for term in greek_terms:
             if re.search(rf'\b{term}\b', text_lower):
@@ -91,7 +92,7 @@ class UnicodeHandler:
                 math_context = any(indicator in text_lower for indicator in 
                                  ['-particle', 'function', 'distribution', 'angle', 'coefficient'])
                 if math_context or term == 'pi':  # pi is almost always mathematical
-                    debug_print(f"Found mathematical Greek term '{term}' in: {text}")
+                    logger.debug(f"Found mathematical Greek term '{term}' in: {text}")
                     return True
         
         return False
@@ -120,7 +121,7 @@ class UnicodeHandler:
         # Enhanced mixed script handling for mathematical content
         if len(scripts) > 1 and "LATIN" in scripts and "GREEK" in scripts:
             if self.has_mathematical_greek(text):
-                debug_print(
+                logger.debug(
                     f"Allowing mixed GREEK/LATIN scripts due to mathematical content: {text}"
                 )
                 scripts = {"LATIN"}  # Don't report this as mixed scripts
@@ -213,21 +214,21 @@ class UnicodeHandler:
     def debug_unicode_difference(self, str1: str, str2: str, label: str = "") -> None:
         """Debug Unicode differences between two strings"""
         if str1 == str2:
-            debug_print(f"{label}Strings are identical")
+            logger.debug(f"{label}Strings are identical")
             return
         
-        debug_print(f"{label}String differences:")
-        debug_print(f"  String 1: {repr(str1)}")
-        debug_print(f"  String 2: {repr(str2)}")
+        logger.debug(f"{label}String differences:")
+        logger.debug(f"  String 1: {repr(str1)}")
+        logger.debug(f"  String 2: {repr(str2)}")
         
         # Character-by-character comparison
         min_len = min(len(str1), len(str2))
         for i in range(min_len):
             if str1[i] != str2[i]:
-                debug_print(f"  Diff at pos {i}: {repr(str1[i])} vs {repr(str2[i])}")
+                logger.debug(f"  Diff at pos {i}: {repr(str1[i])} vs {repr(str2[i])}")
         
         if len(str1) != len(str2):
-            debug_print(f"  Length difference: {len(str1)} vs {len(str2)}")
+            logger.debug(f"  Length difference: {len(str1)} vs {len(str2)}")
 
 
 # Module-level functions for backward compatibility

@@ -51,24 +51,29 @@ class CredentialStore:
             return
 
         key_file = self.config_dir / ".key"
+        salt_file = self.config_dir / ".salt"
         if key_file.exists():
             with open(key_file, "rb") as f:
                 self.fernet = Fernet(f.read())
         else:
-            # Generate new key
+            # Generate new key with random salt
             password = os.urandom(32)
+            salt = os.urandom(16)
             kdf = PBKDF2HMAC(
                 algorithm=hashes.SHA256(),
                 length=32,
-                salt=b"academic_papers_salt",
+                salt=salt,
                 iterations=100000,
             )
             key = base64.urlsafe_b64encode(kdf.derive(password))
             self.fernet = Fernet(key)
             with open(key_file, "wb") as f:
                 f.write(key)
+            with open(salt_file, "wb") as f:
+                f.write(salt)
             # Restrict permissions
             os.chmod(key_file, 0o600)
+            os.chmod(salt_file, 0o600)
 
     def store_credential(self, service: str, username: str, password: str):
         """Store credentials securely in system keyring."""
@@ -106,6 +111,10 @@ class CredentialStore:
             encrypted_password = self.fernet.encrypt(password.encode()).decode()
         else:
             # Fallback to base64 encoding (not secure but functional)
+            logger.warning(
+                "Using base64 encoding fallback — credentials are NOT encrypted. "
+                "Install the 'cryptography' package for proper encryption."
+            )
             encrypted_password = base64.b64encode(password.encode()).decode()
 
         data = {"username": username, "password": encrypted_password}
@@ -128,6 +137,9 @@ class CredentialStore:
                     return self.fernet.decrypt(data["password"].encode()).decode()
                 else:
                     # Fallback to base64 decoding
+                    logger.warning(
+                        "Decrypting with base64 fallback — credentials are NOT encrypted."
+                    )
                     return base64.b64decode(data["password"].encode()).decode()
         except Exception as e:
             logger.error(f"Failed to decrypt credentials: {e}")

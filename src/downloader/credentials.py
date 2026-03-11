@@ -466,9 +466,9 @@ class DownloaderConfig:
                 "alternative_sources"
             ],
             "user_agents": [
-                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-                "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+                "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
             ],
             "proxy_settings": {
                 "use_proxy": False,
@@ -507,18 +507,22 @@ async def setup_credentials():
     master_password = getpass.getpass("Enter master password: ")
     creds.initialize_encryption(master_password)
     
-    # Add publisher credentials
+    # Add publisher credentials (set via environment variables)
     springer_creds = {
-        'institution_url': 'https://link.springer.com/openurl?your_institution_params',
-        'username': 'your_university_username',
-        'password': 'your_university_password'
+        'institution_url': os.environ.get('SPRINGER_INSTITUTION_URL', ''),
+        'username': os.environ.get('SPRINGER_USERNAME', ''),
+        'password': os.environ.get('SPRINGER_PASSWORD', ''),
     }
+    if not springer_creds['username']:
+        raise RuntimeError("Set SPRINGER_USERNAME env var before running setup")
     creds.set_publisher_credentials('springer', springer_creds)
-    
+
     elsevier_creds = {
-        'api_key': 'your_scopus_api_key',
-        'institution_url': 'https://www.sciencedirect.com/science/institution/your_institution'
+        'api_key': os.environ.get('ELSEVIER_API_KEY', ''),
+        'institution_url': os.environ.get('ELSEVIER_INSTITUTION_URL', ''),
     }
+    if not elsevier_creds['api_key']:
+        raise RuntimeError("Set ELSEVIER_API_KEY env var before running setup")
     creds.set_publisher_credentials('elsevier', elsevier_creds)
     
     # Test authentication

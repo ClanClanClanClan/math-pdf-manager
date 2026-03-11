@@ -16,9 +16,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Any, Union
 
-# Add src to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
 # Async imports for open access sources
 import aiohttp
 import aiofiles
@@ -313,24 +310,13 @@ class Downloader:
     
     def __init__(self, download_dir: str = "downloads"):
         self.async_downloader = IntegratedAcademicDownloader(download_dir)
-        self._loop = None
-    
-    def _get_loop(self):
-        """Get or create event loop."""
-        try:
-            return asyncio.get_running_loop()
-        except RuntimeError:
-            if self._loop is None:
-                self._loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(self._loop)
-            return self._loop
-    
+
     def download(self, identifier: str) -> DownloadResult:
         """Sync version of download."""
-        loop = self._get_loop()
-        return loop.run_until_complete(self.async_downloader.download(identifier))
-    
+        from src.core.utils.async_compat import run_sync
+        return run_sync(self.async_downloader.download(identifier))
+
     def close(self):
         """Close the downloader."""
-        if self._loop:
-            self._loop.run_until_complete(self.async_downloader.close())
+        from src.core.utils.async_compat import run_sync
+        run_sync(self.async_downloader.close())

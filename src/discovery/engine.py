@@ -10,7 +10,7 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable, List, Optional
-from urllib.parse import urlencode
+import defusedxml.ElementTree as ET
 
 import httpx
 
@@ -207,27 +207,56 @@ class DiscoveryEngine:
         return re.sub(r"[{}]", "", value).strip()
 
     def _parse_arxiv_feed(self, xml_data: str) -> Iterable[PaperCandidate]:
-        entries = re.split(r"<entry>", xml_data)[1:]
-        for entry in entries:
-            title_match = re.search(r"<title>(.*?)</title>", entry, re.DOTALL)
-            title = title_match.group(1).strip() if title_match else "Unknown title"
-            author_matches = re.findall(r"<name>(.*?)</name>", entry)
-            doi_match = re.search(r"<arxiv:doi>(.*?)</arxiv:doi>", entry)
-            id_match = re.search(r"<id>http://arxiv.org/abs/(.*?)</id>", entry)
-            url_match = re.search(r"<link rel=\"alternate\" type=\"text/html\" href=\"(.*?)\"/>", entry)
-            published_match = re.search(r"<published>(\d{4})-\d{2}-\d{2}</published>", entry)
-            metadata = {
-                "raw": entry,
-            }
+        # Namespace map for Atom + arXiv extensions
+        ns = {
+            "atom": "http://www.w3.org/2005/Atom",
+            "arxiv": "http://arxiv.org/schemas/atom",
+        }
+
+        root = ET.fromstring(xml_data)
+        for entry in root.findall("atom:entry", ns):
+            title_el = entry.find("atom:title", ns)
+            title = re.sub(r"\s+", " ", (title_el.text or "").strip()) if title_el is not None else "Unknown title"
+
+            authors = [
+                name_el.text
+                for author_el in entry.findall("atom:author", ns)
+                if (name_el := author_el.find("atom:name", ns)) is not None and name_el.text
+            ] or ["Unknown"]
+
+            doi_el = entry.find("arxiv:doi", ns)
+            doi = doi_el.text.strip() if doi_el is not None and doi_el.text else None
+
+            id_el = entry.find("atom:id", ns)
+            arxiv_id = None
+            if id_el is not None and id_el.text:
+                id_text = id_el.text.strip()
+                if "/abs/" in id_text:
+                    arxiv_id = id_text.split("/abs/")[-1]
+
+            url = None
+            for link in entry.findall("atom:link", ns):
+                if link.get("rel") == "alternate" and link.get("type") == "text/html":
+                    url = link.get("href")
+                    break
+
+            published_el = entry.find("atom:published", ns)
+            published_year = None
+            if published_el is not None and published_el.text:
+                # ISO 8601: "2024-01-15T00:00:00Z" — extract year
+                year_match = re.match(r"(\d{4})", published_el.text.strip())
+                if year_match:
+                    published_year = int(year_match.group(1))
+
             yield PaperCandidate(
-                title=re.sub(r"\s+", " ", title),
-                authors=author_matches or ["Unknown"],
-                doi=doi_match.group(1) if doi_match else None,
-                arxiv_id=id_match.group(1) if id_match else None,
+                title=title,
+                authors=authors,
+                doi=doi,
+                arxiv_id=arxiv_id,
                 source="arxiv",
-                url=url_match.group(1) if url_match else None,
-                published_year=int(published_match.group(1)) if published_match else None,
-                metadata=metadata,
+                url=url,
+                published_year=published_year,
+                metadata={"raw": ET.tostring(entry, encoding="unicode")},
             )
 
     def _extract_first(self, value) -> Optional[str]:

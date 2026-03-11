@@ -77,7 +77,7 @@ class FactorySecurityConfig:
     enable_execution_logging: bool = True
     strict_mode: bool = False        # Stricter timeouts for production
 
-class TimeoutError(Exception):
+class FactoryTimeoutError(Exception):
     """Raised when factory execution times out."""
     pass
 
@@ -151,7 +151,7 @@ class FactorySecurityManager:
                     self.logger.error(f"Factory {factory_name} timed out after {timeout}s")
                 
                 metrics.record_execution(execution_time, success=False, timeout=True)
-                raise TimeoutError(f"Factory {factory_name} execution timed out after {timeout} seconds")
+                raise FactoryTimeoutError(f"Factory {factory_name} execution timed out after {timeout} seconds")
             
             # Check for exceptions
             if 'exception' in exception_container:
@@ -341,7 +341,7 @@ class DIContainer:
         """
         try:
             return self._security_manager.execute_factory_with_security(factory, factory_name)
-        except TimeoutError as e:
+        except FactoryTimeoutError as e:
             self._logger.error(f"Factory {factory_name} timed out - potential DoS attack or infinite loop")
             raise ValueError(f"Factory execution timed out: {e}") from e
         except Exception as e:
@@ -378,8 +378,9 @@ class DIContainer:
         for service_name, service_config in services_config.items():
             if 'class' in service_config:
                 # Dynamic class loading (simplified)
-                service_config['class']
-                if 'singleton' in service_config and service_config['singleton']:
+                class_name = service_config['class']
+                self._logger.debug(f"Config: {service_name} -> {class_name}")
+                if service_config.get('singleton', False):
                     # Would register as singleton
                     pass
                 else:

@@ -23,6 +23,10 @@ logs/
 credentials.enc
 .DS_Store
 
+# Credential-bearing scripts
+eth_api_vpn_solution.py
+working_eth_api_downloader.py
+
 # Temporary
 temp/
 tmp/

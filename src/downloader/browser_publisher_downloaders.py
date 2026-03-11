@@ -106,7 +106,7 @@ class BrowserDownloadStrategy(DownloadStrategy):
                     logger.info(f"Clicked institutional login: {selector}")
                     login_clicked = True
                     break
-                except:
+                except Exception:
                     continue
             
             if not login_clicked:
@@ -130,7 +130,7 @@ class BrowserDownloadStrategy(DownloadStrategy):
                     await self.page.click(selector)
                     logger.info("Selected ETH Zurich")
                     break
-                except:
+                except Exception:
                     continue
             
             # Wait for ETH login page
@@ -158,7 +158,7 @@ class BrowserDownloadStrategy(DownloadStrategy):
                     await self.page.fill(selector, username)
                     logger.info("Filled username")
                     break
-                except:
+                except Exception:
                     continue
             
             # Fill password
@@ -168,7 +168,7 @@ class BrowserDownloadStrategy(DownloadStrategy):
                     await self.page.fill(selector, password)
                     logger.info("Filled password")
                     break
-                except:
+                except Exception:
                     continue
             
             # Submit form
@@ -185,7 +185,7 @@ class BrowserDownloadStrategy(DownloadStrategy):
                     await self.page.click(selector)
                     logger.info("Submitted login form")
                     break
-                except:
+                except Exception:
                     continue
             
             # Wait for authentication to complete
@@ -335,7 +335,7 @@ class WileyBrowserDownloader(BrowserDownloadStrategy):
                     pdf_url = await elem.get_attribute('href')
                     if pdf_url:
                         break
-                except:
+                except Exception:
                     continue
             
             if not pdf_url:
@@ -492,7 +492,7 @@ class TaylorFrancisBrowserDownloader(BrowserDownloadStrategy):
                         download_time=time.time() - start_time,
                         file_size=len(pdf_data)
                     )
-                except:
+                except Exception:
                     continue
             
             return DownloadResult(
@@ -632,7 +632,7 @@ class SageBrowserDownloader(BrowserDownloadStrategy):
                         download_time=time.time() - start_time,
                         file_size=len(pdf_data)
                     )
-                except:
+                except Exception:
                     continue
             
             return DownloadResult(
@@ -772,7 +772,7 @@ class CambridgeBrowserDownloader(BrowserDownloadStrategy):
                         download_time=time.time() - start_time,
                         file_size=len(pdf_data)
                     )
-                except:
+                except Exception:
                     continue
             
             return DownloadResult(
@@ -912,7 +912,7 @@ class SpringerBrowserDownloader(BrowserDownloadStrategy):
                         download_time=time.time() - start_time,
                         file_size=len(pdf_data)
                     )
-                except:
+                except Exception:
                     continue
             
             return DownloadResult(

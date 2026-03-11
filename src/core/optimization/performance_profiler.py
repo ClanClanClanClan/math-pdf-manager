@@ -13,7 +13,7 @@ import functools
 import threading
 from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 import psutil
 import gc
 from contextlib import contextmanager
@@ -29,7 +29,7 @@ class PerformanceMetrics:
     cpu_percent: float
     memory_mb: float
     call_count: int = 1
-    timestamp: datetime = field(default_factory=datetime.utcnow)
+    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     
     def __post_init__(self):
         # Convert memory to MB

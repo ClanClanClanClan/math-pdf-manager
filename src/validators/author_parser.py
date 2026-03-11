@@ -5,9 +5,11 @@ Author name parsing, normalization, and validation functions
 extracted from src.validators.filename_checker.py
 """
 
+import logging
 import re
 from typing import Tuple, Optional, List
-from src.core.validation import debug_print
+
+logger = logging.getLogger(__name__)
 from .unicode_handler import nfc
 
 
@@ -116,7 +118,7 @@ class AuthorParser:
         normalized = self.normalize_author_string(raw)
         is_normalized = (raw == normalized)
         
-        debug_print(f"Author normalization check: '{raw}' -> '{normalized}' (normalized: {is_normalized})")
+        logger.debug(f"Author normalization check: '{raw}' -> '{normalized}' (normalized: {is_normalized})")
         
         return is_normalized, normalized
     
@@ -186,7 +188,7 @@ def fix_author_block(raw_input: str) -> str:
         return comprehensive_fix(raw_input)
     except ImportError:
         # Fallback to basic processing
-        debug_print("Using fallback author processing")
+        logger.debug("Using fallback author processing")
         return _default_parser.normalize_author_string(raw_input)
 
 

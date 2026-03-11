@@ -1,155 +1,444 @@
 #!/usr/bin/env python3
 """
-finetune.py – tiny LoRA fine-tuning of TinyLlama (or any GGUF-converted base) on the
-PDF-metadata dataset produced earlier.
+Fine-tune Qwen2.5-7B-Instruct on the PDF metadata extraction dataset.
 
-• CPU / Apple-Silicon friendly (no bf16)
-• Works with Transformers ≥ 4.41 + PEFT 0.11
-• Automatically skips broken rows and keeps the script self-contained.
+Designed for **Google Colab Pro + A100** (40–80 GB VRAM).  Uses LoRA for
+parameter-efficient fine-tuning with chat-template tokenisation and label
+masking (loss only on assistant response tokens).
+
+Input: Chat-format JSONL files produced by ``prepare_dataset.py``::
+
+    datasets/train.jsonl
+    datasets/val.jsonl
+
+Each line is ``{"messages": [{"role": "system", ...}, {"role": "user", ...},
+{"role": "assistant", ...}]}``.
+
+Usage::
+
+    # Standard training (Colab A100)
+    python finetune.py --data-dir datasets/ --output-dir models/finetuned
+
+    # Custom hyperparameters
+    python finetune.py --data-dir datasets/ --output-dir models/finetuned \\
+        --epochs 3 --lr 5e-5 --batch-size 4 --grad-accum 4
+
+    # Resume from checkpoint
+    python finetune.py --data-dir datasets/ --output-dir models/finetuned \\
+        --resume-from models/finetuned/checkpoint-500
+
+Output:
+    - LoRA adapter weights at ``<output-dir>/``
+    - Merged full model at ``<output-dir>/merged/``
+    - Training metrics in ``<output-dir>/training_metrics.json``
 """
 
 from __future__ import annotations
 
-import math
 import argparse
+import json
+import logging
+import math
+import os
+import sys
+import time
 from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 import torch
-from datasets import load_dataset
+from datasets import Dataset, load_dataset
 from transformers import (
-    AutoTokenizer,
     AutoModelForCausalLM,
-    DataCollatorForLanguageModeling,
+    AutoTokenizer,
     TrainingArguments,
     Trainer,
+    TrainerCallback,
 )
-from peft import LoraConfig, get_peft_model
+from peft import LoraConfig, get_peft_model, PeftModel
 
-# ──────────────────────────────────────────────────────────────────────────────
-# CLI args (so you can override defaults without editing the file)
-# ──────────────────────────────────────────────────────────────────────────────
+logger = logging.getLogger(__name__)
 
-def get_args():
-    p = argparse.ArgumentParser()
-    p.add_argument("--data", default="datasets/pdfmeta.clean.jsonl",
-                   help="JSONL file with a prompt column (cleaned)")
-    p.add_argument("--base", default="models/base",
-                   help="folder with the base TinyLlama model")
-    p.add_argument("--out",  default="models/finetuned",
-                   help="where to write the LoRA-adapted model")
-    p.add_argument("--epochs", type=int, default=1)
-    p.add_argument("--bsz",    type=int, default=4,
-                   help="per-device batch-size")
-    return p.parse_args()
+# -----------------------------------------------------------------------
+# Constants
+# -----------------------------------------------------------------------
 
-args = get_args()
+BASE_MODEL = "Qwen/Qwen2.5-7B-Instruct"
+MAX_SEQ_LEN = 2048
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Tokeniser
-# ──────────────────────────────────────────────────────────────────────────────
-
-print("🔹 Loading tokenizer …")
-
-_tok = AutoTokenizer.from_pretrained(args.base, use_fast=True, revision="main")  # nosec B615 - revision pinned for security
-_tok.pad_token = _tok.eos_token  # make pad = eos to avoid resize
-_MAX_LEN = 512                  # keep it small – we only need the header info
-
-
-def _tokenise(example: dict):
-    """Convert one JSONL row into input_ids/attention_mask or skip."""
-    prompt: str | None = example.get("prompt")
-    if not prompt or not prompt.strip():
-        return None  # will be filtered out
-    ids = _tok(prompt[:4000], truncation=True, max_length=_MAX_LEN)
-    return {
-        "input_ids": ids["input_ids"],
-        "attention_mask": ids["attention_mask"],
-    }
-
-# ──────────────────────────────────────────────────────────────────────────────
-# Dataset
-# ──────────────────────────────────────────────────────────────────────────────
-
-data_path = Path(args.data).expanduser()
-print("🔹 Loading dataset –", data_path)
-
-ds = load_dataset("json", data_files=str(data_path), split="train", revision="main")  # nosec B615 - revision pinned for security
-
-ds = ds.map(_tokenise, remove_columns=ds.column_names, num_proc=4)
-# filter out Nones produced by rows without prompt
-_ds_before = len(ds)
-ds = ds.filter(lambda x: x is not None and len(x["input_ids"]) > 0)
-print(f"   → kept {len(ds):,} / {_ds_before:,} rows after cleaning")
-
-# ──────────────────────────────────────────────────────────────────────────────
-# Model + LoRA
-# ──────────────────────────────────────────────────────────────────────────────
-
-print("🔹 Loading base model from", args.base)
-
-device_dtype = (
-    torch.float16 if torch.cuda.is_available() else torch.float32
-)  # float32 on CPU/apple-silicon
-
-_base_model = AutoModelForCausalLM.from_pretrained(  # nosec B615 - revision pinned for security
-    args.base,
-    torch_dtype=device_dtype,
-    device_map="auto",
-    revision="main",
-)
-
-lora_cfg = LoraConfig(
-    r=8,
-    lora_alpha=16,
-    target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
+# LoRA configuration — targets all linear projections in attention + MLP
+LORA_CONFIG = LoraConfig(
+    r=16,
+    lora_alpha=32,
+    target_modules=[
+        "q_proj", "k_proj", "v_proj", "o_proj",
+        "gate_proj", "up_proj", "down_proj",
+    ],
     lora_dropout=0.05,
     bias="none",
     task_type="CAUSAL_LM",
 )
 
-model = get_peft_model(_base_model, lora_cfg)
-model.print_trainable_parameters()
+# Default training hyperparameters (A100-optimised)
+DEFAULT_EPOCHS = 2
+DEFAULT_LR = 1e-4
+DEFAULT_BATCH_SIZE = 4
+DEFAULT_GRAD_ACCUM = 4  # effective batch = 16
+DEFAULT_WARMUP_RATIO = 0.05
+DEFAULT_WEIGHT_DECAY = 0.01
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Training arguments – tuned for CPU/small-GPU
-# ──────────────────────────────────────────────────────────────────────────────
 
-steps_per_device = math.ceil(len(ds) / args.bsz / args.epochs)
-print(f"   → will run ~{steps_per_device:,} optimisation steps")
+# -----------------------------------------------------------------------
+# Chat template tokenisation with label masking
+# -----------------------------------------------------------------------
 
-train_args = TrainingArguments(
-    output_dir=args.out,
-    per_device_train_batch_size=args.bsz,
-    gradient_accumulation_steps=4,
-    num_train_epochs=args.epochs,
-    learning_rate=2e-4,
-    lr_scheduler_type="cosine",
-    warmup_ratio=0.05,
-    weight_decay=0.01,
-    logging_steps=25,
-    save_strategy="epoch",
-    report_to="none",  # no wandb
-    fp16=torch.cuda.is_available(),  # enable half-precision only on CUDA
-    bf16=False,                      # keep bf16 off – not supported on CPU/M-GPU
-)
+def tokenize_chat(
+    example: Dict[str, Any],
+    tokenizer: AutoTokenizer,
+    max_length: int = MAX_SEQ_LEN,
+) -> Dict[str, Any]:
+    """Tokenise a chat-format example with label masking.
 
-collator = DataCollatorForLanguageModeling(_tok, mlm=False)
+    The loss is computed only on assistant response tokens — system and user
+    message tokens have their labels set to -100 (ignored by CrossEntropyLoss).
+    """
+    messages = example["messages"]
 
-trainer = Trainer(
-    model=model,
-    args=train_args,
-    train_dataset=ds,
-    data_collator=collator,
-)
+    # Tokenise the full conversation using the model's chat template
+    full_text = tokenizer.apply_chat_template(
+        messages, tokenize=False, add_generation_prompt=False
+    )
+    full_ids = tokenizer(
+        full_text,
+        truncation=True,
+        max_length=max_length,
+        return_attention_mask=True,
+    )
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Train 🚂
-# ──────────────────────────────────────────────────────────────────────────────
+    input_ids = full_ids["input_ids"]
+    attention_mask = full_ids["attention_mask"]
 
-print("🔹 Training …")
-trainer.train()
+    # Find where the assistant response starts to create label mask
+    # Tokenise everything BEFORE the assistant response
+    non_assistant_messages = messages[:-1]  # system + user
+    prefix_text = tokenizer.apply_chat_template(
+        non_assistant_messages, tokenize=False, add_generation_prompt=True
+    )
+    prefix_ids = tokenizer(
+        prefix_text, truncation=True, max_length=max_length
+    )["input_ids"]
+    prefix_len = len(prefix_ids)
 
-print("🔹 Saving … →", args.out)
-trainer.save_model(args.out)
-_tok.save_pretrained(args.out)
-print("✅ Done – finetuned model ready.")
+    # Labels: -100 for prefix (system + user), real token ids for assistant
+    labels = [-100] * prefix_len + input_ids[prefix_len:]
+
+    # Pad labels to match input_ids length (shouldn't differ, but safety)
+    if len(labels) < len(input_ids):
+        labels += [-100] * (len(input_ids) - len(labels))
+    labels = labels[:len(input_ids)]
+
+    return {
+        "input_ids": input_ids,
+        "attention_mask": attention_mask,
+        "labels": labels,
+    }
+
+
+# -----------------------------------------------------------------------
+# Data collator with padding
+# -----------------------------------------------------------------------
+
+class ChatDataCollator:
+    """Pads input_ids, attention_mask, and labels to the longest sequence in batch."""
+
+    def __init__(self, tokenizer: AutoTokenizer):
+        self.pad_token_id = tokenizer.pad_token_id or tokenizer.eos_token_id
+
+    def __call__(self, features: List[Dict[str, Any]]) -> Dict[str, torch.Tensor]:
+        max_len = max(len(f["input_ids"]) for f in features)
+
+        input_ids = []
+        attention_mask = []
+        labels = []
+
+        for f in features:
+            pad_len = max_len - len(f["input_ids"])
+            input_ids.append(f["input_ids"] + [self.pad_token_id] * pad_len)
+            attention_mask.append(f["attention_mask"] + [0] * pad_len)
+            labels.append(f["labels"] + [-100] * pad_len)
+
+        return {
+            "input_ids": torch.tensor(input_ids, dtype=torch.long),
+            "attention_mask": torch.tensor(attention_mask, dtype=torch.long),
+            "labels": torch.tensor(labels, dtype=torch.long),
+        }
+
+
+# -----------------------------------------------------------------------
+# Metrics callback
+# -----------------------------------------------------------------------
+
+class MetricsLogger(TrainerCallback):
+    """Log training metrics to a JSON file."""
+
+    def __init__(self, output_path: Path):
+        self.output_path = output_path
+        self.metrics: List[Dict[str, Any]] = []
+
+    def on_log(self, args, state, control, logs=None, **kwargs):
+        if logs:
+            entry = {
+                "step": state.global_step,
+                "epoch": round(state.epoch, 3) if state.epoch else 0,
+                **{k: v for k, v in logs.items() if isinstance(v, (int, float))},
+            }
+            self.metrics.append(entry)
+
+    def on_train_end(self, args, state, control, **kwargs):
+        with open(self.output_path, "w") as f:
+            json.dump(self.metrics, f, indent=2)
+        print(f"Training metrics saved to {self.output_path}")
+
+
+# -----------------------------------------------------------------------
+# Main training function
+# -----------------------------------------------------------------------
+
+def train(
+    data_dir: Path,
+    output_dir: Path,
+    base_model: str = BASE_MODEL,
+    epochs: int = DEFAULT_EPOCHS,
+    lr: float = DEFAULT_LR,
+    batch_size: int = DEFAULT_BATCH_SIZE,
+    grad_accum: int = DEFAULT_GRAD_ACCUM,
+    resume_from: Optional[str] = None,
+    merge_after: bool = True,
+) -> None:
+    """Run LoRA fine-tuning."""
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # ------------------------------------------------------------------
+    # 1. Load tokenizer
+    # ------------------------------------------------------------------
+    print(f"Loading tokenizer from {base_model}...")
+    tokenizer = AutoTokenizer.from_pretrained(base_model, trust_remote_code=True)
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+
+    # ------------------------------------------------------------------
+    # 2. Load and tokenise datasets
+    # ------------------------------------------------------------------
+    train_path = data_dir / "train.jsonl"
+    val_path = data_dir / "val.jsonl"
+
+    if not train_path.exists():
+        raise FileNotFoundError(f"Training data not found: {train_path}")
+
+    print(f"Loading training data from {train_path}...")
+    train_ds = load_dataset("json", data_files=str(train_path), split="train")
+
+    val_ds = None
+    if val_path.exists():
+        print(f"Loading validation data from {val_path}...")
+        val_ds = load_dataset("json", data_files=str(val_path), split="train")
+
+    print(f"Tokenising {len(train_ds):,} training examples...")
+    train_ds = train_ds.map(
+        lambda x: tokenize_chat(x, tokenizer, MAX_SEQ_LEN),
+        remove_columns=train_ds.column_names,
+        num_proc=4,
+        desc="Tokenising train",
+    )
+    # Filter out examples that are too short (< 50 tokens)
+    before = len(train_ds)
+    train_ds = train_ds.filter(lambda x: len(x["input_ids"]) >= 50)
+    print(f"Kept {len(train_ds):,}/{before:,} training examples after filtering")
+
+    if val_ds is not None:
+        val_ds = val_ds.map(
+            lambda x: tokenize_chat(x, tokenizer, MAX_SEQ_LEN),
+            remove_columns=val_ds.column_names,
+            num_proc=4,
+            desc="Tokenising val",
+        )
+        val_ds = val_ds.filter(lambda x: len(x["input_ids"]) >= 50)
+        print(f"Validation: {len(val_ds):,} examples")
+
+    # ------------------------------------------------------------------
+    # 3. Load model
+    # ------------------------------------------------------------------
+    print(f"Loading base model {base_model}...")
+    compute_dtype = torch.bfloat16 if torch.cuda.is_available() else torch.float32
+
+    model = AutoModelForCausalLM.from_pretrained(
+        base_model,
+        torch_dtype=compute_dtype,
+        device_map="auto",
+        trust_remote_code=True,
+        attn_implementation="flash_attention_2" if torch.cuda.is_available() else "eager",
+    )
+    model.config.use_cache = False  # Required for gradient checkpointing
+
+    # ------------------------------------------------------------------
+    # 4. Apply LoRA
+    # ------------------------------------------------------------------
+    print("Applying LoRA configuration...")
+    model = get_peft_model(model, LORA_CONFIG)
+    model.print_trainable_parameters()
+
+    # ------------------------------------------------------------------
+    # 5. Training arguments
+    # ------------------------------------------------------------------
+    effective_batch = batch_size * grad_accum
+    total_steps = math.ceil(len(train_ds) / effective_batch) * epochs
+    print(f"Effective batch size: {effective_batch}")
+    print(f"Total training steps: ~{total_steps:,}")
+
+    training_args = TrainingArguments(
+        output_dir=str(output_dir),
+        num_train_epochs=epochs,
+        per_device_train_batch_size=batch_size,
+        per_device_eval_batch_size=batch_size,
+        gradient_accumulation_steps=grad_accum,
+        learning_rate=lr,
+        lr_scheduler_type="cosine",
+        warmup_ratio=DEFAULT_WARMUP_RATIO,
+        weight_decay=DEFAULT_WEIGHT_DECAY,
+        logging_steps=10,
+        save_strategy="steps",
+        save_steps=500,
+        save_total_limit=3,
+        eval_strategy="steps" if val_ds else "no",
+        eval_steps=500 if val_ds else None,
+        bf16=torch.cuda.is_available(),
+        fp16=False,
+        gradient_checkpointing=True,
+        gradient_checkpointing_kwargs={"use_reentrant": False},
+        report_to="none",
+        dataloader_num_workers=2,
+        remove_unused_columns=False,
+    )
+
+    # ------------------------------------------------------------------
+    # 6. Train
+    # ------------------------------------------------------------------
+    collator = ChatDataCollator(tokenizer)
+    metrics_logger = MetricsLogger(output_dir / "training_metrics.json")
+
+    trainer = Trainer(
+        model=model,
+        args=training_args,
+        train_dataset=train_ds,
+        eval_dataset=val_ds,
+        data_collator=collator,
+        callbacks=[metrics_logger],
+    )
+
+    print("Starting training...")
+    t0 = time.monotonic()
+
+    if resume_from:
+        trainer.train(resume_from_checkpoint=resume_from)
+    else:
+        trainer.train()
+
+    elapsed = time.monotonic() - t0
+    print(f"Training completed in {elapsed / 60:.1f} minutes")
+
+    # Save LoRA adapter
+    trainer.save_model(str(output_dir))
+    tokenizer.save_pretrained(str(output_dir))
+    print(f"LoRA adapter saved to {output_dir}")
+
+    # ------------------------------------------------------------------
+    # 7. Merge LoRA into base model
+    # ------------------------------------------------------------------
+    if merge_after:
+        merge_dir = output_dir / "merged"
+        print(f"Merging LoRA weights into base model -> {merge_dir}...")
+
+        # Reload base model for merging
+        base = AutoModelForCausalLM.from_pretrained(
+            base_model,
+            torch_dtype=compute_dtype,
+            device_map="auto",
+            trust_remote_code=True,
+        )
+        merged = PeftModel.from_pretrained(base, str(output_dir))
+        merged = merged.merge_and_unload()
+
+        merge_dir.mkdir(parents=True, exist_ok=True)
+        merged.save_pretrained(str(merge_dir))
+        tokenizer.save_pretrained(str(merge_dir))
+        print(f"Merged model saved to {merge_dir}")
+
+    print("Done!")
+
+
+# -----------------------------------------------------------------------
+# CLI
+# -----------------------------------------------------------------------
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Fine-tune Qwen2.5-7B-Instruct on PDF metadata extraction",
+    )
+    parser.add_argument(
+        "--data-dir", type=Path, required=True,
+        help="Directory containing train.jsonl and val.jsonl",
+    )
+    parser.add_argument(
+        "--output-dir", type=Path, default=Path("models/finetuned"),
+        help="Output directory for LoRA adapter and merged model",
+    )
+    parser.add_argument(
+        "--base-model", type=str, default=BASE_MODEL,
+        help=f"HuggingFace model ID (default: {BASE_MODEL})",
+    )
+    parser.add_argument(
+        "--epochs", type=int, default=DEFAULT_EPOCHS,
+        help=f"Number of training epochs (default: {DEFAULT_EPOCHS})",
+    )
+    parser.add_argument(
+        "--lr", type=float, default=DEFAULT_LR,
+        help=f"Learning rate (default: {DEFAULT_LR})",
+    )
+    parser.add_argument(
+        "--batch-size", type=int, default=DEFAULT_BATCH_SIZE,
+        help=f"Per-device batch size (default: {DEFAULT_BATCH_SIZE})",
+    )
+    parser.add_argument(
+        "--grad-accum", type=int, default=DEFAULT_GRAD_ACCUM,
+        help=f"Gradient accumulation steps (default: {DEFAULT_GRAD_ACCUM})",
+    )
+    parser.add_argument(
+        "--resume-from", type=str, default=None,
+        help="Resume from checkpoint directory",
+    )
+    parser.add_argument(
+        "--no-merge", action="store_true",
+        help="Skip merging LoRA into base model after training",
+    )
+    args = parser.parse_args()
+
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s: %(message)s",
+    )
+
+    train(
+        data_dir=args.data_dir,
+        output_dir=args.output_dir,
+        base_model=args.base_model,
+        epochs=args.epochs,
+        lr=args.lr,
+        batch_size=args.batch_size,
+        grad_accum=args.grad_accum,
+        resume_from=args.resume_from,
+        merge_after=not args.no_merge,
+    )
+
+
+if __name__ == "__main__":
+    main()

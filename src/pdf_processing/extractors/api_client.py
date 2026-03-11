@@ -97,6 +97,67 @@ class ArxivAPIClient:
 
         return None
 
+    def extract_arxiv_id_from_pdf(self, pdf_path: str) -> Optional[str]:
+        """Extract arXiv ID by opening the PDF and scanning first 2 pages.
+
+        ArXiv stamps the identifier on papers, often vertically along the
+        left margin or in the header/footer.  We extract full text from the
+        first two pages and search for the ID pattern.
+        """
+        try:
+            import fitz  # PyMuPDF
+        except ImportError:
+            logger.debug("PyMuPDF not available for PDF-based arXiv ID extraction")
+            return None
+
+        try:
+            doc = fitz.open(str(pdf_path))
+            try:
+                max_pages = min(2, len(doc))
+                for page_num in range(max_pages):
+                    page = doc[page_num]
+                    text = page.get_text()
+                    if text:
+                        arxiv_id = self.extract_arxiv_id_from_text(text)
+                        if arxiv_id:
+                            logger.debug(
+                                f"Found arXiv ID '{arxiv_id}' on page {page_num + 1} of {pdf_path}"
+                            )
+                            return arxiv_id
+            finally:
+                doc.close()
+        except Exception as e:
+            logger.debug(f"Failed to extract arXiv ID from PDF {pdf_path}: {e}")
+
+        return None
+
+    def search_by_id(self, arxiv_id: str) -> Optional[dict]:
+        """Search arXiv by ID and return metadata as a plain dictionary.
+
+        This is a convenience wrapper around :meth:`fetch_metadata` that
+        converts the typed :class:`ArxivMetadata` into a dict matching the
+        interface expected by :class:`EnhancedPDFParser`.
+        """
+        metadata = self.fetch_metadata(arxiv_id)
+        if metadata is None:
+            return None
+
+        return {
+            "arxiv_id": metadata.arxiv_id,
+            "title": metadata.title,
+            "authors": metadata.authors,          # List[str]
+            "abstract": metadata.abstract,
+            "categories": metadata.categories,
+            "primary_category": metadata.primary_category,
+            "published": metadata.published,
+            "updated": metadata.updated,
+            "doi": metadata.doi,
+            "journal_ref": metadata.journal_ref,
+            "comment": metadata.comment,
+            "pdf_url": metadata.pdf_url,
+            "confidence": metadata.confidence,
+        }
+
     def fetch_metadata(self, arxiv_id: str) -> Optional[ArxivMetadata]:
         """Fetch metadata from arXiv API"""
         if not self.api_available:

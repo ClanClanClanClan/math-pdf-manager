@@ -9,7 +9,7 @@ import math
 from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass, field
 from datetime import datetime, date
-from collections import defaultdict
+from collections import Counter, defaultdict
 import logging
 
 from .enhanced_sources import EnhancedMetadata
@@ -133,7 +133,7 @@ class MetadataQualityScorer:
             'poor': [
                 r'^[a-z]',  # Lowercase start
                 r'[.]{3,}',  # Multiple dots
-                r'^(the|a|an)\s',  # Article at start
+                # Removed article-at-start penalty — valid sentence-case titles often start with articles
                 r'\?\?\?|\!\!\!',  # Multiple punctuation
             ]
         }
@@ -425,8 +425,8 @@ class MetadataQualityScorer:
         
         # Required fields (60% of completeness score)
         required_present = 0
-        for field in required_fields:
-            value = getattr(metadata, field, None)
+        for field_name in required_fields:
+            value = getattr(metadata, field_name, None)
             if value and (not isinstance(value, list) or len(value) > 0):
                 required_present += 1
         
@@ -434,8 +434,8 @@ class MetadataQualityScorer:
         
         # Important fields (30% of completeness score)
         important_present = 0
-        for field in important_fields:
-            value = getattr(metadata, field, None)
+        for field_name in important_fields:
+            value = getattr(metadata, field_name, None)
             if value and (not isinstance(value, list) or len(value) > 0):
                 important_present += 1
         
@@ -443,8 +443,8 @@ class MetadataQualityScorer:
         
         # Optional fields (10% of completeness score)
         optional_present = 0
-        for field in optional_fields:
-            value = getattr(metadata, field, None)
+        for field_name in optional_fields:
+            value = getattr(metadata, field_name, None)
             if value and (not isinstance(value, list) or len(value) > 0):
                 optional_present += 1
         
@@ -737,7 +737,7 @@ class SourceRankingSystem:
         
         # Analyze quality patterns
         quality_scores = []
-        common_issues = defaultdict(int)
+        common_issues = Counter()
         
         for metadata in metadata_list:
             if metadata.title:  # Valid metadata
@@ -920,7 +920,7 @@ def example_usage():
     
     # Get source analysis
     analysis = ranking_system.get_source_analysis('semantic_scholar')
-    print(f"\nSemantic Scholar Analysis:")
+    print("\nSemantic Scholar Analysis:")
     print(f"  Overall Ranking: {analysis['overall_ranking']:.3f}")
     print(f"  Success Rate: {analysis['success_rate']:.3f}")
     print(f"  Strengths: {', '.join(analysis['strengths'])}")

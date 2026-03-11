@@ -155,8 +155,8 @@ def upgrade_pdf_processing_in_module(module_path: str):
     # updates to use the optimized processor
     
     # For now, just log that optimization is available
-    logger.info(f"Optimized PDF processing available via process_pdf_optimized()")
-    logger.info(f"Expected performance improvements: 10-50x for batch operations")
+    logger.info("Optimized PDF processing available via process_pdf_optimized()")
+    logger.info("Expected performance improvements: 10-50x for batch operations")
 
 
 # Configuration integration
