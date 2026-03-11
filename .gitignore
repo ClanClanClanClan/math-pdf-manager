@@ -89,8 +89,8 @@ data/final_systematic_test/
 data/languages/backups/
 
 # ML training data
-src/pdf-meta-llm/datasets/
-src/pdf-meta-llm/raw_data.jsonl
+ml/pdf-meta-llm/datasets/
+ml/pdf-meta-llm/raw_data.jsonl
 
 # OS files
 Thumbs.db
