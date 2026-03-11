@@ -1,8 +1,0 @@
-{
-  "title": "Propagation of chaos for doubly mean reflected BSDEs",
-  "authors": [],
-  "year": null,
-  "citation_id": null,
-  "snippet": "In this paper, we establish propagation of chaos (POC) for doubly mean reflected backward stochastic differential equations (MRBSDEs). MRBSDEs differentiate the typical RBSDEs in that the constraint is not on the paths of the solution but on its law. This unique property has garnered significant attention since the inception of MRBSDEs. Rather than directly investigating these equations, we focus on approximating them by interacting particle systems (IPS). We propose two sets of IPS having mean-field Skorokhod problems, capturing the dynamics of IPS reflected in a mean-field way. As the dimension of the IPS tends to infinity, the POC phenomenon emerges, indicating that the system converges to a limit with independent particles, where each solves the MRBSDE. Beyond establishing the first POC result for doubly MRBSDEs, we achieve distinct convergence speeds under different scenarios.",
-  "source": "scholar_serpapi"
-}

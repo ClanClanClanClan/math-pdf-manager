@@ -1,8 +1,0 @@
-{
-  "title": "1d backward stochastic differential equation: a unified theory, applications and open problems",
-  "authors": [],
-  "year": null,
-  "citation_id": null,
-  "snippet": "We develop a unified theory on the well-posedness of a one-dimensional backward stochastic differential equation (1d BSDE for short), where the generator g admits a one-sided linear/super-linear growth in the first unknown variable y and a no more than quadratic growth in the second unknown variable z. Several existence theorems and comparison theorems are established by virtue of the test function method and the a priori estimate technique, and then several existence and uniqueness results follow naturally. We also present an overview about relevant known results and introduce some practical applications of our theoretical results. Finally, some open problems on the well-posedness of 1d BSDEs are provided.",
-  "source": "scholar_serpapi"
-}

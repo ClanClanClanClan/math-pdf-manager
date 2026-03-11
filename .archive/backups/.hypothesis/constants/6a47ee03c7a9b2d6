@@ -1,4 +1,0 @@
-# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/utils/security.py
-# hypothesis_version: 6.135.29
-
-[1.0, 255, 1000, 8192, '\x00', ' .', '(?:a+)+', '.', '..', '.pdf', '/', ':', 'AUX', 'COM1', 'COM2', 'COM3', 'COM4', 'COM5', 'COM6', 'COM7', 'COM8', 'COM9', 'CON', 'Invalid XML content', 'LPT1', 'LPT2', 'LPT3', 'LPT4', 'LPT5', 'LPT6', 'LPT7', 'LPT8', 'LPT9', 'NUL', 'PRN', 'XML file not found', '[<>"]', '[\\x00-\\x1f]', '[^\\w\\s\\-_.()]', '\\', '\\$\\(.*\\)', '\\$\\{.*\\}', '\\(\\.\\*\\)\\{[\\d,]+\\}', '\\(\\w*\\*\\)\\+', '\\(\\w*\\+\\)\\*', '\\.\\./', '\\.\\.//', '\\.\\.\\\\', '\\|', '_', '`.*`', 'ads_attack', 'b', 'critical', 'mathpdf_', 'move', 'nt', 'path_traversal', 'rb', 'read', 'redos_attack', 'resource_exhaustion', 'sha256', 'symlink_attack', 'unicode_attack', 'utf-8', 'validation_error', 'w+b', '~/', '‥', '…', '．']

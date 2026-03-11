@@ -1,8 +1,0 @@
-{
-  "title": "Strong solutions of mean-field FBSDEs and their applications to multi-population mean-field games",
-  "authors": [],
-  "year": null,
-  "citation_id": null,
-  "snippet": "We study the existence of strong solutions for mean-field forward-backward stochastic differential equations (FBSDEs) with measurable coefficients and their implication on the Nash equilibrium of a multi-population mean-field game. More specifically, we allow the coefficients to be discontinuous in the forward process and non-Lipschitz continuous concerning their time-sectional distribution. Using the Pontryagin stochastic maximum principle and the martingale approach, we apply our existence result to a multi-population mean-field game (MPMFG) model where the interacting agents in the system are grouped into multiple populations. Each population shares the same objective function, and we take changes in population sizes into consideration.",
-  "source": "scholar_serpapi"
-}

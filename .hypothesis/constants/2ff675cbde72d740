@@ -1,4 +1,0 @@
-# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/src/pdf_processing/parsers/metadata_extraction.py
-# hypothesis_version: 6.135.32
-
-[0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.8, 1.0, 100, 150, 200, 'Unknown', 'Unknown Title', '[.!?]\\s+', '[^\\w\\s\\-,.!?():;]+$', '\\s+', '\\s+abstract\\s*:', '\\s+authors?\\s*:', '\\s+department\\s+', '\\s+institute\\s+', '\\s+introduction\\s*:', '\\s+keywords\\s*:', '\\s+university\\s+', '^[^\\w]+', '^\\d+\\.\\s*', '^nature\\s+\\w+\\s*', 'algorithm', 'analysis', 'application', 'approach', 'clean_title', 'evaluation', 'framework', 'method', 'model', 'score_title_line', 'study', 'system', 'theory']

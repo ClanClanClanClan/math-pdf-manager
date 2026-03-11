@@ -1,8 +1,0 @@
-{
-  "title": "Large Deviation Principle for Backward Stochastic Differential Equations with a stochastic Lipschitz condition on",
-  "authors": [],
-  "year": null,
-  "citation_id": null,
-  "snippet": "In this paper, a probabilistic interpretation for the viscosity solution of a parabolic partial differential equation is obtained by virtue of the solution of a class of quadratic backward stochastic differential equations (BSDEs, for short). Furthermore, we prove the convergence and the large deviation principle for the solution of this class of quadratic BSDEs, which is associated with a family of Markov processes with the diffusion coefficients that tend to be zero.",
-  "source": "scholar_serpapi"
-}

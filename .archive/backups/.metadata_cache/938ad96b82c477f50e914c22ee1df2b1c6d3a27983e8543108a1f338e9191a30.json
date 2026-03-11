@@ -1,8 +1,0 @@
-{
-  "title": "Dynamic programming principle for a controlled FBSDE system and associated extended HJB equation",
-  "authors": [],
-  "year": null,
-  "citation_id": null,
-  "snippet": "This paper investigates the dynamic programming principle for a general stochastic control problem in which the state processes are described by a forward-backward stochastic differential equation (FBSDE). Using the method of S-topology, we show that there exists an optimal control for the value function. Then a dynamic programming principle is established. As a consequence, an extended Hamilton-Jacobi-Bellman (HJB) equation is derived. The existence and uniqueness of both smooth solution and a new type of viscosity solution are investigated for this extended HJB equation. Compared with the extant researches on stochastic maximum principle, this paper is the first normal work on partial differential equation (PDE) method for a controlled FBSDE system.",
-  "source": "scholar_serpapi"
-}

@@ -1,8 +1,0 @@
-{
-  "title": "Competitive optimal portfolio selection in a non-Markovian financial market: A backward stochastic differential equation study",
-  "authors": [],
-  "year": null,
-  "citation_id": null,
-  "snippet": "This paper studies a competitive optimal portfolio selection problem in a model where the interest rate, the appreciation rate and volatility rate of the risky asset are all stochastic processes, thus forming a non-Markovian financial market. In our model, all investors (or agents) aim to obtain an above-average wealth at the end of the common investment horizon. This competitive optimal portfolio problem is indeed a non-zero stochastic differential game problem. The quadratic BSDE theory is applied to tackle the problem and Nash equilibria in suitable spaces are found. We discuss both the CARA and CRRA utility cases. For the CARA utility case, there are three possible scenarios depending on market and competition parameters: a unique Nash equilibrium, no Nash equilibrium, and infinite Nash equilibria. The Nash equilibrium is given by the solutions of a quadratic BSDE and a linear BSDE with unbounded coefficient when it is unique. Different from the wealth-independent Nash equilibria in the existing literature, the equilibrium in our paper is of feedback form of wealth. For the CRRA utility case, the issue is a bit more complicated than the CARA utility case. We prove the solvability of a new kind of quadratic BSDEs with unbounded coefficients. A decoupling technology is used to relate the Nash equilibrium to a series of 1-dimensional quadratic BSDEs. With the help of this decoupling technology, we can even give the limiting strategies for both cases when the number of agent tends to be infinite.",
-  "source": "scholar_serpapi"
-}

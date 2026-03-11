@@ -1,8 +1,0 @@
-{
-  "title": "Random time horizon BSDEs with stochastic monotonicity and general growth generators and related PDEs",
-  "authors": [],
-  "year": null,
-  "citation_id": null,
-  "snippet": "This paper is devoted to solving a multidimensional backward stochastic differential equation (BSDE) with a general random terminal time, which may take values in [0,+ infinity]. The generator g satisfies a stochastic monotonicity condition in the first unknown variable y and a stochastic Lipschitz continuity condition in the second unknown variable z, and it can have a more general growth with respect to y than the classical one stated in (H5) of Briand et al.[2003]. Without imposing any restriction of finite moment on the stochastic coefficients \u2026",
-  "source": "scholar_serpapi"
-}

@@ -1,8 +1,0 @@
-{
-  "title": "Portfolio Optimization under Transaction Costs with Recursive Preferences",
-  "authors": [],
-  "year": null,
-  "citation_id": null,
-  "snippet": "The Merton investment-consumption problem is fundamental, both in the field of finance, and in stochastic control. An important extension of the problem adds transaction costs, which is highly relevant from a financial perspective but also challenging from a control perspective because the solution now involves singular control. A further significant extension takes us from additive utility to stochastic differential utility (SDU), which allows time preferences and risk preferences to be disentangled. In this paper, we study this extended version of the Merton problem with proportional transaction costs and Epstein-Zin SDU. We fully characterise all parameter combinations for which the problem is well posed (which may depend on the level of transaction costs) and provide a full verification argument that relies on no additional technical assumptions and uses primal methods only. The case with SDU requires new mathematical techniques as duality methods break down. Even in the special case of (additive) power utility, our arguments are significantly simpler, more elegant and more far-reaching than the ones in the extant literature. This means that we can easily analyse aspects of the problem which previously have been very challenging, including comparative statics, boundary cases which heretofore have required separate treatment and the situation beyond the small transaction cost regime. A key and novel idea is to parametrise consumption and the value function in terms of the shadow fraction of wealth, which may be of much wider applicability.",
-  "source": "scholar_serpapi"
-}

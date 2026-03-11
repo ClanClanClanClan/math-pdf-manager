@@ -1,8 +1,0 @@
-{
-  "title": "Uniqueness Problem for the Backward Differential Equation of a Continuous-State Branching Process",
-  "authors": [],
-  "year": null,
-  "citation_id": null,
-  "snippet": "The distributional properties of a multi-dimensional continuous-state branching process are determined by its cumulant semigroup, which is defined by the backward differential equation. We provide a proof of the assertion of Rhyzhov and Skorokhod (Theory Probab. Appl., 1970) on the uniqueness of the solutions to the equation, which is based on a characterization of the process as the pathwise unique solution to a system of stochastic equations.",
-  "source": "scholar_serpapi"
-}

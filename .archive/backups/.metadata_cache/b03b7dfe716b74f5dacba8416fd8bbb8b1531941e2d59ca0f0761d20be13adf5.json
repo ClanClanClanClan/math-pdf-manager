@@ -1,8 +1,0 @@
-{
-  "title": "Indefinite linear quadratic control of mean-field backwardstochastic differential equation",
-  "authors": [],
-  "year": null,
-  "citation_id": null,
-  "snippet": "This paper is concerned with a general linear quadratic (LQ) control problem of mean-field backward stochastic differential equation (BSDE). Here, the weighting matrices in the cost functional are allowed to be indefinite. Necessary and sufficient conditions for optimality are obtained via a mean-field forward-backward stochastic differential equation (FBSDE). By investigating the connections with LQ problems of mean-field forward systems and taking some limiting procedures, we establish the solvabilities of corresponding Riccati equations in the case that cost functional is uniformly convex. Subsequently, an explicit formula of optimal control and optimal cost are derived. Moreover, some sufficient conditions for the uniform convexity of cost functional are also proposed in terms of Riccati equations, which have not been considered in existing literatures for backward systems. Some examples are provided to illustrate our results.",
-  "source": "scholar_serpapi"
-}

@@ -1,8 +1,0 @@
-{
-  "title": "Backward stochastic differential equations with nonlinear Young driver",
-  "authors": [],
-  "year": null,
-  "citation_id": null,
-  "snippet": "We study backward stochastic differential equations (BSDEs) involving a nonlinear Young integral of the form , where the driver is a space-time H\\\"older continuous function and is a diffusion process. Solutions to such equations provide a probabilistic interpretation of the solutions to stochastic partial differential equations (SPDEs) driven by space-time noise. We first obtain the existence and uniqueness of the solutions to these BSDEs under the assumption that the driver is bounded, by a modified Picard iteration method. Then, we derive the comparison principle by analyzing associated linear BSDEs and further establish regularity results for the solutions. Finally, by combining the regularity results with a localization argument, we extend the well-posedness result to the case where is unbounded. As applications, we derive nonlinear Feynman-Kac formulae for a class of partial differential equations with Young drivers (Young PDEs), and we also investigate BSDEs with non-Lipschitz coefficient functions as well as linear stochastic heat equations with Neumann boundary conditions.",
-  "source": "scholar_serpapi"
-}

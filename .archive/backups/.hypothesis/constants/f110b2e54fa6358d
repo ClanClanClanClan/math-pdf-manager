@@ -1,4 +1,0 @@
-# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/core/container.py
-# hypothesis_version: 6.135.29
-
-['.cache', 'Factory', 'T', 'author_validator', 'cache_dir', 'config', 'duplicate_detector', 'filename_validator', 'logger', 'math-pdf-manager', 'math_pdf_manager', 'output', 'output_dir', 'project_root', 'reporter', 'scanner', 'strict_mode', 'unicode_validator']

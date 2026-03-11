@@ -1,8 +1,0 @@
-{
-  "title": "Malliavin derivative and sensitivity for optimal liquidation",
-  "authors": [],
-  "year": null,
-  "citation_id": null,
-  "snippet": "We prove that the solution of the backward stochastic differential equation with terminal singularity has a Malliavin derivative, which is the limit of the derivative of the approximating sequence. We also provide the asymptotic behavior of this derivative close to the terminal time. We apply this result to the regularity of the related partial differential equation and to the sensitivity of the liquidation problem.",
-  "source": "scholar_serpapi"
-}

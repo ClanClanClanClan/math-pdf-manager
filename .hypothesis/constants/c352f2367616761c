@@ -1,4 +1,0 @@
-# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/src/core/text_processing/cleaner.py
-# hypothesis_version: 6.135.32
-
-[500, '"', '%.*$', '&[a-zA-Z0-9#]+;', "'", '-', '. ', '<[^>]+>', 'Equation\\s+\\d+', '[""‚„‹›«»]', '[-]{2,}', '[.!?]+\\s+', '[<>:"/\\\\|?*]', '[`´]', '[‒–—―]', '\\([^)]*\\d{4}[^)]*\\)', '\\[[^\\]]*\\d+[^\\]]*\\]', '\\\\cite\\{[^}]+\\}', '\\\\citep?\\{[^}]+\\}', '\\n\\s*\\n', '\\s+', '^[A-Z\\s]+$', '^\\s*\\d+\\s*$', '_', 'cleaned_length', 'config', 'control_chars', 'email_pattern', 'emails_removed', 'html_tag_pattern', 'html_tags_removed', 'latex_math_pattern', 'lines_cleaned', 'lines_original', 'original_length', 'patterns_loaded', 'reduction_ratio', 'url_pattern', 'urls_removed', 'whitespace_pattern']

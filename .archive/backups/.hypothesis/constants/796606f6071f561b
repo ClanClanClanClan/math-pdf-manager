@@ -1,4 +1,0 @@
-# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/validators/title_normalizer.py
-# hypothesis_version: 6.135.32
-
-[' (', ') ', '-{2,}', 'ACM', 'API', 'DASH_ISSUE', 'EU', 'GitHub', 'HTML', 'HTTP', 'HTTPS', 'HYPHEN_CHECK', 'IEEE', 'JSON', 'JavaScript', 'LaTeX', 'MATLAB', 'NATO', 'NumPy', 'PDF', 'PyTorch', 'SciPy', 'TITLE_CAP', 'TeX', 'TensorFlow', 'TypeScript', 'UK', 'UN', 'URI', 'URL', 'USA', 'WORD', 'XML', '[–—−‐-]{2,}', '\\1 ', '\\b\\w+-\\w+\\b', '\\s*([,;:])\\s*', '\\s*([.!?])\\s*', '\\s*\\(\\s*', '\\s*\\)\\s*', '\\s+', '\\s+-\\s+', 'a', 'an', 'and', 'as', 'at', 'but', 'by', 'for', 'from', 'in', 'info', 'into', 'mixed dash types', 'nor', 'of', 'on', 'or', 'the', 'to', 'warning', 'with']

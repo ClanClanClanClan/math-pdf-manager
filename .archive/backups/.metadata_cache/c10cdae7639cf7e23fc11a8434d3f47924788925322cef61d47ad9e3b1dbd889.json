@@ -1,8 +1,0 @@
-{
-  "title": "Dual Representation of Unbounded Dynamic Concave Utilities",
-  "authors": [],
-  "year": null,
-  "citation_id": null,
-  "snippet": "In several linear spaces of possibly unbounded endowments, we represent the dynamic concave utilities (hence the dynamic convex risk measures) as the solutions of backward stochastic differential equations (BSDEs) with unbounded terminal values, with the help of our recent existence and uniqueness results on unbounded solutions of scalar BSDEs whose generators have a linear, super-linear, sub-quadratic or quadratic growth. The Legendre-Fenchel transform (dual representation) of convex functions, the de la vall\\'{e}e-Poussin theorem, and Young's and Gronwall's inequalities constitute the main ingredients of these representation results.",
-  "source": "scholar_serpapi"
-}

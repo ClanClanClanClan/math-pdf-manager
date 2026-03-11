@@ -1,8 +1,0 @@
-{
-  "title": "Infinite Horizon Fully Coupled Nonlinear Forward-Backward Stochastic Difference Equations and their Application to LQ Optimal Control Problems",
-  "authors": [],
-  "year": null,
-  "citation_id": null,
-  "snippet": "This paper focuses on the study of infinite horizon fully coupled nonlinear forward-backward stochastic difference equations (FBSEs). Firstly, we establish a pair of priori estimates for the solutions to forward stochastic difference equations (FSEs) and backward stochastic difference equations (BSEs) respectively. Then, to achieve broader applicability, we utilize a set of domination-monotonicity conditions which are more lenient than general ones. Using these conditions, we apply continuation methods to prove the unique solvability of infinite horizon fully coupled FBSEs and derive a set of solution estimates. Furthermore, our results have considerable implications for a variety of related linear quadratic (LQ) problems, especially when the stochastic Hamiltonian system is consistent with FBSEs satisfying these introduced domination-monotonicity conditions. Thus, by solving the associated stochastic Hamiltonian system, we can derive an explicit expression for the unique optimal control.",
-  "source": "scholar_serpapi"
-}

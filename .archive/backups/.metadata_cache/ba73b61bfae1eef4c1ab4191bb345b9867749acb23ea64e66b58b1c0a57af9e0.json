@@ -1,8 +1,0 @@
-{
-  "title": "Solvability of Coupled Forward-Backward Volterra Integral Equations",
-  "authors": [],
-  "year": null,
-  "citation_id": null,
-  "snippet": "Motivated by the optimality system associated with controlled (forward) Volterra integral equations (FVIEs, for short), the well-posedness of coupled forward-backward Voterra integral equations (FBVIEs, for short) is studied. The main feature of FBVIEs is that the unknown has two arguments. By taking as a parameter and as a (time) variable, one can regard FBVIE as a system of ordinary differential equations (ODEs, for short), with infinite-dimensional space values . To establish the well-posedness of such an FBVIE, a new non-local monotonicity condition is introduced, by which a bridge in infinite-dimensional spaces is constructed. Then by generalizing the method of continuation developed by \\cite{Hu-Peng1995,Yong1997,Peng-Wu1999} for differential equations, we have established the well-posedness of FBVIEs.The key is to apply the chain rule to the mapping $t\\mapsto\\big[\\int_\\cdot^T\\langle Y(s,s),X(s,\\cdot)\\rangle ds +\\langle G(X(T,T)),X(T,\\cdot)\\rangle\\big](t)$.",
-  "source": "scholar_serpapi"
-}

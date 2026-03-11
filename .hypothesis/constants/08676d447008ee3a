@@ -1,4 +1,0 @@
-# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/src/core/exceptions.py
-# hypothesis_version: 6.135.32
-
-['api', 'column', 'config_file', 'config_key', 'context', 'duplicate', 'error_code', 'field', 'high', 'line', 'message', 'operation', 'original', 'path', 'request_id', 'resource_id', 'resource_type', 'response', 'severity', 'similarity', 'status_code', 'suggestion', 'threat_type', 'value']

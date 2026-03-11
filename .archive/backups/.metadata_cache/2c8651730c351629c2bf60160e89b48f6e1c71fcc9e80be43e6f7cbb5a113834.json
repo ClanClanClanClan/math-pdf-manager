@@ -1,8 +1,0 @@
-{
-  "title": "Backward Stochastic Differential Equations with interaction",
-  "authors": [],
-  "year": null,
-  "citation_id": null,
-  "snippet": "In this paper backward stochastic differential equations with interaction (shorter BSDEs with interaction) are introduced. Far to our knowledge, this type of equation is not seen in the literature before. Existence and uniqueness result for BSDE with interaction is proved under version of Lipschitz condition with respect to Wasserstein distance. Such kind of BSDE arises naturally when considering Monge-Kantorovich problem. In the proof we start from discrete measures using known result of Pardoux and Peng and approximate general measure via Wasserstein distance.",
-  "source": "scholar_serpapi"
-}

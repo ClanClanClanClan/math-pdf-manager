@@ -1,4 +1,0 @@
-# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/validators/filename.py
-# hypothesis_version: 6.135.29
-
-[100, 200, 255, 880, 1023, ' - ', '$', ',', ', ', '-', '--', '...', '.pdf', 'DetectorFactory', 'NFC', 'TOKEN_RE', 'Text is empty', 'Volume', '\\', '\\w+', '_', 'author', 'authors', 'en', 'extension', 'ff', 'ffi', 'ffl', 'fi', 'filename', 'filename_checker.py', 'find_math_regions', 'fl', 'format', 'is_series_title', 'is_valid', 'issues', 'mask_math_regions', 'no_change', 'path', 'read_arxiv_id', 'safe_compare_titles', 'strip_latex', 'title', 'tokeniser_roundtrip', 'utf-8', 'utils.py', '–', '—', '…', 'ﬀ', 'ﬁ', 'ﬂ', 'ﬃ', 'ﬄ']

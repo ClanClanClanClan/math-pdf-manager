@@ -1,8 +1,0 @@
-{
-  "title": "Constrained mean-field control with singular control: Existence, stochastic maximum principle and constrained FBSDE",
-  "authors": [],
-  "year": null,
-  "citation_id": null,
-  "snippet": "This paper studies some mean-field control (MFC) problems with singular control under general dynamic state-control-law constraints. We first propose a customized relaxed control formulation to cope with the dynamic mixed constraints and establish the existence of an optimal control using some compactification arguments in the proper canonical spaces to accommodate the singular control. To characterize the optimal pair of regular and singular controls, we treat the controlled McKean-Vlasov process as an infinite-dimensional equality constraint and recast the MFC problem as an optimization problem on canonical spaces with constraints on Banach space, allowing us to derive the stochastic maximum principle (SMP) and a constrained BSDE using a novel Lagrange multipliers method. In addition, we further investigate the uniqueness and the stability result of the solution to the constrained FBSDE associated to the constrained MFC problem with singular control.",
-  "source": "scholar_serpapi"
-}

@@ -1,8 +1,0 @@
-{
-  "title": "Singular Mean\u2010Field Backward Stochastic Volterra Integral Equations in Infinite Dimensional Spaces",
-  "authors": [],
-  "year": null,
-  "citation_id": null,
-  "snippet": "This paper investigates the well\u2010posedness of singular mean\u2010field backward stochastic Volterra integral equations (MF\u2010BSVIEs) in infinite\u2010dimensional spaces. We consider the equation, X(t)=\u03a8(t)+\u222btbFt,s,X(s),Z(t,s),Z(s,t),\ud835\udd3c[X(s)],\ud835\udd3c[Z (t,s)],\ud835\udd3c[Z(s,t)]ds\u2212\u222btbZ(t,s)dBs, where the focus lies on establishing the existence and uniqueness of adapted M\u2010solutions under appropriate conditions. A key contribution of this work is the development of essential lemmas that provide a rigorous foundation for analyzing the well\u2010posedness of these equations. In addition, we extend our analysis to singular mean\u2010field forward stochastic Volterra integral equations (MF\u2010FSVIEs) in infinite\u2010dimensional spaces, demonstrating their solvability and unique adapted solutions. Finally, we strengthen our theoretical results by applying them to derive stochastic maximum principles, showcasing the practical relevance of the proposed framework. These findings contribute to the growing body of research on mean\u2010field stochastic equations and their applications in control theory and mathematical finance.",
-  "source": "scholar_serpapi"
-}

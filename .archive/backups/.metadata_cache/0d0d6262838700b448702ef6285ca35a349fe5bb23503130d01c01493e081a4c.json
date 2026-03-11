@@ -1,8 +1,0 @@
-{
-  "title": "Singular limit of BSDEs and optimal control of two scale systems with jumps in infinite dimensional spaces",
-  "authors": [],
-  "year": null,
-  "citation_id": null,
-  "snippet": "The paper is devoted to a stochastic optimal control problem for a two scale, infinite dimensional, stochastic system. The state of the system consists of slow and fast component and its evolution is driven by both continuous Wiener noises and discontinuous Poisson-type noises. The presence of discontinuous noises is the main feature of the present work. We use the theory of backward stochastic differential equations (BSDEs) to prove that, as the speed of the fast component diverges, the value function of the control problem converges to \u2026",
-  "source": "scholar_serpapi"
-}

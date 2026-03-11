@@ -1,8 +1,0 @@
-{
-  "title": "On the uniqueness result for the BSDE with continuous coefficient",
-  "authors": [],
-  "year": null,
-  "citation_id": null,
-  "snippet": "In this paper, we study one-dimensional backward stochastic differential equation (BSDE, for short), whose coefficient is Lipschitz in but only continuous in . In addition, if the terminal condition has bounded Malliavin derivative, we prove some uniqueness results for the BSDE with quadratic and linear growth in , respectively.",
-  "source": "scholar_serpapi"
-}

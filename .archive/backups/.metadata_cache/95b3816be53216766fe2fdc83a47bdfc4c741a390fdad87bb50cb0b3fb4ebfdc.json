@@ -1,8 +1,0 @@
-{
-  "title": "Comparison theorems for mean-field BSDEs whose generators depend on the law of the solution",
-  "authors": [],
-  "year": null,
-  "citation_id": null,
-  "snippet": "For general mean-field backward stochastic differential equations (BSDEs) it is well-known that we usually do not have the comparison theorem if the coefficients depend on the law of -component of the solution process . A natural question is whether general mean-field BSDEs whose coefficients depend on the law of have the comparison theorem for some cases. In this paper we establish the comparison theorems for one-dimensional mean-field BSDEs whose coefficients also depend on the joint law of the solution process . With the help of Malliavin calculus and a BMO martingale argument, we obtain two comparison theorems for different cases and a strong comparison result. In particular, in this framework, we compare not only the first component of the solution for such mean-field BSDEs, but also the second component .",
-  "source": "scholar_serpapi"
-}

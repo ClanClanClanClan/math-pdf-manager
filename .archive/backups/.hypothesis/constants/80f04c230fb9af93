@@ -1,4 +1,0 @@
-# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/core/io.py
-# hypothesis_version: 6.135.32
-
-['#', 'DEBUG_SENTENCE_CASE', 'debug_print', 'load_word_list', 'load_yaml_config', 'utf-8']

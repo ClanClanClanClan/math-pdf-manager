@@ -1,8 +1,0 @@
-{
-  "title": "A local maximum principle for robust optimal control problems of quadratic BSDEs",
-  "authors": [],
-  "year": null,
-  "citation_id": null,
-  "snippet": "The paper concerns the necessary maximum principle for robust optimal control problems of quadratic BSDEs. The coefficient of the systems depends on the parameter , and the generator of BSDEs is of quadratic growth in . Since the model is uncertain, the variational inequality is proved by weak convergence technique. In addition, due to the generator being quadratic with respect to , the forward adjoint equations are SDEs with unbounded coefficient involving mean oscillation martingales. Using reverse H\\\"older inequality and John-Nirenberg inequality, we show that its solutions are continuous with respect to the parameter . The necessary and sufficient conditions for robust optimal control are proved by linearization method.",
-  "source": "scholar_serpapi"
-}

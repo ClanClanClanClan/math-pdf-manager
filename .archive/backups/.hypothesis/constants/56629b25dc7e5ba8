@@ -1,4 +1,0 @@
-# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/validators/validation_utils.py
-# hypothesis_version: 6.135.32
-
-[1000, '[⁰¹²³⁴⁵⁶⁷⁸⁹]', '[₀₁₂₃₄₅₆₇₈₉]', 'algebra', 'algèbre', 'analyse', 'analysis', 'análisis', 'de', 'einführung', 'en', 'es', 'fr', 'français', 'française', 'funciones', 'funktionen', 'geometrie', 'geometría', 'grundlagen', 'géométrie', 'initiation', 'introducción', 'matemáticas', 'mathematik', 'probabilidad', 'probabilités', 'seeded', 'théorie', 'topologie', 'topología', 'wahrscheinlichkeit', 'álgebra', '🔍 DEBUG:']

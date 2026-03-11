@@ -1,8 +1,0 @@
-{
-  "title": "Convergence rate for random walk approximations of mean field BSDEs",
-  "authors": [],
-  "year": null,
-  "citation_id": null,
-  "snippet": "We study the rate of convergence w.r.t. a Wasserstein type distance for random walk approximation of mean field BSDEs. This article continuous [Briand et al., Donsker-Type Theorem For BSDEs: Rate of Convergence, Bernoulli, 2021], where the rate of convergence of a Donsker-type theorem for standard BSDEs is studied.",
-  "source": "scholar_serpapi"
-}

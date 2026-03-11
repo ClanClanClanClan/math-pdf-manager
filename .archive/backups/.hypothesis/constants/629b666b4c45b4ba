@@ -1,4 +1,0 @@
-# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/scanner.py
-# hypothesis_version: 6.135.16
-
-['*', ', ', '--audit-config', '--audit-report', '--exclude', '--ext', '--file-limit', '--follow-symlinks', '--include-hidden', '--json', '--min-size', '--no-progress', '.', '..', '.pdf', 'Disable progress bar', 'Folder', 'Scanning', 'Type', '__main__', 'base_maths_folder', 'device', 'dir', 'error', 'ext', 'extra', 'folder', 'folder_categories', 'get_file_metadata', 'inode', 'is_hidden', 'is_symlink', 'missing', 'name', 'ok', 'path', 'r', 'scan_directory', 'scanner', 'size', 'st_dev', 'st_ino', 'store_true', 'utf-8', 'w', 'write_audit_report']

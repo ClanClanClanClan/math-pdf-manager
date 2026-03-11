@@ -1,4 +1,0 @@
-# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/src/pdf_processing/extractors/api_client.py
-# hypothesis_version: 6.135.32
-
-[0.95, 3.0, './/atom:entry', 'Doe', 'John', 'Sample Title', '\\1', 'application/pdf', 'arxiv', 'arxiv:comment', 'arxiv:doi', 'arxiv:journal_ref', 'atom', 'atom:author', 'atom:category', 'atom:link', 'atom:name', 'atom:published', 'atom:summary', 'atom:title', 'atom:updated', 'authors', 'first', 'href', 'http://', 'https://', 'last', 'primary', 'scheme', 'term', 'title', 'type', 'utf-8']

@@ -1,8 +1,0 @@
-{
-  "title": "Particle systems for mean reflected BSDEs with jumps",
-  "authors": [],
-  "year": null,
-  "citation_id": null,
-  "snippet": "In this paper, we study the mean reflected backward stochastic differential equations with jump (BSDEJs). We extend the work of Briand and Hibon on the propagation of chaos for mean reflected BSDEs \\cite{briand2021particles} to the jump framework. Besides, we study the reflections for the particle system and obtain the rate of of convergence of the particle system towards the deterministic flat solution to the mean reflected BSDEJ.",
-  "source": "scholar_serpapi"
-}

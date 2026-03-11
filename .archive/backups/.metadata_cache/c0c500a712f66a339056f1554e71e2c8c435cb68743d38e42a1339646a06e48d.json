@@ -1,8 +1,0 @@
-{
-  "title": "A Malliavin Calculus Approach to Backward Stochastic Volterra Integral Equations",
-  "authors": [],
-  "year": null,
-  "citation_id": null,
-  "snippet": "In this paper, we establish existence, uniqueness, and regularity properties of the solutions to multi-dimensional backward stochastic Volterra integral equations (BSVIEs), whose (possibly random) generator reflects nonlinear dependence on both the solution process and the martingale integrand component of the adapted solutions, as well as their diagonal processes. The well-posedness results are developed with the use of Malliavin calculus, which renders a novel perspective in tackling with the challenging diagonal processes while contrasts with the existing methods. We also provide a probabilistic interpretation of the classical solutions to the counterpart semilinear partial differential equations through the explicit adapted solutions of BSVIEs. Moreover, we formulate with BSVIEs to explicitly characterize dynamically optimal mean-variance portfolios for various stochastic investment opportunities, with the myopic investment and intertemporal hedging demands being identified as two diagonal processes of BSVIE solutions.",
-  "source": "scholar_serpapi"
-}

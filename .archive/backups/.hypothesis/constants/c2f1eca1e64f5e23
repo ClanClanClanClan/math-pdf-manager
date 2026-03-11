@@ -1,4 +1,0 @@
-# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/src/pdf_processing/__init__.py
-# hypothesis_version: 6.135.32
-
-['ArxivAPIClient', 'ArxivMetadata', 'Block', 'CACHE_SIZE', 'DEFAULT_TIMEOUT', 'DocumentStructure', 'MAX_AUTHORS', 'MAX_AUTHOR_TOKENS', 'MAX_FILENAME_LEN', 'MAX_PROCESSING_TIME', 'MAX_TEXT_LENGTH', 'MAX_TITLE_LEN', 'MIN_TITLE_LENGTH', 'Metadata', 'MetadataSource', 'PDFConstants', 'PDFMetadata', 'Structure', 'TextBlock', 'clean_text_advanced', 'grobid_available', 'ocr_available', 'timeout_handler']

@@ -1,4 +1,0 @@
-# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/filename_checker/text_processing.py
-# hypothesis_version: 6.135.32
-
-['"', "'", "'n", "'s", '(?<!\\.)\\.\\.\\.(?!\\.)', '(\\W+)', '.,;:!?()[]{}', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ': ', ':;', '; ', '\\b[0-9]\\b', '\\b[A-Za-z]+\\b', '\\bff[A-Za-z]+\\b', 'adapted from', 'analysis of', 'based on', 'comment on', 'companion to', 'critique of', 'd', 'de', 'double', 'e', 'eight', 'en', 'es', 'ff', 'ffi', 'ffl', 'fi', 'five', 'fl', 'four', 'fr', 'guide to', 'guillemet', 'inspired by', 'introduction to', 'it', 'll', 'low-double', 'low-single', "ma'am", 'nine', "o'clock", 'one', 'prequel to', 're', 'reply to', 'response to', 'review of', 's', 'sequel to', 'seven', 'single', 'six', 'study of', 'supplement to', 't', 'three', 'translation of', 'two', 've', "y'all", 'zero', '«', '‘', '’', '‚', '“', '„', '…', 'ﬀ', 'ﬁ', 'ﬂ', 'ﬃ', 'ﬄ']

@@ -1,8 +1,0 @@
-{
-  "title": "-solution of generalized BSDEs in a general filtration with stochastic monotone coefficients",
-  "authors": [],
-  "year": null,
-  "citation_id": null,
-  "snippet": "We study multidimensional generalized backward stochastic differential equations (GBSDEs) within a general filtration that supports a Brownian motion under weak assumptions on the associated data. We establish the existence and uniqueness of solutions in for . Our results apply to generators that are stochastic monotone in the -variable, stochastic Lipschitz in the -variable, and satisfy a general stochastic linear growth condition.",
-  "source": "scholar_serpapi"
-}

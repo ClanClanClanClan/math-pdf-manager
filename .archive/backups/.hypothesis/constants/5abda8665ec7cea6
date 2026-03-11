@@ -1,4 +1,0 @@
-# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/core/math_tokenization.py
-# hypothesis_version: 6.135.32
-
-[' {3,}', '(', ')', 'DASH_CHARS', 'MATH', 'PHRASE', 'PUNCT', 'WORD', '[', '[‐\\-–—−]', '\\$\\$[^$]+\\$\\$', '\\-–—‐−', '\\b', '\\b\\w+\\b', '\\s+', ']', '^', '_', '∂', '∏', '∑', '∞', '∫']

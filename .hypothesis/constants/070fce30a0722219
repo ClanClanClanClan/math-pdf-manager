@@ -1,4 +1,0 @@
-# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/src/core/text_processing/unicode_utils.py
-# hypothesis_version: 6.135.32
-
-['\x00', '. ', '0', 'BYTE-ORDER MARK', 'FUNCTION APPLICATION', 'INVISIBLE PLUS', 'INVISIBLE SEPARATOR', 'INVISIBLE TIMES', 'LEFT-TO-RIGHT MARK', 'NFC', 'NFD', 'NULL BYTE', 'RIGHT-TO-LEFT MARK', 'WORD JOINER', 'ZERO WIDTH JOINER', 'ZERO WIDTH SPACE', '_', 'a', 'c', 'e', 'o', 'p', 'x', 'y', '|', 'ɑ', 'α', 'γ', 'ε', 'ο', 'ρ', 'χ', 'ϲ', 'а', 'е', 'о', 'р', 'с', 'у', 'х', '\u200b', '\u200c', '\u200d', '\u200e', '\u200f', '\u202a', '\u202b', '\u202c', '\u202d', '\u202e', '\u2060', '\u2061', '\u2062', '\u2063', '\u2064', '\ufeff']

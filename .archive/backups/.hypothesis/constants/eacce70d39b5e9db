@@ -1,4 +1,0 @@
-# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/core/logging/structured_logger.py
-# hypothesis_version: 6.135.32
-
-[200, 1000, 'INFO', 'access', 'action', 'allowed', 'args', 'auth', 'auth_method', 'context', 'created', 'critical', 'data', 'description', 'duration_ms', 'error_message', 'error_type', 'exc_info', 'exc_text', 'exception', 'filename', 'fitz', 'funcName', 'function', 'function_call', 'high', 'kwargs', 'level', 'levelname', 'levelno', 'line', 'lineno', 'logger', 'low', 'main', 'medium', 'message', 'metric_name', 'metric_unit', 'metric_value', 'module', 'msecs', 'msg', 'name', 'operation', 'pathname', 'pdfminer', 'pdfplumber', 'performance_metric', 'process', 'processName', 'relativeCreated', 'resource', 'security_event', 'severity', 'stack_info', 'success', 'suspicious', 'thread', 'threadName', 'timestamp', 'traceback', 'type', 'user']

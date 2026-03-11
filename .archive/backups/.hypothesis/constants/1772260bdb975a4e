@@ -1,4 +1,0 @@
-# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/validators/pattern_matcher.py
-# hypothesis_version: 6.135.32
-
-['-', '-{2,}', '-–—−‐', '.,;:!?', 'LMN', 'MATH', 'PHRASE', 'PUNCT', 'WORD', '[', '[×÷±∓∞∑∏∫∂∇]', '[⁰¹²³⁴⁵⁶⁷⁸⁹]', '[₀₁₂₃₄₅₆₇₈₉]', '\\s+-\\s+', ']{2,}', '^[a-z]\\d+$', '^[a-z]_\\d+$', '^\\d+[a-z]$', '^\\d+\\.\\d+$', 'em_dash', 'en_dash', 'greek', 'hyphen', 'minus', 'mixed-dashes', 'multiple-hyphens', 'operators', 'soft_hyphen', 'space-hyphen-space', 'subscript', 'superscript', '\xad', '–', '—', '−']

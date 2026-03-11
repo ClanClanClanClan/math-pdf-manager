@@ -1,8 +1,0 @@
-{
-  "title": "A user's guide to 1D nonlinear backward stochastic differential equations with applications and open problems",
-  "authors": [],
-  "year": null,
-  "citation_id": null,
-  "snippet": "We present a comprehensive theory on the well-posedness of a one-dimensional nonlinear backward stochastic differential equation (1D BSDE for short), where the generator has a one-sided linear/super-linear growth in the first unknown variable and an at most quadratic growth in the second unknown variable . We first establish several existence theorems and comparison theorems with the test function method and the a priori estimate technique, and then immediately give several existence and uniqueness results. We also overview relevant known results and introduce some practical applications of our theoretical results. Finally, we list some open problems on the well-posedness of 1D BSDEs.",
-  "source": "scholar_serpapi"
-}

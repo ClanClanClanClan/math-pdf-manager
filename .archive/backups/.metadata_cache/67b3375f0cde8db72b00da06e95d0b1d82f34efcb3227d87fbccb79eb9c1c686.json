@@ -1,8 +1,0 @@
-{
-  "title": "Forward-Backward Stochastic Linear-Quadratic Optimal Controls: Equilibrium Strategies and Non-Symmetric Riccati Equations",
-  "authors": [],
-  "year": null,
-  "citation_id": null,
-  "snippet": "Linear-quadratic optimal control problem for systems governed by forward-backward stochastic differential equations has been extensively studied over the past three decades. Recent research has revealed that for forward-backward control systems, the corresponding optimal control problem is inherently time-inconsistent. Consequently, the optimal controls derived in existing literature represent pre-committed solutions rather than dynamically consistent strategies. In this paper, we shift focus from pre-committed solutions to addressing the time-inconsistency issue directly, adopting a dynamic game-theoretic approach to derive equilibrium strategies. Owing to the forward-backward structure, the associated equilibrium Riccati equation (ERE) constitutes a coupled system of matrix-valued, non-local ordinary differential equations with a non-symmetric structure. This non-symmetry introduces fundamental challenges in establishing the solvability of the EREs. We overcome the difficulty by establishing a priori estimates for a combination of the solutions to EREs, which, interestingly, is a representation of the equilibrium value function.",
-  "source": "scholar_serpapi"
-}

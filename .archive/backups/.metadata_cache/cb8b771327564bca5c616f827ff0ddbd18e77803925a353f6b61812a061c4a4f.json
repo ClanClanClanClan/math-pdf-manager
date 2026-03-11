@@ -1,8 +1,0 @@
-{
-  "title": "Vulnerable European and American options in a market model with optional hazard process",
-  "authors": [],
-  "year": null,
-  "citation_id": null,
-  "snippet": "We study the upper and lower bounds for prices of European and American style options with the possibility of an external termination, meaning that the contract may be terminated at some random time. Under the assumption that the underlying market model is incomplete and frictionless, we obtain duality results linking the upper price of a vulnerable European option with the price of an American option whose exercise times are constrained to times at which the external termination can happen with a non-zero probability. Similarly, the upper and lower prices for an vulnerable American option are linked to the price of an American option and a game option, respectively. In particular, the minimizer of the game option is only allowed to stop at times which the external termination may occur with a non-zero probability.",
-  "source": "scholar_serpapi"
-}

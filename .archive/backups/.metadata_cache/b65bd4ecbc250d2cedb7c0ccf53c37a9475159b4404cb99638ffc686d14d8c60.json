@@ -1,8 +1,0 @@
-{
-  "title": "The randomization method in stochastic optimal control",
-  "authors": [],
-  "year": null,
-  "citation_id": null,
-  "snippet": "In this paper we make a survey on the so called randomization method, a recent methodology to study stochastic optimization problems. It allows to represent the value function of an optimal control problem by a suitable backward stochastic differential equation (BSDE), by means of an auxiliary optimization problem having the same value as the starting one. This method works for a large class of control problems and provides a BSDE representation to many related PDEs of Hamilton-Jacobi-Bellman type, even in the fully non linear case. After a general informal introduction we explain the method giving full details in a basic case. Then we try to give a complete picture of the existing applications and we present some related open problems.",
-  "source": "scholar_serpapi"
-}

@@ -1,8 +1,0 @@
-{
-  "title": "Weighted solutions of random time horizon BSDEs with stochastic monotonicity generators",
-  "authors": [],
-  "year": null,
-  "citation_id": null,
-  "snippet": "In this paper, we are concerned with a multidimensional backward stochastic differential equation (BSDE) with a general random terminal time , which may take values in . Firstly, we establish an existence and uniqueness result for a weighted solution of the preceding BSDE with generator satisfying a stochastic monotonicity condition with general growth in the first unknown variable and a stochastic Lipschitz continuity condition in the second unknown variable . Then, we derive an existence and uniqueness result for a weighted solution of the preceding BSDE under an additional stochastic sub-linear growth condition in . These results generalize the corresponding ones obtained in \\cite{Li2024} to the solution case. Finally, the corresponding comparison theorems for the weighted solutions are also put forward and verified in the one-dimensional setting. In particular, we develop new ideas and systematical techniques in order to establish the above results.",
-  "source": "scholar_serpapi"
-}

@@ -1,4 +1,0 @@
-# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/utils.py
-# hypothesis_version: 6.135.32
-
-['-', 'DASH_CHARS', 'DEBUG_SENTENCE_CASE', 'NFC', 'TexNormalizeConfig', 'Token', '_DASH_PATTERNS', '_phrase_regex', 'canonical_exceptions', 'canonicalize', 'compound_terms', 'context_hints', 'dash', 'debug_print', 'extract_title_words', 'is_series_title', 'load_word_list', 'load_yaml_config', 'mask_math_regions', 'mdash', 'minus', 'ndash', 'normalize_filename', 'normalize_token', 'read_arxiv_id', 'safe_compare_titles', 'strip_latex', '–', '—', '−']

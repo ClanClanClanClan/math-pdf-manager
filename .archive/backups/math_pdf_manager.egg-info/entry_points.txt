@@ -1,3 +1,0 @@
-[console_scripts]
-mathpdf = main:main
-mathpdf-secure = main_secure:main

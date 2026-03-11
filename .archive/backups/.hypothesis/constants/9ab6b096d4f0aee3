@@ -1,4 +1,0 @@
-# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/validators/__init__.py
-# hypothesis_version: 6.135.29
-
-['AuthorValidator', 'FilenameValidator', 'MathContextDetector', 'UnicodeValidator', 'ValidationError']

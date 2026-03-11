@@ -1,8 +1,0 @@
-{
-  "title": "Fully Coupled Nonlinear FBSEs: Solvability and LQ Control Insights",
-  "authors": [],
-  "year": null,
-  "citation_id": null,
-  "snippet": "This paper explores a class of fully coupled nonlinear forward-backward stochastic difference equations (FBSEs). Building on insights from linear quadratic optimal control problems, we introduce a more relaxed framework of domination-monotonicity conditions specifically designed for discrete systems. Utilizing these conditions, we apply the method of continuation to demonstrate the unique solvability of the fully coupled FBSEs and derive a set of solution estimates. Moreover, our results have considerable implications for various related linear quadratic (LQ) problems, particularly where stochastic Hamiltonian systems are aligned with the FBSEs meeting these introduced domination-monotonicity conditions. As a result, solving the associated stochastic Hamiltonian systems allows us to derive explicit expressions for the unique optimal controls.",
-  "source": "scholar_serpapi"
-}

@@ -1,4 +1,0 @@
-# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/filename_checker/author_processing.py
-# hypothesis_version: 6.135.32
-
-[126, ' -', ' - ', ',', ', ', ',(?!\\s)', '- ', '. \\1.', 'II', 'III', 'IV', 'IX', 'Jr', 'Jr.', 'NFC', 'Sr', 'Sr.', 'V', 'VI', 'VII', 'VIII', 'X', '\\s', '\\s*,\\s*', '\\s+', '\\s+,', '\\s{2,}', '\u200b', '\u200c', '\u200d', '\u200e', '\u200f', '\u202a', '\u202b', '\u202c', '\u202d', '\u202e', '\u2060', '\u2061', '\u2062', '\u2063', '\u2064', '\ufeff']

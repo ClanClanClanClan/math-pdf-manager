@@ -1,4 +1,0 @@
-# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/core/models.py
-# hypothesis_version: 6.135.29
-
-[0.0, '.', 'Unknown', 'Unknown Title', 'arxiv_api', 'arxiv_preprint', 'book', 'book_chapter', 'category', 'conference_paper', 'context', 'critical', 'crossref_api', 'current_value', 'en', 'error', 'error_count', 'field', 'filename', 'fix_available', 'grobid', 'info', 'is_valid', 'issues', 'journal_article', 'line_number', 'manual', 'message', 'ocr', 'pdf_metadata', 'pdf_text', 'position', 'review', 'scholar_api', 'severity', 'suggested_filename', 'suggested_value', 'technical_report', 'thesis', 'unknown', 'validation_time', 'warning', 'warning_count', 'working_paper']

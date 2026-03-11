@@ -1,4 +1,0 @@
-# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/src/auth/models.py
-# hypothesis_version: 6.135.32
-
-['***', 'api_key', 'auth_method', 'basic_auth', 'cookie', 'cookies', 'custom', 'ezproxy', 'oauth', 'oauth_client_secret', 'password', 'shibboleth']

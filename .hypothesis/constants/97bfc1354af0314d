@@ -1,4 +1,0 @@
-# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/src/core/latex_processing.py
-# hypothesis_version: 6.135.32
-
-['-', '.', '[{}]', '[‒–—―⸺⸻﹘﹣－‐−]', '\\s+', 'emph', 'normalize_filename', 'safe_compare_titles', 'strip_latex']

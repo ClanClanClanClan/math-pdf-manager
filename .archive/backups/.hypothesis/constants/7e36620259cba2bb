@@ -1,4 +1,0 @@
-# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/grobid_ocr_integration.py
-# hypothesis_version: 6.135.29
-
-[0.0, 0.3, 0.5, 1.0, 100.0, 200, 255, 300, '\n💡 Recommendations:', ', ', '--grobid-url', '--ocr-language', '--version', './/tei:forename', './/tei:persName', './/tei:surname', '/', '1', '=', 'Grobid service URL', 'Image.Image', 'OCR language code', 'OCR not available', 'PDF file to process', 'PNG', 'Unknown', 'Unknown Title', '__main__', 'abstract', 'authors', 'authors_source', 'combined_metadata', 'conf', 'confidence_scores', 'consolidateHeader', 'eng', 'extraction_methods', 'firstname', 'fullname', 'grobid', 'grobid_authors', 'grobid_results', 'input', 'lastname', 'none', 'ocr', 'ocr_results', 'ocr_text', 'pdf_file', 'pdf_path', 'processing_times', 'rb', 'recommendations', 'simple_preprocess', 'tei', 'tesseract', 'tesseract_failed', 'text', 'title', 'title_source']

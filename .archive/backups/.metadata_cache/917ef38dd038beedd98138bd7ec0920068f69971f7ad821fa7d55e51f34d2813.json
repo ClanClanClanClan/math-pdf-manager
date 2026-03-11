@@ -1,8 +1,0 @@
-{
-  "title": "The System of BSDEs with Singular Terminal Values Arising in Optimal Liquidation with Regime Switching",
-  "authors": [],
-  "year": null,
-  "citation_id": null,
-  "snippet": "We study a stochastic control problem with regime switching arising in an optimal liquidation problem with dark pools and multiple regimes. The new feature of this model is that it introduces a system of BSDEs with jumps and with singular terminal values, which appears in literature for the first time. The existence result for this system is obtained. As a result, we solve the stochastic control problem with regime switching. More importantly, the uniqueness result of this system is also obtained, in contrast to merely minimal solutions established in most related literature.",
-  "source": "scholar_serpapi"
-}

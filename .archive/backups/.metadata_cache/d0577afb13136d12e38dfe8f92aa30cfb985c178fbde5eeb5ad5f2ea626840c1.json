@@ -1,8 +1,0 @@
-{
-  "title": "A multiple coupon collection process and its Markov embedding structure",
-  "authors": [],
-  "year": null,
-  "citation_id": null,
-  "snippet": "The embedding problem of Markov transition matrices into Markov semigroups is a classic problem that regained a lot of impetus and activities in recent years. We consider it here for the following generalisation of the well-known coupon collection process: from a finite set of distinct objects, a subset is drawn repeatedly according to some probability distribution, independently and with replacement, and each time united with the set of objects sampled so far. We derive and interpret properties and explicit conditions for the resulting discrete-time Markov chain to be representable within a semigroup or a flow of a continuous-time process of the same type.",
-  "source": "scholar_serpapi"
-}

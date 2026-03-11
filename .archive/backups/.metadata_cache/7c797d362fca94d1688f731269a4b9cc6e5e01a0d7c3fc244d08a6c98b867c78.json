@@ -1,8 +1,0 @@
-{
-  "title": "Multi-dimensional super-linear backward stochastic volterra integral equations",
-  "authors": [],
-  "year": null,
-  "citation_id": null,
-  "snippet": "In this paper, a systematic investigation is carried out for the general solvability of multi-dimensional backward stochastic Volterra integral equations (BSVIEs) with the generators being super-linear in the adjustment variable Z. Two major situations are discussed: (i) When the terminal term is bounded with the dependence of the generator on Z being of \u201cdiagonally strictly\u201d quadratic growth and being sub-quadratically coupled with off-diagonal components; (ii) When the terminal term is unbounded having exponential moments of arbitrary order with the dependence of the generator on Z being diagonally no more than quadratic and being independent of off-diagonal components. Besides, for the case that the generator is super-quadratic in Z, some negative results are presented.",
-  "source": "scholar_serpapi"
-}

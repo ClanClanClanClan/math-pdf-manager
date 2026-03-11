@@ -1,8 +1,0 @@
-{
-  "title": "Mean Field Backward Stochastic Differential Equations with Double Mean Reflections",
-  "authors": [],
-  "year": null,
-  "citation_id": null,
-  "snippet": "In this paper, we analyze the mean field backward stochastic differential equations (MFBSDEs) with double mean reflections, whose generator and constraints both depend on the distribution of the solution. When the generator is Lipschitz continuous, based on the backward Skorokhod problem with nonlinear constraints, we investigate the solvability of the doubly mean reflected MFBSDEs by constructing a contraction mapping. Furthermore, if the constraints are linear, the solution can also be constructed by a penalization method. For the case of quadratic growth, we obtain the existence and uniqueness results by using a fixed-point argument, the BMO martingale theory and the {\\theta}-method.",
-  "source": "scholar_serpapi"
-}

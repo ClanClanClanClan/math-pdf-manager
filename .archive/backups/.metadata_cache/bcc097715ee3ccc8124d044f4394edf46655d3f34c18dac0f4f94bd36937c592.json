@@ -1,8 +1,0 @@
-{
-  "title": "Stochastic maximum principle for recursive optimal control problems with varying terminal time",
-  "authors": [],
-  "year": null,
-  "citation_id": null,
-  "snippet": "This paper introduces a new recursive stochastic optimal control problem driven by a forward-backward stochastic differential equations (FBSDEs), where the terminal time varies according to the constraints of the state of the forward equation. We can use this optimal control problem to describe the investment portfolio problems with the varying investment period. Based on novel \u03c1-moving variational and adjoint equations, we establish the stochastic maximum principle for this optimal control problem including the classical recursive optimal control problem as a particular case. Furthermore, we propose an example to verify the main results of this study.",
-  "source": "scholar_serpapi"
-}

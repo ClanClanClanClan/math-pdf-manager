@@ -1,8 +1,0 @@
-{
-  "title": "A propagation of chaos result for weakly interacting nonlinear Snell envelopes",
-  "authors": [],
-  "year": null,
-  "citation_id": null,
-  "snippet": "In this article, we establish a propagation of chaos result for weakly interacting nonlinear Snell envelopes which converge to a class of mean-field reflected backward stochastic differential equations (BSDEs) with jumps and right-continuous and left-limited obstacle, where the mean-field interaction in terms of the distribution of the Y-component of the solution enters both the driver and the lower obstacle. Under mild Lipschitz and integrability conditions on the coefficients, we prove existence and uniqueness of the solution to both the mean-field reflected BSDEs with jumps and the corresponding system of weakly interacting particles by using a new approach relying on the characterization of the solution of a mean-field reflected BSDE in terms of a nonlinear optimal stopping problem of mean-field type. We then provide a propagation of chaos result for the whole solution (Y, Z, U, K), which requires new technical results due to the dependence of the obstacle on the solution and the presence of jumps. In particular, we obtain a new law of large number type result for right-continuous and left-limited processes.",
-  "source": "scholar_serpapi"
-}

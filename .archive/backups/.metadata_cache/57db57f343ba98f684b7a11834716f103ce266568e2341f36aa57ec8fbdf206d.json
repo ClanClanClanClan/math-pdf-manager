@@ -1,8 +1,0 @@
-{
-  "title": "-solutions for BSDEs with jumps and stochastic monotone generator",
-  "authors": [],
-  "year": null,
-  "citation_id": null,
-  "snippet": "We study multidimensional discontinuous backward stochastic differential equations in a filtration that supports both a Brownian motion and an independent integer-valued random measure. Under suitable -integrability conditions on the data, we establish the existence and uniqueness of -solutions for both cases: and . The generator is assumed to be stochastically monotone in the state variable , stochastically Lipschitz in the control variables , and to satisfy a stochastic linear growth condition, along with an appropriate -integrability requirement.",
-  "source": "scholar_serpapi"
-}

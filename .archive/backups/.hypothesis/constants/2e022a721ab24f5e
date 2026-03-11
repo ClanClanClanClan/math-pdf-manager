@@ -1,4 +1,0 @@
-# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/mathematician_name_validator.py
-# hypothesis_version: 6.135.26
-
-[0.0, 0.6, 0.85, 1.0, 1000, '"', '""', '#', "'", "''", ',', ':', 'AllCommonVariants', 'CJK', 'CanonicalLatin', 'CanonicalWestern', 'Comments', 'Cyrillic', 'DiasporaFlags', 'MathSciNet', 'Mn', 'NFC', 'NFD', 'NativeScript', 'Suffixes', 'VIAF', '[', ']', '__main__', 'ambiguity_type', 'ambiguous_variants', 'cache_hits', 'canonical', 'chinese.yaml', 'confidence', 'conflicting_entries', 'east european.yaml', 'errors', 'files_loaded', 'found', 'french.yaml', 'german.yaml', 'high_collision_names', 'hungarian.yaml', 'indian.yaml', 'is_ambiguous', 'languages_covered', 'load_errors', 'message', 'num_load_errors', 'polish.yaml', 'position', 'r', 'russian.yaml', 'safe_load', 'suggestions', 'total_mathematicians', 'total_variants', 'type', 'utf-8', 'variant_collision']

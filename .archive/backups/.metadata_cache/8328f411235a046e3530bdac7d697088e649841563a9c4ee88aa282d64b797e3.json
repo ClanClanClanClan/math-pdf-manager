@@ -1,8 +1,0 @@
-{
-  "title": "On the existence and uniqueness of unbounded solutions to quadratic BSDEs with convex generators",
-  "authors": [],
-  "year": null,
-  "citation_id": null,
-  "snippet": "With the terminal value $\\xi^-$ admitting some given exponential moment and $\\xi^+ $ admitting every exponential moments or being bounded, we present several existence and uniqueness results for the unbounded solutions of quadratic backward stochastic differential equations whose generator $ g $ may be non-Lipschitz with general growth in the first unknown variable $ y $, and is convex (concave) in the second unknown variable $ z $. This generalizes some results reported in [4] by relaxing the continuity and growth condition of \u2026",
-  "source": "scholar_serpapi"
-}

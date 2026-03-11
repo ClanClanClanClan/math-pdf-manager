@@ -1,8 +1,0 @@
-{
-  "title": "On invariance of observability for BSDEs and its applications to stochastic control systems",
-  "authors": [],
-  "year": null,
-  "citation_id": null,
-  "snippet": "In this paper, we establish the invariance of observability for the observed backward stochastic differential equations (BSDEs) with constant coefficients, relative to the filtered probability space. This signifies that the observability of these observed BSDEs with constant coefficients remains unaffected by the selection of the filtered probability space. As an illustrative application, we demonstrate that for stochastic control systems with constant coefficients, weak observability, approximate null controllability with cost, and stabilizability are equivalent across some or any filtered probability spaces.",
-  "source": "scholar_serpapi"
-}

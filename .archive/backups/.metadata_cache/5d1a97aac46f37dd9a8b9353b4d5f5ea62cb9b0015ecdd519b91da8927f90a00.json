@@ -1,8 +1,0 @@
-{
-  "title": "A partial stochastic equilibrium model and its limiting behaviour",
-  "authors": [],
-  "year": null,
-  "citation_id": null,
-  "snippet": "The existence of a (partial) market equilibrium price is proved in a complete, continuous time finite-agent market setting. The economic agents act as price takers in a fully competitive setting and maximize exponential utility from terminal wealth. As the number of economic agents goes to infinity, the BSDE system of equations characterizing the equilibrium asset price dynamics decouples. Due to the system's symmetry, the influence of the mean field of the agents, conditionally on the common noise, becomes deterministic.",
-  "source": "scholar_serpapi"
-}

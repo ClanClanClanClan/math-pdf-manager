@@ -1,8 +1,0 @@
-{
-  "title": "A robust stochastic control problem with applications to monotone mean-variance problems",
-  "authors": [],
-  "year": null,
-  "citation_id": null,
-  "snippet": "This paper studies a robust stochastic control problem with a monotone mean-variance cost functional and random coefficients. The main technique is to find the saddle point through two backward stochastic differential equations (BSDEs) with unbounded coefficients. We further show that the robust stochastic control problem shares the same optimal control and optimal value with the stochastic control problem with a mean-variance cost functional. The results obtained are then applied to monotone mean-variance and mean-variance portfolio selection problems and monotone mean-variance and mean-variance investment-reinsurance problems.",
-  "source": "scholar_serpapi"
-}

@@ -1,4 +1,0 @@
-# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/src/downloader/proper_downloader.py
-# hypothesis_version: 6.135.32
-
-[0.0, 200, 8192, '(\\d{4}\\.\\d{4,5})', '10.1007', '10.1109', '10.1137', 'Content-Disposition', 'ETH_PASSWORD', 'ETH_USERNAME', 'User-Agent', 'arxiv', 'auth_method', 'class', 'downloads', 'epubs.siam.org', 'eth', 'eth_password', 'eth_username', 'filename=', 'filename="?([^"]+)"?', 'ieee', 'ieeexplore.ieee.org', 'institutional', 'link.springer.com', 'patterns', 'shibboleth', 'siam', 'springer', 'wb']

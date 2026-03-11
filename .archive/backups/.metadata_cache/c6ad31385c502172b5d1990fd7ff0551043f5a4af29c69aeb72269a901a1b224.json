@@ -1,8 +1,0 @@
-{
-  "title": "A quadratic BSDE approach to normalization for the finite volume 2D sine-Gordon model in the finite ultraviolet regime",
-  "authors": [],
-  "year": null,
-  "citation_id": null,
-  "snippet": "This paper is devoted to a new construction of the two-dimensional sine-Gordon model on bounded domains by a novel normalization technique in the finite ultraviolet regime. Our methodology involves a family of backward stochastic differential equations (BSDEs for short) driven by a cylindrical Wiener process, whose generators are purely quadratic functions of the second unknown variable. The terminal conditions of the quadratic BSDEs are uniformly bounded and converge in probability to the real part of imaginary multiplicative chaos tested against an arbitrarily given test function, which helps us describe our sine-Gordon measure through some delicate estimates concerning bounded mean oscillation martingales. As the ultraviolet cutoffs are vanishing, the quadratic BSDEs converge to a quadratic BSDE that completely characterizes the absolute continuity of our sine-Gordon measure with respect to the law of Gaussian free fields. Our approach can also be used effectively to establish the connection between our sine-Gordon measure and the scaling limit of correlation functions of the critical planar XOR-Ising model and to prove the weak convergence of the normalized charge distributions of two-dimensional log-gases.",
-  "source": "scholar_serpapi"
-}

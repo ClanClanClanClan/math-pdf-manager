@@ -1,8 +1,0 @@
-{
-  "title": "Singular backward stochastic Volterra integral equations in infinite dimensional spaces",
-  "authors": [],
-  "year": null,
-  "citation_id": null,
-  "snippet": "In this paper, the notion of singular backward stochastic Volterra integral equations (singular BSVIEs for short) in infinite dimensional space is introduced, and the corresponding well-posedness is carefully established. A class of singularity conditions are proposed, which not only cover that of fractional kernel, Volterra Heston model kernel, completely monotone kernels, to mention a few, but also happen to be used in the forward stochastic Volterra integral with new conclusions arising. Motivated by mathematical physics problem such as the viscoelasticity/thermoviscoelasticity of materials, heat conduction in materials with memory, optimal control problems of abstract stochastic Volterra integral equations (including fractional stochastic evolution equations and stochastic evolutionary integral equations) are presented. At last, our BSVIEs are surprisingly used in maximum principle of controlled stochastic delay evolution equations. One advantage of this new standpoint is that the final cost functional can naturally depend on the past state.",
-  "source": "scholar_serpapi"
-}

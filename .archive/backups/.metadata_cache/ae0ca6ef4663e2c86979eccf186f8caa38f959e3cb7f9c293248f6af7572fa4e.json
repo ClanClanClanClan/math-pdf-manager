@@ -1,8 +1,0 @@
-{
-  "title": "Two-barriers-reflected BSDE with rank-based data",
-  "authors": [],
-  "year": null,
-  "citation_id": null,
-  "snippet": "We investigate two-barriers-reflected backward stochastic differential equations with data from rank-based stochastic differential equation. More specifically, we focus on the solution of backward stochastic differential equations restricted to two prescribed upper-boundary and lower-boundary processes. We rigorously show that this solution gives a probabilistic expression to the viscosity solution of some obstacle problems for the corresponding parabolic partial differential equations. As an application, the pricing problem of an \u2026",
-  "source": "scholar_serpapi"
-}

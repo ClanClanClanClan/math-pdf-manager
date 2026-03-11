@@ -1,8 +1,0 @@
-{
-  "title": "Multi-dimensional backward stochastic differential equations of non-Markovian interactively quadratic generators",
-  "authors": [],
-  "year": null,
-  "citation_id": null,
-  "snippet": "This paper is devoted to the general solvability of multi-dimensional backward stochastic differential equations (BSDEs) with interactively quadratic generators in the non-Markovian setting. Some general structural conditions on the generator g of BSDEs are demonstrated to guarantee existence and uniqueness of the local and global solutions, which admit that g has a general growth in state variable y, and the ith component g i of g depends quadratically not only on the ith row z i of the state variable z, but also the jth row z j of z for j = i. For these multidimensional BSDEs of non-Markovian interactively quadratic generators, we first establish an existence and uniqueness result on the local bounded solution and then several existence and uniqueness results on the global bounded and unbounded solutions. They unify and strengthen some existing works in the non-Markovian setting, and also incorporate some interesting examples, one of which partially answers an open problem posed in Jackson [25]. A comprehensive investigation on the bounded solution of one-dimensional quadratic BSDEs with unbounded stochastic parameters is carried on for deriving our main results.",
-  "source": "scholar_serpapi"
-}

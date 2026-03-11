@@ -1,4 +1,0 @@
-# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/text_normalization.py
-# hypothesis_version: 6.135.32
-
-[256, ' - ', '"', "'", '-', '.', 'NFC', 'NFD', '[^\\w\\s-]', '\\1', '\\\\[a-zA-Z]+', '‒', '–', '—']

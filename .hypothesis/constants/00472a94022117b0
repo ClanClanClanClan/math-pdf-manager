@@ -1,4 +1,0 @@
-# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/src/pdf_processing/parsers/text_extraction.py
-# hypothesis_version: 6.135.32
-
-[0.0, 0.1, 0.2, 0.3, 1.0, 100, 500, 800, 1000, 10000, '!', ',', '.', '?', 'abstract', 'bibliography', 'blocks', 'conclusion', 'extract_as_text_file', 'extract_with_pymupdf', 'extraction', 'ignore', 'introduction', 'max_pages', 'method', 'page_count', 'pdfminer', 'pdfplumber', 'pymupdf', 'quality_score', 'r', 'references', 'text', 'text_file', 'utf-8']

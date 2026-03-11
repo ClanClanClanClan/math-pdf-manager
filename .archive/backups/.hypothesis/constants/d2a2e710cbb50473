@@ -1,4 +1,0 @@
-# file: /Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/Scripts/core/__init__.py
-# hypothesis_version: 6.135.32
-
-['DASH_CHARS', 'DEBUG_SENTENCE_CASE', 'Token', '_phrase_regex', 'canonicalize', 'debug_print', 'extract_title_words', 'load_word_list', 'load_yaml_config', 'mask_math_regions', 'normalize_filename', 'normalize_token', 'safe_compare_titles', 'strip_latex']
