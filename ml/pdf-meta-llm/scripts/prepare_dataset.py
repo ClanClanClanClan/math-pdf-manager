@@ -33,6 +33,7 @@ import logging
 import random
 import re
 import sys
+import unicodedata
 from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -65,8 +66,12 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 def _normalize_title(title: str) -> str:
-    """Normalise a title for deduplication."""
-    t = title.lower().strip()
+    """Normalise a title for deduplication.
+
+    NFC-normalises, lowercases, strips non-alphanumeric characters.
+    """
+    t = unicodedata.normalize("NFC", title)
+    t = t.lower().strip()
     t = re.sub(r"\s+", " ", t)
     t = re.sub(r"[^a-z0-9 ]", "", t)
     return t
@@ -79,10 +84,41 @@ def _normalize_title(title: str) -> str:
 class QualityFilter:
     """Applies quality filters and tracks rejection reasons."""
 
-    def __init__(self, title_in_text_threshold: float = 70.0):
+    def __init__(
+        self,
+        title_in_text_threshold: float = 70.0,
+        dedup_fuzzy_threshold: float = 95.0,
+    ):
         self.title_in_text_threshold = title_in_text_threshold
+        self.dedup_fuzzy_threshold = dedup_fuzzy_threshold
         self.rejection_counts: Counter = Counter()
-        self.seen_titles: set = set()
+        self.seen_titles_set: set = set()              # exact set for fast exact check
+        self._prefix_buckets: Dict[str, List[str]] = defaultdict(list)  # prefix → titles
+
+    def _is_fuzzy_duplicate(self, norm_title: str) -> bool:
+        """Check if a normalised title is a near-duplicate of any seen title.
+
+        Uses exact set for O(1) check first, then a fast prefix-bucketed fuzzy
+        check for near-duplicates like:
+        - "on the convergence of sgd" vs "on the convergence of sgd methods"
+        - Same paper with slightly different filename encoding
+
+        Performance: O(1) exact check + O(bucket_size) fuzzy check per title.
+        Titles are bucketed by their first 20 alphanumeric characters, so only
+        titles with similar beginnings are compared.
+        """
+        if norm_title in self.seen_titles_set:
+            return True
+
+        # Bucket key: first 20 non-space chars — titles that match at 95%
+        # almost always share the same prefix
+        key = norm_title.replace(" ", "")[:20]
+        if key in self._prefix_buckets:
+            for seen in self._prefix_buckets[key]:
+                if fuzz.ratio(norm_title, seen) >= self.dedup_fuzzy_threshold:
+                    return True
+
+        return False
 
     def check(self, title: str, authors: List[str], text: str) -> Optional[str]:
         """Return rejection reason string, or None if sample passes all filters."""
@@ -96,30 +132,45 @@ class QualityFilter:
         if not is_valid_embedded_title(title):
             return "title_garbage"
 
-        # Filter 3: At least 1 author with 2+ characters
+        # Filter 3: At least 1 valid author name (not journal metadata)
         valid_authors = [a for a in authors if len(a.strip()) >= 2]
         if not valid_authors:
             return "no_valid_authors"
+
+        # Filter 3b: Reject if authors look like journal metadata or numbers
+        # (e.g. "Comptes rendus hebdomadaires...", "tome 273", "série I", "158")
+        _metadata_patterns = re.compile(
+            r"^(comptes rendus|astérisque|mémoires|tome \d|séri|vol\b|"
+            r"nº?\d|supplément|annales|\d+[-–]\d+$|^\d+$)",
+            re.IGNORECASE,
+        )
+        if all(_metadata_patterns.search(a) for a in valid_authors):
+            return "authors_are_metadata"
+
+        # Filter 3c: Reject if any author is a bare number (page/article number)
+        if any(re.fullmatch(r"\d+", a.strip()) for a in valid_authors):
+            return "author_is_number"
 
         # Filter 4: Sufficient text content
         if not text or len(text.strip()) < 200:
             return "text_too_short"
 
-        # Filter 5: Title appears in the PDF text
+        # Filter 5: Title appears in the PDF text (NFC-normalised comparison)
         # This is critical — avoids teaching the LLM to hallucinate titles
         # that aren't in the extracted text.
-        # Use partial_ratio: finds best substring match of title within text,
-        # which handles the length asymmetry (short title vs long text).
-        text_snippet = text[:8000]  # Check first ~8k chars for performance
-        similarity = fuzz.partial_ratio(title.lower(), text_snippet.lower())
+        text_snippet = unicodedata.normalize("NFC", text[:8000])
+        title_nfc = unicodedata.normalize("NFC", title)
+        similarity = fuzz.partial_ratio(title_nfc.lower(), text_snippet.lower())
         if similarity < self.title_in_text_threshold:
             return "title_not_in_text"
 
-        # Filter 6: Deduplicate by normalised title
+        # Filter 6: Deduplicate by normalised title (exact + fuzzy)
         norm = _normalize_title(title)
-        if norm in self.seen_titles:
+        if self._is_fuzzy_duplicate(norm):
             return "duplicate_title"
-        self.seen_titles.add(norm)
+        self.seen_titles_set.add(norm)
+        key = norm.replace(" ", "")[:20]
+        self._prefix_buckets[key].append(norm)
 
         return None
 
@@ -271,6 +322,64 @@ def split_dataset(
 # Writing outputs
 # ---------------------------------------------------------------------------
 
+def generate_empty_text_examples(n: int = 200, seed: int = 42) -> List[Dict[str, Any]]:
+    """Generate synthetic training examples with empty/garbage text.
+
+    These teach the model to return empty results instead of hallucinating
+    when the PDF text is unreadable (scanned PDFs, image-only pages, etc.).
+    """
+    rng = random.Random(seed)
+
+    # Diverse garbage-text templates that mimic what scanned PDFs produce
+    garbage_templates = [
+        "",
+        " ",
+        "\n\n\n",
+        ".............",
+        "_ _ _ _ _ _ _ _ _",
+        "1 2 3 4 5 6 7 8 9 0",
+        "Page 1",
+        "This page intentionally left blank.",
+        "Copyright © All rights reserved.",
+        "Printed in the United States of America.",
+        "ISBN 978-0-00-000000-0",
+        "Library of Congress Cataloging-in-Publication Data",
+        "No part of this publication may be reproduced.",
+        "\\x00\\x01\\x02\\x03",  # binary-like garbage
+        "ff fi fl ffi ffl",  # ligature artifacts
+        "{ } [ ] | \\ / ~ ` @ # $ % ^ & * ( )",
+        "i ii iii iv v vi vii viii ix x",  # Roman numeral page numbers
+        "Contents\n\nPreface\n\nAcknowledgements",  # Table of contents without title
+    ]
+
+    empty_response = json.dumps({"title": "", "authors": []}, ensure_ascii=False)
+
+    examples = []
+    for i in range(n):
+        # Pick a random garbage template, optionally combine multiples
+        n_templates = rng.randint(1, 3)
+        chosen = [rng.choice(garbage_templates) for _ in range(n_templates)]
+        text = "\n".join(chosen)
+
+        # Add some random whitespace/noise
+        text = text + "\n" * rng.randint(0, 5) + " " * rng.randint(0, 20)
+
+        messages = [
+            {"role": "system", "content": _SYSTEM_PROMPT},
+            {"role": "user", "content": _USER_TEMPLATE.format(text=text)},
+            {"role": "assistant", "content": empty_response},
+        ]
+
+        examples.append({
+            "title": "",
+            "authors": [],
+            "text": text,
+            "messages": messages,
+        })
+
+    return examples
+
+
 def write_jsonl(samples: List[Dict[str, Any]], path: Path) -> None:
     """Write chat-format JSONL."""
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -419,7 +528,16 @@ def main() -> None:
         seed=args.seed,
     )
 
-    print(f"\nSplit: train={len(train):,}  val={len(val):,}  test={len(test):,}")
+    # Augment training set with empty-text examples
+    n_empty = max(200, len(train) // 100)  # ~1% of training set, minimum 200
+    empty_examples = generate_empty_text_examples(n=n_empty, seed=args.seed + 1)
+    train.extend(empty_examples)
+    # Also add a few to val for proper evaluation
+    val_empty = generate_empty_text_examples(n=max(20, n_empty // 10), seed=args.seed + 2)
+    val.extend(val_empty)
+
+    print(f"\nSplit: train={len(train):,} (incl. {n_empty} empty-text augmented)  "
+          f"val={len(val):,}  test={len(test):,}")
 
     # Write outputs
     output_dir = args.output_dir

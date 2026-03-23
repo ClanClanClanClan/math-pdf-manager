@@ -1,0 +1,4643 @@
+{
+  "seed": 42,
+  "n_samples": 100,
+  "methods": {
+    "llm": {
+      "summary": {
+        "method": "llm",
+        "n_samples": 100,
+        "title_exact_match": 0.85,
+        "title_fuzzy_mean": 92.2006075067652,
+        "title_token_f1_mean": 0.9087016480595428,
+        "author_jaccard_mean": 0.8916666666666667,
+        "combined_score": 0.8928665678749778,
+        "mean_time_sec": 24.929641143309926,
+        "n_errors": 0
+      },
+      "samples": [
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/05 - Books and lecture notes/04 - Cours spécialisés société mathématique de France/08 - Audin, M. - Les systèmes hamiltoniens et leur intégrabilité.pdf",
+          "gt_title": "Audin, M. - Les systèmes hamiltoniens et leur intégrabilité",
+          "gt_authors": [
+            "08"
+          ],
+          "pred_title": "Audin, M. - Les systèmes Hamiltoniens et leur intégrabilité",
+          "pred_authors": [
+            "08"
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 15.989277166998363
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/03 - Working papers/B/2024/Bovo, A., de Angelis, T. - On the saddle point of a zero-sum stopper vs. singular-controller game.pdf",
+          "gt_title": "On the saddle point of a zero-sum stopper vs. singular-controller game",
+          "gt_authors": [
+            "Bovo",
+            "A.",
+            "de Angelis",
+            "T."
+          ],
+          "pred_title": "On the saddle point of a zero-sum stopper vs. singular-controller game",
+          "pred_authors": [
+            "Bovo",
+            "A.",
+            "de Angelis",
+            "T."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 16.325701666995883
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/03 - Working papers/N/2022/Neufeld, A., Sester, J. - Robust Q-learning algorithm for Markov decision processes under Wasserstein uncertainty.pdf",
+          "gt_title": "Robust Q-learning algorithm for Markov decision processes under Wasserstein uncertainty",
+          "gt_authors": [
+            "Neufeld",
+            "A.",
+            "Sester",
+            "J."
+          ],
+          "pred_title": "Robust Q-learning algorithm for Markov decision processes under Wasserstein uncertainty",
+          "pred_authors": [
+            "Neufeld",
+            "A.",
+            "Sester",
+            "J."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 15.325895374997344
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/08 - Séminaires de probabilités de Strasbourg/Séminaire 42 - 2009/171-Biane, P. - Matrix valued Brownian motion and a paper by Polya.pdf",
+          "gt_title": "Matrix valued Brownian motion and a paper by Polya",
+          "gt_authors": [
+            "171-Biane",
+            "P."
+          ],
+          "pred_title": "Matrix valued Brownian motion and a paper by Pólya",
+          "pred_authors": [
+            "171-Biane",
+            "P."
+          ],
+          "title_exact": false,
+          "title_fuzzy": 98.0,
+          "title_f1": 0.8888888888888888,
+          "author_jaccard": 1.0,
+          "combined": 0.98989898989899,
+          "time_sec": 17.8806851249974
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/A/Ayache, A., Peng, Q. - Stochastic volatility and multifractional Brownian motion.pdf",
+          "gt_title": "Stochastic volatility and multifractional Brownian motion",
+          "gt_authors": [
+            "Ayache",
+            "A.",
+            "Peng",
+            "Q."
+          ],
+          "pred_title": "Stochastic volatility and multifractional Brownian motion",
+          "pred_authors": [
+            "Ayache",
+            "A.",
+            "Peng",
+            "Q."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 24.237120541998593
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/S/Sirignano, J., Spiliopoulos, K. - Mean field analysis of deep neural networks.pdf",
+          "gt_title": "Mean field analysis of deep neural networks",
+          "gt_authors": [
+            "Sirignano",
+            "J.",
+            "Spiliopoulos",
+            "K."
+          ],
+          "pred_title": "Mean field analysis of deep neural networks",
+          "pred_authors": [
+            "Sirignano",
+            "J.",
+            "Spiliopoulos",
+            "K."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 31.857893749998766
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/G/Gomes, D.A., Mitake, H. - Existence for stationary mean-field games with congestion and quadratic Hamiltonians.pdf",
+          "gt_title": "Existence for stationary mean-field games with congestion and quadratic Hamiltonians",
+          "gt_authors": [
+            "Gomes",
+            "D.A.",
+            "Mitake",
+            "H."
+          ],
+          "pred_title": "Existence for stationary mean-field games with congestion and quadratic Hamiltonians",
+          "pred_authors": [
+            "Gomes",
+            "D.A.",
+            "Mitake",
+            "H."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 30.383321500004968
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/03 - Working papers/P/2025/Pennanen, T., Taoum, W. - Statistical modeling of SOFR term structure.pdf",
+          "gt_title": "Statistical modeling of SOFR term structure",
+          "gt_authors": [
+            "Pennanen",
+            "T.",
+            "Taoum",
+            "W."
+          ],
+          "pred_title": "Statistical modeling of SOFR term structure",
+          "pred_authors": [
+            "Pennanen",
+            "T.",
+            "Taoum",
+            "W."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 20.882186709000962
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/08 - Séminaires de probabilités de Strasbourg/Séminaire 14 - 1980/418-Rao, M. - A note on Revuz measure.pdf",
+          "gt_title": "A note on Revuz measure",
+          "gt_authors": [
+            "418-Rao",
+            "M."
+          ],
+          "pred_title": "A note on Revuz measure",
+          "pred_authors": [
+            "418-Rao",
+            "M."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 14.189844084001379
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/03 - Working papers/E/2024/Ekström, E., Tolonen-Weckström, T. - Hiring and firing—a signaling game.pdf",
+          "gt_title": "Hiring and firing—a signaling game",
+          "gt_authors": [
+            "Ekström",
+            "E.",
+            "Tolonen-Weckström",
+            "T."
+          ],
+          "pred_title": "Hiring and firing—a signaling game",
+          "pred_authors": [
+            "Ekström",
+            "E.",
+            "Tolonen-Weckström",
+            "T."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 26.991695374999836
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/05 - Books and lecture notes/K/Knight, F.B. - Essays on the prediction process.pdf",
+          "gt_title": "Essays on the prediction process",
+          "gt_authors": [
+            "Knight",
+            "F.B."
+          ],
+          "pred_title": "Essays on the prediction process",
+          "pred_authors": [
+            "Knight",
+            "F.B."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 5.91758608300006
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/08 - Séminaires de probabilités de Strasbourg/Séminaire 22 - 1988/225-Weinryb, S., Yor, M. - Le mouvement brownien de Lévy indexé par R.pdf",
+          "gt_title": "Le mouvement brownien de Lévy indexé par R",
+          "gt_authors": [
+            "225-Weinryb",
+            "S.",
+            "Yor",
+            "M."
+          ],
+          "pred_title": "Le mouvement brownien de Lévy indexé par R",
+          "pred_authors": [
+            "225-Weinryb",
+            "S.",
+            "Yor",
+            "M."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 24.194282417003706
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/07a - BSDEs/02 - Unpublished papers/Alia, I., Alia, M.S. - On stochastic maximum principle - a backward stochastic partial differential equations point of view.pdf",
+          "gt_title": "On stochastic maximum principle - a backward stochastic partial differential equations point of view",
+          "gt_authors": [
+            "Alia",
+            "I.",
+            "Alia",
+            "M.S."
+          ],
+          "pred_title": "On stochastic maximum principle, a backward stochastic partial differential equations point of view",
+          "pred_authors": [
+            "Alia",
+            "I.",
+            "Alia",
+            "M.S."
+          ],
+          "title_exact": false,
+          "title_fuzzy": 98.49246231155779,
+          "title_f1": 0.8799999999999999,
+          "author_jaccard": 1.0,
+          "combined": 0.9924050632911393,
+          "time_sec": 33.601568166996
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/03 - Working papers/C/2024/Carmona, R. A., Yang, X., Bhela, S., Zeng, C. - Maximizing on-bill savings through battery management optimization.pdf",
+          "gt_title": "Maximizing on-bill savings through battery management optimization",
+          "gt_authors": [
+            "Carmona",
+            "R. A.",
+            "Yang",
+            "X.",
+            "Bhela",
+            "S.",
+            "Zeng",
+            "C."
+          ],
+          "pred_title": "Maximizing on-bill savings through battery management optimization",
+          "pred_authors": [
+            "Carmona",
+            "R. A.",
+            "Yang",
+            "X.",
+            "Bhela",
+            "S.",
+            "Zeng",
+            "C."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 31.019375916999707
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/07a - BSDEs/01 - Published papers/W/Wu, P., Zhang, G. - Representation theorems for generators of BSDEs and the extended g-expectations in probability spaces with general filtration.pdf",
+          "gt_title": "Representation theorems for generators of BSDEs and the extended g-expectations in probability spaces with general filtration",
+          "gt_authors": [
+            "Wu",
+            "P.",
+            "Zhang",
+            "G."
+          ],
+          "pred_title": "Representation theorems for generators of BSDEs and the extended g-expectations in probability spaces with general filtration",
+          "pred_authors": [
+            "Wu",
+            "P.",
+            "Zhang",
+            "G."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 30.619593250004982
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/B/Baños, D.R., Nilssen, T. - Malliavin and flow regularity of SDEs. Application to the study of densities and the stochastic transport equation.pdf",
+          "gt_title": "Malliavin and flow regularity of SDEs. Application to the study of densities and the stochastic transport equation",
+          "gt_authors": [
+            "Baños",
+            "D.R.",
+            "Nilssen",
+            "T."
+          ],
+          "pred_title": "Malliavin and flow regularity of SDEs. Application to the study of densities and the stochastic transport equation",
+          "pred_authors": [
+            "Baños",
+            "D.R.",
+            "Nilssen",
+            "T."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 32.20408204099658
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/03 - Working papers/G/2024/Goldberg, G. - On the HOD conjecture and its failure.pdf",
+          "gt_title": "On the HOD conjecture and its failure",
+          "gt_authors": [
+            "Goldberg",
+            "G."
+          ],
+          "pred_title": "On the HOD conjecture and its failure",
+          "pred_authors": [
+            "Goldberg",
+            "G."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 26.80357254199771
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/03 - Working papers/G/2025/Guan, G., Hu, J., Liang, Z. - N-player and mean field games among fund managers considering excess logarithmic returns.pdf",
+          "gt_title": "N-player and mean field games among fund managers considering excess logarithmic returns",
+          "gt_authors": [
+            "Guan",
+            "G.",
+            "Hu",
+            "J.",
+            "Liang",
+            "Z."
+          ],
+          "pred_title": "N-player and mean field games among fund managers considering excess logarithmic returns",
+          "pred_authors": [
+            "Guan",
+            "G.",
+            "Hu",
+            "J.",
+            "Liang",
+            "Z."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 26.588529707994894
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/03 - Working papers/D/2025/de Feo, F. - Stochastic optimal control problems with measurable coefficients via Lᵖ–viscosity solutions and applications to optimal advertising models.pdf",
+          "gt_title": "Stochastic optimal control problems with measurable coefficients via Lᵖ–viscosity solutions and applications to optimal advertising models",
+          "gt_authors": [
+            "de Feo",
+            "F."
+          ],
+          "pred_title": "Stochastic optimal control problems with measurable coefficients via Lᵖ–viscosity solutions and applications to optimal advertising models",
+          "pred_authors": [
+            "de Feo",
+            "F."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 37.86441624999861
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/G/Gassiat, P., Mijatović, A., Oberhauser, H. - An integral equation for Root's barrier and the generation of Brownian increments.pdf",
+          "gt_title": "An integral equation for Root's barrier and the generation of Brownian increments",
+          "gt_authors": [
+            "Gassiat",
+            "P.",
+            "Mijatović",
+            "A.",
+            "Oberhauser",
+            "H."
+          ],
+          "pred_title": "An integral equation for Root's barrier and the generation of Brownian increments",
+          "pred_authors": [
+            "Gassiat",
+            "P.",
+            "Mijatović",
+            "A.",
+            "Oberhauser",
+            "H."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 35.25656799999706
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/T/Tudor, C.A. - The determinant of the Malliavin matrix and the determinant of the covariance matrix for multiple integrals.pdf",
+          "gt_title": "The determinant of the Malliavin matrix and the determinant of the covariance matrix for multiple integrals",
+          "gt_authors": [
+            "Tudor",
+            "C.A."
+          ],
+          "pred_title": "The determinant of the Malliavin matrix and the determinant of the covariance matrix for multiple integrals",
+          "pred_authors": [
+            "Tudor",
+            "C.A."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 40.21983237499808
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/L/Latala, R. - L₁-norm of combinations of products of independent random variables.pdf",
+          "gt_title": "L₁-norm of combinations of products of independent random variables",
+          "gt_authors": [
+            "Latala",
+            "R."
+          ],
+          "pred_title": "L₁-norm of combinations of products of independent random variables",
+          "pred_authors": [
+            "Latala",
+            "R."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 28.982445666995773
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/05 - Books and lecture notes/03 - Mémoires de la société mathématique de France/Mémoires de la S.M.F. 2e série, tome 79 (1999) - Le Calvez, P. - Décomposition des difféomorphismes du tore en applications déviant la verticale (avec un appendice en collaboration avec Jean-Marc Gambaudo).pdf",
+          "gt_title": "Le Calvez, P. - Décomposition des difféomorphismes du tore en applications déviant la verticale (avec un appendice en collaboration avec Jean-Marc Gambaudo)",
+          "gt_authors": [
+            "Mémoires de la S.M.F. 2e série",
+            "tome 79 (1999)"
+          ],
+          "pred_title": "Le Calvez, P. - Décomposition des difféomorphismes du tore en applications déviant la verticale (avec un appendice en collaboration avec Jean-Marc Gambaudo)",
+          "pred_authors": [
+            "Mémoires de la S.M.F. 2e série",
+            "tome 79 (1999)"
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 28.409898124999017
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/03 - Working papers/N/2024/Neunhäuserer, J. - Expansions of real numbers with respect to two integer bases.pdf",
+          "gt_title": "Expansions of real numbers with respect to two integer bases",
+          "gt_authors": [
+            "Neunhäuserer",
+            "J."
+          ],
+          "pred_title": "Expansions of real numbers with respect to two integer bases",
+          "pred_authors": [
+            "Neunhäuserer",
+            "J."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 30.66229175000626
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/07a - BSDEs/01 - Published papers/G/Guatteri, G., Tessitore, G. - Ergodic BSDEs with multiplicative and degenerate noise.pdf",
+          "gt_title": "Ergodic BSDEs with multiplicative and degenerate noise",
+          "gt_authors": [
+            "Guatteri",
+            "G.",
+            "Tessitore",
+            "G."
+          ],
+          "pred_title": "Ergodic BSDEs with multiplicative and degenerate noise",
+          "pred_authors": [
+            "Guatteri",
+            "G.",
+            "Tessitore",
+            "G."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 33.79606029199931
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/N/Nourdin, I., Peccati, G. - Fourth moments and products, unified estimates.pdf",
+          "gt_title": "Fourth moments and products, unified estimates",
+          "gt_authors": [
+            "Nourdin",
+            "I.",
+            "Peccati",
+            "G."
+          ],
+          "pred_title": "Fourth moments and products, unified estimates",
+          "pred_authors": [
+            "Nourdin",
+            "I.",
+            "Peccati",
+            "G."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 30.73931991700374
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/04 - Papers to be downloaded/Risk/Callegaro, G., Fiorin, L., Grasselli, M. - American quantized calibration in stochastic volatility.pdf",
+          "gt_title": "American quantized calibration in stochastic volatility",
+          "gt_authors": [
+            "Callegaro",
+            "G.",
+            "Fiorin",
+            "L.",
+            "Grasselli",
+            "M."
+          ],
+          "pred_title": "American quantized calibration in stochastic volatility",
+          "pred_authors": [
+            "Callegaro",
+            "G.",
+            "Fiorin",
+            "L.",
+            "Grasselli",
+            "M."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 32.68368970799929
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/05 - Books and lecture notes/C/Caddeo, R., Papadopoulos, A. - Mathematical geography in the eighteenth century, Euler, Lagrange and Lambert.pdf",
+          "gt_title": "Mathematical geography in the eighteenth century, Euler, Lagrange and Lambert",
+          "gt_authors": [
+            "Caddeo",
+            "R.",
+            "Papadopoulos",
+            "A."
+          ],
+          "pred_title": "",
+          "pred_authors": [],
+          "title_exact": false,
+          "title_fuzzy": 0.0,
+          "title_f1": 0.0,
+          "author_jaccard": 0.0,
+          "combined": 0.0,
+          "time_sec": 0.00016079099441412836
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/05 - Books and lecture notes/01 - Comptes rendus hebdomadaires de l'académie des sciences/Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 273, séries A et B - juillet–décembre 1971/Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 273, séries A et B - nº1 - 5 juillet 1971.pdf",
+          "gt_title": "nº1 - 5 juillet 1971",
+          "gt_authors": [
+            "Comptes rendus hebdomadaires des séances de l'académie des sciences",
+            "tome 273",
+            "séries A et B"
+          ],
+          "pred_title": "nº1 - 5 juillet 1971",
+          "pred_authors": [
+            "Comptes rendus hebdomadaires des séances de l'académie des sciences",
+            "tome 273",
+            "séries A et B"
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 33.00022658400121
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/07a - BSDEs/02 - Unpublished papers/Nam, K. - Locally Lipschitz BSDE driven by a continuous martingale, path-derivative approach.pdf",
+          "gt_title": "Locally Lipschitz BSDE driven by a continuous martingale, path-derivative approach",
+          "gt_authors": [
+            "Nam",
+            "K."
+          ],
+          "pred_title": "Locally Lipschitz BSDE driven by a continuous martingale, path-derivative approach",
+          "pred_authors": [
+            "Nam",
+            "K."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 34.78704004100291
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/B/Buckdahn, R., Li, J., Ma, J. - A mean-field stochastic control problem with partial observations.pdf",
+          "gt_title": "A mean-field stochastic control problem with partial observations",
+          "gt_authors": [
+            "Buckdahn",
+            "R.",
+            "Li",
+            "J.",
+            "Ma",
+            "J."
+          ],
+          "pred_title": "A mean-field stochastic control problem with partial observations",
+          "pred_authors": [
+            "Buckdahn",
+            "R.",
+            "Li",
+            "J.",
+            "Ma",
+            "J."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 31.92064591599774
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/G/Gomes, D.A., Mohr, J., Souza, R.R. - Continuous time finite state mean field games.pdf",
+          "gt_title": "Continuous time finite state mean field games",
+          "gt_authors": [
+            "Gomes",
+            "D.A.",
+            "Mohr",
+            "J.",
+            "Souza",
+            "R.R."
+          ],
+          "pred_title": "Continuous time finite state mean field games",
+          "pred_authors": [
+            "Gomes",
+            "D.A.",
+            "Mohr",
+            "J.",
+            "Souza",
+            "R.R."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 26.577309583000897
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/B/Boucekkine, R., Fabbri, G., Federico, S., Gozzi, F. - Geographic environmental Kuznets curves, the optimal growth linear–quadratic case.pdf",
+          "gt_title": "Geographic environmental Kuznets curves, the optimal growth linear–quadratic case",
+          "gt_authors": [
+            "Boucekkine",
+            "R.",
+            "Fabbri",
+            "G.",
+            "Federico",
+            "S.",
+            "Gozzi",
+            "F."
+          ],
+          "pred_title": "Geographic environmental Kuznets curves, the optimal growth linear–quadratic case",
+          "pred_authors": [
+            "Boucekkine",
+            "R.",
+            "Fabbri",
+            "G.",
+            "Federico",
+            "S.",
+            "Gozzi",
+            "F."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 29.68996637500095
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/07a - BSDEs/01 - Published papers/P/Papapantoleon, A., Possamaï, D., Saplaouras, A. - Existence and uniqueness results for BSDE with jumps, the whole nine yards.pdf",
+          "gt_title": "Existence and uniqueness results for BSDE with jumps, the whole nine yards",
+          "gt_authors": [
+            "Papapantoleon",
+            "A.",
+            "Possamaï",
+            "D.",
+            "Saplaouras",
+            "A."
+          ],
+          "pred_title": "Existence and uniqueness results for BSDE with jumps, the whole nine yards",
+          "pred_authors": [
+            "Papapantoleon",
+            "A.",
+            "Possamaï",
+            "D.",
+            "Saplaouras",
+            "A."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 33.21619137500238
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/F/Flandoli, F., Gubinelli, M., Priola, E. - Well-posedness of the transport equation by stochastic perturbation.pdf",
+          "gt_title": "Well-posedness of the transport equation by stochastic perturbation",
+          "gt_authors": [
+            "Flandoli",
+            "F.",
+            "Gubinelli",
+            "M.",
+            "Priola",
+            "E."
+          ],
+          "pred_title": "Well-posedness of the transport equation by stochastic perturbation",
+          "pred_authors": [
+            "Flandoli",
+            "F.",
+            "Gubinelli",
+            "M.",
+            "Priola",
+            "E."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 31.480067959004373
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/06 - Theses/V/Vos, G. - An example of a measurable set that is not Borel.pdf",
+          "gt_title": "An example of a measurable set that is not Borel",
+          "gt_authors": [
+            "Vos",
+            "G."
+          ],
+          "pred_title": "An example of a measurable set that is not Borel",
+          "pred_authors": [
+            "Vos",
+            "G."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 7.69562816600228
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/07c - Time-inconsistent stochastic control/02 - Unpublished papers/Wang, T. - Mean–variance portfolio selection and variance hedging with random coefficients, closed-loop equilibrium strategy.pdf",
+          "gt_title": "Mean–variance portfolio selection and variance hedging with random coefficients, closed-loop equilibrium strategy",
+          "gt_authors": [
+            "Wang",
+            "T."
+          ],
+          "pred_title": "Mean–variance portfolio selection and variance hedging with random coefficients, closed-loop equilibrium strategy",
+          "pred_authors": [
+            "Wang",
+            "T."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 24.285871291998774
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/08 - Séminaires de probabilités de Strasbourg/Séminaire 27 - 1993/256-Lescot, P. - Un théorème de désintégration en analyse quasi-sûre.pdf",
+          "gt_title": "Un théorème de désintégration en analyse quasi-sûre",
+          "gt_authors": [
+            "256-Lescot",
+            "P."
+          ],
+          "pred_title": "Un théorème de désintégration en analyse quasi-sûre",
+          "pred_authors": [
+            "256-Lescot",
+            "P."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 25.329300165998575
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/06 - Theses/M/Mazzonetto, S. - On the exact simulation of (skew) Brownian diffusions with discontinuous drift.pdf",
+          "gt_title": "On the exact simulation of (skew) Brownian diffusions with discontinuous drift",
+          "gt_authors": [
+            "Mazzonetto",
+            "S."
+          ],
+          "pred_title": "On the exact simulation of (skew) Brownian diffusions with discontinuous drift",
+          "pred_authors": [
+            "Mazzonetto",
+            "S."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 20.611993375001475
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/02 - Unpublished papers/H/Huang, W., Lin, Y. - On independence for capacities to fit Ellsberg's model with a weak law of large numbers.pdf",
+          "gt_title": "On independence for capacities to fit Ellsberg's model with a weak law of large numbers",
+          "gt_authors": [
+            "Huang",
+            "W.",
+            "Lin",
+            "Y."
+          ],
+          "pred_title": "On independence for capacities to fit Ellsberg's model with a weak law of large numbers",
+          "pred_authors": [
+            "Huang",
+            "W.",
+            "Lin",
+            "Y."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 29.377912542004196
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/05 - Books and lecture notes/01 - Comptes rendus hebdomadaires de l'académie des sciences/Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 304, série I - mathématique, janvier–mai 1987/Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 304, série I - mathématique, nº2 - 14 janvier 1987.pdf",
+          "gt_title": "mathématique, nº2 - 14 janvier 1987",
+          "gt_authors": [
+            "Comptes rendus hebdomadaires des séances de l'académie des sciences",
+            "tome 304",
+            "série I"
+          ],
+          "pred_title": "mathématique, 1987",
+          "pred_authors": [
+            "Comptes rendus hebdomadaires des séances de l'académie des sciences",
+            "tome 304",
+            "série I"
+          ],
+          "title_exact": false,
+          "title_fuzzy": 67.9245283018868,
+          "title_f1": 0.5,
+          "author_jaccard": 1.0,
+          "combined": 0.8089887640449439,
+          "time_sec": 20.810070874998928
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/B/Bielecki, T.R., Crépey, S., Jeanblanc, M., Rutkowski, M. - Defaultable options in a Markovian intensity model of credit risk.pdf",
+          "gt_title": "Defaultable options in a Markovian intensity model of credit risk",
+          "gt_authors": [
+            "Bielecki",
+            "T.R.",
+            "Crépey",
+            "S.",
+            "Jeanblanc",
+            "M.",
+            "Rutkowski",
+            "M."
+          ],
+          "pred_title": "Defaultable options in a Markovian intensity model of credit risk",
+          "pred_authors": [
+            "Bielecki",
+            "T.R.",
+            "Crépey",
+            "S.",
+            "Jeanblanc",
+            "M.",
+            "Rutkowski",
+            "M."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 30.521813332998136
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/J/Jacod, J. - Une condition d'existence et d'unicité pour les solutions fortes d'équations différentielles stochastiques.pdf",
+          "gt_title": "Une condition d'existence et d'unicité pour les solutions fortes d'équations différentielles stochastiques",
+          "gt_authors": [
+            "Jacod",
+            "J."
+          ],
+          "pred_title": "Une condition d'existence et d'unicité pour les solutions fortes d'équations différentielles stochastiques",
+          "pred_authors": [
+            "Jacod",
+            "J."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 29.411445457997615
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/F/Figalli, A. - On the Monge–Ampère equation.pdf",
+          "gt_title": "On the Monge–Ampère equation",
+          "gt_authors": [
+            "Figalli",
+            "A."
+          ],
+          "pred_title": "On the Monge–Ampère equation",
+          "pred_authors": [
+            "Figalli",
+            "A."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 25.525628292001784
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/02 - Unpublished papers/A/Albeverio, S.A., Lakaev, S.N., Muminov, Z.I. - The threshold effects for a family of Friedrichs models under rank one perturbations.pdf",
+          "gt_title": "The threshold effects for a family of Friedrichs models under rank one perturbations",
+          "gt_authors": [
+            "Albeverio",
+            "S.A.",
+            "Lakaev",
+            "S.N.",
+            "Muminov",
+            "Z.I."
+          ],
+          "pred_title": "The threshold effects for a family of Friedrichs models under rank one perturbations",
+          "pred_authors": [
+            "Albeverio",
+            "S.A.",
+            "Lakaev",
+            "S.N.",
+            "Muminov",
+            "Z.I."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 33.96810799999366
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/G/Gomes, D.A., Patrizi, S., Voskanyan, V. - On the existence of classical solutions for stationary extended mean field games.pdf",
+          "gt_title": "On the existence of classical solutions for stationary extended mean field games",
+          "gt_authors": [
+            "Gomes",
+            "D.A.",
+            "Patrizi",
+            "S.",
+            "Voskanyan",
+            "V."
+          ],
+          "pred_title": "On the existence of classical solutions for stationary extended mean field games",
+          "pred_authors": [
+            "Gomes",
+            "D.A.",
+            "Patrizi",
+            "S.",
+            "Voskanyan",
+            "V."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 31.966604000001098
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/08 - Séminaires de probabilités de Strasbourg/Séminaire 15 - 1981/189-Barlow, M.T. - On Brownian local time.pdf",
+          "gt_title": "On Brownian local time",
+          "gt_authors": [
+            "189-Barlow",
+            "M.T."
+          ],
+          "pred_title": "On Brownian local time",
+          "pred_authors": [
+            "189-Barlow",
+            "M.T."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 15.947552541001642
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/J/Joseph, S., Saeed, F., Suoliman, N., Khanfoor, M., abd Ellah, A.E. - Disintegration of group representations on direct integrals of Banach spaces.pdf",
+          "gt_title": "Disintegration of group representations on direct integrals of Banach spaces",
+          "gt_authors": [
+            "Joseph",
+            "S.",
+            "Saeed",
+            "F.",
+            "Suoliman",
+            "N.",
+            "Khanfoor",
+            "M.",
+            "abd Ellah",
+            "A.E."
+          ],
+          "pred_title": "Disintegration of group representations on direct integrals of Banach spaces",
+          "pred_authors": [
+            "Joseph",
+            "S.",
+            "Saeed",
+            "F.",
+            "Suoliman",
+            "N.",
+            "Khanfoor",
+            "M.",
+            "Abd Ellah",
+            "A.E."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 35.11920995800028
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/03 - Working papers/E/2025/Eckstein, S., Lakhal, A. - Exponential convergence of general iterative proportional fitting procedures.pdf",
+          "gt_title": "Exponential convergence of general iterative proportional fitting procedures",
+          "gt_authors": [
+            "Eckstein",
+            "S.",
+            "Lakhal",
+            "A."
+          ],
+          "pred_title": "Exponential convergence of general iterative proportional fitting procedures",
+          "pred_authors": [
+            "Eckstein",
+            "S.",
+            "Lakhal",
+            "A."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 28.744553083000937
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/03 - Working papers/D/2022/di Persio, L., Garbelli, M., Ricciardi, M. - The master equation in a bounded domain with absorption.pdf",
+          "gt_title": "The master equation in a bounded domain with absorption",
+          "gt_authors": [
+            "di Persio",
+            "L.",
+            "Garbelli",
+            "M.",
+            "Ricciardi",
+            "M."
+          ],
+          "pred_title": "The master equation in a bounded domain with absorption",
+          "pred_authors": [
+            "di Persio",
+            "L.",
+            "Garbelli",
+            "M.",
+            "Ricciardi",
+            "M."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 36.002679042001546
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/D/Decreusefond, L., Üstünel, A.S. - Stochastic analysis of the fractional Brownian motion.pdf",
+          "gt_title": "Stochastic analysis of the fractional Brownian motion",
+          "gt_authors": [
+            "Decreusefond",
+            "L.",
+            "Üstünel",
+            "A.S."
+          ],
+          "pred_title": "Stochastic analysis of the fractional Brownian motion",
+          "pred_authors": [
+            "Decreuseufond",
+            "L.",
+            "Üstünel",
+            "A.S."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 0.6,
+          "combined": 0.7499999999999999,
+          "time_sec": 33.167753875000926
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/03 - Working papers/D/2023/Daudin, S., Jackson, J., Seeger, B. - Well-posedness of Hamilton–Jacobi equations in the Wasserstein space, non-convex Hamiltonians and common noise.pdf",
+          "gt_title": "Well-posedness of Hamilton–Jacobi equations in the Wasserstein space, non-convex Hamiltonians and common noise",
+          "gt_authors": [
+            "Daudin",
+            "S.",
+            "Jackson",
+            "J.",
+            "Seeger",
+            "B."
+          ],
+          "pred_title": "Well-posedness of Hamilton–Jacobi equations in the Wasserstein space, non-convex Hamiltonians and common noise",
+          "pred_authors": [
+            "Daudin",
+            "S.",
+            "Jackson",
+            "J.",
+            "Seeger",
+            "B."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 38.36243370799639
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/C/Coutin, L., Qian, Z. - Stochastic differential equations for fractional Brownian motions.pdf",
+          "gt_title": "Stochastic differential equations for fractional Brownian motions",
+          "gt_authors": [
+            "Coutin",
+            "L.",
+            "Qian",
+            "Z."
+          ],
+          "pred_title": "Stochastic differential equations for fractional Brownian motions",
+          "pred_authors": [
+            "Coutin",
+            "L.",
+            "Qian",
+            "Z."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 39.04639445900102
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/J/Jourdain, B., Margheriti, W. - Martingale Wasserstein inequality for probability measures in the convex order.pdf",
+          "gt_title": "Martingale Wasserstein inequality for probability measures in the convex order",
+          "gt_authors": [
+            "Jourdain",
+            "B.",
+            "Margheriti",
+            "W."
+          ],
+          "pred_title": "Martingale Wasserstein inequality for probability measures in the convex order",
+          "pred_authors": [
+            "Jourdain",
+            "B.",
+            "Margheriti",
+            "W."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 37.24299862499902
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/05 - Books and lecture notes/05 - Astérisque/Astérisque 236 - Émery, M., Yor, M. - Hommage à P.A. Meyer et J. Neveu.pdf",
+          "gt_title": "Émery, M., Yor, M. - Hommage à P.A. Meyer et J. Neveu",
+          "gt_authors": [
+            "Astérisque 236"
+          ],
+          "pred_title": "Hommage à P.-A. Meyer et J. Neveu",
+          "pred_authors": [
+            "01–08"
+          ],
+          "title_exact": false,
+          "title_fuzzy": 74.4186046511628,
+          "title_f1": 0.631578947368421,
+          "author_jaccard": 0.0,
+          "combined": 0.0,
+          "time_sec": 8.763226916002168
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/A/Abi Jaber, E., el Euch, O. - Multi-factor approximation of rough volatility models.pdf",
+          "gt_title": "Multi-factor approximation of rough volatility models",
+          "gt_authors": [
+            "Abi Jaber",
+            "E.",
+            "el Euch",
+            "O."
+          ],
+          "pred_title": "Multifactor approximation of rough volatility models",
+          "pred_authors": [
+            "Abi Jaber",
+            "E.",
+            "el Euch",
+            "O."
+          ],
+          "title_exact": false,
+          "title_fuzzy": 99.04761904761905,
+          "title_f1": 0.8333333333333334,
+          "author_jaccard": 1.0,
+          "combined": 0.9952153110047847,
+          "time_sec": 28.940854665997904
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/06 - Theses/C/Cecchin, A. - Finite state N-player and mean field games.pdf",
+          "gt_title": "Finite state N-player and mean field games",
+          "gt_authors": [
+            "Cecchin",
+            "A."
+          ],
+          "pred_title": "Finite state N-player and mean field games",
+          "pred_authors": [
+            "Cecchin",
+            "A."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 17.99886766700365
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/03 - Working papers/S/2023/Shao, J. - Optimal control problem for reflected McKean–Vlasov SDEs.pdf",
+          "gt_title": "Optimal control problem for reflected McKean–Vlasov SDEs",
+          "gt_authors": [
+            "Shao",
+            "J."
+          ],
+          "pred_title": "Optimal control problem for reflected McKean–Vlasov SDEs",
+          "pred_authors": [
+            "Shao",
+            "J."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 26.15486791600415
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/08 - Séminaires de probabilités de Strasbourg/Séminaire 20 - 1986/338-Ruiz de Chavez, J. - Sur la positivité de certains opérateurs.pdf",
+          "gt_title": "Sur la positivité de certains opérateurs",
+          "gt_authors": [
+            "338-Ruiz de Chavez",
+            "J."
+          ],
+          "pred_title": "Sur la positivité de certains opérateurs",
+          "pred_authors": [
+            "338-Ruiz de Chavez",
+            "J."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 28.380421958005172
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/B/Bony, J.-M., Ciarlet, P.G., Yor, M. - Les comptes rendus en mathématique, passé, présent, futur.pdf",
+          "gt_title": "Les comptes rendus en mathématique, passé, présent, futur",
+          "gt_authors": [
+            "Bony",
+            "J.-M.",
+            "Ciarlet",
+            "P.G.",
+            "Yor",
+            "M."
+          ],
+          "pred_title": "Les comptes rendus en mathématique, passé, présent, futur",
+          "pred_authors": [
+            "Bony",
+            "J.-M.",
+            "Ciarlet",
+            "P.G.",
+            "Yor",
+            "M."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 28.226348499993037
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/W/Watanabe, S. - A simple example of black noise.pdf",
+          "gt_title": "A simple example of black noise",
+          "gt_authors": [
+            "Watanabe",
+            "S."
+          ],
+          "pred_title": "A simple example of black noise",
+          "pred_authors": [
+            "Watanabe",
+            "S."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 27.26479654099967
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/03 - Working papers/K/2023/Karlsen, K.H., Pang, P.H.C. - Weak convergence of stochastic integrals.pdf",
+          "gt_title": "Weak convergence of stochastic integrals",
+          "gt_authors": [
+            "Karlsen",
+            "K.H.",
+            "Pang",
+            "P.H.C."
+          ],
+          "pred_title": "Weak convergence of stochastic integrals",
+          "pred_authors": [
+            "Karlsen",
+            "K.H.",
+            "Pang",
+            "P.H.C."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 29.65060616700066
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/C/Cao, H., Guo, X., Lee, J.S. - MFGs for partially reversible investment.pdf",
+          "gt_title": "MFGs for partially reversible investment",
+          "gt_authors": [
+            "Cao",
+            "H.",
+            "Guo",
+            "X.",
+            "Lee",
+            "J.S."
+          ],
+          "pred_title": "MFGs for partially reversible investment",
+          "pred_authors": [
+            "Cao",
+            "H.",
+            "Guo",
+            "X."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 0.6666666666666666,
+          "combined": 0.8,
+          "time_sec": 24.25529125000321
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/03 - Working papers/C/2022/Chen, A., Stadje, M., Zhang, F. - On the equivalence between value-at-risk and expected shortfall in non-concave optimization.pdf",
+          "gt_title": "On the equivalence between value-at-risk and expected shortfall in non-concave optimization",
+          "gt_authors": [
+            "Chen",
+            "A.",
+            "Stadje",
+            "M.",
+            "Zhang",
+            "F."
+          ],
+          "pred_title": "On the equivalence between value-at-risk and expected shortfall-based risk measures in non-concave optimization",
+          "pred_authors": [
+            "Chen",
+            "A.",
+            "Stadje",
+            "M.",
+            "Zhang",
+            "F."
+          ],
+          "title_exact": false,
+          "title_fuzzy": 90.0990099009901,
+          "title_f1": 0.8333333333333333,
+          "author_jaccard": 1.0,
+          "combined": 0.9479166666666667,
+          "time_sec": 28.661285417001636
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/07a - BSDEs/03 - Working papers/2024/Li, W., Wang, H., Yong, J. - Solvability of coupled forward–backward Volterra integral equations.pdf",
+          "gt_title": "Solvability of coupled forward–backward Volterra integral equations",
+          "gt_authors": [
+            "Li",
+            "W.",
+            "Wang",
+            "H.",
+            "Yong",
+            "J."
+          ],
+          "pred_title": "Solvability of coupled forward–backward Volterra integral equations",
+          "pred_authors": [
+            "Li",
+            "W.",
+            "Wang",
+            "H.",
+            "Yong",
+            "J."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 43.665846625000995
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/F/Fadina, T., Schmidt, T. - Default ambiguity.pdf",
+          "gt_title": "Default ambiguity",
+          "gt_authors": [
+            "Fadina",
+            "T.",
+            "Schmidt",
+            "T."
+          ],
+          "pred_title": "Default ambiguity",
+          "pred_authors": [
+            "Fadina",
+            "T.",
+            "Schmidt",
+            "T."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 25.564055499999085
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/05 - Books and lecture notes/A/Albrecher, H., Runggaldier, W.J., Schachermayer, W. - Advanced financial modelling.pdf",
+          "gt_title": "Advanced financial modelling",
+          "gt_authors": [
+            "Albrecher",
+            "H.",
+            "Runggaldier",
+            "W.J.",
+            "Schachermayer",
+            "W."
+          ],
+          "pred_title": "Advanced financial modelling",
+          "pred_authors": [
+            "Albrecher",
+            "H.",
+            "Runggaldier",
+            "W.J.",
+            "Schachermayer",
+            "W."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 12.417862292000791
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/05 - Books and lecture notes/G/Garaschuk, K., Liu, A. - Grade five competition from the Leningrad mathematical olympiad.pdf",
+          "gt_title": "Grade five competition from the Leningrad mathematical olympiad",
+          "gt_authors": [
+            "Garaschuk",
+            "K.",
+            "Liu",
+            "A."
+          ],
+          "pred_title": "",
+          "pred_authors": [],
+          "title_exact": false,
+          "title_fuzzy": 0.0,
+          "title_f1": 0.0,
+          "author_jaccard": 0.0,
+          "combined": 0.0,
+          "time_sec": 0.00013720899733016267
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/C/Cordoni, F., di Persio, L., Jiang, Y. - A bank salvage model by impulse stochastic controls.pdf",
+          "gt_title": "A bank salvage model by impulse stochastic controls",
+          "gt_authors": [
+            "Cordoni",
+            "F.",
+            "di Persio",
+            "L.",
+            "Jiang",
+            "Y."
+          ],
+          "pred_title": "A bank salvage model by impulse stochastic controls",
+          "pred_authors": [
+            "Cordoni",
+            "F.",
+            "di Persio",
+            "L.",
+            "Jiang",
+            "Y."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 26.48375483300333
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/07a - BSDEs/01 - Published papers/D/Delbaen, F., Hu, Y., Richou, A. - On the uniqueness of solutions to quadratic BSDEs with convex generators and unbounded terminal conditions.pdf",
+          "gt_title": "On the uniqueness of solutions to quadratic BSDEs with convex generators and unbounded terminal conditions",
+          "gt_authors": [
+            "Delbaen",
+            "F.",
+            "Hu",
+            "Y.",
+            "Richou",
+            "A."
+          ],
+          "pred_title": "On the uniqueness of solutions to quadratic BSDEs with convex generators and unbounded terminal conditions",
+          "pred_authors": [
+            "Delbaen",
+            "F.",
+            "Hu",
+            "Y.",
+            "Richou",
+            "A."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 34.5468010409968
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/R/Rutkowski, M. - Stochastic differential equations with singular drift.pdf",
+          "gt_title": "Stochastic differential equations with singular drift",
+          "gt_authors": [
+            "Rutkowski",
+            "M."
+          ],
+          "pred_title": "Stochastic differential equations with singular drift",
+          "pred_authors": [
+            "Rutkowski",
+            "M."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 31.986446041999443
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/05 - Books and lecture notes/01 - Comptes rendus hebdomadaires de l'académie des sciences/Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 323, série IIb - mécanique, physique, chimie, astronomie - 1996/Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 323, série IIb - mécanique, physique, chimie, astronomie supplément au nº12 - 12 décembre 1996.pdf",
+          "gt_title": "mécanique, physique, chimie, astronomie supplément au nº12 - 12 décembre 1996",
+          "gt_authors": [
+            "Comptes rendus hebdomadaires des séances de l'académie des sciences",
+            "tome 323",
+            "série IIb"
+          ],
+          "pred_title": "mécanique, physique, chimie, astronomie nº12b - 17 juin 1996",
+          "pred_authors": [
+            "Comptes rendus hebdomadaires des séances de l'académie des sciences",
+            "tome 323",
+            "série II"
+          ],
+          "title_exact": false,
+          "title_fuzzy": 78.83211678832117,
+          "title_f1": 0.6,
+          "author_jaccard": 0.5,
+          "combined": 0.6118980169971672,
+          "time_sec": 25.835123124998063
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/03 - Working papers/M/2022/Morel, R., Rochette, G., Leonarduzzi, R., Bouchaud, J.-P., Mallat, S. - Scale dependencies and self-similarity through wavelet scattering covariance.pdf",
+          "gt_title": "Scale dependencies and self-similarity through wavelet scattering covariance",
+          "gt_authors": [
+            "Morel",
+            "R.",
+            "Rochette",
+            "G.",
+            "Leonarduzzi",
+            "R.",
+            "Bouchaud",
+            "J.-P.",
+            "Mallat",
+            "S."
+          ],
+          "pred_title": "Scale dependencies and self-similarity through wavelet scattering covariance",
+          "pred_authors": [
+            "Morel",
+            "R.",
+            "Rochette",
+            "G.",
+            "Leonarduzzi",
+            "R.",
+            "Bouchaud",
+            "J.-P.",
+            "Mallat",
+            "S."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 28.88579379099974
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/03 - Working papers/A/2025/Abi Jaber, E., Alfonsi, A., Szulda, G. - Weak solutions of stochastic Volterra equations in convex domains with general kernels.pdf",
+          "gt_title": "Weak solutions of stochastic Volterra equations in convex domains with general kernels",
+          "gt_authors": [
+            "Abi Jaber",
+            "E.",
+            "Alfonsi",
+            "A.",
+            "Szulda",
+            "G."
+          ],
+          "pred_title": "Weak solutions of stochastic Volterra equations in convex domains with general kernels",
+          "pred_authors": [
+            "Abi Jaber",
+            "E.",
+            "Alfonsi",
+            "A.",
+            "Szulda",
+            "G."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 27.113268250002875
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/05 - Books and lecture notes/D/Diestel, J. - Sequences and series in Banach spaces.pdf",
+          "gt_title": "Sequences and series in Banach spaces",
+          "gt_authors": [
+            "Diestel",
+            "J."
+          ],
+          "pred_title": "",
+          "pred_authors": [],
+          "title_exact": false,
+          "title_fuzzy": 0.0,
+          "title_f1": 0.0,
+          "author_jaccard": 0.0,
+          "combined": 0.0,
+          "time_sec": 0.00012937500287080184
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/Z/Zbigniew, J.J., Yor M. - Selfdecomposable laws associated with hyperbolic functions.pdf",
+          "gt_title": "Selfdecomposable laws associated with hyperbolic functions",
+          "gt_authors": [
+            "Zbigniew",
+            "J.J.",
+            "Yor M."
+          ],
+          "pred_title": "Selfdecomposable laws associated with hyperbolic functions",
+          "pred_authors": [
+            "Jurek",
+            "Z.J.",
+            "Yor",
+            "M."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 0.0,
+          "combined": 0.0,
+          "time_sec": 27.28510549999919
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/07b - Contract theory/03 - Working papers/2024/Goel, S., Hann-Caruthers, W. - Optimality of weighted contracts for multi-agent contract design with a budget.pdf",
+          "gt_title": "Optimality of weighted contracts for multi-agent contract design with a budget",
+          "gt_authors": [
+            "Goel",
+            "S.",
+            "Hann-Caruthers",
+            "W."
+          ],
+          "pred_title": "Optimality of weighted contracts for multi-agent contract design with a budget",
+          "pred_authors": [
+            "Goel",
+            "S.",
+            "Hann-Caruthers",
+            "W."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 24.272405333998904
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/F/Fan, X. - Exact rates of convergence in some martingale central limit theorems.pdf",
+          "gt_title": "Exact rates of convergence in some martingale central limit theorems",
+          "gt_authors": [
+            "Fan",
+            "X."
+          ],
+          "pred_title": "Exact rates of convergence in some martingale central limit theorems",
+          "pred_authors": [
+            "Fan",
+            "X."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 30.58198833300412
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/03 - Working papers/C/2022/Cheng, Z., Jaimungal, S. - Markov decision processes with Kusuoka-type conditional risk mappings.pdf",
+          "gt_title": "Markov decision processes with Kusuoka-type conditional risk mappings",
+          "gt_authors": [
+            "Cheng",
+            "Z.",
+            "Jaimungal",
+            "S."
+          ],
+          "pred_title": "Markov decision processes with Kusuoka-type conditional risk mappings",
+          "pred_authors": [
+            "Cheng",
+            "Z.",
+            "Jaimungal",
+            "S."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 21.182157208000717
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/T/Tembine, H. - Nonasymptotic mean-field games.pdf",
+          "gt_title": "Nonasymptotic mean-field games",
+          "gt_authors": [
+            "Tembine",
+            "H."
+          ],
+          "pred_title": "Nonasymptotic mean-field games",
+          "pred_authors": [
+            "Tembine",
+            "H."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 30.97584687500057
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/03 - Working papers/X/2024/Xu, W. - Scaling limit theorems for multivariate Hawkes processes and stochastic Volterra equations with measure kernel.pdf",
+          "gt_title": "Scaling limit theorems for multivariate Hawkes processes and stochastic Volterra equations with measure kernel",
+          "gt_authors": [
+            "Xu",
+            "W."
+          ],
+          "pred_title": "Scaling limit theorems for multivariate Hawkes processes and stochastic Volterra equations with measure kernel",
+          "pred_authors": [
+            "Xu",
+            "W."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 22.609829041997727
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/D/Daróczy, Z., Kátai, E. - On the structure of univoque numbers.pdf",
+          "gt_title": "On the structure of univoque numbers",
+          "gt_authors": [
+            "Daróczy",
+            "Z.",
+            "Kátai",
+            "E."
+          ],
+          "pred_title": "On the structure of univoque numbers",
+          "pred_authors": [
+            "Daróczy",
+            "Z.",
+            "Kátai",
+            "I."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 0.6,
+          "combined": 0.7499999999999999,
+          "time_sec": 24.093874291000247
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/F/Feng, J., Fouque, J.-P., Kumar, R. - Small-time asymptotics for fast mean-reverting stochastic volatility models.pdf",
+          "gt_title": "Small-time asymptotics for fast mean-reverting stochastic volatility models",
+          "gt_authors": [
+            "Feng",
+            "J.",
+            "Fouque",
+            "J.-P.",
+            "Kumar",
+            "R."
+          ],
+          "pred_title": "Small-time asymptotics for fast mean-reverting stochastic volatility models",
+          "pred_authors": [
+            "Feng",
+            "J.",
+            "Fouque",
+            "J.-P.",
+            "Kumar",
+            "R."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 24.354926957996213
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/B/Bellman, R.E. - Some directions of research in dynamic programming.pdf",
+          "gt_title": "Some directions of research in dynamic programming",
+          "gt_authors": [
+            "Bellman",
+            "R.E."
+          ],
+          "pred_title": "Some directions of research in dynamic programming",
+          "pred_authors": [
+            "Bellman",
+            "R.E."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 19.31537466699956
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/05 - Books and lecture notes/H/He, S.-W., Wang, J.-G., Yan, J.-A. - Semimartingale theory and stochastic calculus.pdf",
+          "gt_title": "Semimartingale theory and stochastic calculus",
+          "gt_authors": [
+            "He",
+            "S.-W.",
+            "Wang",
+            "J.-G.",
+            "Yan",
+            "J.-A."
+          ],
+          "pred_title": "",
+          "pred_authors": [],
+          "title_exact": false,
+          "title_fuzzy": 0.0,
+          "title_f1": 0.0,
+          "author_jaccard": 0.0,
+          "combined": 0.0,
+          "time_sec": 5.629200313705951e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/C/Cohen, S.N., Snow, D., Szpruch, Ł. - Black-box model risk in finance.pdf",
+          "gt_title": "Black-box model risk in finance",
+          "gt_authors": [
+            "Cohen",
+            "S.N.",
+            "Snow",
+            "D.",
+            "Szpruch",
+            "Ł."
+          ],
+          "pred_title": "Black-box model risk in finance",
+          "pred_authors": [
+            "Cohen",
+            "S.N.",
+            "Snow",
+            "D.",
+            "Szpruch",
+            "Ł."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 22.02545929200278
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/02 - Unpublished papers/M/Madan, D.B., Roynette, B., Yor, M. - From Black–Scholes formula, to local times and last passage times for certain submartingales.pdf",
+          "gt_title": "From Black–Scholes formula, to local times and last passage times for certain submartingales",
+          "gt_authors": [
+            "Madan",
+            "D.B.",
+            "Roynette",
+            "B.",
+            "Yor",
+            "M."
+          ],
+          "pred_title": "From Black–Scholes formula, to local times and last passage times for certain submartingales",
+          "pred_authors": [
+            "Madan",
+            "D.B.",
+            "Roynette",
+            "B.",
+            "Yor",
+            "M."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 21.940138666002895
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/C/Cardaliaguet, P., Mészáros, A.R., Santambrogio, F. - First order mean field games with density constraints, pressure equals price.pdf",
+          "gt_title": "First order mean field games with density constraints, pressure equals price",
+          "gt_authors": [
+            "Cardaliaguet",
+            "P.",
+            "Mészáros",
+            "A.R.",
+            "Santambrogio",
+            "F."
+          ],
+          "pred_title": "First order mean field games with density constraints, pressure equals price",
+          "pred_authors": [
+            "Cardaliaguet",
+            "P.",
+            "Mészáros",
+            "A.R.",
+            "Santambrogio",
+            "F."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 24.66125733399531
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/C/Carlier, G., Renou, L. - A costly state verification model with diversity of opinions.pdf",
+          "gt_title": "A costly state verification model with diversity of opinions",
+          "gt_authors": [
+            "Carlier",
+            "G.",
+            "Renou",
+            "L."
+          ],
+          "pred_title": "A costly state verification model with diversity of opinions",
+          "pred_authors": [
+            "Carlier",
+            "G.",
+            "Renou",
+            "L."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 21.76479158300208
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/G/Graham, C., Méléard, S. - Fluctuations for a fully connected loss network with alternate routing.pdf",
+          "gt_title": "Fluctuations for a fully connected loss network with alternate routing",
+          "gt_authors": [
+            "Graham",
+            "C.",
+            "Méléard",
+            "S."
+          ],
+          "pred_title": "Fluctuations for a fully connected loss network with alternate routing",
+          "pred_authors": [
+            "Graham",
+            "C.",
+            "Méléard",
+            "S."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 21.299905499996385
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/05 - Books and lecture notes/B/Beiglböck, M., Berestycki, N. - Stochastik für das Lehramt.pdf",
+          "gt_title": "Stochastik für das Lehramt",
+          "gt_authors": [
+            "Beiglböck",
+            "M.",
+            "Berestycki",
+            "N."
+          ],
+          "pred_title": "Stochastik für das Lehramt",
+          "pred_authors": [
+            "Beiglböck",
+            "M.",
+            "Berestycki",
+            "N."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 32.331244040993624
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/A/al Aradi, A., Correia, A., de Frietas Naiff, D., Jardim, G., Saporito, Y.F. - Extensions of the deep Galerkin method.pdf",
+          "gt_title": "Extensions of the deep Galerkin method",
+          "gt_authors": [
+            "al Aradi",
+            "A.",
+            "Correia",
+            "A.",
+            "de Frietas Naiff",
+            "D.",
+            "Jardim",
+            "G.",
+            "Saporito",
+            "Y.F."
+          ],
+          "pred_title": "Extensions of the deep Galerkin method",
+          "pred_authors": [
+            "al Aradi",
+            "A.",
+            "Correia",
+            "A.",
+            "Jardim",
+            "G.",
+            "de Freitas Naiff",
+            "D.",
+            "Saporito",
+            "Y.F."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 0.8,
+          "combined": 0.888888888888889,
+          "time_sec": 25.6530440419956
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/05 - Books and lecture notes/01 - Comptes rendus hebdomadaires de l'académie des sciences/Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 273, séries A et B - juillet–décembre 1971/Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 273, séries A et B - nº17 - 27 octobre 1971.pdf",
+          "gt_title": "nº17 - 27 octobre 1971",
+          "gt_authors": [
+            "Comptes rendus hebdomadaires des séances de l'académie des sciences",
+            "tome 273",
+            "séries A et B"
+          ],
+          "pred_title": "nº17 - 27 octobre 1971",
+          "pred_authors": [
+            "Comptes rendus hebdomadaires des séances de l'académie des sciences",
+            "tome 273",
+            "séries A et B"
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 21.71799091700086
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/05 - Books and lecture notes/P/Pennanen, T., Perkkiö, A.-P. - Convex stochastic optimization.pdf",
+          "gt_title": "Convex stochastic optimization",
+          "gt_authors": [
+            "Pennanen",
+            "T.",
+            "Perkkiö",
+            "A.-P."
+          ],
+          "pred_title": "Stochastic analysis",
+          "pred_authors": [
+            "Kyprianou",
+            "A.E."
+          ],
+          "title_exact": false,
+          "title_fuzzy": 53.06122448979591,
+          "title_f1": 0.4,
+          "author_jaccard": 0.0,
+          "combined": 0.0,
+          "time_sec": 11.559138542004803
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/05 - Books and lecture notes/C/Cauchy, A.-L. - Œuvres complètes d'Augustin Cauchy publiées sous la direction scientifique de l'académie des sciences et sous les auspices de M. le ministre de l'instruction publique, 1ère série, tome III.pdf",
+          "gt_title": "Œuvres complètes d'Augustin Cauchy publiées sous la direction scientifique de l'académie des sciences et sous les auspices de M. le ministre de l'instruction publique, 1ère série, tome III",
+          "gt_authors": [
+            "Cauchy",
+            "A.-L."
+          ],
+          "pred_title": "Œuvres complètes d'Augustin Cauchy publiées sous la direction scientifique de l'académie des sciences et sous les auspices de M. le ministre de l'instruction publique, 1ère série, tome III",
+          "pred_authors": [
+            "Cauchy",
+            "A.-L."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 13.781656166996981
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/03 - Working papers/M/2024/Magnino, L., Zhu, Y., Laurière, M. - Deep learning algorithms for mean field optimal stopping in finite space and discrete time.pdf",
+          "gt_title": "Deep learning algorithms for mean field optimal stopping in finite space and discrete time",
+          "gt_authors": [
+            "Magnino",
+            "L.",
+            "Zhu",
+            "Y.",
+            "Laurière",
+            "M."
+          ],
+          "pred_title": "Deep learning algorithms for mean field optimal stopping in finite space and discrete time",
+          "pred_authors": [
+            "Magnino",
+            "L.",
+            "Zhu",
+            "Y.",
+            "Laurière",
+            "M."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 22.652096332996734
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/05 - Books and lecture notes/05 - Astérisque/Astérisque 249 - Auscher, P., Tchamitchian, P. - Problème de la racine carrée pour les opérateurs sous forme divergente et sujets connexes.pdf",
+          "gt_title": "Auscher, P., Tchamitchian, P. - Problème de la racine carrée pour les opérateurs sous forme divergente et sujets connexes",
+          "gt_authors": [
+            "Astérisque 249"
+          ],
+          "pred_title": "Auscher, P., Tchamitchian, P. - Square root problem for divergence operators and related topics",
+          "pred_authors": [
+            "Astérisque 249"
+          ],
+          "title_exact": false,
+          "title_fuzzy": 60.18518518518518,
+          "title_f1": 0.30303030303030304,
+          "author_jaccard": 1.0,
+          "combined": 0.7514450867052023,
+          "time_sec": 11.253711875004228
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/05 - Books and lecture notes/H/Hirsch, F., Mokobodzki, G. - Séminaire de théorie du potentiel, Paris 1972–1974.pdf",
+          "gt_title": "Séminaire de théorie du potentiel, Paris 1972–1974",
+          "gt_authors": [
+            "Hirsch",
+            "F.",
+            "Mokobodzki",
+            "G."
+          ],
+          "pred_title": "",
+          "pred_authors": [],
+          "title_exact": false,
+          "title_fuzzy": 0.0,
+          "title_f1": 0.0,
+          "author_jaccard": 0.0,
+          "combined": 0.0,
+          "time_sec": 7.38749949960038e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/02 - Unpublished papers/B/Belgrade, N., Benhamou, É., Koehler, E. - A market model for inflation.pdf",
+          "gt_title": "A market model for inflation",
+          "gt_authors": [
+            "Belgrade",
+            "N.",
+            "Benhamou",
+            "É.",
+            "Koehler",
+            "E."
+          ],
+          "pred_title": "",
+          "pred_authors": [],
+          "title_exact": false,
+          "title_fuzzy": 0.0,
+          "title_f1": 0.0,
+          "author_jaccard": 0.0,
+          "combined": 0.0,
+          "time_sec": 2.1541003661695868e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/W/Wang, A.T. - Generalized Itô's formula and additive functionals of Brownian motion.pdf",
+          "gt_title": "Generalized Itô's formula and additive functionals of Brownian motion",
+          "gt_authors": [
+            "Wang",
+            "A.T."
+          ],
+          "pred_title": "Generalized Itô's formula and additive functionals of Brownian motion",
+          "pred_authors": [
+            "Wang",
+            "A.T."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 25.4199421250014
+        }
+      ],
+      "errors": []
+    },
+    "filename": {
+      "summary": {
+        "method": "filename",
+        "n_samples": 100,
+        "title_exact_match": 1.0,
+        "title_fuzzy_mean": 100.0,
+        "title_token_f1_mean": 1.0,
+        "author_jaccard_mean": 1.0,
+        "combined_score": 1.0,
+        "mean_time_sec": 4.1782090047490786e-05,
+        "n_errors": 0
+      },
+      "samples": [
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/05 - Books and lecture notes/04 - Cours spécialisés société mathématique de France/08 - Audin, M. - Les systèmes hamiltoniens et leur intégrabilité.pdf",
+          "gt_title": "Audin, M. - Les systèmes hamiltoniens et leur intégrabilité",
+          "gt_authors": [
+            "08"
+          ],
+          "pred_title": "Audin, M. - Les systèmes hamiltoniens et leur intégrabilité",
+          "pred_authors": [
+            "08"
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 0.00010233300417894498
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/03 - Working papers/B/2024/Bovo, A., de Angelis, T. - On the saddle point of a zero-sum stopper vs. singular-controller game.pdf",
+          "gt_title": "On the saddle point of a zero-sum stopper vs. singular-controller game",
+          "gt_authors": [
+            "Bovo",
+            "A.",
+            "de Angelis",
+            "T."
+          ],
+          "pred_title": "On the saddle point of a zero-sum stopper vs. singular-controller game",
+          "pred_authors": [
+            "Bovo",
+            "A.",
+            "de Angelis",
+            "T."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 3.500000457279384e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/03 - Working papers/N/2022/Neufeld, A., Sester, J. - Robust Q-learning algorithm for Markov decision processes under Wasserstein uncertainty.pdf",
+          "gt_title": "Robust Q-learning algorithm for Markov decision processes under Wasserstein uncertainty",
+          "gt_authors": [
+            "Neufeld",
+            "A.",
+            "Sester",
+            "J."
+          ],
+          "pred_title": "Robust Q-learning algorithm for Markov decision processes under Wasserstein uncertainty",
+          "pred_authors": [
+            "Neufeld",
+            "A.",
+            "Sester",
+            "J."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 7.133300096029416e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/08 - Séminaires de probabilités de Strasbourg/Séminaire 42 - 2009/171-Biane, P. - Matrix valued Brownian motion and a paper by Polya.pdf",
+          "gt_title": "Matrix valued Brownian motion and a paper by Polya",
+          "gt_authors": [
+            "171-Biane",
+            "P."
+          ],
+          "pred_title": "Matrix valued Brownian motion and a paper by Polya",
+          "pred_authors": [
+            "171-Biane",
+            "P."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 3.7208003050182015e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/A/Ayache, A., Peng, Q. - Stochastic volatility and multifractional Brownian motion.pdf",
+          "gt_title": "Stochastic volatility and multifractional Brownian motion",
+          "gt_authors": [
+            "Ayache",
+            "A.",
+            "Peng",
+            "Q."
+          ],
+          "pred_title": "Stochastic volatility and multifractional Brownian motion",
+          "pred_authors": [
+            "Ayache",
+            "A.",
+            "Peng",
+            "Q."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 5.4750002163928e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/S/Sirignano, J., Spiliopoulos, K. - Mean field analysis of deep neural networks.pdf",
+          "gt_title": "Mean field analysis of deep neural networks",
+          "gt_authors": [
+            "Sirignano",
+            "J.",
+            "Spiliopoulos",
+            "K."
+          ],
+          "pred_title": "Mean field analysis of deep neural networks",
+          "pred_authors": [
+            "Sirignano",
+            "J.",
+            "Spiliopoulos",
+            "K."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 5.3750001825392246e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/G/Gomes, D.A., Mitake, H. - Existence for stationary mean-field games with congestion and quadratic Hamiltonians.pdf",
+          "gt_title": "Existence for stationary mean-field games with congestion and quadratic Hamiltonians",
+          "gt_authors": [
+            "Gomes",
+            "D.A.",
+            "Mitake",
+            "H."
+          ],
+          "pred_title": "Existence for stationary mean-field games with congestion and quadratic Hamiltonians",
+          "pred_authors": [
+            "Gomes",
+            "D.A.",
+            "Mitake",
+            "H."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 5.750000127591193e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/03 - Working papers/P/2025/Pennanen, T., Taoum, W. - Statistical modeling of SOFR term structure.pdf",
+          "gt_title": "Statistical modeling of SOFR term structure",
+          "gt_authors": [
+            "Pennanen",
+            "T.",
+            "Taoum",
+            "W."
+          ],
+          "pred_title": "Statistical modeling of SOFR term structure",
+          "pred_authors": [
+            "Pennanen",
+            "T.",
+            "Taoum",
+            "W."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 4.8250003601424396e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/08 - Séminaires de probabilités de Strasbourg/Séminaire 14 - 1980/418-Rao, M. - A note on Revuz measure.pdf",
+          "gt_title": "A note on Revuz measure",
+          "gt_authors": [
+            "418-Rao",
+            "M."
+          ],
+          "pred_title": "A note on Revuz measure",
+          "pred_authors": [
+            "418-Rao",
+            "M."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 2.28749995585531e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/03 - Working papers/E/2024/Ekström, E., Tolonen-Weckström, T. - Hiring and firing—a signaling game.pdf",
+          "gt_title": "Hiring and firing—a signaling game",
+          "gt_authors": [
+            "Ekström",
+            "E.",
+            "Tolonen-Weckström",
+            "T."
+          ],
+          "pred_title": "Hiring and firing—a signaling game",
+          "pred_authors": [
+            "Ekström",
+            "E.",
+            "Tolonen-Weckström",
+            "T."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 5.9833997511304915e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/05 - Books and lecture notes/K/Knight, F.B. - Essays on the prediction process.pdf",
+          "gt_title": "Essays on the prediction process",
+          "gt_authors": [
+            "Knight",
+            "F.B."
+          ],
+          "pred_title": "Essays on the prediction process",
+          "pred_authors": [
+            "Knight",
+            "F.B."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 3.8958001823630184e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/08 - Séminaires de probabilités de Strasbourg/Séminaire 22 - 1988/225-Weinryb, S., Yor, M. - Le mouvement brownien de Lévy indexé par R.pdf",
+          "gt_title": "Le mouvement brownien de Lévy indexé par R",
+          "gt_authors": [
+            "225-Weinryb",
+            "S.",
+            "Yor",
+            "M."
+          ],
+          "pred_title": "Le mouvement brownien de Lévy indexé par R",
+          "pred_authors": [
+            "225-Weinryb",
+            "S.",
+            "Yor",
+            "M."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 3.774999640882015e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/07a - BSDEs/02 - Unpublished papers/Alia, I., Alia, M.S. - On stochastic maximum principle - a backward stochastic partial differential equations point of view.pdf",
+          "gt_title": "On stochastic maximum principle - a backward stochastic partial differential equations point of view",
+          "gt_authors": [
+            "Alia",
+            "I.",
+            "Alia",
+            "M.S."
+          ],
+          "pred_title": "On stochastic maximum principle - a backward stochastic partial differential equations point of view",
+          "pred_authors": [
+            "Alia",
+            "I.",
+            "Alia",
+            "M.S."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 3.858299896819517e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/03 - Working papers/C/2024/Carmona, R. A., Yang, X., Bhela, S., Zeng, C. - Maximizing on-bill savings through battery management optimization.pdf",
+          "gt_title": "Maximizing on-bill savings through battery management optimization",
+          "gt_authors": [
+            "Carmona",
+            "R. A.",
+            "Yang",
+            "X.",
+            "Bhela",
+            "S.",
+            "Zeng",
+            "C."
+          ],
+          "pred_title": "Maximizing on-bill savings through battery management optimization",
+          "pred_authors": [
+            "Carmona",
+            "R. A.",
+            "Yang",
+            "X.",
+            "Bhela",
+            "S.",
+            "Zeng",
+            "C."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 4.170800093561411e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/07a - BSDEs/01 - Published papers/W/Wu, P., Zhang, G. - Representation theorems for generators of BSDEs and the extended g-expectations in probability spaces with general filtration.pdf",
+          "gt_title": "Representation theorems for generators of BSDEs and the extended g-expectations in probability spaces with general filtration",
+          "gt_authors": [
+            "Wu",
+            "P.",
+            "Zhang",
+            "G."
+          ],
+          "pred_title": "Representation theorems for generators of BSDEs and the extended g-expectations in probability spaces with general filtration",
+          "pred_authors": [
+            "Wu",
+            "P.",
+            "Zhang",
+            "G."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 4.1250001231674105e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/B/Baños, D.R., Nilssen, T. - Malliavin and flow regularity of SDEs. Application to the study of densities and the stochastic transport equation.pdf",
+          "gt_title": "Malliavin and flow regularity of SDEs. Application to the study of densities and the stochastic transport equation",
+          "gt_authors": [
+            "Baños",
+            "D.R.",
+            "Nilssen",
+            "T."
+          ],
+          "pred_title": "Malliavin and flow regularity of SDEs. Application to the study of densities and the stochastic transport equation",
+          "pred_authors": [
+            "Baños",
+            "D.R.",
+            "Nilssen",
+            "T."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 6.325000140350312e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/03 - Working papers/G/2024/Goldberg, G. - On the HOD conjecture and its failure.pdf",
+          "gt_title": "On the HOD conjecture and its failure",
+          "gt_authors": [
+            "Goldberg",
+            "G."
+          ],
+          "pred_title": "On the HOD conjecture and its failure",
+          "pred_authors": [
+            "Goldberg",
+            "G."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 4.420799814397469e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/03 - Working papers/G/2025/Guan, G., Hu, J., Liang, Z. - N-player and mean field games among fund managers considering excess logarithmic returns.pdf",
+          "gt_title": "N-player and mean field games among fund managers considering excess logarithmic returns",
+          "gt_authors": [
+            "Guan",
+            "G.",
+            "Hu",
+            "J.",
+            "Liang",
+            "Z."
+          ],
+          "pred_title": "N-player and mean field games among fund managers considering excess logarithmic returns",
+          "pred_authors": [
+            "Guan",
+            "G.",
+            "Hu",
+            "J.",
+            "Liang",
+            "Z."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 5.6915996538009495e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/03 - Working papers/D/2025/de Feo, F. - Stochastic optimal control problems with measurable coefficients via Lᵖ–viscosity solutions and applications to optimal advertising models.pdf",
+          "gt_title": "Stochastic optimal control problems with measurable coefficients via Lᵖ–viscosity solutions and applications to optimal advertising models",
+          "gt_authors": [
+            "de Feo",
+            "F."
+          ],
+          "pred_title": "Stochastic optimal control problems with measurable coefficients via Lᵖ–viscosity solutions and applications to optimal advertising models",
+          "pred_authors": [
+            "de Feo",
+            "F."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 5.795799370389432e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/G/Gassiat, P., Mijatović, A., Oberhauser, H. - An integral equation for Root's barrier and the generation of Brownian increments.pdf",
+          "gt_title": "An integral equation for Root's barrier and the generation of Brownian increments",
+          "gt_authors": [
+            "Gassiat",
+            "P.",
+            "Mijatović",
+            "A.",
+            "Oberhauser",
+            "H."
+          ],
+          "pred_title": "An integral equation for Root's barrier and the generation of Brownian increments",
+          "pred_authors": [
+            "Gassiat",
+            "P.",
+            "Mijatović",
+            "A.",
+            "Oberhauser",
+            "H."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 0.00011316600284771994
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/T/Tudor, C.A. - The determinant of the Malliavin matrix and the determinant of the covariance matrix for multiple integrals.pdf",
+          "gt_title": "The determinant of the Malliavin matrix and the determinant of the covariance matrix for multiple integrals",
+          "gt_authors": [
+            "Tudor",
+            "C.A."
+          ],
+          "pred_title": "The determinant of the Malliavin matrix and the determinant of the covariance matrix for multiple integrals",
+          "pred_authors": [
+            "Tudor",
+            "C.A."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 6.0999998822808266e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/L/Latala, R. - L₁-norm of combinations of products of independent random variables.pdf",
+          "gt_title": "L₁-norm of combinations of products of independent random variables",
+          "gt_authors": [
+            "Latala",
+            "R."
+          ],
+          "pred_title": "L₁-norm of combinations of products of independent random variables",
+          "pred_authors": [
+            "Latala",
+            "R."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 4.8207999498117715e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/05 - Books and lecture notes/03 - Mémoires de la société mathématique de France/Mémoires de la S.M.F. 2e série, tome 79 (1999) - Le Calvez, P. - Décomposition des difféomorphismes du tore en applications déviant la verticale (avec un appendice en collaboration avec Jean-Marc Gambaudo).pdf",
+          "gt_title": "Le Calvez, P. - Décomposition des difféomorphismes du tore en applications déviant la verticale (avec un appendice en collaboration avec Jean-Marc Gambaudo)",
+          "gt_authors": [
+            "Mémoires de la S.M.F. 2e série",
+            "tome 79 (1999)"
+          ],
+          "pred_title": "Le Calvez, P. - Décomposition des difféomorphismes du tore en applications déviant la verticale (avec un appendice en collaboration avec Jean-Marc Gambaudo)",
+          "pred_authors": [
+            "Mémoires de la S.M.F. 2e série",
+            "tome 79 (1999)"
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 6.425000174203888e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/03 - Working papers/N/2024/Neunhäuserer, J. - Expansions of real numbers with respect to two integer bases.pdf",
+          "gt_title": "Expansions of real numbers with respect to two integer bases",
+          "gt_authors": [
+            "Neunhäuserer",
+            "J."
+          ],
+          "pred_title": "Expansions of real numbers with respect to two integer bases",
+          "pred_authors": [
+            "Neunhäuserer",
+            "J."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 5.5000004067551345e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/07a - BSDEs/01 - Published papers/G/Guatteri, G., Tessitore, G. - Ergodic BSDEs with multiplicative and degenerate noise.pdf",
+          "gt_title": "Ergodic BSDEs with multiplicative and degenerate noise",
+          "gt_authors": [
+            "Guatteri",
+            "G.",
+            "Tessitore",
+            "G."
+          ],
+          "pred_title": "Ergodic BSDEs with multiplicative and degenerate noise",
+          "pred_authors": [
+            "Guatteri",
+            "G.",
+            "Tessitore",
+            "G."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 4.6540997573174536e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/N/Nourdin, I., Peccati, G. - Fourth moments and products, unified estimates.pdf",
+          "gt_title": "Fourth moments and products, unified estimates",
+          "gt_authors": [
+            "Nourdin",
+            "I.",
+            "Peccati",
+            "G."
+          ],
+          "pred_title": "Fourth moments and products, unified estimates",
+          "pred_authors": [
+            "Nourdin",
+            "I.",
+            "Peccati",
+            "G."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 4.912500298814848e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/04 - Papers to be downloaded/Risk/Callegaro, G., Fiorin, L., Grasselli, M. - American quantized calibration in stochastic volatility.pdf",
+          "gt_title": "American quantized calibration in stochastic volatility",
+          "gt_authors": [
+            "Callegaro",
+            "G.",
+            "Fiorin",
+            "L.",
+            "Grasselli",
+            "M."
+          ],
+          "pred_title": "American quantized calibration in stochastic volatility",
+          "pred_authors": [
+            "Callegaro",
+            "G.",
+            "Fiorin",
+            "L.",
+            "Grasselli",
+            "M."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 6.183400546433404e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/05 - Books and lecture notes/C/Caddeo, R., Papadopoulos, A. - Mathematical geography in the eighteenth century, Euler, Lagrange and Lambert.pdf",
+          "gt_title": "Mathematical geography in the eighteenth century, Euler, Lagrange and Lambert",
+          "gt_authors": [
+            "Caddeo",
+            "R.",
+            "Papadopoulos",
+            "A."
+          ],
+          "pred_title": "Mathematical geography in the eighteenth century, Euler, Lagrange and Lambert",
+          "pred_authors": [
+            "Caddeo",
+            "R.",
+            "Papadopoulos",
+            "A."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 3.529200330376625e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/05 - Books and lecture notes/01 - Comptes rendus hebdomadaires de l'académie des sciences/Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 273, séries A et B - juillet–décembre 1971/Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 273, séries A et B - nº1 - 5 juillet 1971.pdf",
+          "gt_title": "nº1 - 5 juillet 1971",
+          "gt_authors": [
+            "Comptes rendus hebdomadaires des séances de l'académie des sciences",
+            "tome 273",
+            "séries A et B"
+          ],
+          "pred_title": "nº1 - 5 juillet 1971",
+          "pred_authors": [
+            "Comptes rendus hebdomadaires des séances de l'académie des sciences",
+            "tome 273",
+            "séries A et B"
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 5.991599755361676e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/07a - BSDEs/02 - Unpublished papers/Nam, K. - Locally Lipschitz BSDE driven by a continuous martingale, path-derivative approach.pdf",
+          "gt_title": "Locally Lipschitz BSDE driven by a continuous martingale, path-derivative approach",
+          "gt_authors": [
+            "Nam",
+            "K."
+          ],
+          "pred_title": "Locally Lipschitz BSDE driven by a continuous martingale, path-derivative approach",
+          "pred_authors": [
+            "Nam",
+            "K."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 2.9625000024680048e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/B/Buckdahn, R., Li, J., Ma, J. - A mean-field stochastic control problem with partial observations.pdf",
+          "gt_title": "A mean-field stochastic control problem with partial observations",
+          "gt_authors": [
+            "Buckdahn",
+            "R.",
+            "Li",
+            "J.",
+            "Ma",
+            "J."
+          ],
+          "pred_title": "A mean-field stochastic control problem with partial observations",
+          "pred_authors": [
+            "Buckdahn",
+            "R.",
+            "Li",
+            "J.",
+            "Ma",
+            "J."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 4.504100070334971e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/G/Gomes, D.A., Mohr, J., Souza, R.R. - Continuous time finite state mean field games.pdf",
+          "gt_title": "Continuous time finite state mean field games",
+          "gt_authors": [
+            "Gomes",
+            "D.A.",
+            "Mohr",
+            "J.",
+            "Souza",
+            "R.R."
+          ],
+          "pred_title": "Continuous time finite state mean field games",
+          "pred_authors": [
+            "Gomes",
+            "D.A.",
+            "Mohr",
+            "J.",
+            "Souza",
+            "R.R."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 4.41250012954697e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/B/Boucekkine, R., Fabbri, G., Federico, S., Gozzi, F. - Geographic environmental Kuznets curves, the optimal growth linear–quadratic case.pdf",
+          "gt_title": "Geographic environmental Kuznets curves, the optimal growth linear–quadratic case",
+          "gt_authors": [
+            "Boucekkine",
+            "R.",
+            "Fabbri",
+            "G.",
+            "Federico",
+            "S.",
+            "Gozzi",
+            "F."
+          ],
+          "pred_title": "Geographic environmental Kuznets curves, the optimal growth linear–quadratic case",
+          "pred_authors": [
+            "Boucekkine",
+            "R.",
+            "Fabbri",
+            "G.",
+            "Federico",
+            "S.",
+            "Gozzi",
+            "F."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 6.65420011500828e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/07a - BSDEs/01 - Published papers/P/Papapantoleon, A., Possamaï, D., Saplaouras, A. - Existence and uniqueness results for BSDE with jumps, the whole nine yards.pdf",
+          "gt_title": "Existence and uniqueness results for BSDE with jumps, the whole nine yards",
+          "gt_authors": [
+            "Papapantoleon",
+            "A.",
+            "Possamaï",
+            "D.",
+            "Saplaouras",
+            "A."
+          ],
+          "pred_title": "Existence and uniqueness results for BSDE with jumps, the whole nine yards",
+          "pred_authors": [
+            "Papapantoleon",
+            "A.",
+            "Possamaï",
+            "D.",
+            "Saplaouras",
+            "A."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 4.3000000005122274e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/F/Flandoli, F., Gubinelli, M., Priola, E. - Well-posedness of the transport equation by stochastic perturbation.pdf",
+          "gt_title": "Well-posedness of the transport equation by stochastic perturbation",
+          "gt_authors": [
+            "Flandoli",
+            "F.",
+            "Gubinelli",
+            "M.",
+            "Priola",
+            "E."
+          ],
+          "pred_title": "Well-posedness of the transport equation by stochastic perturbation",
+          "pred_authors": [
+            "Flandoli",
+            "F.",
+            "Gubinelli",
+            "M.",
+            "Priola",
+            "E."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 4.2665997170843184e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/06 - Theses/V/Vos, G. - An example of a measurable set that is not Borel.pdf",
+          "gt_title": "An example of a measurable set that is not Borel",
+          "gt_authors": [
+            "Vos",
+            "G."
+          ],
+          "pred_title": "An example of a measurable set that is not Borel",
+          "pred_authors": [
+            "Vos",
+            "G."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 3.599999763537198e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/07c - Time-inconsistent stochastic control/02 - Unpublished papers/Wang, T. - Mean–variance portfolio selection and variance hedging with random coefficients, closed-loop equilibrium strategy.pdf",
+          "gt_title": "Mean–variance portfolio selection and variance hedging with random coefficients, closed-loop equilibrium strategy",
+          "gt_authors": [
+            "Wang",
+            "T."
+          ],
+          "pred_title": "Mean–variance portfolio selection and variance hedging with random coefficients, closed-loop equilibrium strategy",
+          "pred_authors": [
+            "Wang",
+            "T."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 4.7916000767145306e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/08 - Séminaires de probabilités de Strasbourg/Séminaire 27 - 1993/256-Lescot, P. - Un théorème de désintégration en analyse quasi-sûre.pdf",
+          "gt_title": "Un théorème de désintégration en analyse quasi-sûre",
+          "gt_authors": [
+            "256-Lescot",
+            "P."
+          ],
+          "pred_title": "Un théorème de désintégration en analyse quasi-sûre",
+          "pred_authors": [
+            "256-Lescot",
+            "P."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 4.3167005060240626e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/06 - Theses/M/Mazzonetto, S. - On the exact simulation of (skew) Brownian diffusions with discontinuous drift.pdf",
+          "gt_title": "On the exact simulation of (skew) Brownian diffusions with discontinuous drift",
+          "gt_authors": [
+            "Mazzonetto",
+            "S."
+          ],
+          "pred_title": "On the exact simulation of (skew) Brownian diffusions with discontinuous drift",
+          "pred_authors": [
+            "Mazzonetto",
+            "S."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 3.395899693714455e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/02 - Unpublished papers/H/Huang, W., Lin, Y. - On independence for capacities to fit Ellsberg's model with a weak law of large numbers.pdf",
+          "gt_title": "On independence for capacities to fit Ellsberg's model with a weak law of large numbers",
+          "gt_authors": [
+            "Huang",
+            "W.",
+            "Lin",
+            "Y."
+          ],
+          "pred_title": "On independence for capacities to fit Ellsberg's model with a weak law of large numbers",
+          "pred_authors": [
+            "Huang",
+            "W.",
+            "Lin",
+            "Y."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 5.075000080978498e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/05 - Books and lecture notes/01 - Comptes rendus hebdomadaires de l'académie des sciences/Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 304, série I - mathématique, janvier–mai 1987/Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 304, série I - mathématique, nº2 - 14 janvier 1987.pdf",
+          "gt_title": "mathématique, nº2 - 14 janvier 1987",
+          "gt_authors": [
+            "Comptes rendus hebdomadaires des séances de l'académie des sciences",
+            "tome 304",
+            "série I"
+          ],
+          "pred_title": "mathématique, nº2 - 14 janvier 1987",
+          "pred_authors": [
+            "Comptes rendus hebdomadaires des séances de l'académie des sciences",
+            "tome 304",
+            "série I"
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 3.408299380680546e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/B/Bielecki, T.R., Crépey, S., Jeanblanc, M., Rutkowski, M. - Defaultable options in a Markovian intensity model of credit risk.pdf",
+          "gt_title": "Defaultable options in a Markovian intensity model of credit risk",
+          "gt_authors": [
+            "Bielecki",
+            "T.R.",
+            "Crépey",
+            "S.",
+            "Jeanblanc",
+            "M.",
+            "Rutkowski",
+            "M."
+          ],
+          "pred_title": "Defaultable options in a Markovian intensity model of credit risk",
+          "pred_authors": [
+            "Bielecki",
+            "T.R.",
+            "Crépey",
+            "S.",
+            "Jeanblanc",
+            "M.",
+            "Rutkowski",
+            "M."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 5.220800085226074e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/J/Jacod, J. - Une condition d'existence et d'unicité pour les solutions fortes d'équations différentielles stochastiques.pdf",
+          "gt_title": "Une condition d'existence et d'unicité pour les solutions fortes d'équations différentielles stochastiques",
+          "gt_authors": [
+            "Jacod",
+            "J."
+          ],
+          "pred_title": "Une condition d'existence et d'unicité pour les solutions fortes d'équations différentielles stochastiques",
+          "pred_authors": [
+            "Jacod",
+            "J."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 5.345899990061298e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/F/Figalli, A. - On the Monge–Ampère equation.pdf",
+          "gt_title": "On the Monge–Ampère equation",
+          "gt_authors": [
+            "Figalli",
+            "A."
+          ],
+          "pred_title": "On the Monge–Ampère equation",
+          "pred_authors": [
+            "Figalli",
+            "A."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 4.1040999349206686e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/02 - Unpublished papers/A/Albeverio, S.A., Lakaev, S.N., Muminov, Z.I. - The threshold effects for a family of Friedrichs models under rank one perturbations.pdf",
+          "gt_title": "The threshold effects for a family of Friedrichs models under rank one perturbations",
+          "gt_authors": [
+            "Albeverio",
+            "S.A.",
+            "Lakaev",
+            "S.N.",
+            "Muminov",
+            "Z.I."
+          ],
+          "pred_title": "The threshold effects for a family of Friedrichs models under rank one perturbations",
+          "pred_authors": [
+            "Albeverio",
+            "S.A.",
+            "Lakaev",
+            "S.N.",
+            "Muminov",
+            "Z.I."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 3.8833997678011656e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/G/Gomes, D.A., Patrizi, S., Voskanyan, V. - On the existence of classical solutions for stationary extended mean field games.pdf",
+          "gt_title": "On the existence of classical solutions for stationary extended mean field games",
+          "gt_authors": [
+            "Gomes",
+            "D.A.",
+            "Patrizi",
+            "S.",
+            "Voskanyan",
+            "V."
+          ],
+          "pred_title": "On the existence of classical solutions for stationary extended mean field games",
+          "pred_authors": [
+            "Gomes",
+            "D.A.",
+            "Patrizi",
+            "S.",
+            "Voskanyan",
+            "V."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 3.645799733931199e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/08 - Séminaires de probabilités de Strasbourg/Séminaire 15 - 1981/189-Barlow, M.T. - On Brownian local time.pdf",
+          "gt_title": "On Brownian local time",
+          "gt_authors": [
+            "189-Barlow",
+            "M.T."
+          ],
+          "pred_title": "On Brownian local time",
+          "pred_authors": [
+            "189-Barlow",
+            "M.T."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 3.9541999285575e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/J/Joseph, S., Saeed, F., Suoliman, N., Khanfoor, M., abd Ellah, A.E. - Disintegration of group representations on direct integrals of Banach spaces.pdf",
+          "gt_title": "Disintegration of group representations on direct integrals of Banach spaces",
+          "gt_authors": [
+            "Joseph",
+            "S.",
+            "Saeed",
+            "F.",
+            "Suoliman",
+            "N.",
+            "Khanfoor",
+            "M.",
+            "abd Ellah",
+            "A.E."
+          ],
+          "pred_title": "Disintegration of group representations on direct integrals of Banach spaces",
+          "pred_authors": [
+            "Joseph",
+            "S.",
+            "Saeed",
+            "F.",
+            "Suoliman",
+            "N.",
+            "Khanfoor",
+            "M.",
+            "abd Ellah",
+            "A.E."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 4.520799848251045e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/03 - Working papers/E/2025/Eckstein, S., Lakhal, A. - Exponential convergence of general iterative proportional fitting procedures.pdf",
+          "gt_title": "Exponential convergence of general iterative proportional fitting procedures",
+          "gt_authors": [
+            "Eckstein",
+            "S.",
+            "Lakhal",
+            "A."
+          ],
+          "pred_title": "Exponential convergence of general iterative proportional fitting procedures",
+          "pred_authors": [
+            "Eckstein",
+            "S.",
+            "Lakhal",
+            "A."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 4.000000626547262e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/03 - Working papers/D/2022/di Persio, L., Garbelli, M., Ricciardi, M. - The master equation in a bounded domain with absorption.pdf",
+          "gt_title": "The master equation in a bounded domain with absorption",
+          "gt_authors": [
+            "di Persio",
+            "L.",
+            "Garbelli",
+            "M.",
+            "Ricciardi",
+            "M."
+          ],
+          "pred_title": "The master equation in a bounded domain with absorption",
+          "pred_authors": [
+            "di Persio",
+            "L.",
+            "Garbelli",
+            "M.",
+            "Ricciardi",
+            "M."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 2.633300027810037e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/D/Decreusefond, L., Üstünel, A.S. - Stochastic analysis of the fractional Brownian motion.pdf",
+          "gt_title": "Stochastic analysis of the fractional Brownian motion",
+          "gt_authors": [
+            "Decreusefond",
+            "L.",
+            "Üstünel",
+            "A.S."
+          ],
+          "pred_title": "Stochastic analysis of the fractional Brownian motion",
+          "pred_authors": [
+            "Decreusefond",
+            "L.",
+            "Üstünel",
+            "A.S."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 3.574999573174864e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/03 - Working papers/D/2023/Daudin, S., Jackson, J., Seeger, B. - Well-posedness of Hamilton–Jacobi equations in the Wasserstein space, non-convex Hamiltonians and common noise.pdf",
+          "gt_title": "Well-posedness of Hamilton–Jacobi equations in the Wasserstein space, non-convex Hamiltonians and common noise",
+          "gt_authors": [
+            "Daudin",
+            "S.",
+            "Jackson",
+            "J.",
+            "Seeger",
+            "B."
+          ],
+          "pred_title": "Well-posedness of Hamilton–Jacobi equations in the Wasserstein space, non-convex Hamiltonians and common noise",
+          "pred_authors": [
+            "Daudin",
+            "S.",
+            "Jackson",
+            "J.",
+            "Seeger",
+            "B."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 4.799999442184344e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/C/Coutin, L., Qian, Z. - Stochastic differential equations for fractional Brownian motions.pdf",
+          "gt_title": "Stochastic differential equations for fractional Brownian motions",
+          "gt_authors": [
+            "Coutin",
+            "L.",
+            "Qian",
+            "Z."
+          ],
+          "pred_title": "Stochastic differential equations for fractional Brownian motions",
+          "pred_authors": [
+            "Coutin",
+            "L.",
+            "Qian",
+            "Z."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 3.566600207705051e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/J/Jourdain, B., Margheriti, W. - Martingale Wasserstein inequality for probability measures in the convex order.pdf",
+          "gt_title": "Martingale Wasserstein inequality for probability measures in the convex order",
+          "gt_authors": [
+            "Jourdain",
+            "B.",
+            "Margheriti",
+            "W."
+          ],
+          "pred_title": "Martingale Wasserstein inequality for probability measures in the convex order",
+          "pred_authors": [
+            "Jourdain",
+            "B.",
+            "Margheriti",
+            "W."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 3.616599860833958e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/05 - Books and lecture notes/05 - Astérisque/Astérisque 236 - Émery, M., Yor, M. - Hommage à P.A. Meyer et J. Neveu.pdf",
+          "gt_title": "Émery, M., Yor, M. - Hommage à P.A. Meyer et J. Neveu",
+          "gt_authors": [
+            "Astérisque 236"
+          ],
+          "pred_title": "Émery, M., Yor, M. - Hommage à P.A. Meyer et J. Neveu",
+          "pred_authors": [
+            "Astérisque 236"
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 4.841599729843438e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/A/Abi Jaber, E., el Euch, O. - Multi-factor approximation of rough volatility models.pdf",
+          "gt_title": "Multi-factor approximation of rough volatility models",
+          "gt_authors": [
+            "Abi Jaber",
+            "E.",
+            "el Euch",
+            "O."
+          ],
+          "pred_title": "Multi-factor approximation of rough volatility models",
+          "pred_authors": [
+            "Abi Jaber",
+            "E.",
+            "el Euch",
+            "O."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 7.562500104540959e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/06 - Theses/C/Cecchin, A. - Finite state N-player and mean field games.pdf",
+          "gt_title": "Finite state N-player and mean field games",
+          "gt_authors": [
+            "Cecchin",
+            "A."
+          ],
+          "pred_title": "Finite state N-player and mean field games",
+          "pred_authors": [
+            "Cecchin",
+            "A."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 5.454200436361134e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/03 - Working papers/S/2023/Shao, J. - Optimal control problem for reflected McKean–Vlasov SDEs.pdf",
+          "gt_title": "Optimal control problem for reflected McKean–Vlasov SDEs",
+          "gt_authors": [
+            "Shao",
+            "J."
+          ],
+          "pred_title": "Optimal control problem for reflected McKean–Vlasov SDEs",
+          "pred_authors": [
+            "Shao",
+            "J."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 4.6167006075847894e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/08 - Séminaires de probabilités de Strasbourg/Séminaire 20 - 1986/338-Ruiz de Chavez, J. - Sur la positivité de certains opérateurs.pdf",
+          "gt_title": "Sur la positivité de certains opérateurs",
+          "gt_authors": [
+            "338-Ruiz de Chavez",
+            "J."
+          ],
+          "pred_title": "Sur la positivité de certains opérateurs",
+          "pred_authors": [
+            "338-Ruiz de Chavez",
+            "J."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 3.470899537205696e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/B/Bony, J.-M., Ciarlet, P.G., Yor, M. - Les comptes rendus en mathématique, passé, présent, futur.pdf",
+          "gt_title": "Les comptes rendus en mathématique, passé, présent, futur",
+          "gt_authors": [
+            "Bony",
+            "J.-M.",
+            "Ciarlet",
+            "P.G.",
+            "Yor",
+            "M."
+          ],
+          "pred_title": "Les comptes rendus en mathématique, passé, présent, futur",
+          "pred_authors": [
+            "Bony",
+            "J.-M.",
+            "Ciarlet",
+            "P.G.",
+            "Yor",
+            "M."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 3.5333003324922174e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/W/Watanabe, S. - A simple example of black noise.pdf",
+          "gt_title": "A simple example of black noise",
+          "gt_authors": [
+            "Watanabe",
+            "S."
+          ],
+          "pred_title": "A simple example of black noise",
+          "pred_authors": [
+            "Watanabe",
+            "S."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 3.237499913666397e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/03 - Working papers/K/2023/Karlsen, K.H., Pang, P.H.C. - Weak convergence of stochastic integrals.pdf",
+          "gt_title": "Weak convergence of stochastic integrals",
+          "gt_authors": [
+            "Karlsen",
+            "K.H.",
+            "Pang",
+            "P.H.C."
+          ],
+          "pred_title": "Weak convergence of stochastic integrals",
+          "pred_authors": [
+            "Karlsen",
+            "K.H.",
+            "Pang",
+            "P.H.C."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 3.541699697962031e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/C/Cao, H., Guo, X., Lee, J.S. - MFGs for partially reversible investment.pdf",
+          "gt_title": "MFGs for partially reversible investment",
+          "gt_authors": [
+            "Cao",
+            "H.",
+            "Guo",
+            "X.",
+            "Lee",
+            "J.S."
+          ],
+          "pred_title": "MFGs for partially reversible investment",
+          "pred_authors": [
+            "Cao",
+            "H.",
+            "Guo",
+            "X.",
+            "Lee",
+            "J.S."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 4.295899998396635e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/03 - Working papers/C/2022/Chen, A., Stadje, M., Zhang, F. - On the equivalence between value-at-risk and expected shortfall in non-concave optimization.pdf",
+          "gt_title": "On the equivalence between value-at-risk and expected shortfall in non-concave optimization",
+          "gt_authors": [
+            "Chen",
+            "A.",
+            "Stadje",
+            "M.",
+            "Zhang",
+            "F."
+          ],
+          "pred_title": "On the equivalence between value-at-risk and expected shortfall in non-concave optimization",
+          "pred_authors": [
+            "Chen",
+            "A.",
+            "Stadje",
+            "M.",
+            "Zhang",
+            "F."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 4.295899998396635e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/07a - BSDEs/03 - Working papers/2024/Li, W., Wang, H., Yong, J. - Solvability of coupled forward–backward Volterra integral equations.pdf",
+          "gt_title": "Solvability of coupled forward–backward Volterra integral equations",
+          "gt_authors": [
+            "Li",
+            "W.",
+            "Wang",
+            "H.",
+            "Yong",
+            "J."
+          ],
+          "pred_title": "Solvability of coupled forward–backward Volterra integral equations",
+          "pred_authors": [
+            "Li",
+            "W.",
+            "Wang",
+            "H.",
+            "Yong",
+            "J."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 3.9792001189198345e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/F/Fadina, T., Schmidt, T. - Default ambiguity.pdf",
+          "gt_title": "Default ambiguity",
+          "gt_authors": [
+            "Fadina",
+            "T.",
+            "Schmidt",
+            "T."
+          ],
+          "pred_title": "Default ambiguity",
+          "pred_authors": [
+            "Fadina",
+            "T.",
+            "Schmidt",
+            "T."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 3.716699575306848e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/05 - Books and lecture notes/A/Albrecher, H., Runggaldier, W.J., Schachermayer, W. - Advanced financial modelling.pdf",
+          "gt_title": "Advanced financial modelling",
+          "gt_authors": [
+            "Albrecher",
+            "H.",
+            "Runggaldier",
+            "W.J.",
+            "Schachermayer",
+            "W."
+          ],
+          "pred_title": "Advanced financial modelling",
+          "pred_authors": [
+            "Albrecher",
+            "H.",
+            "Runggaldier",
+            "W.J.",
+            "Schachermayer",
+            "W."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 3.404200106160715e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/05 - Books and lecture notes/G/Garaschuk, K., Liu, A. - Grade five competition from the Leningrad mathematical olympiad.pdf",
+          "gt_title": "Grade five competition from the Leningrad mathematical olympiad",
+          "gt_authors": [
+            "Garaschuk",
+            "K.",
+            "Liu",
+            "A."
+          ],
+          "pred_title": "Grade five competition from the Leningrad mathematical olympiad",
+          "pred_authors": [
+            "Garaschuk",
+            "K.",
+            "Liu",
+            "A."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 3.3875003282446414e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/C/Cordoni, F., di Persio, L., Jiang, Y. - A bank salvage model by impulse stochastic controls.pdf",
+          "gt_title": "A bank salvage model by impulse stochastic controls",
+          "gt_authors": [
+            "Cordoni",
+            "F.",
+            "di Persio",
+            "L.",
+            "Jiang",
+            "Y."
+          ],
+          "pred_title": "A bank salvage model by impulse stochastic controls",
+          "pred_authors": [
+            "Cordoni",
+            "F.",
+            "di Persio",
+            "L.",
+            "Jiang",
+            "Y."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 2.5291999918408692e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/07a - BSDEs/01 - Published papers/D/Delbaen, F., Hu, Y., Richou, A. - On the uniqueness of solutions to quadratic BSDEs with convex generators and unbounded terminal conditions.pdf",
+          "gt_title": "On the uniqueness of solutions to quadratic BSDEs with convex generators and unbounded terminal conditions",
+          "gt_authors": [
+            "Delbaen",
+            "F.",
+            "Hu",
+            "Y.",
+            "Richou",
+            "A."
+          ],
+          "pred_title": "On the uniqueness of solutions to quadratic BSDEs with convex generators and unbounded terminal conditions",
+          "pred_authors": [
+            "Delbaen",
+            "F.",
+            "Hu",
+            "Y.",
+            "Richou",
+            "A."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 3.379199915798381e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/R/Rutkowski, M. - Stochastic differential equations with singular drift.pdf",
+          "gt_title": "Stochastic differential equations with singular drift",
+          "gt_authors": [
+            "Rutkowski",
+            "M."
+          ],
+          "pred_title": "Stochastic differential equations with singular drift",
+          "pred_authors": [
+            "Rutkowski",
+            "M."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 2.8917005693074316e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/05 - Books and lecture notes/01 - Comptes rendus hebdomadaires de l'académie des sciences/Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 323, série IIb - mécanique, physique, chimie, astronomie - 1996/Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 323, série IIb - mécanique, physique, chimie, astronomie supplément au nº12 - 12 décembre 1996.pdf",
+          "gt_title": "mécanique, physique, chimie, astronomie supplément au nº12 - 12 décembre 1996",
+          "gt_authors": [
+            "Comptes rendus hebdomadaires des séances de l'académie des sciences",
+            "tome 323",
+            "série IIb"
+          ],
+          "pred_title": "mécanique, physique, chimie, astronomie supplément au nº12 - 12 décembre 1996",
+          "pred_authors": [
+            "Comptes rendus hebdomadaires des séances de l'académie des sciences",
+            "tome 323",
+            "série IIb"
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 4.183400596957654e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/03 - Working papers/M/2022/Morel, R., Rochette, G., Leonarduzzi, R., Bouchaud, J.-P., Mallat, S. - Scale dependencies and self-similarity through wavelet scattering covariance.pdf",
+          "gt_title": "Scale dependencies and self-similarity through wavelet scattering covariance",
+          "gt_authors": [
+            "Morel",
+            "R.",
+            "Rochette",
+            "G.",
+            "Leonarduzzi",
+            "R.",
+            "Bouchaud",
+            "J.-P.",
+            "Mallat",
+            "S."
+          ],
+          "pred_title": "Scale dependencies and self-similarity through wavelet scattering covariance",
+          "pred_authors": [
+            "Morel",
+            "R.",
+            "Rochette",
+            "G.",
+            "Leonarduzzi",
+            "R.",
+            "Bouchaud",
+            "J.-P.",
+            "Mallat",
+            "S."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 3.862499579554424e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/03 - Working papers/A/2025/Abi Jaber, E., Alfonsi, A., Szulda, G. - Weak solutions of stochastic Volterra equations in convex domains with general kernels.pdf",
+          "gt_title": "Weak solutions of stochastic Volterra equations in convex domains with general kernels",
+          "gt_authors": [
+            "Abi Jaber",
+            "E.",
+            "Alfonsi",
+            "A.",
+            "Szulda",
+            "G."
+          ],
+          "pred_title": "Weak solutions of stochastic Volterra equations in convex domains with general kernels",
+          "pred_authors": [
+            "Abi Jaber",
+            "E.",
+            "Alfonsi",
+            "A.",
+            "Szulda",
+            "G."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 3.445900074439123e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/05 - Books and lecture notes/D/Diestel, J. - Sequences and series in Banach spaces.pdf",
+          "gt_title": "Sequences and series in Banach spaces",
+          "gt_authors": [
+            "Diestel",
+            "J."
+          ],
+          "pred_title": "Sequences and series in Banach spaces",
+          "pred_authors": [
+            "Diestel",
+            "J."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 2.9334005375858396e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/Z/Zbigniew, J.J., Yor M. - Selfdecomposable laws associated with hyperbolic functions.pdf",
+          "gt_title": "Selfdecomposable laws associated with hyperbolic functions",
+          "gt_authors": [
+            "Zbigniew",
+            "J.J.",
+            "Yor M."
+          ],
+          "pred_title": "Selfdecomposable laws associated with hyperbolic functions",
+          "pred_authors": [
+            "Zbigniew",
+            "J.J.",
+            "Yor M."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 2.0916995708830655e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/07b - Contract theory/03 - Working papers/2024/Goel, S., Hann-Caruthers, W. - Optimality of weighted contracts for multi-agent contract design with a budget.pdf",
+          "gt_title": "Optimality of weighted contracts for multi-agent contract design with a budget",
+          "gt_authors": [
+            "Goel",
+            "S.",
+            "Hann-Caruthers",
+            "W."
+          ],
+          "pred_title": "Optimality of weighted contracts for multi-agent contract design with a budget",
+          "pred_authors": [
+            "Goel",
+            "S.",
+            "Hann-Caruthers",
+            "W."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 3.862499579554424e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/F/Fan, X. - Exact rates of convergence in some martingale central limit theorems.pdf",
+          "gt_title": "Exact rates of convergence in some martingale central limit theorems",
+          "gt_authors": [
+            "Fan",
+            "X."
+          ],
+          "pred_title": "Exact rates of convergence in some martingale central limit theorems",
+          "pred_authors": [
+            "Fan",
+            "X."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 3.733299672603607e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/03 - Working papers/C/2022/Cheng, Z., Jaimungal, S. - Markov decision processes with Kusuoka-type conditional risk mappings.pdf",
+          "gt_title": "Markov decision processes with Kusuoka-type conditional risk mappings",
+          "gt_authors": [
+            "Cheng",
+            "Z.",
+            "Jaimungal",
+            "S."
+          ],
+          "pred_title": "Markov decision processes with Kusuoka-type conditional risk mappings",
+          "pred_authors": [
+            "Cheng",
+            "Z.",
+            "Jaimungal",
+            "S."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 2.279200271004811e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/T/Tembine, H. - Nonasymptotic mean-field games.pdf",
+          "gt_title": "Nonasymptotic mean-field games",
+          "gt_authors": [
+            "Tembine",
+            "H."
+          ],
+          "pred_title": "Nonasymptotic mean-field games",
+          "pred_authors": [
+            "Tembine",
+            "H."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 2.433299960102886e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/03 - Working papers/X/2024/Xu, W. - Scaling limit theorems for multivariate Hawkes processes and stochastic Volterra equations with measure kernel.pdf",
+          "gt_title": "Scaling limit theorems for multivariate Hawkes processes and stochastic Volterra equations with measure kernel",
+          "gt_authors": [
+            "Xu",
+            "W."
+          ],
+          "pred_title": "Scaling limit theorems for multivariate Hawkes processes and stochastic Volterra equations with measure kernel",
+          "pred_authors": [
+            "Xu",
+            "W."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 3.587499668356031e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/D/Daróczy, Z., Kátai, E. - On the structure of univoque numbers.pdf",
+          "gt_title": "On the structure of univoque numbers",
+          "gt_authors": [
+            "Daróczy",
+            "Z.",
+            "Kátai",
+            "E."
+          ],
+          "pred_title": "On the structure of univoque numbers",
+          "pred_authors": [
+            "Daróczy",
+            "Z.",
+            "Kátai",
+            "E."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 3.204200038453564e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/F/Feng, J., Fouque, J.-P., Kumar, R. - Small-time asymptotics for fast mean-reverting stochastic volatility models.pdf",
+          "gt_title": "Small-time asymptotics for fast mean-reverting stochastic volatility models",
+          "gt_authors": [
+            "Feng",
+            "J.",
+            "Fouque",
+            "J.-P.",
+            "Kumar",
+            "R."
+          ],
+          "pred_title": "Small-time asymptotics for fast mean-reverting stochastic volatility models",
+          "pred_authors": [
+            "Feng",
+            "J.",
+            "Fouque",
+            "J.-P.",
+            "Kumar",
+            "R."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 2.0707993826363236e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/B/Bellman, R.E. - Some directions of research in dynamic programming.pdf",
+          "gt_title": "Some directions of research in dynamic programming",
+          "gt_authors": [
+            "Bellman",
+            "R.E."
+          ],
+          "pred_title": "Some directions of research in dynamic programming",
+          "pred_authors": [
+            "Bellman",
+            "R.E."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 2.425000275252387e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/05 - Books and lecture notes/H/He, S.-W., Wang, J.-G., Yan, J.-A. - Semimartingale theory and stochastic calculus.pdf",
+          "gt_title": "Semimartingale theory and stochastic calculus",
+          "gt_authors": [
+            "He",
+            "S.-W.",
+            "Wang",
+            "J.-G.",
+            "Yan",
+            "J.-A."
+          ],
+          "pred_title": "Semimartingale theory and stochastic calculus",
+          "pred_authors": [
+            "He",
+            "S.-W.",
+            "Wang",
+            "J.-G.",
+            "Yan",
+            "J.-A."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 2.291700366185978e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/C/Cohen, S.N., Snow, D., Szpruch, Ł. - Black-box model risk in finance.pdf",
+          "gt_title": "Black-box model risk in finance",
+          "gt_authors": [
+            "Cohen",
+            "S.N.",
+            "Snow",
+            "D.",
+            "Szpruch",
+            "Ł."
+          ],
+          "pred_title": "Black-box model risk in finance",
+          "pred_authors": [
+            "Cohen",
+            "S.N.",
+            "Snow",
+            "D.",
+            "Szpruch",
+            "Ł."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 3.929100057575852e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/02 - Unpublished papers/M/Madan, D.B., Roynette, B., Yor, M. - From Black–Scholes formula, to local times and last passage times for certain submartingales.pdf",
+          "gt_title": "From Black–Scholes formula, to local times and last passage times for certain submartingales",
+          "gt_authors": [
+            "Madan",
+            "D.B.",
+            "Roynette",
+            "B.",
+            "Yor",
+            "M."
+          ],
+          "pred_title": "From Black–Scholes formula, to local times and last passage times for certain submartingales",
+          "pred_authors": [
+            "Madan",
+            "D.B.",
+            "Roynette",
+            "B.",
+            "Yor",
+            "M."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 4.120900121051818e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/C/Cardaliaguet, P., Mészáros, A.R., Santambrogio, F. - First order mean field games with density constraints, pressure equals price.pdf",
+          "gt_title": "First order mean field games with density constraints, pressure equals price",
+          "gt_authors": [
+            "Cardaliaguet",
+            "P.",
+            "Mészáros",
+            "A.R.",
+            "Santambrogio",
+            "F."
+          ],
+          "pred_title": "First order mean field games with density constraints, pressure equals price",
+          "pred_authors": [
+            "Cardaliaguet",
+            "P.",
+            "Mészáros",
+            "A.R.",
+            "Santambrogio",
+            "F."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 4.037500184495002e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/C/Carlier, G., Renou, L. - A costly state verification model with diversity of opinions.pdf",
+          "gt_title": "A costly state verification model with diversity of opinions",
+          "gt_authors": [
+            "Carlier",
+            "G.",
+            "Renou",
+            "L."
+          ],
+          "pred_title": "A costly state verification model with diversity of opinions",
+          "pred_authors": [
+            "Carlier",
+            "G.",
+            "Renou",
+            "L."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 1.8291000742465258e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/G/Graham, C., Méléard, S. - Fluctuations for a fully connected loss network with alternate routing.pdf",
+          "gt_title": "Fluctuations for a fully connected loss network with alternate routing",
+          "gt_authors": [
+            "Graham",
+            "C.",
+            "Méléard",
+            "S."
+          ],
+          "pred_title": "Fluctuations for a fully connected loss network with alternate routing",
+          "pred_authors": [
+            "Graham",
+            "C.",
+            "Méléard",
+            "S."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 3.9792001189198345e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/05 - Books and lecture notes/B/Beiglböck, M., Berestycki, N. - Stochastik für das Lehramt.pdf",
+          "gt_title": "Stochastik für das Lehramt",
+          "gt_authors": [
+            "Beiglböck",
+            "M.",
+            "Berestycki",
+            "N."
+          ],
+          "pred_title": "Stochastik für das Lehramt",
+          "pred_authors": [
+            "Beiglböck",
+            "M.",
+            "Berestycki",
+            "N."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 3.308399755042046e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/A/al Aradi, A., Correia, A., de Frietas Naiff, D., Jardim, G., Saporito, Y.F. - Extensions of the deep Galerkin method.pdf",
+          "gt_title": "Extensions of the deep Galerkin method",
+          "gt_authors": [
+            "al Aradi",
+            "A.",
+            "Correia",
+            "A.",
+            "de Frietas Naiff",
+            "D.",
+            "Jardim",
+            "G.",
+            "Saporito",
+            "Y.F."
+          ],
+          "pred_title": "Extensions of the deep Galerkin method",
+          "pred_authors": [
+            "al Aradi",
+            "A.",
+            "Correia",
+            "A.",
+            "de Frietas Naiff",
+            "D.",
+            "Jardim",
+            "G.",
+            "Saporito",
+            "Y.F."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 2.7499998395796865e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/05 - Books and lecture notes/01 - Comptes rendus hebdomadaires de l'académie des sciences/Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 273, séries A et B - juillet–décembre 1971/Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 273, séries A et B - nº17 - 27 octobre 1971.pdf",
+          "gt_title": "nº17 - 27 octobre 1971",
+          "gt_authors": [
+            "Comptes rendus hebdomadaires des séances de l'académie des sciences",
+            "tome 273",
+            "séries A et B"
+          ],
+          "pred_title": "nº17 - 27 octobre 1971",
+          "pred_authors": [
+            "Comptes rendus hebdomadaires des séances de l'académie des sciences",
+            "tome 273",
+            "séries A et B"
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 2.633300027810037e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/05 - Books and lecture notes/P/Pennanen, T., Perkkiö, A.-P. - Convex stochastic optimization.pdf",
+          "gt_title": "Convex stochastic optimization",
+          "gt_authors": [
+            "Pennanen",
+            "T.",
+            "Perkkiö",
+            "A.-P."
+          ],
+          "pred_title": "Convex stochastic optimization",
+          "pred_authors": [
+            "Pennanen",
+            "T.",
+            "Perkkiö",
+            "A.-P."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 2.849999873433262e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/05 - Books and lecture notes/C/Cauchy, A.-L. - Œuvres complètes d'Augustin Cauchy publiées sous la direction scientifique de l'académie des sciences et sous les auspices de M. le ministre de l'instruction publique, 1ère série, tome III.pdf",
+          "gt_title": "Œuvres complètes d'Augustin Cauchy publiées sous la direction scientifique de l'académie des sciences et sous les auspices de M. le ministre de l'instruction publique, 1ère série, tome III",
+          "gt_authors": [
+            "Cauchy",
+            "A.-L."
+          ],
+          "pred_title": "Œuvres complètes d'Augustin Cauchy publiées sous la direction scientifique de l'académie des sciences et sous les auspices de M. le ministre de l'instruction publique, 1ère série, tome III",
+          "pred_authors": [
+            "Cauchy",
+            "A.-L."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 4.179199459031224e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/03 - Working papers/M/2024/Magnino, L., Zhu, Y., Laurière, M. - Deep learning algorithms for mean field optimal stopping in finite space and discrete time.pdf",
+          "gt_title": "Deep learning algorithms for mean field optimal stopping in finite space and discrete time",
+          "gt_authors": [
+            "Magnino",
+            "L.",
+            "Zhu",
+            "Y.",
+            "Laurière",
+            "M."
+          ],
+          "pred_title": "Deep learning algorithms for mean field optimal stopping in finite space and discrete time",
+          "pred_authors": [
+            "Magnino",
+            "L.",
+            "Zhu",
+            "Y.",
+            "Laurière",
+            "M."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 3.662500239443034e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/05 - Books and lecture notes/05 - Astérisque/Astérisque 249 - Auscher, P., Tchamitchian, P. - Problème de la racine carrée pour les opérateurs sous forme divergente et sujets connexes.pdf",
+          "gt_title": "Auscher, P., Tchamitchian, P. - Problème de la racine carrée pour les opérateurs sous forme divergente et sujets connexes",
+          "gt_authors": [
+            "Astérisque 249"
+          ],
+          "pred_title": "Auscher, P., Tchamitchian, P. - Problème de la racine carrée pour les opérateurs sous forme divergente et sujets connexes",
+          "pred_authors": [
+            "Astérisque 249"
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 2.7082998713012785e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/05 - Books and lecture notes/H/Hirsch, F., Mokobodzki, G. - Séminaire de théorie du potentiel, Paris 1972–1974.pdf",
+          "gt_title": "Séminaire de théorie du potentiel, Paris 1972–1974",
+          "gt_authors": [
+            "Hirsch",
+            "F.",
+            "Mokobodzki",
+            "G."
+          ],
+          "pred_title": "Séminaire de théorie du potentiel, Paris 1972–1974",
+          "pred_authors": [
+            "Hirsch",
+            "F.",
+            "Mokobodzki",
+            "G."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 2.68340008915402e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/02 - Unpublished papers/B/Belgrade, N., Benhamou, É., Koehler, E. - A market model for inflation.pdf",
+          "gt_title": "A market model for inflation",
+          "gt_authors": [
+            "Belgrade",
+            "N.",
+            "Benhamou",
+            "É.",
+            "Koehler",
+            "E."
+          ],
+          "pred_title": "A market model for inflation",
+          "pred_authors": [
+            "Belgrade",
+            "N.",
+            "Benhamou",
+            "É.",
+            "Koehler",
+            "E."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 1.4917000953573734e-05
+        },
+        {
+          "path": "/Users/dylanpossamai/Library/CloudStorage/Dropbox/Work/Maths/01 - Published papers/W/Wang, A.T. - Generalized Itô's formula and additive functionals of Brownian motion.pdf",
+          "gt_title": "Generalized Itô's formula and additive functionals of Brownian motion",
+          "gt_authors": [
+            "Wang",
+            "A.T."
+          ],
+          "pred_title": "Generalized Itô's formula and additive functionals of Brownian motion",
+          "pred_authors": [
+            "Wang",
+            "A.T."
+          ],
+          "title_exact": true,
+          "title_fuzzy": 100.0,
+          "title_f1": 1.0,
+          "author_jaccard": 1.0,
+          "combined": 1.0,
+          "time_sec": 2.7874993975274265e-05
+        }
+      ],
+      "errors": []
+    }
+  }
+}

@@ -27,6 +27,7 @@ without ``llama-cpp-python`` installed will never see an import error.
 
 import json
 import logging
+import unicodedata
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
@@ -81,7 +82,10 @@ Given the first pages of a PDF, extract the paper's title and all author names.
 Return a JSON object with exactly two keys:
   "title" — the full paper title (string)
   "authors" — all author names (array of strings, each "Firstname Lastname")
-Do NOT include affiliations, emails, or other data."""
+Rules:
+- Use the title exactly as it appears in the text (preserve the original language).
+- Do NOT include affiliations, emails, or other data.
+- If the text is too short or unclear to determine the title, return {"title": "", "authors": []}."""
 
 _USER_TEMPLATE = """\
 <PDF text>
@@ -160,6 +164,11 @@ class LLMMetadataExtractor:
         -------
         ``{"title": "...", "authors": ["Author One", ...]}``
         """
+        # Guard: skip LLM for empty/scanned PDFs — avoids hallucinations
+        if not first_pages_text or len(first_pages_text.strip()) < 100:
+            logger.info("Text too short for LLM extraction (<100 chars), skipping")
+            return {"title": "", "authors": []}
+
         # Truncate to fit context window (leave room for system prompt + output)
         max_input_chars = 6000  # ~2000 tokens
         text = first_pages_text[:max_input_chars]
@@ -192,8 +201,13 @@ class LLMMetadataExtractor:
         if isinstance(result["authors"], str):
             result["authors"] = [result["authors"]]
 
-        # Strip whitespace from each author name
-        result["authors"] = [a.strip() for a in result["authors"] if a.strip()]
+        # NFC-normalise title and author names (model outputs NFC, which is
+        # the correct canonical form for Unicode text)
+        result["title"] = unicodedata.normalize("NFC", result["title"]).strip()
+        result["authors"] = [
+            unicodedata.normalize("NFC", a).strip()
+            for a in result["authors"] if a.strip()
+        ]
 
         return result
 

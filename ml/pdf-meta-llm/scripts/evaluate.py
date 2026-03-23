@@ -32,11 +32,18 @@ import random
 import re
 import sys
 import time
+import unicodedata
 from collections import defaultdict
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from rapidfuzz import fuzz
+
+# Add src/ to path so pdf_processing imports work
+_project_root = Path(__file__).resolve().parent.parent.parent.parent
+_src_dir = str(_project_root / "src")
+if _src_dir not in sys.path:
+    sys.path.insert(0, _src_dir)
 
 # Reuse extraction and parsing from the existing training data script
 try:
@@ -54,7 +61,14 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 def _normalize_for_comparison(s: str) -> str:
-    """Lowercase, collapse whitespace, strip boundary punctuation."""
+    """NFC-normalise, lowercase, collapse whitespace, strip boundary punctuation.
+
+    macOS HFS+/APFS stores filenames in NFD (decomposed) form, while LLMs
+    output NFC (composed) form.  Without NFC normalisation, identical-looking
+    strings like ``é`` (U+00E9) and ``e`` + combining acute (U+0065 U+0301)
+    are treated as different, producing ~10% false misses on French/German titles.
+    """
+    s = unicodedata.normalize("NFC", s)
     s = s.lower().strip()
     s = re.sub(r"\s+", " ", s)
     s = re.sub(r"^[^\w]+|[^\w]+$", "", s)
@@ -92,6 +106,7 @@ def title_token_f1(predicted: str, ground_truth: str) -> float:
 
 def _normalize_author_name(name: str) -> str:
     """Normalize an author name for comparison."""
+    name = unicodedata.normalize("NFC", name)
     name = name.lower().strip()
     name = re.sub(r"^(dr|prof|professor)\s+", "", name)
     return " ".join(name.split())

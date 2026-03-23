@@ -30,6 +30,7 @@ import argparse
 import json
 import re
 import sys
+import unicodedata
 import multiprocessing as mp
 import warnings
 
@@ -75,7 +76,10 @@ _SYSTEM_PROMPT = (
     "Return a JSON object with exactly two keys:\n"
     '  "title" — the full paper title (string)\n'
     '  "authors" — all author names (array of strings, each "Firstname Lastname")\n'
-    "Do NOT include affiliations, emails, or other data."
+    "Rules:\n"
+    "- Use the title exactly as it appears in the text (preserve the original language).\n"
+    "- Do NOT include affiliations, emails, or other data.\n"
+    '- If the text is too short or unclear to determine the title, return {"title": "", "authors": []}.'
 )
 
 _USER_TEMPLATE = (
@@ -93,12 +97,145 @@ def skip_this(path: Path) -> bool:
 
 
 # -------- filename parsing --------
+def _is_initials_or_suffix(part: str) -> bool:
+    """Check if a comma-separated part is initials or a name suffix.
+
+    Matches patterns like: ``A.``, ``P. P.``, ``É.``, ``K. T. H.``,
+    ``Yu.M.``, ``J.-P.``, ``P.-É.``, ``Jr.``, ``III``.
+
+    Handles accented uppercase (É, Ł, Á, etc.) and Cyrillic-convention
+    multi-letter initials (Yu., Sh., Ch.).
+    """
+    p = part.strip()
+    # Uppercase letter class: ASCII + accented Latin uppercase
+    _U = r"[A-ZÀ-ÖØ-Þ\u0100-\u024EŁ]"
+    # An "initial unit": one or two uppercase letters followed by a period
+    # Handles: A., É., Yu., Sh., Ch.
+    _INIT = _U + r"{1,2}\."
+
+    # Single uppercase letter without period: "A", "N", "É"
+    if re.fullmatch(_U, p):
+        return True
+    # Single initial: "A.", "É.", "Ł.", "Yu."
+    if re.fullmatch(_INIT, p):
+        return True
+    # Spaced initials: "P. P.", "E. A.", "K. T. H.", "S. C. P."
+    if re.fullmatch(_INIT + r"(?:\s+" + _INIT + r")*", p):
+        return True
+    # Compact initials: "R.A.", "J.P.", "Yu.M.", "A.Yu."
+    if re.fullmatch(_INIT + r"(?:" + _INIT + r")*", p):
+        return True
+    # Hyphenated initials: "J.-P.", "A.-L.", "P.-É.", "C.-É."
+    if re.fullmatch(_INIT + r"\s*-\s*" + _INIT, p):
+        return True
+    # Cyrillic-convention with hyphen: "Y.R.-Y.", "J.Z.-G.", "T.-K.L."
+    if re.fullmatch(r"(?:" + _INIT + r")+\s*-\s*(?:" + _INIT + r")+", p):
+        return True
+    # Suffixes: Jr, Jr., Sr, Sr., II, III, IV
+    if re.fullmatch(r"(?:Jr|Sr|II|III|IV|V)\.?", p.rstrip("."), re.IGNORECASE):
+        return True
+    return False
+
+
+def _group_author_parts(parts: list) -> list:
+    """Group comma-split parts into complete author names.
+
+    Filenames use ``Lastname, Initials`` with commas separating both parts
+    of a name *and* different authors.  This function pairs each initial/suffix
+    with its preceding lastname.
+
+    Example::
+
+        ["Bank", "P.", "Bayer", "C.", "Hager", "P. P."]
+        → ["Bank, P.", "Bayer, C.", "Hager, P. P."]
+    """
+    if not parts:
+        return []
+
+    grouped = []
+    current = parts[0].strip()
+
+    for part in parts[1:]:
+        part = part.strip()
+        if not part:
+            continue
+        if _is_initials_or_suffix(part):
+            # Attach to current name
+            current = f"{current}, {part}"
+        else:
+            # Current name is complete, start a new one
+            grouped.append(current)
+            current = part
+
+    if current:
+        grouped.append(current)
+
+    return grouped
+
+
+def _to_firstname_lastname(name: str) -> str:
+    """Convert ``Lastname, Initials`` → ``Initials Lastname``.
+
+    If the name has no comma (already "Firstname Lastname" or a single name),
+    return it as-is.
+
+    Examples::
+
+        "Dupont, F."       → "F. Dupont"
+        "el Karoui, N."    → "N. el Karoui"
+        "Hager, P. P."     → "P. P. Hager"
+        "Clancy, Jr., D."  → "D. Clancy Jr."
+        "Touzi"            → "Touzi"
+    """
+    if ", " not in name:
+        return name
+
+    parts = [p.strip() for p in name.split(", ")]
+
+    if len(parts) == 2:
+        lastname, initials = parts
+        if _is_initials_or_suffix(initials):
+            return f"{initials} {lastname}"
+        else:
+            # Two lastnames? e.g. "de Angelis, T." already handled above
+            # but "Firstname, Lastname" would land here
+            return name
+
+    if len(parts) == 3:
+        # "Clancy, Jr., D." → ["Clancy", "Jr.", "D."]
+        # or "Chu, K. T. H., etc" — suffix in middle
+        lastname, mid, last = parts
+        if _is_initials_or_suffix(mid) and _is_initials_or_suffix(last):
+            # "Lastname, Jr., D." → "D. Lastname Jr."
+            return f"{last} {lastname} {mid}"
+        elif _is_initials_or_suffix(last):
+            return f"{last} {lastname}, {mid}"
+        else:
+            return name
+
+    # 4+ parts: rare, return as-is
+    return name
+
+
 def parse_filename(pdf: Path):
     """Parse ``Author1, Author2 - Title.pdf`` → (title, [authors]).
 
     Returns ``(None, [])`` if the filename doesn't match the expected pattern.
+
+    Authors are returned in ``"Firstname Lastname"`` format, matching the
+    system prompt.  Handles the filename convention where commas separate
+    both parts of a name and different authors.
+
+    All output strings are NFC-normalised.  macOS stores filenames in NFD
+    (decomposed) form, so ``é`` is stored as ``e`` + combining accent.
+    NFC normalisation ensures training data uses the canonical composed form
+    that the tokenizer and model expect.
     """
-    stem = pdf.stem
+    # NFC-normalise the stem — critical on macOS where filenames use NFD
+    stem = unicodedata.normalize("NFC", pdf.stem)
+
+    # Strip leading article/page numbers from Séminaire papers: "218-Maitra" → "Maitra"
+    stem = re.sub(r"^\d+\s*[-–]\s*", "", stem)
 
     # Strip trailing arXiv IDs, years, etc.
     stem = re.sub(r"\s*\(\d{4}\)\s*$", "", stem)          # trailing (2023)
@@ -113,10 +250,17 @@ def parse_filename(pdf: Path):
     if not title or len(title) < 5:
         return None, []
 
-    # Parse authors: "Lastname1, Lastname2" or "Lastname1, Lastname2, Lastname3"
-    # Also handles "Author1 and Author2 - Title"
-    raw_authors = re.split(r"\s*(?:,\s*and\s+|,\s+and\s+|\s+and\s+|,\s+)", authors_part)
-    authors = [a.strip() for a in raw_authors if a.strip()]
+    # Handle "and" separators first: "Author1 and Author2" or "Author1, Author2 and Author3"
+    # Split on " and " but not on ", and " (which is handled by comma splitting)
+    authors_part = re.sub(r"\s+and\s+", ", ", authors_part)
+
+    # Split on commas, then group "Lastname, Initials" pairs together
+    raw_parts = [p.strip() for p in authors_part.split(",") if p.strip()]
+    grouped = _group_author_parts(raw_parts)
+
+    # Convert each "Lastname, Initials" → "Initials Lastname"
+    authors = [_to_firstname_lastname(name) for name in grouped]
+    authors = [a for a in authors if a and len(a) >= 2]
 
     if not authors:
         return None, []
@@ -156,13 +300,17 @@ def page_text(page):
 
 
 def extract_text(pdf: Path, n_pages: int = 3) -> str:
-    """Extract text from the first *n_pages* of a PDF."""
+    """Extract text from the first *n_pages* of a PDF.
+
+    Output is NFC-normalised so that accented characters use composed form.
+    """
     try:
         with fitz.open(pdf) as doc:
-            return "\n".join(
+            raw = "\n".join(
                 page_text(doc.load_page(i))
                 for i in range(min(n_pages, doc.page_count))
             )
+            return unicodedata.normalize("NFC", raw)
     except Exception:
         return ""   # unreadable / empty
 
