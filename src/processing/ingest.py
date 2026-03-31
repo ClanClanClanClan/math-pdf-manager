@@ -97,6 +97,48 @@ def extract_metadata_from_pdf(pdf_path: Path) -> dict:
     except Exception as exc:
         logger.warning("Failed to extract PDF metadata from %s: %s", pdf_path, exc)
 
+    # Try ArXiv API lookup if we have an arXiv ID
+    if metadata.get("arxiv_id") and not metadata["title"]:
+        try:
+            import xml.etree.ElementTree as ET
+
+            import requests
+
+            arxiv_id = re.sub(r"v\d+$", "", metadata["arxiv_id"])  # strip version
+            resp = requests.get(
+                f"https://export.arxiv.org/api/query?id_list={arxiv_id}",
+                timeout=10,
+            )
+            if resp.status_code == 200:
+                ns = {"atom": "http://www.w3.org/2005/Atom"}
+                root = ET.fromstring(resp.content)
+                entry = root.find("atom:entry", ns)
+                if entry is not None:
+                    title_el = entry.find("atom:title", ns)
+                    if title_el is not None and title_el.text:
+                        metadata["title"] = unicodedata.normalize(
+                            "NFC", re.sub(r"\s+", " ", title_el.text.strip())
+                        )
+                    # Authors
+                    arxiv_authors = []
+                    for author_el in entry.findall("atom:author", ns):
+                        name_el = author_el.find("atom:name", ns)
+                        if name_el is not None and name_el.text:
+                            arxiv_authors.append(name_el.text.strip())
+                    if arxiv_authors:
+                        metadata["authors"] = arxiv_authors
+
+                    # Check if ArXiv links to a DOI (paper is published!)
+                    for link in entry.findall("atom:link", ns):
+                        if link.get("title") == "doi":
+                            metadata["doi"] = link.get("href", "").replace("http://dx.doi.org/", "")
+
+                    # Categories
+                    for cat in entry.findall("{http://arxiv.org/schemas/atom}primary_category"):
+                        metadata["arxiv_category"] = cat.get("term", "")
+        except Exception as exc:
+            logger.debug("ArXiv lookup failed for %s: %s", metadata["arxiv_id"], exc)
+
     # Try Crossref lookup if we have a DOI
     if metadata.get("doi") and not metadata["title"]:
         try:
