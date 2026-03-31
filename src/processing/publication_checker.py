@@ -400,5 +400,86 @@ def main(argv: list[str] | None = None) -> None:
         print(f"\nFull report written to {args.output}")
 
 
+# ---------------------------------------------------------------------------
+# ArXiv version checker
+# ---------------------------------------------------------------------------
+def check_arxiv_versions(
+    directory: Path,
+    *,
+    limit: Optional[int] = None,
+    verbose: bool = False,
+) -> list[dict]:
+    """Check for outdated ArXiv paper versions in the library.
+
+    Scans filenames for arXiv IDs (e.g., ``2401.07160v1``), queries the
+    ArXiv API for the latest version, and reports papers where the library
+    has an older version.
+    """
+    import xml.etree.ElementTree as ET
+
+    import requests
+
+    results = []
+    pdfs = sorted(directory.rglob("*.pdf"))
+    if limit:
+        pdfs = pdfs[:limit]
+
+    arxiv_pattern = re.compile(r"(\d{4}\.\d{4,5})(v(\d+))?")
+
+    for pdf in pdfs:
+        stem = unicodedata.normalize("NFC", pdf.stem)
+        match = arxiv_pattern.search(stem)
+        if not match:
+            continue
+
+        arxiv_id = match.group(1)
+        local_version = int(match.group(3)) if match.group(3) else None
+
+        # Query ArXiv API
+        try:
+            time.sleep(1.0)  # rate limit
+            resp = requests.get(
+                f"https://export.arxiv.org/api/query?id_list={arxiv_id}",
+                timeout=10,
+            )
+            if resp.status_code != 200:
+                continue
+
+            ns = {"atom": "http://www.w3.org/2005/Atom"}
+            root = ET.fromstring(resp.content)
+            entry = root.find("atom:entry", ns)
+            if entry is None:
+                continue
+
+            # Find latest version from the entry ID
+            entry_id = entry.find("atom:id", ns)
+            if entry_id is None:
+                continue
+            id_match = arxiv_pattern.search(entry_id.text or "")
+            if not id_match:
+                continue
+            latest_version = int(id_match.group(3)) if id_match.group(3) else 1
+
+            if local_version and latest_version > local_version:
+                title_el = entry.find("atom:title", ns)
+                title = (title_el.text or "").strip() if title_el else ""
+
+                results.append({
+                    "file": str(pdf),
+                    "filename": pdf.name,
+                    "arxiv_id": arxiv_id,
+                    "local_version": local_version,
+                    "latest_version": latest_version,
+                    "title": re.sub(r"\s+", " ", title),
+                })
+                if verbose:
+                    print(f"  OUTDATED: {arxiv_id} v{local_version} → v{latest_version}: {title[:50]}")
+
+        except Exception as exc:
+            logger.debug("ArXiv check failed for %s: %s", arxiv_id, exc)
+
+    return results
+
+
 if __name__ == "__main__":
     main()

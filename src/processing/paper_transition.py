@@ -39,13 +39,57 @@ if _src_dir not in sys.path:
     sys.path.insert(0, _src_dir)
 
 from arxivbot.models.cmo import Author, CMO
-from organization.system import FolderRouter, PUBLISHED
+from organization.system import FolderRouter, PUBLISHED, UNPUBLISHED, WORKING
 from processing.undo_log import UndoLog, logged_move
 
 # Default library root
 LIBRARY_ROOT = Path(__file__).resolve().parent.parent.parent.parent / "Maths"
 if not LIBRARY_ROOT.exists():
     LIBRARY_ROOT = Path.home() / "Library/CloudStorage/Dropbox/Work/Maths"
+
+
+def find_preprint_versions(
+    library_root: Path,
+    filename: str,
+    published_path: Path,
+) -> list[dict]:
+    """Search for preprint versions of a paper in 02/ and 03/.
+
+    Returns a list of candidate preprint files with size comparison info.
+    """
+    from rapidfuzz import fuzz
+
+    stem = unicodedata.normalize("NFC", Path(filename).stem)
+    title = stem.split(" - ", 1)[1].strip() if " - " in stem else stem
+    title_norm = re.sub(r"[^\w\s]", "", title.lower())
+
+    candidates = []
+    for folder_name in [UNPUBLISHED, WORKING]:
+        folder = library_root / folder_name
+        if not folder.exists():
+            continue
+        for pdf in folder.rglob("*.pdf"):
+            if pdf == published_path:
+                continue
+            pdf_stem = unicodedata.normalize("NFC", pdf.stem)
+            pdf_title = pdf_stem.split(" - ", 1)[1].strip() if " - " in pdf_stem else pdf_stem
+            pdf_title_norm = re.sub(r"[^\w\s]", "", pdf_title.lower())
+
+            score = fuzz.ratio(title_norm, pdf_title_norm)
+            if score >= 90:
+                pub_size = published_path.stat().st_size if published_path.exists() else 0
+                pre_size = pdf.stat().st_size
+
+                candidates.append({
+                    "path": str(pdf),
+                    "filename": pdf.name,
+                    "title_similarity": score,
+                    "preprint_size_kb": pre_size // 1024,
+                    "published_size_kb": pub_size // 1024,
+                    "preprint_larger": pre_size > pub_size * 1.2,  # >20% larger
+                })
+
+    return candidates
 
 
 def build_canonical_filename_from_crossref(match: dict) -> str:
@@ -296,6 +340,8 @@ Examples:
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("-i", "--interactive", action="store_true", help="Ask before each move")
     parser.add_argument("-y", "--yes", action="store_true", help="Approve all without asking")
+    parser.add_argument("--cleanup-preprints", action="store_true",
+                        help="After moving, search for and delete preprint versions in 02/03")
     parser.add_argument("-v", "--verbose", action="store_true")
     return parser
 
