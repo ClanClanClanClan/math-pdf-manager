@@ -252,6 +252,7 @@ class OrganizationSystem:
         filename: str,
         *,
         year: Optional[int] = None,
+        undo_log=None,
     ) -> OrganizationResult:
         """File a paper into the correct library location.
 
@@ -287,6 +288,8 @@ class OrganizationSystem:
                 try:
                     shutil.copy2(file_path, destination)
                     actions.append(f"copied to {destination}")
+                    if undo_log is not None:
+                        undo_log.record_copy(file_path, destination)
                 except Exception as exc:
                     logger.error("Failed to copy %s → %s: %s", file_path, destination, exc)
                     actions.append(f"ERROR: copy failed: {exc}")

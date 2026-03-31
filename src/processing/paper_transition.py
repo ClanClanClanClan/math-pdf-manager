@@ -40,6 +40,7 @@ if _src_dir not in sys.path:
 
 from arxivbot.models.cmo import Author, CMO
 from organization.system import FolderRouter, PUBLISHED
+from processing.undo_log import UndoLog, logged_move
 
 # Default library root
 LIBRARY_ROOT = Path(__file__).resolve().parent.parent.parent.parent / "Maths"
@@ -140,10 +141,10 @@ def transition_paper(
         result["success"] = True
         return result
 
-    # Perform the move
+    # Perform the move (with undo log)
+    undo_log = entry.get("_undo_log")
     try:
-        dest_dir.mkdir(parents=True, exist_ok=True)
-        shutil.move(str(source), str(destination))
+        logged_move(source, destination, undo_log=undo_log)
         result["action"] = f"MOVED: {source.name} → {destination}"
         result["destination"] = str(destination)
         result["success"] = True
@@ -160,6 +161,8 @@ def process_report(
     library_root: Path = LIBRARY_ROOT,
     min_confidence: float = 0.75,
     dry_run: bool = False,
+    interactive: bool = False,
+    auto_approve: bool = False,
     verbose: bool = False,
 ) -> list[dict]:
     """Process a publication checker report and move confirmed papers.
@@ -174,6 +177,10 @@ def process_report(
         Minimum confidence threshold for moving papers.
     dry_run : bool
         Preview without moving.
+    interactive : bool
+        Ask for approval before each move.
+    auto_approve : bool
+        Approve all moves without asking (batch mode).
     verbose : bool
         Print progress.
     """
@@ -185,30 +192,81 @@ def process_report(
             print("No published papers found in report.")
         return []
 
-    results = []
-    moved = 0
-
+    # Filter by confidence
+    candidates = []
     for entry in published:
         match = entry.get("match", {})
         confidence = match.get("confidence", 0)
+        if confidence >= min_confidence:
+            candidates.append(entry)
+        elif verbose:
+            print(f"  SKIP (confidence {confidence:.0%} < {min_confidence:.0%}): {entry.get('filename', '?')[:60]}")
 
-        if confidence < min_confidence:
-            if verbose:
-                print(f"  SKIP (confidence {confidence:.0%} < {min_confidence:.0%}): {entry.get('filename', '?')[:60]}")
-            continue
+    if not candidates:
+        print("No papers above confidence threshold.")
+        return []
 
+    # Show preview if interactive
+    if interactive and not auto_approve:
+        print(f"\n{len(candidates)} papers would be moved to {PUBLISHED}/:\n")
+        for i, entry in enumerate(candidates, 1):
+            m = entry.get("match", {})
+            print(f"  [{i}] {entry.get('filename', '?')[:65]}")
+            print(f"      → DOI: {m.get('doi', '?')}  |  {m.get('journal', '?')[:40]}  |  Conf: {m['confidence']:.0%}")
+
+        print(f"\nOptions: [a]pprove all, [s]elect individually, [c]ancel")
+        choice = input("> ").strip().lower()
+
+        if choice == "c":
+            print("Cancelled.")
+            return []
+        elif choice == "s":
+            # Individual selection
+            approved = []
+            for i, entry in enumerate(candidates, 1):
+                resp = input(f"  Move [{i}] {entry.get('filename', '?')[:50]}? [y/n] ").strip().lower()
+                if resp == "y":
+                    approved.append(entry)
+            candidates = approved
+            if not candidates:
+                print("No papers approved.")
+                return []
+        elif choice != "a":
+            print("Cancelled.")
+            return []
+
+    # Set up undo log
+    undo_log = None
+    if not dry_run:
+        undo_log = UndoLog()
+        desc = f"Transition {len(candidates)} papers from {report_path.name}"
+        tx_id = undo_log.begin_transaction(desc)
+        print(f"Transaction ID: {tx_id}  (use 'python -m processing.undo_log undo' to revert)")
+
+    results = []
+    moved = 0
+
+    for entry in candidates:
+        if undo_log:
+            entry["_undo_log"] = undo_log
         result = transition_paper(entry, library_root=library_root, dry_run=dry_run)
+        # Clean up internal key
+        entry.pop("_undo_log", None)
         results.append(result)
 
         if result["success"] and "MOVED" in result["action"]:
             moved += 1
 
-        if verbose:
+        if verbose or not dry_run:
             print(f"  {result['action']}")
 
-    if verbose:
-        verb = "Would move" if dry_run else "Moved"
-        print(f"\n{verb} {moved} papers to {PUBLISHED}/")
+    # Commit the undo log
+    if undo_log and moved > 0:
+        log_file = undo_log.commit()
+        print(f"\nMoved {moved} papers. Undo log: {log_file}")
+        print(f"To revert: python -m processing.undo_log undo --transaction {tx_id}")
+    elif dry_run:
+        print(f"\nWould move {len(candidates)} papers (dry run)")
 
     return results
 
@@ -236,6 +294,8 @@ Examples:
     parser.add_argument("--library", type=Path, default=LIBRARY_ROOT)
     parser.add_argument("--min-confidence", type=float, default=0.75)
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("-i", "--interactive", action="store_true", help="Ask before each move")
+    parser.add_argument("-y", "--yes", action="store_true", help="Approve all without asking")
     parser.add_argument("-v", "--verbose", action="store_true")
     return parser
 
@@ -254,6 +314,8 @@ def main(argv: list[str] | None = None) -> None:
         library_root=args.library,
         min_confidence=args.min_confidence,
         dry_run=args.dry_run,
+        interactive=args.interactive or (not args.yes and not args.dry_run),
+        auto_approve=args.yes,
         verbose=True,
     )
 

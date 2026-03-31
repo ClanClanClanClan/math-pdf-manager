@@ -34,6 +34,7 @@ if _src_dir not in sys.path:
 
 from arxivbot.models.cmo import Author, CMO
 from organization.system import OrganizationSystem
+from processing.undo_log import UndoLog
 
 logger = logging.getLogger(__name__)
 
@@ -221,6 +222,7 @@ def ingest_paper(
     year: Optional[int] = None,
     dry_run: bool = False,
     verbose: bool = False,
+    **kwargs,
 ) -> dict:
     """Ingest a single PDF into the library.
 
@@ -297,9 +299,9 @@ def ingest_paper(
     # Step 4: Determine year for working papers
     paper_year = year or metadata.get("year")
 
-    # Step 5: Organize (route to correct directory)
+    # Step 5: Organize (route to correct directory, with undo logging)
     org = OrganizationSystem(library_root, topic=topic, dry_run=dry_run)
-    org_result = org.organize(pdf_path, metadata, canonical_name, year=paper_year)
+    org_result = org.organize(pdf_path, metadata, canonical_name, year=paper_year, undo_log=kwargs.get("undo_log"))
 
     result["destination"] = str(org_result.destination)
     result["status"] = org_result.publication_status
@@ -356,6 +358,13 @@ def main(argv: list[str] | None = None) -> None:
     parser = build_parser()
     args = parser.parse_args(argv)
 
+    # Set up undo log for non-dry-run operations
+    undo_log = None
+    tx_id = None
+    if not args.dry_run:
+        undo_log = UndoLog()
+        tx_id = undo_log.begin_transaction(f"Ingest {len(args.files)} paper(s)")
+
     results = []
     for pdf_path in args.files:
         pdf_path = pdf_path.resolve()
@@ -370,6 +379,7 @@ def main(argv: list[str] | None = None) -> None:
             year=args.year,
             dry_run=args.dry_run,
             verbose=args.verbose,
+            undo_log=undo_log,
         )
         results.append(result)
 
@@ -381,6 +391,13 @@ def main(argv: list[str] | None = None) -> None:
 
     if args.json:
         print(json.dumps(results, indent=2, ensure_ascii=False))
+
+    # Commit undo log
+    if undo_log and any(r["success"] for r in results):
+        log_file = undo_log.commit()
+        if not args.json:
+            print(f"\nUndo log: {log_file}")
+            print(f"To revert: python -m processing.undo_log undo --transaction {tx_id}")
 
     # Summary
     if len(results) > 1 and not args.json:
