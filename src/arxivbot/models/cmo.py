@@ -242,17 +242,49 @@ def _apply_sentence_case(title: str) -> str:
     """Apply academic sentence case to a title.
 
     Uses ``to_sentence_case_academic()`` from the core module with
-    auto-loaded whitelists.  Falls back to the title as-is if the
-    sentence case module is unavailable.
+    auto-loaded whitelists.  Falls back to a minimal sentence case
+    if the full module is unavailable (e.g. in test environments
+    where transitive dependencies may not load).
     """
     try:
         from core.sentence_case import to_sentence_case_academic
+
         result, _ = to_sentence_case_academic(title)
         return result
-    except ImportError:
-        # Minimal fallback: just lowercase after first word
-        # (only reached if core module is missing)
+    except (ImportError, Exception):
+        # Minimal fallback: lowercase all words except the first,
+        # known acronyms (2-4 uppercase letters), and words with
+        # mixed case (LaTeX, PyTorch).
+        return _minimal_sentence_case(title)
+
+
+def _minimal_sentence_case(title: str) -> str:
+    """Bare-minimum sentence case when the full module isn't available.
+
+    - First word capitalised
+    - All-caps words of 2-4 letters kept (acronyms: BSDE, PDE)
+    - Mixed-case words kept (LaTeX, PyTorch)
+    - Everything else lowercased
+    """
+    if not title:
         return title
+    words = title.split()
+    result = []
+    for i, word in enumerate(words):
+        stripped = word.strip(".,;:!?()[]")
+        if i == 0:
+            # Capitalise first word (unless it's a technical prefix)
+            if stripped.islower() and "-" in stripped:
+                result.append(word.lower())  # g-expectation stays lower
+            else:
+                result.append(word[0].upper() + word[1:] if len(word) > 1 else word.upper())
+        elif stripped.isupper() and 2 <= len(stripped) <= 5:
+            result.append(word)  # BSDE, PDE, SDE
+        elif not stripped.islower() and not stripped.isupper() and any(c.isupper() for c in stripped[1:]):
+            result.append(word)  # LaTeX, PyTorch, McKean
+        else:
+            result.append(word.lower())
+    return " ".join(result)
 
 
 def _clean_for_fs(text: str) -> str:

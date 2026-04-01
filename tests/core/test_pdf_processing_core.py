@@ -589,36 +589,41 @@ class TestMultiEngineTextExtraction:
             assert page_count == 1
     
     def test_extraction_with_corrupted_pdf(self, mock_config):
-        """Test extraction methods with corrupted PDF files."""
-        # Create a corrupted PDF file
+        """Test extraction methods with corrupted PDF files.
+
+        Each extractor should return None or empty rather than crashing.
+        """
         with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as f:
             f.write(b"This is not a valid PDF file content")
             corrupted_pdf = Path(f.name)
-        
+
         try:
-            # Test all extraction methods with corrupted file
-            extract_with_pymupdf(corrupted_pdf, mock_config)
-            # Should handle gracefully (return None or raise expected exception)
-            
-            extract_with_pdfplumber(corrupted_pdf, mock_config)
-            # Should handle gracefully
-            
-            extract_with_pdfminer(corrupted_pdf, mock_config)
-            # Should handle gracefully
-            
+            result = extract_with_pymupdf(corrupted_pdf, mock_config)
+            assert result is None or result == "" or (hasattr(result, 'text') and not result.text), \
+                f"Corrupted PDF should return empty/None, got: {result!r}"
+
+            result = extract_with_pdfplumber(corrupted_pdf, mock_config)
+            assert result is None or result == "" or (hasattr(result, 'text') and not result.text), \
+                f"Corrupted PDF should return empty/None, got: {result!r}"
+
+            result = extract_with_pdfminer(corrupted_pdf, mock_config)
+            assert result is None or result == "" or (hasattr(result, 'text') and not result.text), \
+                f"Corrupted PDF should return empty/None, got: {result!r}"
         finally:
             corrupted_pdf.unlink()
     
     def test_extraction_with_password_protected_pdf(self, mock_config):
-        """Test extraction methods with password-protected PDFs."""
-        # This would require creating an actual password-protected PDF
-        # For now, test the error handling path
+        """Test extraction methods with password-protected PDFs.
+
+        Should return None/empty rather than crashing.
+        """
         with patch('src.pdf_processing.parsers.text_extraction.PDF_LIBRARIES') as mock_libs:
             mock_libs['pymupdf'].open.side_effect = RuntimeError("Password required")
-            
+
             non_existent_pdf = Path("/tmp/password_protected.pdf")
-            extract_with_pymupdf(non_existent_pdf, mock_config)
-            # Should handle password errors gracefully
+            result = extract_with_pymupdf(non_existent_pdf, mock_config)
+            assert result is None or result == "" or (hasattr(result, 'text') and not result.text), \
+                f"Password-protected PDF should return empty/None, got: {result!r}"
 
 
 class TestMetadataExtractionLogic:

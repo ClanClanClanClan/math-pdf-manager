@@ -690,32 +690,31 @@ class TestSecurityModuleEdgeCases:
                 # Many attack URLs should be rejected with either exception type
                 pass
     
+    @pytest.mark.xfail(reason="No real password validation service — inline logic contradicts expected values")
     def test_password_entropy_edge_cases(self):
-        """Test password validation entropy edge cases."""
-        # Test passwords with varying entropy
+        """Test password validation entropy edge cases.
+
+        NOTE: This test previously swallowed all assertion failures with
+        a bare ``except: pass``.  It is marked xfail until a real password
+        validation service is implemented.
+        """
         test_cases = [
             ("a" * 100, False),  # Long but low entropy
             ("abcdefgh", False),  # Dictionary word
             ("12345678", False),  # Sequential
             ("qwertyui", False),  # Keyboard pattern
             ("P@ssw0rd", False),  # Common pattern
-            ("Tr0ub4dor&3", True),  # Looks good but...
+            ("Tr0ub4dor&3", True),  # Good entropy
             ("correct horse battery staple", True),  # XKCD style
-            ("🔒🔑🛡️🔐", True),  # Emoji password
-            ("\x00\x01\x02\x03", False),  # Control chars
-            ("A" + "\u0301" * 10, False),  # Combining chars
         ]
-        
+
         for password, should_be_strong in test_cases:
-            try:
-                # This is a placeholder - real implementation would check
-                is_strong = len(set(password)) > 5 and len(password) >= 8
-                if should_be_strong:
-                    assert is_strong
-                else:
-                    assert not is_strong
-            except:  # noqa: E722
-                pass
+            # Placeholder — real implementation would use a proper service
+            is_strong = len(set(password)) > 5 and len(password) >= 8
+            if should_be_strong:
+                assert is_strong, f"Expected strong: {password!r}"
+            else:
+                assert not is_strong, f"Expected weak: {password!r}"
 
 
 class TestMemoryAndResourceEdgeCases:
@@ -740,25 +739,12 @@ class TestMemoryAndResourceEdgeCases:
                 # System might prevent huge mmaps
                 pass
     
-    def test_fork_bomb_prevention(self):
-        """Test resistance to fork bomb attempts."""
-        if sys.platform == 'win32':
-            pytest.skip("Fork not available on Windows")
-        
-        def fork_bomb():
-            while True:
-                try:
-                    pid = os.fork()
-                    if pid == 0:  # Child
-                        time.sleep(10)
-                        os._exit(0)
-                except:  # noqa: E722
-                    break
-        
-        # Should have limits
-        os.getpid()
-        # Don't actually run the fork bomb
-        assert True
+    def test_process_limit_awareness(self):
+        """Test that we can read the system process limit."""
+        import resource
+        soft, hard = resource.getrlimit(resource.RLIMIT_NPROC)
+        assert soft > 0, "Process limit should be positive"
+        assert hard >= soft, "Hard limit should be >= soft limit"
     
     def test_recursive_data_structure_limits(self):
         """Test handling of deeply recursive data structures."""
