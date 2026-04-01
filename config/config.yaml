@@ -700,12 +700,12 @@ capitalization_whitelist:
   - G-Gaussian
   - G–Lévy process
   - G–Lévy processes
-  - G–Markov
+  - G-Markov
   - G-martingale
   - G-martingales
   - G-neutral
   - G-SDE
-  - G–SDEs
+  - G-SDEs
   - G-setting
   - G–stochastic calculus
   - G–stochastic control
@@ -765,7 +765,7 @@ capitalization_whitelist:
   - Obizhaeva–Wang–type
   - optimal–PhiBE
   - Ornstein–Uhlenbeck–related
-  - p-Brownian
+  - p–Brownian
   - p-contest
   - p-ground
   - p-Laplacian
@@ -1317,13 +1317,13 @@ proper_adjectives:
 compound_terms:
   - backward-forward
   - forward-backward
-  - G-Brownian motion
-  - G-Lévy process
-  - G-Lévy processes
-  - G-Markov process
-  - G-Markov processes
-  - G-stochastic control
-  - G-stochastic differential equation
+  - G–Brownian motion
+  - G–Lévy process
+  - G–Lévy processes
+  - G–Markov process
+  - G–Markov processes
+  - G–stochastic control
+  - G–stochastic differential equation
   - Lévy-type
   - Mean-field–type
   - mean-variance

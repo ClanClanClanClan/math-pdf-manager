@@ -171,12 +171,16 @@ filenames.
 
 | Character | Unicode | Use | Example |
 |-----------|---------|-----|---------|
-| Hyphen `-` | U+002D | Compound adjectives, prefixes | `mean-field`, `long-time`, `path-dependent` |
-| En-dash `–` | U+2013 | Between proper names (Name–Name) | `McKean–Vlasov`, `Black–Scholes` |
-| Em-dash `—` | U+2014 | Parenthetical breaks (rare) | `…theory — a new approach` |
+| Hyphen `-` | U+002D | Compound adjectives, prefixes, prefix + single word | `mean-field`, `long-time`, `G-expectation` |
+| En-dash `–` | U+2013 | Between two proper names, or prefix + multi-word compound | `McKean–Vlasov`, `Black–Scholes`, `G–Brownian motion` |
+| Em-dash `—` | U+2014 | Parenthetical breaks (rare in titles) | `…theory — a new approach` |
 
-The name-dash whitelist (`data/name_dash_whitelist.txt`, 52 entries)
-specifies the correct dash for each compound mathematician name.
+**Key distinction for prefixes (G-, p-, etc.):**
+- Prefix + **single word** → **hyphen**: `G-expectation`, `G-martingale`, `G-framework`, `G-SDE`
+- Prefix + **multi-word compound** → **en-dash**: `G–Brownian motion`, `G–Lévy process`, `G–stochastic control`, `G–white noise`
+
+The name-dash whitelist (`data/name_dash_whitelist.txt`, 305 entries)
+specifies the correct dash for each compound term.
 
 **Rule:** `--` (double hyphen) is always normalised to en-dash `–`.
 
