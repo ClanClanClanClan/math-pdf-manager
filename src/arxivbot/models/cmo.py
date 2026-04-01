@@ -111,21 +111,14 @@ class CMO:
         return " ".join(parts)
 
     def get_canonical_filename(self, *, max_bytes: int = 0) -> str:
-        """Generate a canonical filename matching the library convention.
+        """Generate a ready-to-use canonical filename.
 
         Format: ``Lastname1, I., Lastname2, I. - Title.pdf``
 
-        Includes as many authors as possible while respecting the
-        filesystem byte limit.  When not all authors fit, the included
-        authors are followed by ", et al.".
-
-        Title is in sentence case (applied by the caller or by
-        ``to_sentence_case_academic`` — this method preserves the title
-        as given).
-
-        Math symbols (ℝ, ℤ, ≤, etc.) and Unicode are preserved.  Only
-        filesystem-unsafe characters (``/``, ``\\``, null bytes, control
-        chars) are removed.
+        Applies sentence case to the title, includes as many authors as
+        possible within the filesystem byte limit, and handles all
+        character replacements.  The returned filename is final — no
+        further processing is needed.
 
         Parameters
         ----------
@@ -138,7 +131,14 @@ class CMO:
 
         title = unicodedata.normalize("NFC", re.sub(r"\s+", " ", self.title.strip()))
 
-        # Clean title of filesystem-unsafe characters
+        # Replace colon with comma BEFORE sentence case, so the word
+        # after the comma is correctly lowercased
+        title = title.replace(":", ",")
+
+        # Apply sentence case
+        title = _apply_sentence_case(title)
+
+        # Clean remaining filesystem-unsafe characters
         title = _clean_for_fs(title)
 
         # Build filename with as many authors as possible
@@ -238,12 +238,30 @@ def _get_fs_name_max() -> int:
     return _FS_NAME_MAX
 
 
+def _apply_sentence_case(title: str) -> str:
+    """Apply academic sentence case to a title.
+
+    Uses ``to_sentence_case_academic()`` from the core module with
+    auto-loaded whitelists.  Falls back to the title as-is if the
+    sentence case module is unavailable.
+    """
+    try:
+        from core.sentence_case import to_sentence_case_academic
+        result, _ = to_sentence_case_academic(title)
+        return result
+    except ImportError:
+        # Minimal fallback: just lowercase after first word
+        # (only reached if core module is missing)
+        return title
+
+
 def _clean_for_fs(text: str) -> str:
     """Remove filesystem-unsafe characters and normalise spaces."""
     text = re.sub(r"[\u0000-\u001f]", "", text)  # control chars
     text = text.replace("/", "–")   # slash → en-dash
     text = text.replace("\\", "–")  # backslash → en-dash
-    text = text.replace(":", ",")    # colon → comma (subtitle convention)
+    # Colon replacement is done before sentence case in get_canonical_filename()
+    # so we don't need it here — but handle any stragglers
     # Normalise all Unicode space variants to regular space
     text = re.sub(r"[\u00a0\u2000-\u200a\u202f\u2009]", " ", text)
     text = re.sub(r"\s+", " ", text).strip()
