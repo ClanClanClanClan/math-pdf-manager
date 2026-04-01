@@ -9,8 +9,8 @@ import yaml
 import json
 from unittest.mock import patch
 
-from src.core.unified_config.manager import UnifiedConfigManager
-from src.core.unified_config.interfaces import ConfigSchema, ConfigSecurityLevel, ConfigSource
+from core.unified_config.manager import UnifiedConfigManager
+from core.unified_config.interfaces import ConfigSchema, ConfigSecurityLevel, ConfigSource
 
 
 class TestUnifiedConfigSystemIntegration:

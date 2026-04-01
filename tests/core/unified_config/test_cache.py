@@ -8,8 +8,8 @@ import time
 import tempfile
 from pathlib import Path
 
-from src.core.unified_config.cache import ConfigCache
-from src.core.unified_config.interfaces import ConfigValue, ConfigSource, ConfigSecurityLevel
+from core.unified_config.cache import ConfigCache
+from core.unified_config.interfaces import ConfigValue, ConfigSource, ConfigSecurityLevel
 
 
 class TestConfigCache:

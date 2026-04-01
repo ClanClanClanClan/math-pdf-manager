@@ -32,7 +32,7 @@ from utils.security import (
     PathValidator
 )
 from core.dependency_injection import get_container, ISecurityService
-from src.secure_credential_manager import SecureCredentialManager
+from secure_credential_manager import SecureCredentialManager
 
 
 class TestInjectionAttacks:

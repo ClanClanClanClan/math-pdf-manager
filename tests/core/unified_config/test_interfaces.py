@@ -4,7 +4,7 @@ Comprehensive tests for configuration system interfaces and data structures.
 """
 
 
-from src.core.unified_config.interfaces import (
+from core.unified_config.interfaces import (
     ConfigSecurityLevel, ConfigSource, ConfigValue, ConfigSchema
 )
 

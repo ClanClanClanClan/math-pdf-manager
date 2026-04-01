@@ -206,8 +206,8 @@ class ArxivAPIClient:
             root = SecureXMLParser.parse_string(xml_data)
 
             ns = {
-                "atom": "https://www.w3.org/2005/Atom",  # Secure HTTPS protocol
-                "arxiv": "https://arxiv.org/schemas/atom",  # Secure HTTPS protocol
+                "atom": "http://www.w3.org/2005/Atom",  # ArXiv API uses HTTP namespace
+                "arxiv": "http://arxiv.org/schemas/atom",
             }
 
             entries = root.findall(".//atom:entry", ns)

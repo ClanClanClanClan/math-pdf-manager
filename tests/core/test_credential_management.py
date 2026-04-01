@@ -16,14 +16,14 @@ from unittest.mock import Mock, patch
 from pathlib import Path
 
 # Import classes under test
-from src.secure_credential_manager import (
+from secure_credential_manager import (
     SecureCredentialManager, 
     CredentialSource,
     get_credential_manager,
     setup_eth_credentials_from_env
 )
 
-from src.auth.store import CredentialStore
+from auth.store import CredentialStore
 
 try:
     from tools.security.eth_auth_setup import ETHAuthSetup
@@ -382,7 +382,7 @@ class TestGlobalFunctions:
         assert manager1 is manager2
     
     @patch.dict(os.environ, {"ETH_USERNAME": "testuser", "ETH_PASSWORD": "testpass"})
-    @patch('src.secure_credential_manager.get_credential_manager')
+    @patch('secure_credential_manager.get_credential_manager')
     def test_setup_eth_credentials_from_env_success(self, mock_get_manager):
         """Test successful setup from environment variables."""
         mock_manager = Mock()

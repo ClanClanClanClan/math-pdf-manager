@@ -1,0 +1,123 @@
+{
+  "springer": [
+    {
+      "doi": "10.1007/s00211-021-01234-3",
+      "success": true,
+      "duration": 45.647221088409424,
+      "file_size": 1496455
+    },
+    {
+      "doi": "10.1007/s002110100314",
+      "success": true,
+      "duration": 1.26456618309021,
+      "file_size": 218796
+    },
+    {
+      "doi": "10.1007/BF02124750",
+      "success": true,
+      "duration": 1.4477179050445557,
+      "file_size": 2060906
+    },
+    {
+      "doi": "10.1007/s10915-020-01377-9",
+      "success": true,
+      "duration": 2.2945759296417236,
+      "file_size": 1877339
+    },
+    {
+      "doi": "10.1007/BF01386390",
+      "success": true,
+      "duration": 1.0181398391723633,
+      "file_size": 139277
+    },
+    {
+      "doi": "10.1007/s11192-020-03456-y",
+      "success": true,
+      "duration": 1.6609961986541748,
+      "file_size": 423855
+    },
+    {
+      "doi": "10.1007/BF00234567",
+      "success": true,
+      "duration": 1.316969871520996,
+      "file_size": 432515
+    }
+  ],
+  "ieee": [
+    {
+      "doi": "10.1109/5.771073",
+      "success": false,
+      "duration": 125.54469609260559,
+      "error": "Download failed"
+    },
+    {
+      "doi": "10.1109/TAC.2019.2936379",
+      "success": false,
+      "error": "Wrong publisher"
+    },
+    {
+      "doi": "10.1109/MWC.2019.1800601",
+      "success": false,
+      "duration": 37.98402214050293,
+      "error": "Download failed"
+    },
+    {
+      "doi": "10.1109/COMST.2019.2894727",
+      "success": false,
+      "duration": 38.275609254837036,
+      "error": "Download failed"
+    },
+    {
+      "doi": "10.1109/JPROC.2018.2819938",
+      "success": false,
+      "duration": 38.24086308479309,
+      "error": "Download failed"
+    }
+  ],
+  "torture_tests": [
+    {
+      "publisher": "springer",
+      "tests": [
+        {
+          "test": "marathon",
+          "success_rate": 100.0
+        },
+        {
+          "test": "rapid_fire",
+          "blocked": 0,
+          "success": 3
+        },
+        {
+          "test": "session_limits",
+          "papers_per_session": 7
+        },
+        {
+          "test": "error_injection",
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "publisher": "ieee",
+      "tests": [
+        {
+          "test": "marathon",
+          "success_rate": 0.0
+        },
+        {
+          "test": "rapid_fire",
+          "blocked": 0,
+          "success": 2
+        },
+        {
+          "test": "session_limits",
+          "papers_per_session": 1
+        },
+        {
+          "test": "error_injection",
+          "status": "completed"
+        }
+      ]
+    }
+  ]
+}

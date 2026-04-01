@@ -1,0 +1,87 @@
+{
+  "test_date": "2025-08-04T11:03:51.893066",
+  "total_pdfs_tested": 5,
+  "successful_extractions": 5,
+  "overall_success_rate": 1.0,
+  "vertical_arxiv_detection_rate": 0.8,
+  "total_test_time": 95.9197211265564,
+  "method_statistics": {
+    "enhanced": {
+      "attempts": 5,
+      "successes": 5,
+      "total_time": 52.83335733413696,
+      "journal_headers": 0,
+      "publisher_info": 0,
+      "success_rate": 1.0,
+      "avg_time": 10.566671466827392
+    },
+    "grobid": {
+      "attempts": 5,
+      "successes": 5,
+      "total_time": 41.891722202301025,
+      "journal_headers": 0,
+      "publisher_info": 0,
+      "success_rate": 1.0,
+      "avg_time": 8.378344440460205
+    },
+    "llm": {
+      "attempts": 5,
+      "successes": 5,
+      "total_time": 0.7338564395904541,
+      "journal_headers": 0,
+      "publisher_info": 0,
+      "success_rate": 1.0,
+      "avg_time": 0.14677128791809083
+    },
+    "arxiv": {
+      "attempts": 4,
+      "successes": 4,
+      "total_time": 0.3455018997192383,
+      "journal_headers": 0,
+      "publisher_info": 0,
+      "success_rate": 1.0,
+      "avg_time": 0.08637547492980957
+    }
+  },
+  "quality_issues": {
+    "journal_headers": 0,
+    "publisher_info": 0
+  },
+  "detailed_results": [
+    {
+      "pdf": "stochast, C. O. P. S. I. A. N.-M. FI. M. A. B. - Competitive.pdf",
+      "success": true,
+      "best_method": "enhanced",
+      "vertical_arxiv": false,
+      "issues": []
+    },
+    {
+      "pdf": "Nakano, Y., Saito, T. - A Deep Learning Approach to Multi-marginal Optimal Transport via Hilbert.pdf",
+      "success": true,
+      "best_method": "enhanced",
+      "vertical_arxiv": true,
+      "issues": []
+    },
+    {
+      "pdf": "Beghin, L., Gregorio, A. D., Mishura, Y. - Hadamard Fractional Brownian Motion Path Properties and Wiener.pdf",
+      "success": true,
+      "best_method": "enhanced",
+      "vertical_arxiv": true,
+      "issues": []
+    },
+    {
+      "pdf": "2508.00294v1.pdf",
+      "success": true,
+      "best_method": "enhanced",
+      "vertical_arxiv": true,
+      "issues": []
+    },
+    {
+      "pdf": "Seifried, F. T., Wurschmidt, M. - A Discretization Scheme for BSDEs with.pdf",
+      "success": true,
+      "best_method": "enhanced",
+      "vertical_arxiv": true,
+      "issues": []
+    }
+  ]
+}

@@ -9,11 +9,11 @@ import json
 import yaml
 from unittest.mock import patch
 
-from src.core.unified_config.sources import (
+from core.unified_config.sources import (
     EnvironmentConfigSource, YAMLConfigSource, JSONConfigSource,
     DefaultsConfigSource, CommandLineConfigSource
 )
-from src.core.unified_config.interfaces import ConfigValue, ConfigSource, ConfigSecurityLevel
+from core.unified_config.interfaces import ConfigValue, ConfigSource, ConfigSecurityLevel
 
 
 class TestEnvironmentConfigSource:

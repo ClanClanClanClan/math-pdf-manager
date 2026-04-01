@@ -1,0 +1,148 @@
+{
+  "ieee": {
+    "success": 0,
+    "failed": 0,
+    "papers": []
+  },
+  "springer": {
+    "success": 0,
+    "failed": 0,
+    "papers": []
+  },
+  "edge_cases": [
+    {
+      "doi": "10.1007/BF00234567",
+      "type": "very_old",
+      "status": "reached_publisher",
+      "success": true
+    },
+    {
+      "doi": "10.1007/978-3-030-12345-6_1",
+      "type": "book_chapter",
+      "status": "not_found",
+      "success": false
+    },
+    {
+      "doi": "10.1007/978-3-642-12345-6_100",
+      "type": "conference",
+      "status": "not_found",
+      "success": false
+    },
+    {
+      "doi": "10.1007/s11192-020-03456-y",
+      "type": "review",
+      "status": "reached_publisher",
+      "success": true
+    },
+    {
+      "doi": "10.1007/s00211-020-01234-5",
+      "type": "retraction",
+      "status": "not_found",
+      "success": false
+    },
+    {
+      "doi": "10.1007/s00211-021-01234-3",
+      "type": "open_access",
+      "status": "reached_publisher",
+      "success": true
+    },
+    {
+      "doi": "10.1109/JRPROC.1950.234567",
+      "type": "very_old",
+      "status": "not_found",
+      "success": false
+    },
+    {
+      "doi": "10.1109/CVPR.2021.00123",
+      "type": "conference",
+      "status": "not_found",
+      "success": false
+    },
+    {
+      "doi": "10.1109/LCOMM.2020.123456",
+      "type": "letter",
+      "status": "not_found",
+      "success": false
+    },
+    {
+      "doi": "10.1109/TAC.2019.2936379",
+      "type": "special_chars",
+      "status": "not_found",
+      "success": false
+    },
+    {
+      "doi": "10.1109/TSP.2020.1234567",
+      "type": "correction",
+      "status": "not_found",
+      "success": false
+    },
+    {
+      "doi": "10.1109/ACCESS.2024.123456",
+      "type": "brand_new",
+      "status": "not_found",
+      "success": false
+    }
+  ],
+  "performance_metrics": {},
+  "error_recovery": [
+    {
+      "test": "timeout_recovery",
+      "success": true
+    },
+    {
+      "test": "download_interruption",
+      "success": true
+    }
+  ],
+  "concurrent_results": [
+    {
+      "publisher": "springer",
+      "num_concurrent": 3,
+      "success_count": 3,
+      "total_time": 58.22018098831177,
+      "results": [
+        {
+          "doi": "10.1007/s00211-021-01234-3",
+          "success": true,
+          "duration": 54.216705083847046,
+          "file": "stress_test_downloads/springer_s00211-021-01234-3.pdf"
+        },
+        {
+          "doi": "10.1007/s002110100314",
+          "success": true,
+          "duration": 49.77337026596069,
+          "file": "stress_test_downloads/springer_s002110100314.pdf"
+        },
+        {
+          "doi": "10.1007/BF02124750",
+          "success": true,
+          "duration": 55.47159695625305,
+          "file": "stress_test_downloads/springer_BF02124750.pdf"
+        }
+      ]
+    },
+    {
+      "publisher": "ieee",
+      "num_concurrent": 3,
+      "success_count": 0,
+      "total_time": 132.71537113189697,
+      "results": [
+        {
+          "doi": "10.1109/5.771073",
+          "success": false,
+          "error": "Failed at some step"
+        },
+        {
+          "doi": "10.1109/TAC.2019.2936379",
+          "success": false,
+          "error": "Failed at some step"
+        },
+        {
+          "doi": "10.1109/MWC.2019.1800601",
+          "success": false,
+          "error": "Failed at some step"
+        }
+      ]
+    }
+  ]
+}

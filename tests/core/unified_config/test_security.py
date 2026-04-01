@@ -8,8 +8,8 @@ import tempfile
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
-from src.core.unified_config.security import ConfigSecurityManager
-from src.core.unified_config.interfaces import ConfigValue, ConfigSource, ConfigSecurityLevel
+from core.unified_config.security import ConfigSecurityManager
+from core.unified_config.interfaces import ConfigValue, ConfigSource, ConfigSecurityLevel
 
 
 class TestConfigSecurityManager:

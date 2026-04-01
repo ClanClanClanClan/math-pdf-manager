@@ -1,0 +1,5 @@
+# Local-only scripts and credentials helpers (never commit)
+*
+!.gitignore
+!README.md
+

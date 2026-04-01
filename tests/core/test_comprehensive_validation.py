@@ -10,7 +10,7 @@ import pytest
 import tempfile
 from pathlib import Path
 
-from src.core.validation import ComprehensiveUnifiedValidationService
+from core.validation import ComprehensiveUnifiedValidationService
 
 
 class TestComprehensiveValidation:

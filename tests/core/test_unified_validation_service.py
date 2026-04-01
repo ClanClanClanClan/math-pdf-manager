@@ -4,7 +4,7 @@
 Comprehensive tests for UnifiedValidationService
 
 Tests the consolidation of all validation systems:
-- CLI argument validation (from src.validators.core_validation.py)
+- CLI argument validation (from validators.core_validation.py)
 - Security validation (from utils/security.py and core/security/input_validation.py)
 - Mathematical content validation (from validators/validation_utils.py)
 - Filename and path validation

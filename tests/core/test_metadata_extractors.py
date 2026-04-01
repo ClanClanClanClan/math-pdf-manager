@@ -20,11 +20,11 @@ from urllib.error import HTTPError, URLError
 
 # Import the modules under test
 try:
-    from src.pdf_processing.extractors import (
+    from pdf_processing.extractors import (
         AdvancedSSRNExtractor, AdvancedArxivExtractor, AdvancedJournalExtractor, ArxivAPIClient
     )
-    from src.pdf_processing.models import TextBlock, ArxivMetadata
-    from src.pdf_processing.constants import PDFConstants
+    from pdf_processing.models import TextBlock, ArxivMetadata
+    from pdf_processing.constants import PDFConstants
     EXTRACTORS_AVAILABLE = True
 except ImportError as e:
     EXTRACTORS_AVAILABLE = False
@@ -925,7 +925,7 @@ class TestArxivAPIClient:
             result = arxiv_client.extract_arxiv_id_from_text(invalid_text)
             assert result is None
     
-    @patch('src.pdf_processing.extractors.api_client.urlopen')
+    @patch('pdf_processing.extractors.api_client.urlopen')
     def test_fetch_metadata_success(self, mock_urlopen, arxiv_client, mock_arxiv_xml_response):
         """Test successful metadata fetching from arXiv API."""
         # Mock the HTTP response
@@ -950,7 +950,7 @@ class TestArxivAPIClient:
         assert metadata.comment == "15 pages, 8 figures"
         assert metadata.confidence == 0.95
     
-    @patch('src.pdf_processing.extractors.api_client.urlopen')
+    @patch('pdf_processing.extractors.api_client.urlopen')
     def test_fetch_metadata_network_error(self, mock_urlopen, arxiv_client):
         """Test metadata fetching with network errors."""
         # Test HTTP error
@@ -965,7 +965,7 @@ class TestArxivAPIClient:
         metadata = arxiv_client.fetch_metadata("2023.12345")
         assert metadata is None
     
-    @patch('src.pdf_processing.extractors.api_client.urlopen')
+    @patch('pdf_processing.extractors.api_client.urlopen')
     def test_fetch_metadata_malformed_xml(self, mock_urlopen, arxiv_client):
         """Test metadata fetching with malformed XML response."""
         # Mock malformed XML response
@@ -977,7 +977,7 @@ class TestArxivAPIClient:
         metadata = arxiv_client.fetch_metadata("2023.12345")
         assert metadata is None
     
-    @patch('src.pdf_processing.extractors.api_client.urlopen')
+    @patch('pdf_processing.extractors.api_client.urlopen')
     def test_fetch_metadata_empty_response(self, mock_urlopen, arxiv_client):
         """Test metadata fetching with empty response."""
         empty_xml = """<?xml version="1.0" encoding="UTF-8"?>
@@ -992,7 +992,7 @@ class TestArxivAPIClient:
         metadata = arxiv_client.fetch_metadata("nonexistent.id")
         assert metadata is None
     
-    @patch('src.pdf_processing.extractors.api_client.urlopen')
+    @patch('pdf_processing.extractors.api_client.urlopen')
     def test_rate_limiting_behavior(self, mock_urlopen, arxiv_client):
         """Test rate limiting functionality."""
         # Mock the HTTP response to avoid actual network calls

@@ -15,16 +15,16 @@ import gc
 
 # Import the modules under test with proper error handling
 try:
-    from src.pdf_processing.parsers.base_parser import UltraEnhancedPDFParser
-    from src.pdf_processing.models import PDFMetadata, TextBlock, DocumentStructure, MetadataSource  # noqa: F401
-    from src.pdf_processing.constants import PDFConstants
+    from pdf_processing.parsers.base_parser import UltraEnhancedPDFParser
+    from pdf_processing.models import PDFMetadata, TextBlock, DocumentStructure, MetadataSource  # noqa: F401
+    from pdf_processing.constants import PDFConstants
     PARSERS_AVAILABLE = True
 except ImportError as e:
     PARSERS_AVAILABLE = False
     pytest.skip(f"PDF parser modules not available: {e}", allow_module_level=True)
 
 try:
-    from src.pdf_processing.parsers.text_extraction import (
+    from pdf_processing.parsers.text_extraction import (
         multi_engine_extraction, calculate_text_quality
     )
     TEXT_EXTRACTION_AVAILABLE = True
@@ -32,13 +32,13 @@ except ImportError:
     TEXT_EXTRACTION_AVAILABLE = False
 
 try:
-    from src.pdf_processing.utilities import clean_text_advanced
+    from pdf_processing.utilities import clean_text_advanced
     UTILITIES_AVAILABLE = True
 except ImportError:
     UTILITIES_AVAILABLE = False
 
 try:
-    from src.pdf_processing.extractors import (
+    from pdf_processing.extractors import (
         AdvancedSSRNExtractor, AdvancedArxivExtractor, AdvancedJournalExtractor, ArxivAPIClient
     )
     EXTRACTORS_AVAILABLE = True
@@ -109,7 +109,7 @@ class TestUltraEnhancedPDFParserImplemented:
     @pytest.fixture
     def parser(self, mock_config):
         """Initialize parser with mocked dependencies."""
-        with patch('src.pdf_processing.parsers.base_parser.Path.exists', return_value=False):
+        with patch('pdf_processing.parsers.base_parser.Path.exists', return_value=False):
             with patch('yaml.safe_load'):
                 parser = UltraEnhancedPDFParser()
                 parser.config = mock_config
@@ -483,10 +483,10 @@ class TestTextExtractionImplemented:
     
     def test_multi_engine_extraction_mocked(self, mock_pdf_file, mock_config):
         """Test multi-engine extraction with comprehensive mocking."""
-        with patch('src.pdf_processing.parsers.text_extraction.extract_with_pymupdf') as mock_pymupdf:
-            with patch('src.pdf_processing.parsers.text_extraction.extract_with_pdfplumber') as mock_pdfplumber:
-                with patch('src.pdf_processing.parsers.text_extraction.extract_with_pdfminer') as mock_pdfminer:
-                    with patch('src.pdf_processing.parsers.text_extraction.extract_as_text_file') as mock_textfile:
+        with patch('pdf_processing.parsers.text_extraction.extract_with_pymupdf') as mock_pymupdf:
+            with patch('pdf_processing.parsers.text_extraction.extract_with_pdfplumber') as mock_pdfplumber:
+                with patch('pdf_processing.parsers.text_extraction.extract_with_pdfminer') as mock_pdfminer:
+                    with patch('pdf_processing.parsers.text_extraction.extract_as_text_file') as mock_textfile:
                         
                         # Setup mocks with different quality scenarios
                         mock_pymupdf.return_value = ("PyMuPDF text with good quality content", [], 1)
@@ -516,10 +516,10 @@ class TestTextExtractionImplemented:
     
     def test_multi_engine_extraction_with_failures(self, mock_pdf_file, mock_config):
         """Test multi-engine extraction when some engines fail."""
-        with patch('src.pdf_processing.parsers.text_extraction.extract_with_pymupdf') as mock_pymupdf:
-            with patch('src.pdf_processing.parsers.text_extraction.extract_with_pdfplumber') as mock_pdfplumber:
-                with patch('src.pdf_processing.parsers.text_extraction.extract_with_pdfminer') as mock_pdfminer:
-                    with patch('src.pdf_processing.parsers.text_extraction.extract_as_text_file') as mock_textfile:
+        with patch('pdf_processing.parsers.text_extraction.extract_with_pymupdf') as mock_pymupdf:
+            with patch('pdf_processing.parsers.text_extraction.extract_with_pdfplumber') as mock_pdfplumber:
+                with patch('pdf_processing.parsers.text_extraction.extract_with_pdfminer') as mock_pdfminer:
+                    with patch('pdf_processing.parsers.text_extraction.extract_as_text_file') as mock_textfile:
                         
                         # Setup some engines to fail
                         mock_pymupdf.side_effect = Exception("PyMuPDF engine failed")
@@ -539,10 +539,10 @@ class TestTextExtractionImplemented:
     
     def test_multi_engine_extraction_all_fail(self, mock_pdf_file, mock_config):
         """Test multi-engine extraction when all engines fail."""
-        with patch('src.pdf_processing.parsers.text_extraction.extract_with_pymupdf') as mock_pymupdf:
-            with patch('src.pdf_processing.parsers.text_extraction.extract_with_pdfplumber') as mock_pdfplumber:
-                with patch('src.pdf_processing.parsers.text_extraction.extract_with_pdfminer') as mock_pdfminer:
-                    with patch('src.pdf_processing.parsers.text_extraction.extract_as_text_file') as mock_textfile:
+        with patch('pdf_processing.parsers.text_extraction.extract_with_pymupdf') as mock_pymupdf:
+            with patch('pdf_processing.parsers.text_extraction.extract_with_pdfplumber') as mock_pdfplumber:
+                with patch('pdf_processing.parsers.text_extraction.extract_with_pdfminer') as mock_pdfminer:
+                    with patch('pdf_processing.parsers.text_extraction.extract_as_text_file') as mock_textfile:
                         
                         # Setup all engines to fail
                         mock_pymupdf.side_effect = Exception("PyMuPDF failed")
@@ -739,7 +739,7 @@ class TestPDFProcessingIntegration:
         
         # Test with parser if available
         if PARSERS_AVAILABLE:
-            with patch('src.pdf_processing.parsers.base_parser.Path.exists', return_value=False):
+            with patch('pdf_processing.parsers.base_parser.Path.exists', return_value=False):
                 parser = UltraEnhancedPDFParser()
                 
                 # Test repository detection
@@ -760,7 +760,7 @@ class TestPDFProcessingIntegration:
         # Create and destroy multiple components
         for i in range(10):
             if PARSERS_AVAILABLE:
-                with patch('src.pdf_processing.parsers.base_parser.Path.exists', return_value=False):
+                with patch('pdf_processing.parsers.base_parser.Path.exists', return_value=False):
                     parser = UltraEnhancedPDFParser()
                     del parser
             
@@ -795,7 +795,7 @@ class TestPDFProcessingIntegration:
                     assert isinstance(cleaned, str) or cleaned is None
                 
                 if PARSERS_AVAILABLE:
-                    with patch('src.pdf_processing.parsers.base_parser.Path.exists', return_value=False):
+                    with patch('pdf_processing.parsers.base_parser.Path.exists', return_value=False):
                         parser = UltraEnhancedPDFParser()
                         repo_type = parser._detect_repository_type(test_input)
                         assert repo_type in ["journal", "arxiv", "ssrn", "nber"]

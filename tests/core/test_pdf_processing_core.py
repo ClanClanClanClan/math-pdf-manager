@@ -19,24 +19,24 @@ import threading
 
 # Import the modules under test
 try:
-    from src.pdf_processing.parsers.base_parser import UltraEnhancedPDFParser
-    from src.pdf_processing.parsers.text_extraction import (
+    from pdf_processing.parsers.base_parser import UltraEnhancedPDFParser
+    from pdf_processing.parsers.text_extraction import (
         multi_engine_extraction, extract_with_pymupdf, extract_with_pdfplumber,
         extract_with_pdfminer, extract_as_text_file, calculate_text_quality  # noqa: F401
     )
-    from src.pdf_processing.parsers.metadata_extraction import (
+    from pdf_processing.parsers.metadata_extraction import (
         extract_title_multi_method, extract_authors_multi_method,
         extract_title_heuristic, extract_title_from_line
     )
-    from src.pdf_processing.parsers.document_analysis import (
+    from pdf_processing.parsers.document_analysis import (
         analyze_document_structure, calculate_text_quality as doc_quality
     )
-    from src.pdf_processing.models import PDFMetadata, TextBlock, DocumentStructure, MetadataSource
-    from src.pdf_processing.extractors import (
+    from pdf_processing.models import PDFMetadata, TextBlock, DocumentStructure, MetadataSource
+    from pdf_processing.extractors import (
         AdvancedSSRNExtractor, AdvancedArxivExtractor, AdvancedJournalExtractor, ArxivAPIClient
     )
-    from src.pdf_processing.utilities import timeout_handler, clean_text_advanced
-    from src.pdf_processing.constants import PDFConstants
+    from pdf_processing.utilities import timeout_handler, clean_text_advanced
+    from pdf_processing.constants import PDFConstants
 except ImportError as e:
     pytest.skip(f"PDF processing modules not available: {e}", allow_module_level=True)
 
@@ -104,7 +104,7 @@ class TestUltraEnhancedPDFParserCore:
     @pytest.fixture
     def parser(self, mock_config):
         """Initialize parser with mocked dependencies."""
-        with patch('src.pdf_processing.parsers.base_parser.Path.exists', return_value=False):
+        with patch('pdf_processing.parsers.base_parser.Path.exists', return_value=False):
             with patch('yaml.safe_load'):
                 parser = UltraEnhancedPDFParser()
                 parser.config = mock_config
@@ -212,7 +212,7 @@ class TestUltraEnhancedPDFParserCore:
         normalized = parser._normalise_title(punct_title)
         assert isinstance(normalized, str)
     
-    @patch('src.pdf_processing.parsers.base_parser.Path.exists')
+    @patch('pdf_processing.parsers.base_parser.Path.exists')
     @patch('builtins.open')
     @patch('yaml.safe_load')
     def test_extract_metadata_full_workflow(self, mock_yaml, mock_open, mock_exists, parser, temp_pdf_file):
@@ -416,11 +416,11 @@ class TestMultiEngineTextExtraction:
     
     def test_multi_engine_extraction_all_engines_success(self, mock_pdf_file, mock_config):
         """Test multi-engine extraction when all engines succeed."""
-        with patch('src.pdf_processing.parsers.text_extraction.extract_with_pymupdf') as mock_pymupdf:
-            with patch('src.pdf_processing.parsers.text_extraction.extract_with_pdfplumber') as mock_pdfplumber:
-                with patch('src.pdf_processing.parsers.text_extraction.extract_with_pdfminer') as mock_pdfminer:
-                    with patch('src.pdf_processing.parsers.text_extraction.extract_as_text_file') as mock_textfile:
-                        with patch('src.pdf_processing.parsers.text_extraction.calculate_text_quality') as mock_quality:
+        with patch('pdf_processing.parsers.text_extraction.extract_with_pymupdf') as mock_pymupdf:
+            with patch('pdf_processing.parsers.text_extraction.extract_with_pdfplumber') as mock_pdfplumber:
+                with patch('pdf_processing.parsers.text_extraction.extract_with_pdfminer') as mock_pdfminer:
+                    with patch('pdf_processing.parsers.text_extraction.extract_as_text_file') as mock_textfile:
+                        with patch('pdf_processing.parsers.text_extraction.calculate_text_quality') as mock_quality:
                             
                             # Setup mocks with different quality scores
                             mock_pymupdf.return_value = ("PyMuPDF text", [], 1)
@@ -449,11 +449,11 @@ class TestMultiEngineTextExtraction:
     
     def test_multi_engine_extraction_partial_failures(self, mock_pdf_file, mock_config):
         """Test multi-engine extraction when some engines fail."""
-        with patch('src.pdf_processing.parsers.text_extraction.extract_with_pymupdf') as mock_pymupdf:
-            with patch('src.pdf_processing.parsers.text_extraction.extract_with_pdfplumber') as mock_pdfplumber:
-                with patch('src.pdf_processing.parsers.text_extraction.extract_with_pdfminer') as mock_pdfminer:
-                    with patch('src.pdf_processing.parsers.text_extraction.extract_as_text_file') as mock_textfile:
-                        with patch('src.pdf_processing.parsers.text_extraction.calculate_text_quality') as mock_quality:
+        with patch('pdf_processing.parsers.text_extraction.extract_with_pymupdf') as mock_pymupdf:
+            with patch('pdf_processing.parsers.text_extraction.extract_with_pdfplumber') as mock_pdfplumber:
+                with patch('pdf_processing.parsers.text_extraction.extract_with_pdfminer') as mock_pdfminer:
+                    with patch('pdf_processing.parsers.text_extraction.extract_as_text_file') as mock_textfile:
+                        with patch('pdf_processing.parsers.text_extraction.calculate_text_quality') as mock_quality:
                             
                             # Setup mocks with some failures
                             mock_pymupdf.side_effect = Exception("PyMuPDF failed")
@@ -474,10 +474,10 @@ class TestMultiEngineTextExtraction:
     
     def test_multi_engine_extraction_all_engines_fail(self, mock_pdf_file, mock_config):
         """Test multi-engine extraction when all engines fail."""
-        with patch('src.pdf_processing.parsers.text_extraction.extract_with_pymupdf') as mock_pymupdf:
-            with patch('src.pdf_processing.parsers.text_extraction.extract_with_pdfplumber') as mock_pdfplumber:
-                with patch('src.pdf_processing.parsers.text_extraction.extract_with_pdfminer') as mock_pdfminer:
-                    with patch('src.pdf_processing.parsers.text_extraction.extract_as_text_file') as mock_textfile:
+        with patch('pdf_processing.parsers.text_extraction.extract_with_pymupdf') as mock_pymupdf:
+            with patch('pdf_processing.parsers.text_extraction.extract_with_pdfplumber') as mock_pdfplumber:
+                with patch('pdf_processing.parsers.text_extraction.extract_with_pdfminer') as mock_pdfminer:
+                    with patch('pdf_processing.parsers.text_extraction.extract_as_text_file') as mock_textfile:
                         
                         # Setup all mocks to fail
                         mock_pymupdf.side_effect = Exception("PyMuPDF failed")
@@ -560,9 +560,9 @@ class TestMultiEngineTextExtraction:
         mock_pymupdf.open.return_value = mock_doc
         
         # Patch PDF_LIBRARIES as a dictionary - clear and set
-        with patch.dict('src.pdf_processing.parsers.text_extraction.PDF_LIBRARIES', {'pymupdf': mock_pymupdf}, clear=True):
+        with patch.dict('pdf_processing.parsers.text_extraction.PDF_LIBRARIES', {'pymupdf': mock_pymupdf}, clear=True):
             # Also add other libraries as None to avoid issues
-            with patch.dict('src.pdf_processing.parsers.text_extraction.PDF_LIBRARIES', 
+            with patch.dict('pdf_processing.parsers.text_extraction.PDF_LIBRARIES', 
                           {'pymupdf': mock_pymupdf, 'pdfplumber': None, 'pdfminer': None}):
                 result = extract_with_pymupdf(mock_pdf_file, mock_config)
                 assert result is not None
@@ -581,7 +581,7 @@ class TestMultiEngineTextExtraction:
         mock_pdfplumber.open.return_value.__exit__ = Mock(return_value=None)
         
         # Patch PDF_LIBRARIES as a dictionary
-        with patch.dict('src.pdf_processing.parsers.text_extraction.PDF_LIBRARIES', {'pdfplumber': mock_pdfplumber}):
+        with patch.dict('pdf_processing.parsers.text_extraction.PDF_LIBRARIES', {'pdfplumber': mock_pdfplumber}):
             result = extract_with_pdfplumber(mock_pdf_file, mock_config)
             assert result is not None
             text, blocks, page_count = result
@@ -617,7 +617,7 @@ class TestMultiEngineTextExtraction:
 
         Should return None/empty rather than crashing.
         """
-        with patch('src.pdf_processing.parsers.text_extraction.PDF_LIBRARIES') as mock_libs:
+        with patch('pdf_processing.parsers.text_extraction.PDF_LIBRARIES') as mock_libs:
             mock_libs['pymupdf'].open.side_effect = RuntimeError("Password required")
 
             non_existent_pdf = Path("/tmp/password_protected.pdf")
@@ -643,8 +643,8 @@ class TestMetadataExtractionLogic:
         Abstract: This paper examines...
         """
         
-        with patch('src.pdf_processing.parsers.metadata_extraction.extract_title_heuristic') as mock_heuristic:
-            with patch('src.pdf_processing.parsers.metadata_extraction.extract_title_from_line') as mock_line:
+        with patch('pdf_processing.parsers.metadata_extraction.extract_title_heuristic') as mock_heuristic:
+            with patch('pdf_processing.parsers.metadata_extraction.extract_title_from_line') as mock_line:
                 mock_heuristic.return_value = ("AI Impact on Economic Growth", 0.9)
                 mock_line.return_value = ("Alternative Title", 0.7)
                 
@@ -852,7 +852,7 @@ class TestDocumentAnalysis:
         
         for test_input in extreme_cases:
             try:
-                if hasattr(sys.modules['src.pdf_processing.parsers.document_analysis'], 'calculate_text_quality'):
+                if hasattr(sys.modules['pdf_processing.parsers.document_analysis'], 'calculate_text_quality'):
                     quality = doc_quality(test_input)
                 else:
                     # Fallback to text_extraction version
@@ -898,7 +898,7 @@ class TestDocumentAnalysis:
         start_memory = self._get_memory_usage()
         
         try:
-            with patch('src.pdf_processing.parsers.document_analysis.analyze_document_structure') as mock_analyze:
+            with patch('pdf_processing.parsers.document_analysis.analyze_document_structure') as mock_analyze:
                 mock_analyze.return_value = DocumentStructure(
                     title_candidates=[("Test Title", 0.8, {})],
                     author_candidates=[("Test Author", 0.8, {})],
@@ -1128,12 +1128,11 @@ class TestRepositorySpecificExtractors:
         """Test arXiv API client with various scenarios."""
         client = ArxivAPIClient()
         
-        # Test with mock API responses
-        with patch('requests.get') as mock_get:
+        # Test with mock API responses (ArxivAPIClient uses urlopen, not requests)
+        with patch('pdf_processing.extractors.api_client.urlopen') as mock_urlopen:
             # Test successful API response
             mock_response = Mock()
-            mock_response.status_code = 200
-            mock_response.content = b"""<?xml version="1.0" encoding="UTF-8"?>
+            mock_response.read.return_value = b"""<?xml version="1.0" encoding="UTF-8"?>
             <feed xmlns="http://www.w3.org/2005/Atom">
                 <entry>
                     <title>Test Paper Title</title>
@@ -1143,21 +1142,17 @@ class TestRepositorySpecificExtractors:
                     <id>http://arxiv.org/abs/2023.12345v1</id>
                 </entry>
             </feed>"""
-            mock_get.return_value = mock_response
-            
+            mock_response.__enter__ = Mock(return_value=mock_response)
+            mock_response.__exit__ = Mock(return_value=False)
+            mock_urlopen.return_value = mock_response
+
             result = client.fetch_metadata("2023.12345")
-            
+
             # Verify API client functionality
             assert result is not None
-            # Additional assertions depend on implementation
-            
-            # Test API error handling
-            mock_response.status_code = 404
-            result = client.fetch_metadata("invalid.id")
-            # Should handle gracefully
-            
+
             # Test network timeout
-            mock_get.side_effect = Exception("Network timeout")
+            mock_urlopen.side_effect = Exception("Network timeout")
             result = client.fetch_metadata("2023.12345")
             # Should handle gracefully
 

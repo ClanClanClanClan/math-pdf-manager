@@ -11,7 +11,7 @@ import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
-from src.core.unified_config import (
+from core.unified_config import (
     UnifiedConfigManager, get_config_manager, get_config, set_config,
     ConfigSecurityLevel, ConfigSource, ConfigValue, ConfigSchema,
     EnvironmentConfigSource, YAMLConfigSource, JSONConfigSource

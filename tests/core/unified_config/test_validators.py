@@ -5,8 +5,8 @@ Comprehensive tests for configuration validators.
 
 import pytest
 
-from src.core.unified_config.validators import ConfigValidator
-from src.core.unified_config.interfaces import ConfigValue, ConfigSource, ConfigSecurityLevel, ConfigSchema
+from core.unified_config.validators import ConfigValidator
+from core.unified_config.interfaces import ConfigValue, ConfigSource, ConfigSecurityLevel, ConfigSchema
 
 
 class TestConfigValidator:

@@ -34,7 +34,7 @@ from utils.security import (
 )
 # Only import what's needed from secure credential manager
 try:
-    from src.secure_credential_manager import SecureCredentialManager, CredentialSource
+    from secure_credential_manager import SecureCredentialManager, CredentialSource
 except ImportError:
     SecureCredentialManager = None
     CredentialSource = None

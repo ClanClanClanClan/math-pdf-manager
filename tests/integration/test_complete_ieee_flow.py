@@ -12,9 +12,9 @@ from pathlib import Path
 # Add src to path  
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from src.publishers.ieee_publisher import IEEEPublisher
-from src.publishers import AuthenticationConfig
-from src.secure_credential_manager import get_credential_manager
+from publishers.ieee_publisher import IEEEPublisher
+from publishers import AuthenticationConfig
+from secure_credential_manager import get_credential_manager
 
 def test_complete_ieee_flow():
     """Test complete IEEE authentication and download flow."""

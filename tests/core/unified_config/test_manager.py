@@ -10,8 +10,8 @@ import yaml
 from pathlib import Path
 from unittest.mock import patch
 
-from src.core.unified_config.manager import UnifiedConfigManager
-from src.core.unified_config.interfaces import (
+from core.unified_config.manager import UnifiedConfigManager
+from core.unified_config.interfaces import (
     ConfigValue, ConfigSource, ConfigSecurityLevel, ConfigSchema
 )
 

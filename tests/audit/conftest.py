@@ -3,7 +3,7 @@ Audit test configuration.
 
 The project has mixed import styles:
   - Some modules use: from core.xxx import yyy (requires src/ on path)
-  - Some modules use: from src.core.xxx import yyy (requires src/../ on path)
+  - Some modules use: from core.xxx import yyy (requires src/../ on path)
 
 We add BOTH to sys.path so all imports resolve.
 This is itself an AUDIT FINDING: mixed import styles are a maintenance hazard.
