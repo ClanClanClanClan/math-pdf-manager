@@ -182,18 +182,24 @@ specifies the correct dash for each compound mathematician name.
 
 ### 3.3 Subtitles and colons
 
-Many papers have a main title and subtitle.  Rules:
+Many papers have a main title and subtitle separated by a colon.
+The colon is replaced with a **comma**, and the subtitle follows in
+**lowercase** (sentence case continues — the subtitle is not a new
+sentence).
+
+| Source | In filename |
+|--------|-------------|
+| `Geometry: A Story` | `Geometry, a story` |
+| `Optimal stopping: A new approach` | `Optimal stopping, a new approach` |
+| `BSDEs: Theory and Applications` | `BSDEs, theory and applications` |
+
+Other separators:
 
 | Separator | In filename | Capitalisation after |
 |-----------|-------------|---------------------|
-| Colon `:` | Replaced with ` –` (space + en-dash) for filesystem safety | Yes — first word of subtitle capitalised |
 | Period `.` | Preserved | Yes — treated as new sentence |
 | Em-dash `—` | Preserved | No |
-| Comma `,` | Preserved | No — commas do not indicate subtitles |
-
-Example: `Optimal stopping: A new approach` becomes
-`Optimal stopping – A new approach` in the filename, with "A"
-capitalised as the start of the subtitle.
+| Comma `,` | Preserved | No |
 
 ### 3.5 Quotation marks (language-specific)
 
@@ -334,7 +340,7 @@ Only filesystem-unsafe characters are replaced:
 |-----------|-------------|--------|
 | `/` | `–` (en-dash) | Path separator on Unix |
 | `\` | `–` (en-dash) | Path separator on Windows |
-| `:` | ` –` (space + en-dash) | Illegal on macOS HFS+/APFS |
+| `:` | `,` (comma) | Illegal on macOS HFS+/APFS; also subtitle convention (see §3.3) |
 | Control chars U+0000–U+001F | removed | Invisible / illegal |
 
 All other characters are preserved, including `( ) [ ] & * + = < > ' "`.

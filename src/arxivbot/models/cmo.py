@@ -243,7 +243,7 @@ def _clean_for_fs(text: str) -> str:
     text = re.sub(r"[\u0000-\u001f]", "", text)  # control chars
     text = text.replace("/", "–")   # slash → en-dash
     text = text.replace("\\", "–")  # backslash → en-dash
-    text = text.replace(":", " –")  # colon → space + en-dash
+    text = text.replace(":", ",")    # colon → comma (subtitle convention)
     # Normalise all Unicode space variants to regular space
     text = re.sub(r"[\u00a0\u2000-\u200a\u202f\u2009]", " ", text)
     text = re.sub(r"\s+", " ", text).strip()
