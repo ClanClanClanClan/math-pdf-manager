@@ -27,7 +27,7 @@ from core.models import (
     Author, PDFMetadata, ValidationSeverity, ValidationIssue
 )
 from core.dependency_injection import DIContainer
-from core.dependency_injection.container import FactorySecurityConfig, TimeoutError
+from core.dependency_injection.container import FactorySecurityConfig
 from core.dependency_injection.validation_service import UnifiedValidationService
 from utils.security import (
     PathValidator
