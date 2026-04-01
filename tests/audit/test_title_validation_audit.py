@@ -341,11 +341,18 @@ class TestTitleDashRules:
             assert ch != "\u2013", \
                 f"En-dash U+2013 introduced at position {i} in: {result}"
 
-    def test_endash_in_input_preserved(self):
-        """En-dashes already present in input should be preserved."""
+    def test_endash_in_input_corrected_by_whitelist(self):
+        """Whitelist is authoritative: G-Brownian uses hyphen (prefix, not two names).
+        Even if the input has an en-dash, the whitelist's hyphen wins."""
         result, _ = _convert("G\u2013Brownian motion in stochastic analysis")
+        assert "G-Brownian" in result, \
+            f"Whitelist should correct en-dash to hyphen for G-Brownian, got: {result}"
+
+    def test_endash_preserved_for_compound_names(self):
+        """En-dashes between two proper names are preserved (whitelist says en-dash)."""
+        result, _ = _convert("McKean\u2013Vlasov optimal control")
         assert "\u2013" in result, \
-            "En-dash from input should be preserved in output"
+            f"En-dash should be preserved for McKean–Vlasov, got: {result}"
 
 
 # ============================================================================

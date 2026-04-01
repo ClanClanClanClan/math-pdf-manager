@@ -684,7 +684,7 @@ capitalization_whitelist:
   - Feynman-type
   - FX-pricing
   - G
-  - G–Brownian
+  - G-Brownian
   - G-BSDE
   - G-BSDEs
   - G-capacities
@@ -765,7 +765,7 @@ capitalization_whitelist:
   - Obizhaeva–Wang–type
   - optimal–PhiBE
   - Ornstein–Uhlenbeck–related
-  - p–Brownian
+  - p-Brownian
   - p-contest
   - p-ground
   - p-Laplacian
@@ -820,7 +820,6 @@ capitalization_whitelist:
   - ℝᵈ-valued
 
   # Roman numerals
-  - I
   - II
   - III
   - IV
