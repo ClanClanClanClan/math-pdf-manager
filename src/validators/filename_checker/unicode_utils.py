@@ -91,6 +91,10 @@ def sanitize_unicode_security(text: str) -> Tuple[str, List[str], Set[str]]:
         Tuple of (sanitized_text, removed_characters, scripts_found)
     """
     removed = []
+    # Normalise special spaces to regular space (U+0020) before stripping
+    # dangerous chars.  U+00A0 (NBSP) and U+2000-U+200A (various width
+    # spaces) are not dangerous, just non-standard.
+    text = re.sub(r"[\u00a0\u2000-\u200a\u2009]", " ", text)
     for ch, name in DANGEROUS_UNICODE_CHARS.items():
         if ch in text:
             text = text.replace(ch, "")

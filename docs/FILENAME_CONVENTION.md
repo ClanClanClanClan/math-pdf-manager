@@ -130,15 +130,42 @@ Nouns capitalised per German orthographic rules.
 Stochastik für das Lehramt
 ```
 
-#### Other languages (Russian, Spanish, Italian, …)
+#### Spanish
 
-Follow the capitalisation conventions of that language.
+Sentence case.  Inverted punctuation marks (`¿`, `¡`) are preserved.
+
+```
+¿Existe una solución única para el problema de control óptimo?
+```
+
+#### Italian
+
+Sentence case.  Proper nouns capitalised.
+
+#### Russian and other non-Latin-script languages
+
+Titles in Latin transliteration follow the capitalisation conventions
+of the target language.  No automatic transliteration from Cyrillic or
+other scripts is performed; names must be provided in Latin script by
+the metadata source (ArXiv, Crossref, etc.).
+
+The capitalisation whitelist (`config/config.yaml`) contains canonical
+Latin spellings for mathematician names (e.g., Chebyshev not
+Tchebycheff).
 
 #### Language detection
 
 Language is detected automatically via `langdetect` (imported in
 `src/validators/filename_checker/core.py`) to apply language-specific
 rules for capitalisation and quotation marks.
+
+#### Language-specific punctuation spacing
+
+French typography requires a thin non-breaking space (U+202F) before
+`;`, `!`, `?`, and `:`.  This is **NOT** applied in filenames because
+U+202F is stripped for filesystem safety (see §4.4).  Standard English
+spacing (no space before punctuation) is used for all languages in
+filenames.
 
 ### 3.2 Dashes in titles
 
@@ -153,7 +180,22 @@ specifies the correct dash for each compound mathematician name.
 
 **Rule:** `--` (double hyphen) is always normalised to en-dash `–`.
 
-### 3.3 Quotation marks (language-specific)
+### 3.3 Subtitles and colons
+
+Many papers have a main title and subtitle.  Rules:
+
+| Separator | In filename | Capitalisation after |
+|-----------|-------------|---------------------|
+| Colon `:` | Replaced with ` –` (space + en-dash) for filesystem safety | Yes — first word of subtitle capitalised |
+| Period `.` | Preserved | Yes — treated as new sentence |
+| Em-dash `—` | Preserved | No |
+| Comma `,` | Preserved | No — commas do not indicate subtitles |
+
+Example: `Optimal stopping: A new approach` becomes
+`Optimal stopping – A new approach` in the filename, with "A"
+capitalised as the start of the subtitle.
+
+### 3.5 Quotation marks (language-specific)
 
 Straight quotes are normalised to typographic quotes based on language.
 Implemented in `fix_and_flag_quotes()` in
@@ -169,18 +211,18 @@ Implemented in `fix_and_flag_quotes()` in
 Apostrophes in contractions (`it's`, `d'après`, `l'équation`) are
 preserved as right single quotation mark (U+2019).
 
-### 3.4 Ellipsis
+### 3.6 Ellipsis
 
 Three consecutive dots `...` are normalised to horizontal ellipsis `…`
 (U+2026).  Implemented in `fix_ellipsis()`.
 
-### 3.5 Small numbers
+### 3.7 Small numbers
 
 Isolated digits 0–9 in non-mathematical context are spelled out:
 `2-dimensional` stays, but a lone `2` in text becomes `two`.
 Implemented in `spell_out_small_numbers()`.
 
-### 3.6 Title preservation
+### 3.8 Title preservation
 
 The following are always preserved as-is:
 
@@ -188,6 +230,51 @@ The following are always preserved as-is:
 - Parentheses and brackets: `(0 < d < 2)`, `[d'après …]`
 - Punctuation: commas, semicolons, apostrophes
 - Superscript/subscript Unicode: ⁰¹²³⁴⁵⁶⁷⁸⁹, ₀₁₂₃₄₅₆₇₈₉
+
+### 3.9 Mathematical notation
+
+Mathematical notation is preserved exactly as the source provides it.
+No normalisation between ASCII and Unicode representations is performed.
+
+| Both valid | Example |
+|------------|---------|
+| ASCII-style | `R^d`, `L_2`, `H^1` |
+| Unicode | `ℝᵈ`, `L₂`, `H¹` |
+
+Spacing within mathematical expressions is preserved as-is.
+
+### 3.10 Roman numerals
+
+Roman numerals in context (Part II, Volume III, Chapter IV) are
+preserved as roman numerals and treated as acronyms (uppercase).
+They are NOT converted to arabic numerals.
+
+### 3.11 Abbreviations
+
+Common abbreviations are preserved as the source provides them:
+`vs.`, `i.e.`, `e.g.`, `cf.`, `etc.` — kept with their periods.
+Not expanded to full words.  Note: `et al.` in the *title* is
+preserved as-is; `et al.` in the *author section* has special
+truncation semantics (see §2.5).
+
+### 3.12 Ordinals
+
+Ordinals in compound adjectives are preserved as digits: `2nd-order`,
+`1st-kind`.  The number spelling rule (§3.7) does not apply to
+ordinals because the digit is not isolated.
+
+### 3.13 Apostrophes
+
+All apostrophes and right single quotes use the typographic form
+U+2019 (RIGHT SINGLE QUOTATION MARK), never the straight ASCII
+apostrophe U+0027.  This applies to contractions (`it's`, `don't`),
+possessives (`Itô's`), and French elisions (`d'après`, `l'équation`).
+
+### 3.14 German sharp-s and special letters
+
+German `ß` is preserved as-is, never converted to `ss`.  Spanish
+inverted punctuation (`¿`, `¡`) is preserved.  All diacritics and
+special letters from any language are preserved in NFC form.
 
 ---
 
@@ -218,6 +305,22 @@ expanded to their component ASCII letters.  Implemented in
 
 Must be balanced.  Every opening `(`, `[`, `{` must have a matching
 closing `)`, `]`, `}`.  Unmatched delimiters are flagged by validation.
+Mathematical angle brackets `⟨…⟩` are also checked.
+
+### 4.4 Non-breaking and special spaces
+
+All spaces in filenames are regular spaces (U+0020).
+
+| Character | Unicode | Action |
+|-----------|---------|--------|
+| Non-breaking space | U+00A0 | Replaced with regular space |
+| Narrow no-break space | U+202F | Stripped (in dangerous Unicode list) |
+| Thin space | U+2009 | Replaced with regular space |
+| Em space, en space, etc. | U+2000–U+200A | Replaced with regular space |
+
+This means French thin-space-before-punctuation is NOT preserved in
+filenames.  This is by design — filesystem tools and terminal
+emulators handle special spaces poorly.
 
 ---
 
