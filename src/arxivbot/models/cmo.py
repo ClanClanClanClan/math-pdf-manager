@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import unicodedata
 from dataclasses import asdict, dataclass, field
@@ -109,60 +110,98 @@ class CMO:
             parts.append(re.sub(r"\s+", " ", self.abstract.strip()))
         return " ".join(parts)
 
-    def get_canonical_filename(self, *, et_al_threshold: int = 8) -> str:
+    def get_canonical_filename(self, *, max_bytes: int = 0) -> str:
         """Generate a canonical filename matching the library convention.
 
         Format: ``Lastname1, I., Lastname2, I. - Title.pdf``
 
-        Authors are listed up to ``et_al_threshold`` (default 8).  When
-        a paper has more authors than the threshold, only the first 3 are
-        listed followed by ", et al.".  Math symbols (ℝ, ℤ, ≤, etc.)
-        and Unicode are preserved.  Only filesystem-unsafe characters
-        (``/``, ``\\``, null bytes, control chars) are removed.
+        Includes as many authors as possible while respecting the
+        filesystem byte limit.  When not all authors fit, the included
+        authors are followed by ", et al.".
+
+        Title is in sentence case (applied by the caller or by
+        ``to_sentence_case_academic`` — this method preserves the title
+        as given).
+
+        Math symbols (ℝ, ℤ, ≤, etc.) and Unicode are preserved.  Only
+        filesystem-unsafe characters (``/``, ``\\``, null bytes, control
+        chars) are removed.
+
+        Parameters
+        ----------
+        max_bytes : int
+            Maximum filename length in UTF-8 bytes (excluding ``.pdf``).
+            If 0, auto-detected from the filesystem (``NAME_MAX``).
         """
-        author_segments = self._format_authors(et_al_threshold=et_al_threshold)
+        if max_bytes <= 0:
+            max_bytes = _get_fs_name_max() - 4  # reserve for ".pdf"
+
         title = unicodedata.normalize("NFC", re.sub(r"\s+", " ", self.title.strip()))
-        base = f"{author_segments} - {title}" if author_segments else title
-        # Remove only control chars and filesystem-unsafe characters
-        cleaned = re.sub(r"[\u0000-\u001f]", "", base)
-        cleaned = cleaned.replace("/", "–")   # slash → en-dash
-        cleaned = cleaned.replace("\\", "–")
-        cleaned = cleaned.replace(":", " –")  # colon can be problematic on some FS
-        cleaned = re.sub(r"\s+", " ", cleaned).strip()
-        # Ensure filename fits filesystem limits (255 bytes UTF-8 for most FS)
-        max_bytes = 250  # leave room for .pdf extension
-        encoded = cleaned.encode("utf-8")
+
+        # Clean title of filesystem-unsafe characters
+        title = _clean_for_fs(title)
+
+        # Build filename with as many authors as possible
+        if not self.authors:
+            base = title
+        else:
+            all_segments = self._author_segments()
+            separator = " - "
+            title_part = separator + title  # constant suffix
+
+            # Binary search for maximum authors that fit
+            base = self._build_with_max_authors(
+                all_segments, title_part, max_bytes
+            )
+
+        # Final byte-limit enforcement (safety net)
+        encoded = base.encode("utf-8")
         if len(encoded) > max_bytes:
-            cleaned = encoded[:max_bytes].decode("utf-8", "ignore").rstrip()
-        if not cleaned.lower().endswith(".pdf"):
-            cleaned += ".pdf"
-        return cleaned
+            base = encoded[:max_bytes].decode("utf-8", "ignore").rstrip()
+
+        if not base.lower().endswith(".pdf"):
+            base += ".pdf"
+        return base
 
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
-    def _format_authors(self, *, et_al_threshold: int = 8) -> str:
-        """Format authors as ``Lastname, I., Lastname2, I.``
-
-        When there are more than ``et_al_threshold`` authors, only the
-        first 3 are listed followed by ", et al.".
-        """
-        if not self.authors:
-            return ""
-
-        use_et_al = len(self.authors) > et_al_threshold
-        authors_to_show = self.authors[:3] if use_et_al else self.authors
-
+    def _author_segments(self) -> List[str]:
+        """Format each author as ``Lastname, I.`` and return a list."""
         segments: List[str] = []
-        for author in authors_to_show:
+        for author in self.authors:
             initials = author.initials()
             if initials:
                 segments.append(f"{author.family}, {initials}.")
             else:
                 segments.append(author.family)
-        if use_et_al:
-            segments.append("et al.")
-        return ", ".join(segments)
+        return segments
+
+    def _build_with_max_authors(
+        self, all_segments: List[str], title_part: str, max_bytes: int
+    ) -> str:
+        """Include as many authors as possible, using 'et al.' when truncated."""
+        n = len(all_segments)
+        et_al = ", et al."
+
+        # Try all authors first
+        full = ", ".join(all_segments) + title_part
+        if len(full.encode("utf-8")) <= max_bytes:
+            return full
+
+        # Binary search: find largest k such that
+        # "Author1, ..., Authork, et al. - Title" fits
+        lo, hi, best_k = 1, n - 1, 1
+        while lo <= hi:
+            mid = (lo + hi) // 2
+            candidate = ", ".join(all_segments[:mid]) + et_al + title_part
+            if len(candidate.encode("utf-8")) <= max_bytes:
+                best_k = mid
+                lo = mid + 1
+            else:
+                hi = mid - 1
+
+        return ", ".join(all_segments[:best_k]) + et_al + title_part
 
     # Convenience accessors -------------------------------------------------
     def list_author_names(self) -> List[str]:
@@ -170,6 +209,43 @@ class CMO:
 
     def primary_category(self) -> str | None:
         return self.categories[0] if self.categories else None
+
+
+# ----------------------------------------------------------------------
+# Module-level helpers
+# ----------------------------------------------------------------------
+_FS_NAME_MAX: int | None = None
+
+
+def _get_fs_name_max() -> int:
+    """Return the filesystem NAME_MAX for the library directory."""
+    global _FS_NAME_MAX
+    if _FS_NAME_MAX is not None:
+        return _FS_NAME_MAX
+
+    try:
+        # Try the library path first
+        library = os.path.expanduser(
+            "~/Library/CloudStorage/Dropbox/Work/Maths"
+        )
+        if os.path.isdir(library):
+            _FS_NAME_MAX = os.pathconf(library, "PC_NAME_MAX")
+        else:
+            _FS_NAME_MAX = os.pathconf(".", "PC_NAME_MAX")
+    except (OSError, ValueError):
+        _FS_NAME_MAX = 255  # POSIX default
+
+    return _FS_NAME_MAX
+
+
+def _clean_for_fs(text: str) -> str:
+    """Remove filesystem-unsafe characters from text."""
+    text = re.sub(r"[\u0000-\u001f]", "", text)  # control chars
+    text = text.replace("/", "–")   # slash → en-dash
+    text = text.replace("\\", "–")  # backslash → en-dash
+    text = text.replace(":", " –")  # colon → space + en-dash
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
 
 
 def ensure_iterable_authors(raw: Iterable[dict[str, Any] | Author]) -> List[Author]:

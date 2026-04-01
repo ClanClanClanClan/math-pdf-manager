@@ -55,14 +55,17 @@ Always preserved.  NFC Unicode normalisation is used (not NFD).
 
 ### "et al." truncation
 
-When a paper has **more than 8 authors**, only the first 3 are listed,
-followed by `, et al.`.
+As many authors as possible are listed while keeping the total
+filename within the filesystem limit (255 bytes UTF-8).  When not all
+authors fit, the listed authors are followed by `, et al.`.
 
-| Actual authors (count) | Formatted |
-|------------------------|-----------|
-| Dupont, J., Martin, G. (2) | Dupont, J., Martin, G. |
-| A, B, C, D, E, F, G, H (8) | A, B, C, D, E, F, G, H |
-| A, B, C, D, E, F, G, H, I, J (10) | A, B, C, et al. |
+The algorithm is:
+1. Try listing all authors.  If the filename fits → done.
+2. Otherwise, binary-search for the largest *k* such that
+   ``Author1, …, Authork, et al. - Title.pdf`` fits within 255 bytes.
+
+This means short titles allow more authors and long titles force
+earlier truncation — the title is never shortened.
 
 ### Multiple authors: separator
 
@@ -76,18 +79,68 @@ Dupont, J.-P., Martin, G., Krée, P.A. - Title.pdf
 
 ## Title Rules
 
-### Preserve everything
+### Capitalisation: sentence case
 
-- Original language (French, German, etc.)
-- Original capitalisation
+Titles use **sentence case**: capitalise the first word and proper
+nouns only.  This is applied by `to_sentence_case_academic()` in
+`src/core/sentence_case.py`.
+
+**English titles:**
+- First word capitalised.
+- Proper nouns and adjectives derived from proper nouns capitalised
+  (Bayesian, Gaussian, Markovian, Euclidean, Laplacian, …).
+- Acronyms preserved (BSDE, PDE, SDE, LIBOR, CVA, …).
+- Mixed-case terms preserved exactly (LaTeX, macOS, PyTorch, …).
+- Compound names with dashes preserved from the name-dash whitelist
+  (Black–Scholes, McKean–Vlasov, Fokker–Planck, Itô–McKean, …).
+- Technical single-letter prefixes stay lowercase even at the start
+  of a title (g-expectation, p-variation, α-stable, …).
+
+**French titles:**
+- Sentence case: ``Les systèmes hamiltoniens et leur intégrabilité``
+- Proper nouns capitalised: ``… d'après Bourbaki``
+
+**German titles:**
+- All nouns capitalised per German rules: ``Stochastik für das Lehramt``
+
+**Russian/other languages:**
+- Follow the capitalisation conventions of that language.
+
+### Preserve content
+
 - Mathematical symbols: ℝ, ℤ, ≤, ∞, Γ, ζ, ^, etc.
 - Parentheses and brackets: `(0 < d < 2)`, `[d'après ...]`
 - Punctuation: commas, semicolons, en-dashes (–), apostrophes
 
+### Dashes in titles
+
+Three types of dash, each with a specific role:
+
+| Character | Unicode | Use in titles | Example |
+|-----------|---------|---------------|---------|
+| Hyphen `-` | U+002D | Compound adjectives, prefixes | `mean-field`, `long-time`, `path-dependent` |
+| En-dash `–` | U+2013 | Between proper names (Name–Name) | `McKean–Vlasov`, `Black–Scholes`, `Fokker–Planck` |
+| Em-dash `—` | U+2014 | Parenthetical breaks (rare in titles) | — |
+
+The name-dash whitelist (`data/name_dash_whitelist.txt`) specifies
+the correct dash for each compound mathematician name.
+
 ### No truncation
 
-Titles are never truncated.  If the total filename exceeds 250 bytes
-UTF-8, the title is shortened to fit (this is extremely rare).
+The title is never truncated.  The author list is compressed (via
+"et al.") instead when the filename would exceed filesystem limits.
+
+### Exceptions and whitelists
+
+The following data files control capitalisation:
+
+| File | Purpose |
+|------|---------|
+| `config/config.yaml` → `capitalization_whitelist` | 500+ mathematician/scientist names with exact capitalisation |
+| `data/name_dash_whitelist.txt` | Compound names with correct dash type |
+| `src/core/sentence_case.py` → `MATH_TECHNICAL_PREFIXES` | Single-letter prefixes that stay lowercase |
+| `src/core/sentence_case.py` → `mixed_case_words` | Terms like LaTeX, PyTorch |
+| `src/core/sentence_case.py` → `proper_adjectives` | Bayesian, Gaussian, etc. |
 
 ### Character replacements
 
