@@ -95,9 +95,10 @@ def _load_sentence_case_config() -> Dict:
     }
     
     # Load name_dash_whitelist from data file
+    data_dir = os.path.join(os.path.dirname(__file__), "..", "..", "data")
     dash_whitelist_paths = [
         "data/name_dash_whitelist.txt",
-        os.path.join(os.path.dirname(__file__), "..", "..", "data", "name_dash_whitelist.txt"),
+        os.path.join(data_dir, "name_dash_whitelist.txt"),
     ]
     for path in dash_whitelist_paths:
         if os.path.exists(path):
@@ -342,19 +343,22 @@ def to_sentence_case_academic(
 
                 if exact_match:
                     if matched_via_dash_norm:
-                        # Preserve the INPUT's dash characters but apply the
-                        # whitelist's capitalization pattern.  Walk both strings
-                        # and copy the letter-case from the whitelist while
-                        # keeping the original dash codepoints.
+                        # Apply the whitelist's EXACT form: both the
+                        # capitalisation AND the dash characters.  The
+                        # whitelist is authoritative — if it says en-dash,
+                        # the output uses en-dash regardless of the input.
                         out_chars = []
                         ti = 0  # index into exact_match (whitelist term)
                         for pc in phrase:
                             if pc in '-\u2013\u2014\u2212':
-                                # Keep the dash character from the input
-                                out_chars.append(pc)
-                                # Advance past the corresponding dash in term
-                                while ti < len(exact_match) and exact_match[ti] in '-\u2013\u2014\u2212':
+                                # Use the dash character from the WHITELIST
+                                while ti < len(exact_match) and exact_match[ti] not in '-\u2013\u2014\u2212':
                                     ti += 1
+                                if ti < len(exact_match):
+                                    out_chars.append(exact_match[ti])
+                                    ti += 1
+                                else:
+                                    out_chars.append(pc)
                             else:
                                 if ti < len(exact_match):
                                     # Apply case from whitelist term
