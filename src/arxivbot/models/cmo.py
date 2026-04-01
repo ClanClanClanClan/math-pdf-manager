@@ -109,16 +109,18 @@ class CMO:
             parts.append(re.sub(r"\s+", " ", self.abstract.strip()))
         return " ".join(parts)
 
-    def get_canonical_filename(self) -> str:
+    def get_canonical_filename(self, *, et_al_threshold: int = 8) -> str:
         """Generate a canonical filename matching the library convention.
 
         Format: ``Lastname1, I., Lastname2, I. - Title.pdf``
 
-        All authors are listed (no "et al." truncation).  Math symbols
-        (ℝ, ℤ, ≤, etc.) and Unicode are preserved.  Only filesystem-unsafe
-        characters (``/``, ``\\``, null bytes, control chars) are removed.
+        Authors are listed up to ``et_al_threshold`` (default 8).  When
+        a paper has more authors than the threshold, only the first 3 are
+        listed followed by ", et al.".  Math symbols (ℝ, ℤ, ≤, etc.)
+        and Unicode are preserved.  Only filesystem-unsafe characters
+        (``/``, ``\\``, null bytes, control chars) are removed.
         """
-        author_segments = self._format_authors()
+        author_segments = self._format_authors(et_al_threshold=et_al_threshold)
         title = unicodedata.normalize("NFC", re.sub(r"\s+", " ", self.title.strip()))
         base = f"{author_segments} - {title}" if author_segments else title
         # Remove only control chars and filesystem-unsafe characters
@@ -139,17 +141,27 @@ class CMO:
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
-    def _format_authors(self) -> str:
-        """Format all authors as ``Lastname, I., Lastname2, I.``"""
+    def _format_authors(self, *, et_al_threshold: int = 8) -> str:
+        """Format authors as ``Lastname, I., Lastname2, I.``
+
+        When there are more than ``et_al_threshold`` authors, only the
+        first 3 are listed followed by ", et al.".
+        """
         if not self.authors:
             return ""
+
+        use_et_al = len(self.authors) > et_al_threshold
+        authors_to_show = self.authors[:3] if use_et_al else self.authors
+
         segments: List[str] = []
-        for author in self.authors:
+        for author in authors_to_show:
             initials = author.initials()
             if initials:
                 segments.append(f"{author.family}, {initials}.")
             else:
                 segments.append(author.family)
+        if use_et_al:
+            segments.append("et al.")
         return ", ".join(segments)
 
     # Convenience accessors -------------------------------------------------

@@ -966,43 +966,55 @@ class EnhancedPDFParser(BaseParser):
         return metadata
 
     def _generate_filename_from_metadata(self, metadata: PDFMetadata) -> str:
-        """Generate filename from metadata using the user's existing format"""
+        """Generate filename from metadata.
+
+        .. deprecated::
+            This method produces filenames that do not match the library
+            convention (only uses first author, truncates title at 80 chars).
+            Use :meth:`CMO.get_canonical_filename` from
+            ``arxivbot.models.cmo`` instead for proper filename generation.
+
+        This is kept as a minimal fallback for cases where CMO is not
+        available.  It produces ``FirstAuthor - Title.pdf`` which is
+        better than nothing but should be corrected by the ingest pipeline.
+        """
+        import warnings
+        warnings.warn(
+            "_generate_filename_from_metadata() produces non-standard filenames. "
+            "Use CMO.get_canonical_filename() for library-standard filenames.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
         if not metadata.title or metadata.title == "Unknown":
             return None
 
-        # Extract first author for filename
+        # Extract first author for filename (minimal fallback)
         first_author = "Unknown Author"
         if metadata.authors and metadata.authors != "Unknown":
-            # Split by common separators and get first author
             authors = metadata.authors.replace(';', ',').split(',')
             if authors:
                 first_author = authors[0].strip()
-
-                # Clean up author name for filename
                 # Remove academic titles
-                titles_to_remove = ['Dr.', 'Prof.', 'Professor', 'Dr', 'Prof']
-                for title_prefix in titles_to_remove:
-                    if first_author.startswith(title_prefix + ' '):
-                        first_author = first_author[len(title_prefix):].strip()
+                for prefix in ('Dr. ', 'Prof. ', 'Professor '):
+                    if first_author.startswith(prefix):
+                        first_author = first_author[len(prefix):]
 
-        # Create filename in user's expected format: "Author - Title.pdf"
         title = metadata.title
-        if len(title) > 80:
-            title = title[:77] + "..."
-
         filename = f"{first_author} - {title}.pdf"
 
-        # Clean up problematic characters
-        problematic_chars = ['/', '\\', ':', '*', '?', '"', '<', '>', '|', '\n', '\r', '\t']
-        for char in problematic_chars:
-            filename = filename.replace(char, ' ')
+        # Remove only filesystem-unsafe characters
+        for char in ('/', '\\', '\0'):
+            filename = filename.replace(char, '–')
+        filename = filename.replace(':', ' –')
 
         # Clean up multiple spaces
         filename = ' '.join(filename.split())
 
-        # Limit total length
-        if len(filename) > 200:
-            filename = filename[:197] + "..."
+        # UTF-8 byte limit (250 + .pdf)
+        encoded = filename.encode('utf-8')
+        if len(encoded) > 254:
+            filename = encoded[:250].decode('utf-8', 'ignore').rstrip() + '.pdf'
 
         return filename
 
