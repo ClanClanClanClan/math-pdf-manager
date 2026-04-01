@@ -86,7 +86,8 @@ def find_aged_papers(
                 # Extract first author for destination routing
                 stem = unicodedata.normalize("NFC", pdf.stem)
                 if " - " in stem:
-                    first_lastname = stem.split(",")[0].strip()
+                    authors_part = stem.split(" - ", 1)[0]
+                    first_lastname = authors_part.split(",")[0].strip()
                 else:
                     first_lastname = "Z"
 

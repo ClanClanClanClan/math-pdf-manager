@@ -83,15 +83,20 @@ def extract_metadata_from_pdf(pdf_path: Path) -> dict:
             doi = doi_match.group(1).rstrip(".")
             metadata["doi"] = doi
 
-        # ArXiv ID detection
-        arxiv_match = re.search(r"arXiv[:\s]*(\d{4}\.\d{4,5}(?:v\d+)?)", text)
+        # ArXiv ID detection (new format: 2401.07160v3, old format: math/0601234)
+        arxiv_match = re.search(
+            r"arXiv[:\s]*(\d{4}\.\d{4,5}(?:v\d+)?|[a-z-]+/\d{7}(?:v\d+)?)", text
+        )
         if arxiv_match:
             metadata["arxiv_id"] = arxiv_match.group(1)
 
         # Year detection
-        year_match = re.search(r"\b(19\d{2}|20[0-2]\d)\b", pdf_meta.get("creationDate", ""))
+        year_match = re.search(r"\b(19\d{2}|20\d{2})\b", pdf_meta.get("creationDate", ""))
         if year_match:
-            metadata["year"] = int(year_match.group(1))
+            year_val = int(year_match.group(1))
+            from datetime import datetime as _dt
+            if 1900 <= year_val <= _dt.now().year:
+                metadata["year"] = year_val
 
         doc.close()
     except Exception as exc:

@@ -92,16 +92,6 @@ def find_preprint_versions(
     return candidates
 
 
-def build_canonical_filename_from_crossref(match: dict) -> str:
-    """Build a canonical filename from Crossref match data."""
-    title = match.get("matched_title", "")
-    authors = []
-
-    # We don't have full author info in the report, so we fall back to
-    # the original filename's author portion if possible
-    return ""  # Let the caller handle this
-
-
 def transition_paper(
     entry: dict,
     *,

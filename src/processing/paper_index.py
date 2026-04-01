@@ -64,15 +64,21 @@ def _classify_location(path: Path, library_root: Path) -> dict:
     top = parts[0]
     is_topic = top.startswith("07")
 
-    if "01 - Published" in top or (is_topic and len(parts) > 1 and "01 - Published" in parts[1]):
+    def _starts(folder: str, prefix: str) -> bool:
+        return folder.startswith(prefix)
+
+    # Check the top-level folder first; for topic folders (07x), check the subfolder
+    check_folder = parts[1] if is_topic and len(parts) > 1 else top
+
+    if _starts(check_folder, "01 - Published"):
         status = "published"
-    elif "02 - Unpublished" in top or (is_topic and len(parts) > 1 and "02 - Unpublished" in parts[1]):
+    elif _starts(check_folder, "02 - Unpublished"):
         status = "unpublished"
-    elif "03 - Working" in top or (is_topic and len(parts) > 1 and "03 - Working" in parts[1]):
+    elif _starts(check_folder, "03 - Working"):
         status = "working"
-    elif "05 - Books" in top:
+    elif _starts(check_folder, "05 - Books"):
         status = "book"
-    elif "06 - Theses" in top:
+    elif _starts(check_folder, "06 - Theses"):
         status = "thesis"
     else:
         status = "other"

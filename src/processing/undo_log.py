@@ -212,31 +212,47 @@ class UndoLog:
 def logged_move(
     source: Path, destination: Path, *, undo_log: Optional[UndoLog] = None
 ) -> None:
-    """Move a file and record the operation in the undo log."""
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    shutil.move(str(source), str(destination))
+    """Move a file and record the operation in the undo log.
+
+    Records the operation BEFORE moving so that a crash mid-move
+    still leaves a recoverable undo entry.
+    """
+    if not source.exists():
+        raise FileNotFoundError(f"Source does not exist: {source}")
+    if destination.exists():
+        raise FileExistsError(f"Destination already exists: {destination}")
     if undo_log:
         undo_log.record_move(source, destination)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    shutil.move(str(source), str(destination))
 
 
 def logged_copy(
     source: Path, destination: Path, *, undo_log: Optional[UndoLog] = None
 ) -> None:
     """Copy a file and record the operation in the undo log."""
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(source, destination)
+    if not source.exists():
+        raise FileNotFoundError(f"Source does not exist: {source}")
+    if destination.exists():
+        raise FileExistsError(f"Destination already exists: {destination}")
     if undo_log:
         undo_log.record_copy(source, destination)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(source, destination)
 
 
 def logged_rename(
     old_path: Path, new_path: Path, *, undo_log: Optional[UndoLog] = None
 ) -> None:
     """Rename a file and record the operation in the undo log."""
-    new_path.parent.mkdir(parents=True, exist_ok=True)
-    old_path.rename(new_path)
+    if not old_path.exists():
+        raise FileNotFoundError(f"Source does not exist: {old_path}")
+    if new_path.exists() and old_path != new_path:
+        raise FileExistsError(f"Destination already exists: {new_path}")
     if undo_log:
         undo_log.record_rename(old_path, new_path)
+    new_path.parent.mkdir(parents=True, exist_ok=True)
+    old_path.rename(new_path)
 
 
 # ---------------------------------------------------------------------------

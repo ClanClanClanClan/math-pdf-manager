@@ -57,8 +57,9 @@ def normalize_filename(name: str) -> str:
     # "Author  - Title" → "Author - Title"
     # "Author -Title" → "Author - Title"
     # "Author- Title" → "Author - Title"
-    s = re.sub(r"\s*\s+-\s*", " - ", s)
-    s = re.sub(r"\s+-\s+", " - ", s)
+    # But DON'T touch hyphens inside initials like "J.-P."
+    s = re.sub(r"(?<!\.)  +- +", " - ", s)  # double+ space before dash
+    s = re.sub(r"(?<!\.) +- +", " - ", s)   # normalize single space around dash
 
     # Normalize dash types: "--" → "–", but keep single "-" in names like "J.-P."
     # Only replace standalone double-dashes (not in initials)
