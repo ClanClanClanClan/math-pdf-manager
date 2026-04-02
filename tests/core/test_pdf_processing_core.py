@@ -552,7 +552,15 @@ class TestMultiEngineTextExtraction:
         mock_pymupdf = Mock()
         mock_doc = Mock()
         mock_page = Mock()
-        mock_page.get_text.return_value = "PyMuPDF extracted text"
+        def mock_get_text(mode=None, **kwargs):
+            if mode == "dict":
+                return {"blocks": [{"type": 0, "lines": [{"spans": [
+                    {"text": "PyMuPDF extracted text", "size": 12.0,
+                     "font": "Times", "flags": 0, "color": 0,
+                     "bbox": [50, 50, 500, 65]}
+                ]}]}]}
+            return "PyMuPDF extracted text"
+        mock_page.get_text = mock_get_text
         mock_doc.__iter__ = Mock(return_value=iter([mock_page]))
         mock_doc.__len__ = Mock(return_value=1)
         mock_doc.close = Mock()
