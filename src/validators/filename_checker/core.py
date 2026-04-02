@@ -320,19 +320,17 @@ def check_filename(
     if ext:
         new_fn += f".{ext}"
 
-    # Use Unicode-aware comparison for determining if we need to fix the filename
-    if (auto_fix_nfc or auto_fix_authors) and any(
-        m.type == "info" and "fix" in m.message.lower() for m in result.messages
-    ):
-        # Check if the normalized versions are actually different
-        original_normalized = normalize_for_comparison(nfc(raw))
-        new_normalized = normalize_for_comparison(nfc(new_fn))
+    # Check if the reconstructed filename differs from the original.
+    # This catches ALL corrections: sentence case, author formatting,
+    # NFC normalization, dash whitelist, etc.
+    original_normalized = normalize_for_comparison(nfc(raw))
+    new_normalized = normalize_for_comparison(nfc(new_fn))
 
-        if original_normalized != new_normalized:
-            fixed_name = new_fn
-            debug_print(f"Filename fix needed: '{raw}' → '{new_fn}'")
-        else:
-            debug_print(f"No filename fix needed after Unicode normalization: '{raw}'")
+    if original_normalized != new_normalized:
+        fixed_name = new_fn
+        debug_print(f"Filename fix needed: '{raw}' → '{new_fn}'")
+    else:
+        debug_print(f"No filename fix needed after comparison: '{raw}'")
 
     # Update result with final information
     result.corrected_filename = fixed_name

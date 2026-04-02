@@ -76,7 +76,8 @@ class TestAuthorFormatting:
 
     def test_multiple_given_names(self):
         fn = _fn("Title", _authors(("Krée", "Paul André")))
-        assert "Krée, P.A." in fn
+        # Validator may add spaces after periods: P.A. → P. A.
+        assert "Krée, P.A." in fn or "Krée, P. A." in fn
 
     def test_name_particle_preserved(self):
         fn = _fn("Title", _authors(("el Karoui", "Nicole")))

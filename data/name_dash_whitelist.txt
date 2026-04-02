@@ -24,7 +24,6 @@ Bienaymé–Chebyshev
 Bismut-Elworthy-Li
 Bismut–Elworthy
 Bismut–Elworthy–Li
-Black-Scholes
 Black–Karasinski
 Black–Merton
 Black–Scholes

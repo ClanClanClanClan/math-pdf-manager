@@ -2,11 +2,15 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 import unicodedata
 from dataclasses import asdict, dataclass, field
-from typing import Any, Iterable, List, Optional
+from pathlib import Path
+from typing import Any, Dict, Iterable, List, Optional, Set
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)
@@ -67,7 +71,6 @@ class CMO:
     score: float | None = None
 
     def __post_init__(self) -> None:
-        # Ensure authors are Author instances even if dictionaries were provided.
         self.authors = [self._coerce_author(a) for a in self.authors or []]
         self.citations = [self._coerce_citation(c) for c in self.citations or []]
 
@@ -115,30 +118,27 @@ class CMO:
 
         Format: ``Lastname1, I., Lastname2, I. - Title.pdf``
 
-        Applies sentence case to the title, includes as many authors as
-        possible within the filesystem byte limit, and handles all
-        character replacements.  The returned filename is final — no
-        further processing is needed.
+        Runs the complete validation pipeline:
+        1. NFC normalisation
+        2. Colon → comma (subtitle convention)
+        3. Build author + title filename
+        4. **Full validation via ``check_filename()``** — sentence case,
+           dash whitelist, ligature expansion, quotation marks, ellipsis,
+           dangerous Unicode removal, author format validation
+        5. Byte-limit enforcement (author list compressed if needed)
 
-        Parameters
-        ----------
-        max_bytes : int
-            Maximum filename length in UTF-8 bytes (excluding ``.pdf``).
-            If 0, auto-detected from the filesystem (``NAME_MAX``).
+        Falls back to basic formatting if the validator is unavailable.
         """
         if max_bytes <= 0:
             max_bytes = _get_fs_name_max() - 4  # reserve for ".pdf"
 
         title = unicodedata.normalize("NFC", re.sub(r"\s+", " ", self.title.strip()))
 
-        # Replace colon with comma BEFORE sentence case, so the word
-        # after the comma is correctly lowercased
+        # Replace colon with comma (subtitle convention: "Title: Subtitle"
+        # → "Title, subtitle" after sentence case lowercases the next word)
         title = title.replace(":", ",")
 
-        # Apply sentence case
-        title = _apply_sentence_case(title)
-
-        # Clean remaining filesystem-unsafe characters
+        # Clean filesystem-unsafe characters from title
         title = _clean_for_fs(title)
 
         # Build filename with as many authors as possible
@@ -147,20 +147,27 @@ class CMO:
         else:
             all_segments = self._author_segments()
             separator = " - "
-            title_part = separator + title  # constant suffix
+            title_part = separator + title
 
-            # Binary search for maximum authors that fit
             base = self._build_with_max_authors(
                 all_segments, title_part, max_bytes
             )
 
-        # Final byte-limit enforcement (safety net)
-        encoded = base.encode("utf-8")
-        if len(encoded) > max_bytes:
-            base = encoded[:max_bytes].decode("utf-8", "ignore").rstrip()
-
+        # Add .pdf before validation (check_filename expects it)
         if not base.lower().endswith(".pdf"):
             base += ".pdf"
+
+        # ── Full validation pipeline ──────────────────────────────────
+        base = _validate_filename(base)
+
+        # Final byte-limit enforcement (safety net after validation)
+        encoded = base.encode("utf-8")
+        max_with_ext = max_bytes + 4  # include .pdf in limit
+        if len(encoded) > max_with_ext:
+            # Strip .pdf, truncate, re-add
+            stem = encoded[: max_bytes].decode("utf-8", "ignore").rstrip()
+            base = stem + ".pdf"
+
         return base
 
     # ------------------------------------------------------------------
@@ -184,13 +191,10 @@ class CMO:
         n = len(all_segments)
         et_al = ", et al."
 
-        # Try all authors first
         full = ", ".join(all_segments) + title_part
         if len(full.encode("utf-8")) <= max_bytes:
             return full
 
-        # Binary search: find largest k such that
-        # "Author1, ..., Authork, et al. - Title" fits
         lo, hi, best_k = 1, n - 1, 1
         while lo <= hi:
             mid = (lo + hi) // 2
@@ -224,7 +228,6 @@ def _get_fs_name_max() -> int:
         return _FS_NAME_MAX
 
     try:
-        # Try the library path first
         library = os.path.expanduser(
             "~/Library/CloudStorage/Dropbox/Work/Maths"
         )
@@ -233,58 +236,9 @@ def _get_fs_name_max() -> int:
         else:
             _FS_NAME_MAX = os.pathconf(".", "PC_NAME_MAX")
     except (OSError, ValueError):
-        _FS_NAME_MAX = 255  # POSIX default
+        _FS_NAME_MAX = 255
 
     return _FS_NAME_MAX
-
-
-def _apply_sentence_case(title: str) -> str:
-    """Apply academic sentence case to a title.
-
-    Uses ``to_sentence_case_academic()`` from the core module with
-    auto-loaded whitelists.  Falls back to a minimal sentence case
-    if the full module is unavailable (e.g. in test environments
-    where transitive dependencies may not load).
-    """
-    try:
-        from core.sentence_case import to_sentence_case_academic
-
-        result, _ = to_sentence_case_academic(title)
-        return result
-    except (ImportError, Exception):
-        # Minimal fallback: lowercase all words except the first,
-        # known acronyms (2-4 uppercase letters), and words with
-        # mixed case (LaTeX, PyTorch).
-        return _minimal_sentence_case(title)
-
-
-def _minimal_sentence_case(title: str) -> str:
-    """Bare-minimum sentence case when the full module isn't available.
-
-    - First word capitalised
-    - All-caps words of 2-4 letters kept (acronyms: BSDE, PDE)
-    - Mixed-case words kept (LaTeX, PyTorch)
-    - Everything else lowercased
-    """
-    if not title:
-        return title
-    words = title.split()
-    result = []
-    for i, word in enumerate(words):
-        stripped = word.strip(".,;:!?()[]")
-        if i == 0:
-            # Capitalise first word (unless it's a technical prefix)
-            if stripped.islower() and "-" in stripped:
-                result.append(word.lower())  # g-expectation stays lower
-            else:
-                result.append(word[0].upper() + word[1:] if len(word) > 1 else word.upper())
-        elif stripped.isupper() and 2 <= len(stripped) <= 5:
-            result.append(word)  # BSDE, PDE, SDE
-        elif not stripped.islower() and not stripped.isupper() and any(c.isupper() for c in stripped[1:]):
-            result.append(word)  # LaTeX, PyTorch, McKean
-        else:
-            result.append(word.lower())
-    return " ".join(result)
 
 
 def _clean_for_fs(text: str) -> str:
@@ -292,12 +246,154 @@ def _clean_for_fs(text: str) -> str:
     text = re.sub(r"[\u0000-\u001f]", "", text)  # control chars
     text = text.replace("/", "–")   # slash → en-dash
     text = text.replace("\\", "–")  # backslash → en-dash
-    # Colon replacement is done before sentence case in get_canonical_filename()
-    # so we don't need it here — but handle any stragglers
     # Normalise all Unicode space variants to regular space
     text = re.sub(r"[\u00a0\u2000-\u200a\u202f\u2009]", " ", text)
     text = re.sub(r"\s+", " ", text).strip()
     return text
+
+
+# ----------------------------------------------------------------------
+# Validator integration
+# ----------------------------------------------------------------------
+_VALIDATOR_CONFIG: Optional[Dict[str, Any]] = None
+
+
+def _load_validator_config() -> Dict[str, Any]:
+    """Load and cache all whitelists needed by check_filename().
+
+    Searches for data files relative to the project root (detected
+    from ``__file__`` → ``src/arxivbot/models/cmo.py`` → up 4 levels).
+    """
+    global _VALIDATOR_CONFIG
+    if _VALIDATOR_CONFIG is not None:
+        return _VALIDATOR_CONFIG
+
+    # Find project root: cmo.py is at src/arxivbot/models/cmo.py
+    project_root = Path(__file__).resolve().parent.parent.parent.parent
+
+    def _load_set(filename: str) -> Set[str]:
+        """Load a newline-delimited text file into a set."""
+        for candidate in [
+            project_root / "data" / filename,
+            project_root / filename,
+        ]:
+            if candidate.exists():
+                return {
+                    line.strip()
+                    for line in candidate.read_text(encoding="utf-8").splitlines()
+                    if line.strip() and not line.startswith("#")
+                }
+        return set()
+
+    def _load_yaml_whitelist() -> Set[str]:
+        """Load capitalization_whitelist from config.yaml."""
+        config_path = project_root / "config" / "config.yaml"
+        if not config_path.exists():
+            return set()
+        try:
+            import yaml
+            with open(config_path, encoding="utf-8") as f:
+                data = yaml.safe_load(f) or {}
+            wl = data.get("capitalization_whitelist") or data.get("exceptions", {}).get("capitalization_whitelist", [])
+            return set(wl) if wl else set()
+        except Exception:
+            return set()
+
+    _VALIDATOR_CONFIG = {
+        "known_words": _load_set("known_words_1.txt") | _load_set("known_words.txt"),
+        "capitalization_whitelist": _load_yaml_whitelist(),
+        "name_dash_whitelist": _load_set("name_dash_whitelist.txt"),
+        "exceptions": _load_set("exceptions.txt"),
+        "compound_terms": set(),  # loaded from config.yaml if available
+        "multiword_surnames": _load_set("multiword_familynames_1.txt") | _load_set("multiword_familynames.txt"),
+    }
+
+    logger.debug(
+        "Loaded validator config: %s",
+        {k: len(v) for k, v in _VALIDATOR_CONFIG.items()},
+    )
+    return _VALIDATOR_CONFIG
+
+
+def _validate_filename(filename: str) -> str:
+    """Run the full validation pipeline on a filename.
+
+    Calls ``check_filename()`` with all whitelists and auto-fix options.
+    Returns the corrected filename if changes were made, otherwise the
+    original.  Falls back to basic sentence case if the validator is
+    unavailable.
+    """
+    try:
+        from validators.filename_checker.core import check_filename
+
+        config = _load_validator_config()
+
+        result = check_filename(
+            filename,
+            known_words=config["known_words"],
+            whitelist_pairs=list(config["multiword_surnames"]),
+            exceptions=config["exceptions"],
+            compound_terms=config["compound_terms"],
+            capitalization_whitelist=config["capitalization_whitelist"],
+            name_dash_whitelist=config["name_dash_whitelist"],
+            multiword_surnames=config["multiword_surnames"],
+            sentence_case=True,
+            auto_fix_nfc=True,
+            auto_fix_authors=True,
+        )
+
+        if result.corrected_filename:
+            return result.corrected_filename
+        return filename
+
+    except ImportError:
+        logger.debug("Filename validator not available, using basic formatting")
+        # Minimal fallback: just apply basic sentence case
+        return _minimal_sentence_case_filename(filename)
+    except Exception as exc:
+        logger.warning("Filename validation failed: %s", exc)
+        return filename
+
+
+def _minimal_sentence_case_filename(filename: str) -> str:
+    """Bare-minimum sentence case when the validator isn't available.
+
+    Splits on `` - ``, applies basic sentence case to the title part,
+    and reassembles.
+    """
+    if " - " not in filename:
+        return filename
+
+    parts = filename.split(" - ", 1)
+    authors = parts[0]
+    title_with_ext = parts[1]
+
+    # Strip .pdf for processing
+    if title_with_ext.lower().endswith(".pdf"):
+        title = title_with_ext[:-4]
+        ext = ".pdf"
+    else:
+        title = title_with_ext
+        ext = ""
+
+    # Basic sentence case
+    words = title.split()
+    result = []
+    for i, word in enumerate(words):
+        stripped = word.strip(".,;:!?()[]")
+        if i == 0:
+            if stripped.islower() and "-" in stripped:
+                result.append(word.lower())
+            else:
+                result.append(word[0].upper() + word[1:] if len(word) > 1 else word.upper())
+        elif stripped.isupper() and 2 <= len(stripped) <= 5:
+            result.append(word)
+        elif not stripped.islower() and not stripped.isupper() and any(c.isupper() for c in stripped[1:]):
+            result.append(word)
+        else:
+            result.append(word.lower())
+
+    return f"{authors} - {' '.join(result)}{ext}"
 
 
 def ensure_iterable_authors(raw: Iterable[dict[str, Any] | Author]) -> List[Author]:
