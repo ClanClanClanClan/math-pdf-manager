@@ -6,11 +6,11 @@ This replaces multiple scattered validation modules throughout the project.
 
 Usage:
     # New unified interface (recommended)
-    from src.core.validation import UnifiedValidationService
+    from core.validation import UnifiedValidationService
     validator = UnifiedValidationService()
     
     # Legacy compatibility (deprecated but supported)
-    from src.core.validation.compatibility import validate_cli_inputs
+    from core.validation.compatibility import validate_cli_inputs
 """
 
 from .unified_validator import UnifiedValidationService

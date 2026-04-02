@@ -8,7 +8,7 @@ Extracted from utils.py to improve modularity
 from typing import List, Iterable, Tuple, Set
 import regex as re
 
-from src.core.text_processing import math_detector
+from core.text_processing import math_detector
 from .tokenization import Token
 
 # Common dash characters

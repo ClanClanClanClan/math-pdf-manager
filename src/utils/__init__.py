@@ -71,7 +71,7 @@ except ImportError:
 # Import utilities from validators package (modern approach)
 try:
     from validators import ValidationResult, check_filename as validator_check_filename  # noqa: F401
-    from src.validators.filename_checker import check_filename as fc_check_filename  # noqa: F401
+    from validators.filename_checker import check_filename as fc_check_filename  # noqa: F401
     
     print("✅ Utils package: imported modern validator functions")
     

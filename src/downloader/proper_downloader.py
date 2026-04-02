@@ -417,10 +417,10 @@ class Downloader:
     
     def download(self, identifier: str) -> DownloadResult:
         """Sync download."""
-        from src.core.utils.async_compat import run_sync
+        from core.utils.async_compat import run_sync
         return run_sync(self.async_downloader.download(identifier))
 
     def close(self):
         """Close downloader."""
-        from src.core.utils.async_compat import run_sync
+        from core.utils.async_compat import run_sync
         run_sync(self.async_downloader.close())

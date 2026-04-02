@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Core parsing base classes and utilities
-Extracted from src.parsers.pdf_parser.py for better modularity
+Extracted from parsers.pdf_parser.py for better modularity
 """
 
 import logging

@@ -429,27 +429,27 @@ class PaperDatabase:
 
     def add_paper(self, paper: PaperRecord) -> int:
         """Sync version of add_paper."""
-        from src.core.utils.async_compat import run_sync
+        from core.utils.async_compat import run_sync
         return run_sync(self.async_db.add_paper(paper))
 
     def get_paper(self, paper_id: int) -> Optional[PaperRecord]:
         """Sync version of get_paper."""
-        from src.core.utils.async_compat import run_sync
+        from core.utils.async_compat import run_sync
         return run_sync(self.async_db.get_paper(paper_id))
 
     def search_papers(self, query: str, limit: int = 50) -> List[PaperRecord]:
         """Sync version of search_papers."""
-        from src.core.utils.async_compat import run_sync
+        from core.utils.async_compat import run_sync
         return run_sync(self.async_db.search_papers(query, limit))
 
     def list_papers(self, limit: int = 100, offset: int = 0) -> List[PaperRecord]:
         """Sync version of list_papers."""
-        from src.core.utils.async_compat import run_sync
+        from core.utils.async_compat import run_sync
         return run_sync(self.async_db.list_papers(limit, offset))
 
     def get_statistics(self) -> Dict[str, Any]:
         """Sync version of get_statistics."""
-        from src.core.utils.async_compat import run_sync
+        from core.utils.async_compat import run_sync
         return run_sync(self.async_db.get_statistics())
 
 

@@ -2,7 +2,7 @@
 Title Normalizer Module
 
 Title normalization, capitalization checking, and dash handling
-extracted from src.validators.filename_checker.py
+extracted from validators.filename_checker.py
 """
 
 import re

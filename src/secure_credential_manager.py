@@ -346,7 +346,7 @@ export ETH_PASSWORD="your_eth_password_here"
 
 ## Method 2: Encrypted Files (Recommended for local automation)
 ```python
-from src.secure_credential_manager import SecureCredentialManager
+from secure_credential_manager import SecureCredentialManager
 
 manager = SecureCredentialManager()
 manager.store_credential("eth_username", "your_eth_username", "file")
@@ -368,7 +368,7 @@ ENV ETH_PASSWORD=your_password
 
 ## Verification
 ```python
-from src.secure_credential_manager import SecureCredentialManager
+from secure_credential_manager import SecureCredentialManager
 manager = SecureCredentialManager()
 print(manager.list_available_credentials())
 ```

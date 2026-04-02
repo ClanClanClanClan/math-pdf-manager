@@ -2,7 +2,7 @@
 PDF Content Extractors
 
 Specialized extractors for different types of academic papers.
-Extracted from src.parsers.pdf_parser.py for better modularity.
+Extracted from parsers.pdf_parser.py for better modularity.
 """
 
 import regex as re

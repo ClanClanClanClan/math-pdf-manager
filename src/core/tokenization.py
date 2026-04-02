@@ -11,7 +11,7 @@ from functools import lru_cache
 from typing import Iterable, List, Tuple
 import regex as re
 
-from src.core.text_processing import math_detector
+from core.text_processing import math_detector
 
 
 @dataclass(frozen=True, slots=True)

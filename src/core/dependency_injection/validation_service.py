@@ -623,7 +623,7 @@ class UnifiedValidationService:
         """
         try:
             # Try to use mathematician name validator if available
-            from src.validators.mathematician_name_validator import get_global_validator
+            from validators.mathematician_name_validator import get_global_validator
             validator = get_global_validator()
             if validator:
                 return validator.is_mathematician(name)

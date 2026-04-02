@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 ArXiv API Client
-Extracted from src.parsers.pdf_parser.py - Handles ArXiv API integration
+Extracted from parsers.pdf_parser.py - Handles ArXiv API integration
 """
 
 import logging

@@ -1,5 +1,5 @@
 """
-Validation Module - Refactored from src.validators.filename_checker.py
+Validation Module - Refactored from validators.filename_checker.py
 
 This module contains the validation logic extracted from the monolithic
 filename_checker.py file, organized into focused components.
@@ -82,7 +82,7 @@ from .validation_result import (
 )
 
 # Utility functions
-from src.core.validation import (
+from core.validation import (
     enable_debug,
     disable_debug,
     debug_print,

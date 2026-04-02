@@ -5,7 +5,7 @@ A comprehensive configuration management system that consolidates all configurat
 sources and provides a single, coherent interface for configuration access.
 
 Usage:
-    from src.core.unified_config import get_config, set_config, get_config_manager
+    from core.unified_config import get_config, set_config, get_config_manager
     
     # Get configuration values
     database_url = get_config('database_url', 'sqlite:///default.db')

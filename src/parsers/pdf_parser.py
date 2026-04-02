@@ -50,7 +50,7 @@ except ImportError:
 
 # Import everything from the new modular structure (after module setup)
 try:
-    from src.pdf_processing import (
+    from pdf_processing import (
         _fake_image_to_string,
         UltraEnhancedPDFParser
     )

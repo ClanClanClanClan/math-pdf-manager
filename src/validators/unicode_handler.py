@@ -2,7 +2,7 @@
 Unicode Handler Module
 
 Unicode processing, normalization, and security functions
-extracted from src.validators.filename_checker.py
+extracted from validators.filename_checker.py
 """
 
 import logging

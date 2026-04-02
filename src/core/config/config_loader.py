@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Set, Dict, Any, Optional
 from unicodedata import normalize
 
-from src.core.utils.service_registry import get_logging_service, get_file_service, get_config_service
+from core.utils.service_registry import get_logging_service, get_file_service, get_config_service
 from core.dependency_injection import IConfigurationService
 
 # Constants from main.py

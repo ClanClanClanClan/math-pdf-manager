@@ -2,14 +2,14 @@
 Pattern Matcher Module
 
 Pattern matching, tokenization, and text analysis functions
-extracted from src.validators.filename_checker.py
+extracted from validators.filename_checker.py
 """
 
 import re
 import unicodedata
 from dataclasses import dataclass
 from typing import List, Set, Tuple, Optional
-from src.core.validation import debug_print
+from core.validation import debug_print
 
 
 @dataclass

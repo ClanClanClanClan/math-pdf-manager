@@ -2,7 +2,7 @@
 PDF Processing Utilities
 
 Utility functions for PDF processing operations.
-Extracted from src.parsers.pdf_parser.py for better modularity.
+Extracted from parsers.pdf_parser.py for better modularity.
 """
 
 import signal
@@ -82,7 +82,7 @@ def _fake_image_to_string(image_path: str) -> str:
 
 
 # Backward compatibility - make functions accessible as top-level names
-# (tests do `from src.parsers.pdf_parser import …`)
+# (tests do `from parsers.pdf_parser import …`)
 globals().update(
     grobid_available=grobid_available,
     ocr_available=ocr_available,

@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 # Import secure credential manager
 try:
-    from src.secure_credential_manager import get_credential_manager
+    from secure_credential_manager import get_credential_manager
     SECURE_CREDS_AVAILABLE = True
 except ImportError:
     SECURE_CREDS_AVAILABLE = False

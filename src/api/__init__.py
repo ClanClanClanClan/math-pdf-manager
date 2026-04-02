@@ -1,6 +1,6 @@
 """
 API Clients Module
-Extracted from src.parsers.pdf_parser.py to handle external API integrations
+Extracted from parsers.pdf_parser.py to handle external API integrations
 """
 
 from .arxiv_client import ArxivAPIClient

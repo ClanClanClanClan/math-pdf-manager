@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Core validation base classes and utilities
-Extracted from src.validators.filename_checker.py for better modularity
+Extracted from validators.filename_checker.py for better modularity
 """
 
 import unicodedata

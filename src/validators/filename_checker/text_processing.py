@@ -84,8 +84,8 @@ MATHBB_MAP = {
 
 # Try to import from existing modules
 try:
-    from src.core.text_processing.my_spellchecker import SpellChecker
-    from src.validators.filename_checker import LIGATURE_MAP, LIGATURES_WHITELIST
+    from core.text_processing.my_spellchecker import SpellChecker
+    from validators.filename_checker import LIGATURE_MAP, LIGATURES_WHITELIST
     _SC = SpellChecker()
     debug_print("Successfully imported SpellChecker and ligature constants")
 except ImportError:

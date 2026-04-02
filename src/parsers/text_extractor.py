@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Text Extraction Engine
-Extracted from src.parsers.pdf_parser.py - Handles text extraction from PDFs using multiple backends
+Extracted from parsers.pdf_parser.py - Handles text extraction from PDFs using multiple backends
 """
 
 import logging

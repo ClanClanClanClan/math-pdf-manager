@@ -391,17 +391,17 @@ class MetadataFetcher:
 
     def fetch_metadata(self, identifier: str) -> Optional[Metadata]:
         """Sync version of fetch_metadata."""
-        from src.core.utils.async_compat import run_sync
+        from core.utils.async_compat import run_sync
         return run_sync(self.async_fetcher.fetch_metadata(identifier))
 
     def fetch_multiple(self, identifiers: List[str]) -> List[Tuple[str, Optional[Metadata]]]:
         """Sync version of fetch_multiple."""
-        from src.core.utils.async_compat import run_sync
+        from core.utils.async_compat import run_sync
         return run_sync(self.async_fetcher.fetch_multiple(identifiers))
 
     def close(self):
         """Close the async fetcher."""
-        from src.core.utils.async_compat import run_sync
+        from core.utils.async_compat import run_sync
         run_sync(self.async_fetcher.close())
 
 

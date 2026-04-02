@@ -1,7 +1,7 @@
 """
 PDF Processing Module
 
-Modular PDF processing system extracted from src.parsers.pdf_parser.py.
+Modular PDF processing system extracted from parsers.pdf_parser.py.
 Provides comprehensive PDF metadata extraction, text processing,
 and document structure analysis capabilities.
 

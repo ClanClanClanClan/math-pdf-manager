@@ -83,7 +83,7 @@ except Exception as e:
 # Test 5: Compatibility Layer
 print("\n5. Testing Compatibility Layer")
 try:
-    from src.validators.filename_checker_compatibility import enable_debug, SUPERSCRIPT_MAP, find_math_regions
+    from validators.filename_checker_compatibility import enable_debug, SUPERSCRIPT_MAP, find_math_regions
     
     enable_debug()
     regions = find_math_regions("Test $x^2$")

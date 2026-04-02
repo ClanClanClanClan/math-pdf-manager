@@ -141,8 +141,10 @@ def extract_metadata_from_pdf(pdf_path: Path) -> dict:
                     # Categories
                     for cat in entry.findall("{http://arxiv.org/schemas/atom}primary_category"):
                         metadata["arxiv_category"] = cat.get("term", "")
+        except requests.exceptions.RequestException as exc:
+            logger.warning("ArXiv API request failed for %s: %s", metadata["arxiv_id"], exc)
         except Exception as exc:
-            logger.debug("ArXiv lookup failed for %s: %s", metadata["arxiv_id"], exc)
+            logger.warning("ArXiv lookup failed for %s: %s", metadata["arxiv_id"], exc)
 
     # Try Crossref lookup if we have a DOI
     if metadata.get("doi") and not metadata["title"]:
@@ -173,8 +175,10 @@ def extract_metadata_from_pdf(pdf_path: Path) -> dict:
                     parts = pub_date["date-parts"][0]
                     if parts:
                         metadata["year"] = parts[0]
+        except requests.exceptions.RequestException as exc:
+            logger.warning("Crossref API request failed for DOI %s: %s", metadata["doi"], exc)
         except Exception as exc:
-            logger.debug("Crossref lookup failed for %s: %s", metadata["doi"], exc)
+            logger.warning("Crossref lookup failed for DOI %s: %s", metadata["doi"], exc)
 
     # Try LLM extraction if title is still missing
     if not metadata["title"]:

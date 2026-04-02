@@ -14,7 +14,7 @@ from enum import Enum
 
 # Try to import secure credential manager
 try:
-    from src.secure_credential_manager import SecureCredentialManager
+    from secure_credential_manager import SecureCredentialManager
     SECURE_CREDENTIALS_AVAILABLE = True
 except ImportError:
     SECURE_CREDENTIALS_AVAILABLE = False

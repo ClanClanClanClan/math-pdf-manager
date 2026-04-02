@@ -2,7 +2,7 @@
 Suggestion Engine Module
 
 Auto-fix suggestions and correction generation
-extracted from src.validators.filename_checker.py
+extracted from validators.filename_checker.py
 """
 
 import re

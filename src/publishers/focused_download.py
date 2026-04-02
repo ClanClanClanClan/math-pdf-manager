@@ -20,7 +20,7 @@ async def focused_download():
     from playwright.async_api import async_playwright
     
     # Get credentials
-    from src.secure_credential_manager import get_credential_manager
+    from secure_credential_manager import get_credential_manager
     cm = get_credential_manager()
     username, password = cm.get_eth_credentials()
     

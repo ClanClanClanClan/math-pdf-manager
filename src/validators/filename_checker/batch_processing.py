@@ -10,7 +10,7 @@ from typing import Iterable, Dict, Any, Set, List
 from .core import check_filename
 
 try:
-    from src.core.text_processing.my_spellchecker import SpellChecker
+    from core.text_processing.my_spellchecker import SpellChecker
 except ImportError:
     class MockSpellChecker:
         def __init__(self, *args, **kwargs):

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Base Parser Classes and Constants
-Extracted from src.parsers.pdf_parser.py - Contains core data structures and constants
+Extracted from parsers.pdf_parser.py - Contains core data structures and constants
 """
 
 from enum import Enum

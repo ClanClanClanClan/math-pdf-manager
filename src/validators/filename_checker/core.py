@@ -24,7 +24,7 @@ from .author_processing import (
 
 # Try to import required functions from existing modules
 try:
-    from src.core.text_processing.my_spellchecker import SpellChecker
+    from core.text_processing.my_spellchecker import SpellChecker
     from langdetect import detect, LangDetectException
     debug_print("Successfully imported SpellChecker and language detection")
 except ImportError:

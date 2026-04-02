@@ -1,6 +1,6 @@
 """
 PDF Parser Module
-Extracted from src.parsers.pdf_parser.py to create focused, maintainable modules
+Extracted from parsers.pdf_parser.py to create focused, maintainable modules
 """
 
 from .base_parser import PDFMetadata, MetadataSource, PDFConstants

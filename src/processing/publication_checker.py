@@ -149,6 +149,12 @@ class CrossrefChecker:
                 timeout=15,
             )
             resp.raise_for_status()
+        except requests.exceptions.Timeout as exc:
+            logger.warning("Crossref query timed out for '%s': %s", title[:50], exc)
+            return {"error": "timeout"}
+        except requests.exceptions.RequestException as exc:
+            logger.warning("Crossref API request failed for '%s': %s", title[:50], exc)
+            return {"error": str(exc)}
         except Exception as exc:
             logger.warning("Crossref query failed for '%s': %s", title[:50], exc)
             return None

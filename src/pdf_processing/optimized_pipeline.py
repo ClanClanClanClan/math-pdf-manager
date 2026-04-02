@@ -27,7 +27,7 @@ import aiofiles
 
 # Import secure session creator
 try:
-    from src.downloader.credentials import create_secure_session
+    from downloader.credentials import create_secure_session
 except ImportError:
     # Fallback if credentials module not available
     def create_secure_session(**kwargs):

@@ -2,7 +2,7 @@
 Author Parser Module
 
 Author name parsing, normalization, and validation functions
-extracted from src.validators.filename_checker.py
+extracted from validators.filename_checker.py
 """
 
 import logging

@@ -8,7 +8,7 @@ Simple script to securely store ETH credentials.
 
 import getpass
 import sys
-from src.secure_credential_manager import get_credential_manager
+from secure_credential_manager import get_credential_manager
 
 def setup_credentials_interactive():
     """Interactive credential setup with secure password input."""

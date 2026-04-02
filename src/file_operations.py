@@ -11,7 +11,7 @@ import os
 from pathlib import Path
 from typing import Any, List
 
-from src.core.utils.service_registry import get_logging_service
+from core.utils.service_registry import get_logging_service
 
 # Dropbox migration paths
 DROPBOX_OLD_PATH = Path.home() / "Dropbox"

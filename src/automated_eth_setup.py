@@ -11,7 +11,7 @@ import logging
 from typing import Dict, List, Optional
 from dataclasses import dataclass
 
-from src.secure_credential_manager import get_credential_manager
+from secure_credential_manager import get_credential_manager
 from auth_manager import get_auth_manager, AuthConfig, AuthMethod
 from core.config.secure_config import get_secure_credential, ConfigurationError
 

@@ -1,7 +1,7 @@
 """
 Validation Result Objects
 
-Data models for validation results extracted from src.validators.filename_checker.py
+Data models for validation results extracted from validators.filename_checker.py
 """
 
 from dataclasses import dataclass

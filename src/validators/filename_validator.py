@@ -1,7 +1,7 @@
 """
 Filename Validator Module
 
-Core filename validation logic extracted from src.validators.filename_checker.py
+Core filename validation logic extracted from validators.filename_checker.py
 """
 
 import time

@@ -2,7 +2,7 @@
 PDF Processing Constants
 
 Constants and configuration values for PDF processing operations.
-Extracted from src.parsers.pdf_parser.py for better modularity.
+Extracted from parsers.pdf_parser.py for better modularity.
 """
 
 

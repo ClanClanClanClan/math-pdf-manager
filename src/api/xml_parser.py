@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 XML Parser for ArXiv API
-Extracted from src.parsers.pdf_parser.py - Handles XML parsing for ArXiv API responses
+Extracted from parsers.pdf_parser.py - Handles XML parsing for ArXiv API responses
 """
 
 import logging

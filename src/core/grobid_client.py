@@ -109,7 +109,7 @@ class GrobidClient:
         try:
             # Use existing PDF processing infrastructure
             try:
-                from src.pdf_processing.extractors import (
+                from pdf_processing.extractors import (
                     AdvancedArxivExtractor,
                     AdvancedJournalExtractor,
                     AdvancedSSRNExtractor

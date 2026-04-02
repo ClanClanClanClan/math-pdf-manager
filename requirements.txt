@@ -1,74 +1,30 @@
 # Core
-PyYAML
-requests
-tqdm
-PyMuPDF
-pdfplumber
-jinja2
+PyYAML>=6.0
+requests>=2.31
+tqdm>=4.66
+PyMuPDF>=1.23
+rapidfuzz>=3.5
+regex>=2023.12
+defusedxml>=0.7
+jinja2>=3.1
 
-# Fuzzy matching / NLP
-rapidfuzz
-spacy
-en_core_web_sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.1/en_core_web_sm-3.7.1-py3-none-any.whl
+# Async
+aiohttp>=3.9
+aiofiles>=23.0
+aiosqlite>=0.19
+httpx>=0.25
 
-# Spellcheck/grammar
-pyspellchecker
-language_tool_python
+# Text processing
+langdetect>=1.0
+lz4>=4.3
+pdfplumber>=0.10
 
-# LLM/AI
-transformers
-torch
-
-# OCR fallback
-pytesseract
-Pillow
-pdf2image
-
-# Browser automation (optional advanced download)
-playwright
-selenium
-
-# Google Scholar
-scholarly
-
-# Testing
-pytest
-pytest-cov
-
-# Async and performance optimization
-aiohttp
-aiofiles
-lz4
-
-# Performance monitoring
-memory_profiler
-psutil
-
-# Security and encryption
-cryptography
+# Security
+cryptography>=41.0
 certifi
 
-# HTML parsing
-beautifulsoup4
+# LLM (optional — only needed for PDF metadata extraction via local model)
+# llama-cpp-python>=0.3
 
-# API server
-fastapi
-uvicorn[standard]
-prometheus-client
-
-# Missing dependencies from audit
-httpx
-tenacity
-backoff
-sentence-transformers
-opencv-python
-defusedxml
-regex
-
-# Testing dependencies
-pytest-benchmark
-
-# Enhanced Acquisition Engine dependencies
-jsonschema>=4.0.0  # Configuration validation
-asyncio-throttle>=1.0.0  # Rate limiting for async operations
-urllib3>=1.26.0  # HTTP client improvements
+# Testing (install with: pip install -e ".[dev]")
+# pytest, pytest-cov, pytest-timeout, pytest-asyncio, hypothesis
