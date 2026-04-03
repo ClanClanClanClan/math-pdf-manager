@@ -1,0 +1,36 @@
+# Math-PDF Watcher Configuration
+#
+# Drop PDFs in the inbox directory and they will be automatically
+# ingested into the library with proper filenames.
+
+# Where to watch for new PDFs
+inbox_dir: ~/Downloads/MathInbox
+
+# Root of the paper library
+library_root: ~/Library/CloudStorage/Dropbox/Work/Maths
+
+# Log directory
+log_dir: ~/.mathpdf
+
+# Default publication status for papers without DOI or arXiv ID
+# Options: working, unpublished, published, auto
+# "auto" = detect from metadata (DOI → published, arXiv → unpublished, else → working)
+default_status: auto
+
+# Default year for working papers (used if year can't be detected)
+# Use "current" for the current year
+default_year: current
+
+# Automatically classify papers into topic folders (07a-07f)?
+auto_classify_topic: false
+
+# Seconds to wait after last file modification before processing
+# (ensures file is fully written, especially for large downloads)
+settle_seconds: 3.0
+
+# Delete the source file from inbox after successful filing?
+delete_source: true
+
+# macOS notifications
+notifications: true
+notification_sound: Glass
