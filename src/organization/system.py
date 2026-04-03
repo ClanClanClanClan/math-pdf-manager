@@ -130,17 +130,25 @@ class FolderRouter:
         return None
 
     def determine_publication_status(self, metadata: Dict) -> str:
-        """Determine publication status from metadata."""
+        """Determine publication status from metadata.
+
+        A paper is considered "published" only if it has a DOI from an
+        actual journal or publisher.  DOIs from repositories (SSRN, arXiv,
+        HAL, Zenodo, NBER, RePEc, etc.) are preprints, not publications.
+        """
         doc_type = metadata.get("document_type", "").lower()
         if doc_type in ("book", "lecture_notes"):
             return "book"
         if doc_type == "thesis":
             return "thesis"
 
-        if metadata.get("doi"):
+        doi = metadata.get("doi", "")
+        journal = metadata.get("journal", "")
+
+        # DOIs from repositories are NOT publications
+        if doi and not _is_repository_doi(doi):
             return "published"
-        if metadata.get("journal"):
-            # Has a journal but no DOI — accepted but not fully published
+        if journal and not _is_repository_journal(journal):
             return "published"
         if metadata.get("arxiv_id"):
             return "unpublished"
@@ -305,6 +313,55 @@ class OrganizationSystem:
 
     def find_duplicates(self, files: Iterable[Path]) -> Dict[str, List[Path]]:
         return self.duplicate_detector.find_exact_duplicates(files)
+
+
+# ---------------------------------------------------------------------------
+# Repository detection — these are NOT journal publications
+# ---------------------------------------------------------------------------
+
+# DOI prefixes that belong to repositories, not journals
+_REPOSITORY_DOI_PREFIXES = (
+    "10.2139/ssrn",       # SSRN
+    "10.48550/arxiv",     # arXiv
+    "10.26509/",          # HAL (some)
+    "10.5281/zenodo",     # Zenodo
+    "10.3386/",           # NBER
+    "10.21034/",          # Federal Reserve
+    "10.17863/",          # Cambridge repository
+    "10.2139/",           # SSRN (broader prefix)
+    "10.1101/",           # bioRxiv / medRxiv
+)
+
+# Journal names that are actually repositories
+_REPOSITORY_JOURNAL_NAMES = (
+    "ssrn electronic journal",
+    "ssrn",
+    "arxiv",
+    "hal",
+    "nber working paper",
+    "nber",
+    "cepr discussion paper",
+    "repec",
+    "zenodo",
+    "biorxiv",
+    "medrxiv",
+    "working paper",
+    "discussion paper",
+    "technical report",
+    "preprint",
+)
+
+
+def _is_repository_doi(doi: str) -> bool:
+    """Check if a DOI belongs to a repository (not a journal)."""
+    doi_lower = doi.lower().strip()
+    return any(doi_lower.startswith(prefix) for prefix in _REPOSITORY_DOI_PREFIXES)
+
+
+def _is_repository_journal(journal: str) -> bool:
+    """Check if a journal name is actually a repository."""
+    j_lower = journal.lower().strip()
+    return any(repo in j_lower for repo in _REPOSITORY_JOURNAL_NAMES)
 
 
 __all__ = [

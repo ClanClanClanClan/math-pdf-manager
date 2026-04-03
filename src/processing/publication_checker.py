@@ -205,8 +205,17 @@ class CrossrefChecker:
                     "confidence": round(combined, 3),
                 }
 
-        # Only accept high-confidence matches
+        # Only accept high-confidence matches from real journals
+        # (not repositories like SSRN, arXiv, HAL, NBER, etc.)
         if best_match and best_match["confidence"] >= 0.75:
+            if _is_repository_match(best_match):
+                logger.debug(
+                    "Skipping repository match for '%s': %s (%s)",
+                    title[:40], best_match.get("journal"), best_match.get("doi"),
+                )
+                self._cache[cache_key] = None
+                self._save_cache()
+                return None
             self._cache[cache_key] = best_match
             self._save_cache()
             return best_match
@@ -485,6 +494,45 @@ def check_arxiv_versions(
             logger.debug("ArXiv check failed for %s: %s", arxiv_id, exc)
 
     return results
+
+
+# ---------------------------------------------------------------------------
+# Repository detection — matches from these are NOT publications
+# ---------------------------------------------------------------------------
+
+_REPOSITORY_DOI_PREFIXES = (
+    "10.2139/ssrn",       # SSRN
+    "10.48550/arxiv",     # arXiv
+    "10.5281/zenodo",     # Zenodo
+    "10.3386/",           # NBER
+    "10.1101/",           # bioRxiv / medRxiv
+)
+
+_REPOSITORY_JOURNALS = (
+    "ssrn electronic journal",
+    "ssrn",
+    "arxiv",
+    "nber working paper",
+    "zenodo",
+    "biorxiv",
+    "medrxiv",
+    "hal",
+    "working paper",
+    "discussion paper",
+    "preprint",
+)
+
+
+def _is_repository_match(match: dict) -> bool:
+    """Check if a Crossref match is from a repository, not a journal."""
+    doi = (match.get("doi") or "").lower()
+    journal = (match.get("journal") or "").lower()
+
+    if any(doi.startswith(prefix) for prefix in _REPOSITORY_DOI_PREFIXES):
+        return True
+    if any(repo in journal for repo in _REPOSITORY_JOURNALS):
+        return True
+    return False
 
 
 if __name__ == "__main__":
