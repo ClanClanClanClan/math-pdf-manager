@@ -324,6 +324,24 @@ class DOIDownloader:
             UNPAYWALL_EMAIL = unpaywall_email
         self.rate_limit = rate_limit
 
+    def _try_cloudflare_session(self, doi: str, output_path: Path) -> bool:
+        """Try downloading with saved Cloudflare session cookies."""
+        try:
+            from downloader.cloudflare_session import PUBLISHERS, download_with_cookies
+            # Find which publisher this DOI belongs to
+            doi_prefix = doi.split("/")[0] if "/" in doi else ""
+            for pub_name, pub_info in PUBLISHERS.items():
+                if doi.startswith(pub_info["doi_prefix"]):
+                    result = download_with_cookies(pub_name, doi, output_path.parent)
+                    if result and result.exists():
+                        if result != output_path:
+                            result.rename(output_path)
+                        return True
+                    break
+        except Exception as exc:
+            logger.debug("Cloudflare session failed for %s: %s", doi, exc)
+        return False
+
     def _try_eth_institutional(self, doi: str, output_path: Path) -> bool:
         """Try ETH institutional download via Playwright."""
         try:
@@ -350,8 +368,8 @@ class DOIDownloader:
             ("Unpaywall", try_unpaywall),
             ("Direct DOI", try_direct_doi),
             ("ETH Institutional", self._try_eth_institutional),
+            ("Cloudflare Session", self._try_cloudflare_session),
             ("Sci-Hub", try_scihub),
-            ("Anna's Archive", try_annas_archive),
         ]
 
         for name, strategy_fn in strategies:
