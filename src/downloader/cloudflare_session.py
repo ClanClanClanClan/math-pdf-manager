@@ -79,6 +79,13 @@ PUBLISHERS = {
         "doi_prefix": "10.1080",
         "wayf_selector": 'a:has-text("Institutional")',
     },
+    "annas_archive": {
+        "domain": "annas-archive.gl",
+        "test_url": "https://annas-archive.gl/",
+        "pdf_pattern": None,  # Dynamic — needs md5 lookup
+        "doi_prefix": "",  # Matches all DOIs as fallback
+        "wayf_selector": None,  # No institutional login
+    },
 }
 
 
@@ -236,6 +243,70 @@ async def start_session(publisher: str) -> None:
 # ---------------------------------------------------------------------------
 # Download with saved cookies
 # ---------------------------------------------------------------------------
+
+def download_annas_archive(
+    doi: str,
+    output_dir: Path,
+) -> Optional[Path]:
+    """Download via Anna's Archive using saved DDoS-Guard cookies.
+
+    Flow: search by DOI → find md5 → try slow_download servers.
+    """
+    cookies = load_cookies("annas_archive")
+    if not cookies:
+        logger.warning("No Anna's Archive cookies — run 'start annas_archive' first")
+        return None
+
+    session = cookies_to_session(cookies)
+    domain = "https://annas-archive.gl"
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    safe_doi = re.sub(r"[/\\:]", "_", doi)
+    output_path = output_dir / f"{safe_doi}.pdf"
+
+    try:
+        # Step 1: Search by DOI
+        from bs4 import BeautifulSoup
+
+        resp = session.get(f"{domain}/search?q={doi}", timeout=15)
+        if resp.status_code != 200:
+            return None
+
+        soup = BeautifulSoup(resp.text, "html.parser")
+        md5_links = soup.find_all("a", href=re.compile(r"/md5/"))
+        if not md5_links:
+            return None
+
+        # Step 2: Get md5 from first result
+        md5_path = md5_links[0]["href"]
+        md5_match = re.search(r"/md5/([a-f0-9]+)", md5_path)
+        if not md5_match:
+            return None
+        md5 = md5_match.group(1)
+
+        # Step 3: Try slow_download servers with session cookies
+        detail_url = f"{domain}/md5/{md5}"
+
+        for group in range(2):
+            for server in range(8):
+                dl_url = f"{domain}/slow_download/{md5}/{group}/{server}"
+                try:
+                    resp = session.get(
+                        dl_url, timeout=60, allow_redirects=True,
+                        headers={"Referer": detail_url},
+                    )
+                    if resp.content[:4] == b"%PDF" and len(resp.content) > 1000:
+                        output_path.write_bytes(resp.content)
+                        logger.info("Anna's Archive: downloaded %s (%d KB)", doi, len(resp.content) // 1024)
+                        return output_path
+                except Exception:
+                    continue
+
+    except Exception as exc:
+        logger.debug("Anna's Archive failed for %s: %s", doi, exc)
+
+    return None
+
 
 def download_with_cookies(
     publisher: str,

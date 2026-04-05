@@ -342,6 +342,19 @@ class DOIDownloader:
             logger.debug("Cloudflare session failed for %s: %s", doi, exc)
         return False
 
+    def _try_annas_archive_cookies(self, doi: str, output_path: Path) -> bool:
+        """Try Anna's Archive with saved DDoS-Guard session cookies."""
+        try:
+            from downloader.cloudflare_session import download_annas_archive
+            result = download_annas_archive(doi, output_path.parent)
+            if result and result.exists():
+                if result != output_path:
+                    result.rename(output_path)
+                return True
+        except Exception as exc:
+            logger.debug("Anna's Archive (cookies) failed for %s: %s", doi, exc)
+        return False
+
     def _try_eth_institutional(self, doi: str, output_path: Path) -> bool:
         """Try ETH institutional download via Playwright."""
         try:
@@ -370,9 +383,7 @@ class DOIDownloader:
             ("ETH Institutional", self._try_eth_institutional),
             ("Cloudflare Session", self._try_cloudflare_session),
             ("Sci-Hub", try_scihub),
-            # Anna's Archive: search works but downloads need DDoS-Guard
-            # bypass (same semi-automated approach as Cloudflare publishers).
-            # Sci-Hub covers pre-2021 papers (~80% hit rate).
+            ("Anna's Archive", self._try_annas_archive_cookies),
         ]
 
         for name, strategy_fn in strategies:
