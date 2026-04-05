@@ -370,6 +370,9 @@ class DOIDownloader:
             ("ETH Institutional", self._try_eth_institutional),
             ("Cloudflare Session", self._try_cloudflare_session),
             ("Sci-Hub", try_scihub),
+            # Anna's Archive: search works but downloads need DDoS-Guard
+            # bypass (same semi-automated approach as Cloudflare publishers).
+            # Sci-Hub covers pre-2021 papers (~80% hit rate).
         ]
 
         for name, strategy_fn in strategies:
