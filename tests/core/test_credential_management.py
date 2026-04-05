@@ -23,7 +23,10 @@ from secure_credential_manager import (
     setup_eth_credentials_from_env
 )
 
-from auth.store import CredentialStore
+try:
+    from auth.store import CredentialStore
+except ImportError:
+    CredentialStore = None
 
 try:
     from tools.security.eth_auth_setup import ETHAuthSetup
@@ -272,6 +275,7 @@ class TestSecureCredentialManager:
         assert loaded_source.encrypted is True
 
 
+@pytest.mark.skipif(CredentialStore is None, reason="auth.store module removed")
 class TestCredentialStore:
     """Test CredentialStore from auth module."""
     

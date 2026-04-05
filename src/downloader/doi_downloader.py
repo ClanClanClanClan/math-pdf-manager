@@ -251,55 +251,6 @@ def try_scihub(doi: str, output_path: Path) -> bool:
 
 
 # ---------------------------------------------------------------------------
-# Strategy 4: Anna's Archive
-# ---------------------------------------------------------------------------
-
-def try_annas_archive(doi: str, output_path: Path) -> bool:
-    """Try Anna's Archive search by DOI."""
-    try:
-        search_url = f"{ANNAS_ARCHIVE_URL}/search?q={doi}"
-        resp = requests.get(search_url, headers=HEADERS, timeout=15)
-        if resp.status_code != 200:
-            return False
-
-        soup = BeautifulSoup(resp.text, "html.parser")
-
-        # Find the first result link that looks like a paper
-        for a in soup.find_all("a", href=True):
-            href = a["href"]
-            if "/md5/" in href or "/scidb/" in href:
-                # This is a result page — follow it
-                if not href.startswith("http"):
-                    href = ANNAS_ARCHIVE_URL + href
-
-                detail_resp = requests.get(href, headers=HEADERS, timeout=15)
-                if detail_resp.status_code != 200:
-                    continue
-
-                detail_soup = BeautifulSoup(detail_resp.text, "html.parser")
-
-                # Find download links
-                for dl_link in detail_soup.find_all("a", href=True):
-                    dl_href = dl_link["href"]
-                    if "download" in dl_href.lower() or ".pdf" in dl_href.lower():
-                        if not dl_href.startswith("http"):
-                            dl_href = ANNAS_ARCHIVE_URL + dl_href
-
-                        if _download_to_file(dl_href, output_path, timeout=60):
-                            logger.info("Anna's Archive: downloaded %s", doi)
-                            return True
-
-                # Only check first result
-                break
-
-        return False
-
-    except Exception as exc:
-        logger.debug("Anna's Archive failed for %s: %s", doi, exc)
-        return False
-
-
-# ---------------------------------------------------------------------------
 # Main DOI Downloader
 # ---------------------------------------------------------------------------
 
@@ -324,19 +275,32 @@ class DOIDownloader:
             UNPAYWALL_EMAIL = unpaywall_email
         self.rate_limit = rate_limit
 
+    @staticmethod
+    def _safe_rename(source: Path, dest: Path) -> bool:
+        """Safely rename a file, handling race conditions."""
+        if not source or not source.exists():
+            return False
+        if source == dest:
+            return True
+        try:
+            source.rename(dest)
+            return True
+        except FileExistsError:
+            source.unlink(missing_ok=True)
+            return True  # dest already has the file
+        except Exception as exc:
+            logger.warning("Could not rename %s → %s: %s", source, dest, exc)
+            return False
+
     def _try_cloudflare_session(self, doi: str, output_path: Path) -> bool:
         """Try downloading with saved Cloudflare session cookies."""
         try:
             from downloader.cloudflare_session import PUBLISHERS, download_with_cookies
-            # Find which publisher this DOI belongs to
-            doi_prefix = doi.split("/")[0] if "/" in doi else ""
             for pub_name, pub_info in PUBLISHERS.items():
-                if doi.startswith(pub_info["doi_prefix"]):
+                if pub_info["doi_prefix"] and doi.startswith(pub_info["doi_prefix"]):
                     result = download_with_cookies(pub_name, doi, output_path.parent)
-                    if result and result.exists():
-                        if result != output_path:
-                            result.rename(output_path)
-                        return True
+                    if result:
+                        return self._safe_rename(result, output_path)
                     break
         except Exception as exc:
             logger.debug("Cloudflare session failed for %s: %s", doi, exc)
@@ -347,23 +311,22 @@ class DOIDownloader:
         try:
             from downloader.cloudflare_session import download_annas_archive
             result = download_annas_archive(doi, output_path.parent)
-            if result and result.exists():
-                if result != output_path:
-                    result.rename(output_path)
-                return True
+            if result:
+                return self._safe_rename(result, output_path)
         except Exception as exc:
             logger.debug("Anna's Archive (cookies) failed for %s: %s", doi, exc)
         return False
 
     def _try_eth_institutional(self, doi: str, output_path: Path) -> bool:
-        """Try ETH institutional download via Playwright."""
+        """Try ETH institutional download via Playwright.
+
+        This is the SLOWEST strategy (opens a browser) so it's tried last.
+        """
         try:
             from downloader.eth_institutional import download_sync
             result = download_sync(doi, output_path.parent)
-            if result and result.exists():
-                if result != output_path:
-                    result.rename(output_path)
-                return True
+            if result:
+                return self._safe_rename(result, output_path)
         except Exception as exc:
             logger.debug("ETH institutional failed for %s: %s", doi, exc)
         return False
@@ -372,18 +335,20 @@ class DOIDownloader:
         """Try all strategies to download a PDF by DOI.
 
         Returns path to downloaded PDF, or None if all fail.
+        Strategy order: fast/free first, slow/browser-based last.
         """
         output_dir.mkdir(parents=True, exist_ok=True)
         safe_doi = re.sub(r"[/\\:]", "_", doi)
         output_path = output_dir / f"{safe_doi}.pdf"
 
+        # Ordered: fast/free → cached sessions → slow browser-based
         strategies = [
             ("Unpaywall", try_unpaywall),
             ("Direct DOI", try_direct_doi),
-            ("ETH Institutional", self._try_eth_institutional),
-            ("Cloudflare Session", self._try_cloudflare_session),
             ("Sci-Hub", try_scihub),
+            ("Cloudflare Session", self._try_cloudflare_session),
             ("Anna's Archive", self._try_annas_archive_cookies),
+            ("ETH Institutional", self._try_eth_institutional),
         ]
 
         for name, strategy_fn in strategies:

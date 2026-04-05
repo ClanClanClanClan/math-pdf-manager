@@ -118,7 +118,16 @@ def load_cookies(publisher: str) -> Optional[List[Dict]]:
     # Check age — cookies expire after ~1 hour
     age_seconds = time.time() - path.stat().st_mtime
     if age_seconds > 3600:
-        logger.warning("Cookies for %s are %d minutes old — may be expired", publisher, age_seconds // 60)
+        logger.error(
+            "Cookies for %s expired (%d minutes old) — run 'start %s' to refresh",
+            publisher, age_seconds // 60, publisher,
+        )
+        return None
+    elif age_seconds > 2700:
+        logger.warning(
+            "Cookies for %s expiring soon (%d minutes old)",
+            publisher, age_seconds // 60,
+        )
 
     cookies = json.loads(path.read_text())
     return cookies
@@ -335,19 +344,31 @@ def download_with_cookies(
         pdf_url = pub["pdf_pattern"].format(doi=doi)
         logger.debug("Trying %s", pdf_url[:60])
 
-        resp = session.get(pdf_url, timeout=30, allow_redirects=True)
-        ct = resp.headers.get("content-type", "")
-
-        if ct.startswith("application/pdf") and len(resp.content) > 1000:
-            output_path.write_bytes(resp.content)
-            if _is_valid_pdf(output_path):
-                logger.info("Downloaded %s (%d KB)", doi, len(resp.content) // 1024)
-                return output_path
-            output_path.unlink(missing_ok=True)
+        try:
+            resp = session.get(pdf_url, timeout=30, allow_redirects=True)
+            if resp.status_code != 200:
+                logger.debug("PDF URL returned %d", resp.status_code)
+            else:
+                ct = resp.headers.get("content-type", "").lower()
+                if ("pdf" in ct or "octet-stream" in ct) and len(resp.content) > 1000:
+                    output_path.write_bytes(resp.content)
+                    if _is_valid_pdf(output_path):
+                        logger.info("Downloaded %s (%d KB)", doi, len(resp.content) // 1024)
+                        return output_path
+                    output_path.unlink(missing_ok=True)
+        except requests.RequestException as exc:
+            logger.debug("PDF URL request failed: %s", exc)
 
     # Try DOI redirect
     doi_url = f"https://doi.org/{doi}"
-    resp = session.get(doi_url, timeout=30, allow_redirects=True)
+    try:
+        resp = session.get(doi_url, timeout=30, allow_redirects=True)
+    except requests.RequestException:
+        return None
+
+    if resp.status_code != 200:
+        return None
+
     final_url = resp.url
 
     # Look for PDF link in the HTML
@@ -355,17 +376,19 @@ def download_with_cookies(
         from bs4 import BeautifulSoup
 
         soup = BeautifulSoup(resp.text, "html.parser")
-        for sel in ["a[href*='.pdf']", "a.c-pdf-download__link", "a:contains('PDF')"]:
-            for a in soup.select("a[href]"):
-                href = a.get("href", "")
-                text = a.get_text(strip=True).lower()
-                if ".pdf" in href or "pdf" in text:
-                    if not href.startswith("http"):
-                        from urllib.parse import urljoin
-                        href = urljoin(final_url, href)
+        # Search all links for PDF references
+        for a in soup.select("a[href]"):
+            href = a.get("href", "")
+            text = a.get_text(strip=True).lower()
+            if ".pdf" in href.lower() or "download pdf" in text:
+                if not href.startswith("http"):
+                    from urllib.parse import urljoin
+                    href = urljoin(final_url, href)
 
+                try:
                     resp2 = session.get(href, timeout=30)
-                    if resp2.headers.get("content-type", "").startswith("application/pdf"):
+                    ct2 = resp2.headers.get("content-type", "").lower()
+                    if ("pdf" in ct2 or "octet-stream" in ct2) and resp2.status_code == 200:
                         output_path.write_bytes(resp2.content)
                         if _is_valid_pdf(output_path):
                             return output_path

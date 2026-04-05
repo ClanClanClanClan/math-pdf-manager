@@ -148,12 +148,19 @@ def _try_direct_doi(doi: str, output_path: Path) -> bool:
 def try_download_by_doi(doi: str, output_dir: Path) -> Optional[Path]:
     """Try to download a published PDF via DOI.
 
-    Strategies (in order):
-    1. Unpaywall API (open access)
-    2. Direct DOI resolution (follow redirects)
+    Uses the unified DOIDownloader with full strategy chain:
+    Unpaywall → Direct → Sci-Hub → Cloudflare Session → Anna's → ETH Auth.
 
     Returns path to downloaded PDF, or None if all fail.
     """
+    try:
+        from downloader.doi_downloader import DOIDownloader
+        dl = DOIDownloader(unpaywall_email=UNPAYWALL_EMAIL, rate_limit=RATE_LIMIT_SECS)
+        return dl.download(doi, output_dir)
+    except ImportError:
+        logger.warning("DOIDownloader not available, using basic Unpaywall+Direct")
+
+    # Fallback to basic strategies if DOIDownloader can't import
     output_dir.mkdir(parents=True, exist_ok=True)
     safe_doi = re.sub(r"[/\\:]", "_", doi)
     output_path = output_dir / f"{safe_doi}.pdf"
@@ -279,10 +286,17 @@ def upgrade_paper(
                 else:
                     # Delete preprint
                     if preprint_path.exists():
-                        if undo_log:
-                            undo_log.record_move(preprint_path, Path("/dev/null"))
-                        preprint_path.unlink()
-                        result["action"] = f"DOWNLOADED + FILED + DELETED preprint"
+                        try:
+                            if undo_log:
+                                undo_log.record_move(preprint_path, Path("/dev/null"))
+                            preprint_path.unlink()
+                            if preprint_path.exists():
+                                result["action"] = f"DOWNLOADED + FILED but preprint deletion failed (still exists)"
+                            else:
+                                result["action"] = f"DOWNLOADED + FILED + DELETED preprint"
+                        except Exception as exc:
+                            logger.error("Failed to delete preprint %s: %s", preprint_path, exc)
+                            result["action"] = f"DOWNLOADED + FILED but preprint deletion error: {exc}"
                     else:
                         result["action"] = f"DOWNLOADED + FILED (preprint already gone)"
                     result["kept_preprint"] = False

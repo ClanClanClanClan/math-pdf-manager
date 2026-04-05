@@ -290,99 +290,99 @@ async def download_with_eth_auth(
                 headless=headless,
                 args=["--disable-blink-features=AutomationControlled"],
             )
-            ctx = await browser.new_context(
-                user_agent=(
-                    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-                    "AppleWebKit/537.36 (KHTML, like Gecko) "
-                    "Chrome/120.0.0.0 Safari/537.36"
-                ),
-                viewport={"width": 1920, "height": 1080},
-            )
-            page = await ctx.new_page()
+            try:
+                ctx = await browser.new_context(
+                    user_agent=(
+                        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                        "AppleWebKit/537.36 (KHTML, like Gecko) "
+                        "Chrome/120.0.0.0 Safari/537.36"
+                    ),
+                    viewport={"width": 1920, "height": 1080},
+                )
+                page = await ctx.new_page()
 
-            # Step 1: Visit article page
-            logger.debug("Visiting https://doi.org/%s", doi)
-            await page.goto(
-                f"https://doi.org/{doi}",
-                wait_until="domcontentloaded",
-                timeout=20000,
-            )
-            await page.wait_for_timeout(3000)
-            await _kill_overlays(page)
-
-            article_url = page.url
-            title = await page.title()
-
-            # Check for Cloudflare
-            if "Just a moment" in title:
-                logger.warning("Cloudflare challenge — cannot proceed headless")
-                await browser.close()
-                return None
-
-            # Step 2: Navigate WAYF (publisher-specific)
-            wayf_ok = False
-            if "springer" in article_url or "nature.com" in article_url:
-                wayf_ok = await _springer_wayf(page, doi)
-            elif "projecteuclid" in article_url:
-                wayf_ok = await _euclid_wayf(page, doi)
-            else:
-                wayf_ok = await _generic_wayf(page, doi)
-
-            if not wayf_ok and "aai-logon.ethz.ch" not in page.url:
-                logger.warning("Could not navigate to ETH login for %s", doi)
-                await browser.close()
-                return None
-
-            # Step 3: ETH login
-            if "aai-logon.ethz.ch" in page.url:
-                login_ok = await _eth_shibboleth_login(page, username, password)
-                if not login_ok:
-                    await browser.close()
+                # Step 1: Visit article page
+                logger.debug("Visiting https://doi.org/%s", doi)
+                resp = await page.goto(
+                    f"https://doi.org/{doi}",
+                    wait_until="domcontentloaded",
+                    timeout=20000,
+                )
+                if resp and not resp.ok:
+                    logger.warning("Page load failed: %d", resp.status)
                     return None
-            else:
-                logger.debug("Not at ETH login page: %s", page.url[:60])
 
-            # Step 4: Download PDF
-            import requests
+                await page.wait_for_timeout(3000)
+                await _kill_overlays(page)
 
-            # Try publisher-specific PDF URL
-            pdf_url = _get_pdf_url(doi, article_url)
-            if not pdf_url:
-                # Fallback: look for PDF link on the page
-                pdf_link = await page.query_selector(
-                    'a.c-pdf-download__link, a:has-text("Download PDF"), '
-                    'a[href*=".pdf"], a.btn-DownloadPaper'
-                )
-                if pdf_link:
-                    href = await pdf_link.get_attribute("href")
-                    if href:
-                        from urllib.parse import urljoin
-                        pdf_url = urljoin(page.url, href)
+                article_url = page.url
+                title = await page.title()
 
-            if pdf_url:
-                cookies = {c["name"]: c["value"] for c in await ctx.cookies()}
-                resp = requests.get(
-                    pdf_url,
-                    cookies=cookies,
-                    timeout=30,
-                    headers={"User-Agent": "Mozilla/5.0"},
-                )
-                if (
-                    resp.headers.get("content-type", "").startswith("application/pdf")
-                    and len(resp.content) > 1000
-                ):
-                    output_path.write_bytes(resp.content)
-                    logger.info(
-                        "ETH auth: downloaded %s (%d KB)",
-                        doi,
-                        len(resp.content) // 1024,
+                # Check for Cloudflare
+                if "Just a moment" in title:
+                    logger.warning("Cloudflare challenge — cannot proceed headless")
+                    return None
+
+                # Step 2: Navigate WAYF (publisher-specific)
+                wayf_ok = False
+                if "springer" in article_url or "nature.com" in article_url:
+                    wayf_ok = await _springer_wayf(page, doi)
+                elif "projecteuclid" in article_url:
+                    wayf_ok = await _euclid_wayf(page, doi)
+                else:
+                    wayf_ok = await _generic_wayf(page, doi)
+
+                if not wayf_ok and "aai-logon.ethz.ch" not in page.url:
+                    logger.warning("Could not navigate to ETH login for %s", doi)
+                    return None
+
+                # Step 3: ETH login
+                if "aai-logon.ethz.ch" in page.url:
+                    login_ok = await _eth_shibboleth_login(page, username, password)
+                    if not login_ok:
+                        return None
+                    # Verify we're not stuck in an auth loop
+                    await page.wait_for_timeout(2000)
+                    if "aai-logon" in page.url:
+                        logger.warning("Stuck in auth loop for %s", doi)
+                        return None
+
+                # Step 4: Download PDF
+                import requests as req_lib
+
+                pdf_url = _get_pdf_url(doi, article_url)
+                if not pdf_url:
+                    pdf_link = await page.query_selector(
+                        'a.c-pdf-download__link, a:has-text("Download PDF"), '
+                        'a[href*=".pdf"], a.btn-DownloadPaper'
                     )
-                    await browser.close()
-                    return output_path
+                    if pdf_link:
+                        href = await pdf_link.get_attribute("href")
+                        if href:
+                            from urllib.parse import urljoin
+                            pdf_url = urljoin(page.url, href)
 
-            logger.warning("Could not download PDF for %s after ETH auth", doi)
-            await browser.close()
-            return None
+                if pdf_url:
+                    cookies = {c["name"]: c["value"] for c in await ctx.cookies()}
+                    dl_resp = req_lib.get(
+                        pdf_url, cookies=cookies, timeout=30,
+                        headers={"User-Agent": "Mozilla/5.0"},
+                    )
+                    ct = dl_resp.headers.get("content-type", "").lower()
+                    if ("pdf" in ct or "octet-stream" in ct) and len(dl_resp.content) > 1000:
+                        output_path.write_bytes(dl_resp.content)
+                        # Verify it's a real PDF
+                        with open(output_path, "rb") as f:
+                            if f.read(4) == b"%PDF":
+                                logger.info("ETH auth: downloaded %s (%d KB)", doi, len(dl_resp.content) // 1024)
+                                return output_path
+                        output_path.unlink(missing_ok=True)
+
+                logger.warning("Could not download PDF for %s after ETH auth", doi)
+                return None
+
+            finally:
+                await browser.close()
 
     except Exception as exc:
         logger.error("ETH download failed for %s: %s", doi, exc)

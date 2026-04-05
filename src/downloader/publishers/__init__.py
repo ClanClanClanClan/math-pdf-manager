@@ -57,10 +57,20 @@ def list_publishers() -> list:
     return [(p.name, p.doi_prefix, p.domain) for p in _REGISTRY]
 
 
-# Import all publisher modules to trigger registration
-from downloader.publishers.springer import SpringerDownloader  # noqa: F401, E402
-from downloader.publishers.euclid import EuclidDownloader  # noqa: F401, E402
-from downloader.publishers.mdpi import MDPIDownloader  # noqa: F401, E402
-from downloader.publishers.centre_mersenne import CentreMersenneDownloader  # noqa: F401, E402
-from downloader.publishers.edp_sciences import EDPSciencesDownloader  # noqa: F401, E402
-from downloader.publishers.ams import AMSDownloader  # noqa: F401, E402
+# Import all publisher modules to trigger registration.
+# Each import is wrapped so a single broken module doesn't break the registry.
+_MODULES = [
+    ("downloader.publishers.springer", "SpringerDownloader"),
+    ("downloader.publishers.euclid", "EuclidDownloader"),
+    ("downloader.publishers.mdpi", "MDPIDownloader"),
+    ("downloader.publishers.centre_mersenne", "CentreMersenneDownloader"),
+    ("downloader.publishers.edp_sciences", "EDPSciencesDownloader"),
+    ("downloader.publishers.ams", "AMSDownloader"),
+]
+
+for _mod_name, _cls_name in _MODULES:
+    try:
+        _mod = __import__(_mod_name, fromlist=[_cls_name])
+        # The @register decorator handles registration on import
+    except Exception as _exc:
+        logger.warning("Failed to load publisher %s: %s", _cls_name, _exc)
