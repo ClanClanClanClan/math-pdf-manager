@@ -324,6 +324,19 @@ class DOIDownloader:
             UNPAYWALL_EMAIL = unpaywall_email
         self.rate_limit = rate_limit
 
+    def _try_eth_institutional(self, doi: str, output_path: Path) -> bool:
+        """Try ETH institutional download via Playwright."""
+        try:
+            from downloader.eth_institutional import download_sync
+            result = download_sync(doi, output_path.parent)
+            if result and result.exists():
+                if result != output_path:
+                    result.rename(output_path)
+                return True
+        except Exception as exc:
+            logger.debug("ETH institutional failed for %s: %s", doi, exc)
+        return False
+
     def download(self, doi: str, output_dir: Path) -> Optional[Path]:
         """Try all strategies to download a PDF by DOI.
 
@@ -336,6 +349,7 @@ class DOIDownloader:
         strategies = [
             ("Unpaywall", try_unpaywall),
             ("Direct DOI", try_direct_doi),
+            ("ETH Institutional", self._try_eth_institutional),
             ("Sci-Hub", try_scihub),
             ("Anna's Archive", try_annas_archive),
         ]
