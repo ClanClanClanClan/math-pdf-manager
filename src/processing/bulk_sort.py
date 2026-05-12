@@ -162,29 +162,45 @@ def sort_one(
         result["error"] = ingest_result.get("error") or "ingest failed (no specific reason)"
         return result
 
-    # QUALITY GATE: if metadata extraction failed and we got a "garbage"
-    # canonical filename (just the original stem because everything else fell
-    # back), refuse to file it. The user wants raw-named PDFs flagged for
-    # manual review, not silently moved into the library where they look
-    # filed but are useless.
+    # QUALITY GATE: refuse to file if metadata extraction was clearly
+    # broken. We use two independent signals (either alone is enough):
     #
-    # Signal of "metadata extraction failed":
-    #   - canonical filename has NO " - " author/title separator
-    #     (the canonical convention is "Author1, I., Author2, I. - Title.pdf")
-    #   - AND canonical equals the source stem + ".pdf"
-    #     (title fell back to the filename stem because no title was found)
+    #   (a) The title fell back to the source stem. We know this because
+    #       ingest_paper sets result["title_from_metadata"] = False when
+    #       no title was found in PDF metadata / API / LLM. This catches
+    #       the "PDF author=='SoWise' but title missing" case where a
+    #       fake author was extracted but the title is junk.
     #
-    # An already-canonical file ("Smith, J. - Already canonical.pdf") DOES
-    # contain " - " so it passes this gate even though canonical == source.
+    #   (b) The canonical filename has no " - " separator AND equals the
+    #       source stem + .pdf. Catches the "no author, no title" case
+    #       where everything fell back.
+    #
+    # An already-canonical file ("Smith, J. - Already canonical.pdf") has
+    # title_from_metadata == False BUT we deliberately accept it via the
+    # source-stem check (the filing is a no-op rename + move).
     canonical = ingest_result.get("filename") or ""
     source_stem = pdf.stem
+    title_was_extracted = ingest_result.get("title_from_metadata", True)
     canonical_has_author_separator = " - " in canonical
-    if not canonical_has_author_separator and canonical == source_stem + ".pdf":
-        result["error"] = (
-            f"metadata extraction failed (canonical filename would be {canonical!r}); "
-            "needs manual review — left in 12 - To be sorted/"
-        )
-        return result
+    canonical_equals_source = canonical == source_stem + ".pdf"
+    canonical_is_already_clean = canonical_has_author_separator and canonical_equals_source
+
+    if not canonical_is_already_clean:
+        if not canonical_has_author_separator and canonical_equals_source:
+            # Case (b): nothing was extracted at all
+            result["error"] = (
+                f"metadata extraction failed (canonical filename would be {canonical!r}); "
+                "needs manual review — left in 12 - To be sorted/"
+            )
+            return result
+        if not title_was_extracted:
+            # Case (a): title fell back to stem, but a "fake" author may
+            # have leaked in via PDF metadata (e.g. PDF software name).
+            result["error"] = (
+                f"title fell back to filename stem ({canonical!r}); "
+                "needs manual review — left in 12 - To be sorted/"
+            )
+            return result
 
     # On success, move the source out of staging to recoverable trash.
     try:

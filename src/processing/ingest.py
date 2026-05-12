@@ -515,6 +515,13 @@ def ingest_paper(
         print(f"  Extracting metadata from {pdf_path.name}...")
     metadata = extract_metadata_from_pdf(pdf_path)
 
+    # Surface to callers whether we actually got a title from metadata
+    # (vs. silently falling back to the filename stem in metadata_to_cmo).
+    # bulk_sort uses this to flag papers that need manual review even when
+    # a fake "author" was extracted (e.g. PDF metadata with author=
+    # "SoWise" but no title).
+    result["title_from_metadata"] = bool(metadata.get("title"))
+
     # Step 2: Build CMO and generate canonical filename
     cmo = metadata_to_cmo(metadata, pdf_path)
     canonical_name = cmo.get_canonical_filename()

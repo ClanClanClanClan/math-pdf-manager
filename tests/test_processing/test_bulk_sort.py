@@ -160,6 +160,39 @@ class TestBulkSortDryRun:
         assert "filed" in summary
         assert "failed" in summary
 
+    def test_quality_gate_flags_fake_author_with_no_title(
+        self, synthetic_library, make_pdf
+    ):
+        """PDFs whose 'author' is creation-software (e.g. 'SoWise') but
+        title is missing get filed with garbage canonical names if we only
+        check for the ' - ' separator. Verify we flag these for manual
+        review via the title_from_metadata signal.
+        """
+        from processing.bulk_sort import sort_one
+
+        sub = synthetic_library / "12 - To be sorted" / "01 - Published papers"
+        sub.mkdir(parents=True, exist_ok=True)
+        # Source name looks like a raw DOI download
+        bogus = sub / "10.3934_puqr.2025016.pdf"
+        make_pdf(bogus)
+
+        # Simulate ingest_paper signalling that title fell back to stem
+        from unittest.mock import patch
+        fake_ingest_result = {
+            "success": True,
+            "filename": "SoWise - Ten.3934_puqr.2025016.pdf",  # garbage
+            "title_from_metadata": False,  # the critical signal
+            "destination": str(synthetic_library / "01 - Published papers" / "S" / "SoWise - Ten.3934_puqr.2025016.pdf"),
+            "actions": [],
+        }
+        with patch("processing.ingest.ingest_paper", return_value=fake_ingest_result):
+            r = sort_one(bogus, "published", library_root=synthetic_library, dry_run=True)
+
+        assert r["ok"] is False
+        assert "title fell back" in r["error"]
+        # Source must still be in 12/ — nothing moved
+        assert bogus.exists()
+
     def test_only_filter(self, synthetic_library, make_pdf):
         for sub_name in ["01 - Published papers", "03 - Working papers"]:
             sub = synthetic_library / "12 - To be sorted" / sub_name
