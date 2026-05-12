@@ -90,6 +90,15 @@ class _FakeFernet:
     def __init__(self, key):
         self._key = key
 
+    @staticmethod
+    def generate_key() -> bytes:
+        # Real Fernet.generate_key returns a 32-byte urlsafe-base64 key.
+        # We return a deterministic placeholder so downstream code that
+        # only checks "did I get bytes?" is satisfied — tests that need a
+        # cryptographically valid key should not be using this mock.
+        import base64
+        return base64.urlsafe_b64encode(b"\x00" * 32)
+
     def encrypt(self, data: bytes) -> bytes:
         import base64
         return base64.urlsafe_b64encode(data)

@@ -1,0 +1,135 @@
+"""Tests for processing.bulk_sort.
+
+Covers:
+- iter_pdfs_with_hint correctly maps subfolder names to status hints.
+- Unknown subfolder names are skipped (not crashed on).
+- bulk_sort dry-run touches no files.
+- _move_to_trash disambiguates name collisions.
+"""
+from __future__ import annotations
+
+from pathlib import Path
+
+import pytest
+
+from processing.bulk_sort import (
+    SUBFOLDER_STATUS,
+    _move_to_trash,
+    bulk_sort,
+    iter_pdfs_with_hint,
+)
+
+
+class TestIterPdfsWithHint:
+    def test_yields_known_subfolders(self, synthetic_library, make_pdf):
+        staging = synthetic_library / "12 - To be sorted"
+        # Drop one PDF in each known subfolder
+        for sub, status in SUBFOLDER_STATUS.items():
+            sub_dir = staging / sub
+            sub_dir.mkdir(parents=True, exist_ok=True)
+            make_pdf(sub_dir / f"raw_{status}.pdf")
+
+        results = list(iter_pdfs_with_hint(staging))
+        # Each subfolder should yield exactly one (path, status)
+        statuses = {s for (_, s) in results}
+        assert statuses == set(SUBFOLDER_STATUS.values())
+
+    def test_skips_unknown_subfolder(self, synthetic_library, make_pdf, caplog):
+        staging = synthetic_library / "12 - To be sorted"
+        weird = staging / "99 - Unknown subfolder"
+        weird.mkdir(parents=True)
+        make_pdf(weird / "raw.pdf")
+
+        # Also drop a known one so we have something to compare to
+        known = staging / "01 - Published papers"
+        known.mkdir(parents=True, exist_ok=True)
+        make_pdf(known / "raw_known.pdf")
+
+        with caplog.at_level("WARNING"):
+            results = list(iter_pdfs_with_hint(staging))
+        names = [p.name for (p, _) in results]
+        assert "raw_known.pdf" in names
+        assert "raw.pdf" not in names
+
+    def test_skips_dotfiles(self, synthetic_library, make_pdf):
+        staging = synthetic_library / "12 - To be sorted"
+        sub = staging / "01 - Published papers"
+        sub.mkdir(parents=True, exist_ok=True)
+        # Hidden file mimicking macOS metadata
+        (sub / ".DS_Store").write_bytes(b"junk")
+        make_pdf(sub / "real.pdf")
+        results = list(iter_pdfs_with_hint(staging))
+        assert all(p.name == "real.pdf" for (p, _) in results)
+
+    def test_missing_staging_root_returns_empty(self, tmp_path):
+        # No 12 - To be sorted/ at all
+        results = list(iter_pdfs_with_hint(tmp_path / "nope"))
+        assert results == []
+
+
+class TestMoveToTrash:
+    def test_creates_trash_dir(self, synthetic_library, make_pdf):
+        source = synthetic_library / "12 - To be sorted" / "01 - Published papers" / "x.pdf"
+        source.parent.mkdir(parents=True, exist_ok=True)
+        make_pdf(source)
+        target = _move_to_trash(source, synthetic_library, subfolder="01 - Published papers")
+        assert target.exists()
+        assert ".trash" in str(target)
+        assert "sorted_originals" in str(target)
+        assert not source.exists()
+
+    def test_disambiguates_collision(self, synthetic_library, make_pdf):
+        # First move
+        s1 = synthetic_library / "12 - To be sorted" / "01 - Published papers" / "dupe.pdf"
+        s1.parent.mkdir(parents=True, exist_ok=True)
+        make_pdf(s1, body=b"first")
+        t1 = _move_to_trash(s1, synthetic_library, subfolder="01 - Published papers")
+        assert t1.exists()
+
+        # Second file with same name
+        s2 = synthetic_library / "12 - To be sorted" / "01 - Published papers" / "dupe.pdf"
+        make_pdf(s2, body=b"second")
+        t2 = _move_to_trash(s2, synthetic_library, subfolder="01 - Published papers")
+        assert t2.exists()
+        assert t1 != t2  # disambiguated
+
+    def test_dry_run_does_not_move(self, synthetic_library, make_pdf):
+        source = synthetic_library / "12 - To be sorted" / "01 - Published papers" / "x.pdf"
+        source.parent.mkdir(parents=True, exist_ok=True)
+        make_pdf(source)
+        target = _move_to_trash(source, synthetic_library,
+                                subfolder="01 - Published papers", dry_run=True)
+        # Source still exists (not moved)
+        assert source.exists()
+
+
+class TestBulkSortDryRun:
+    def test_dry_run_does_not_modify_files(self, synthetic_library, make_pdf):
+        # Drop a PDF in the staging area
+        sub = synthetic_library / "12 - To be sorted" / "01 - Published papers"
+        sub.mkdir(parents=True, exist_ok=True)
+        pdf = make_pdf(sub / "test.pdf")
+
+        summary = bulk_sort(synthetic_library, dry_run=True)
+        # Source still in place
+        assert pdf.exists()
+        # Trash dir was NOT created
+        assert not (synthetic_library / ".trash").exists()
+        # Summary is well-formed
+        assert "processed" in summary
+        assert "filed" in summary
+        assert "failed" in summary
+
+    def test_only_filter(self, synthetic_library, make_pdf):
+        for sub_name in ["01 - Published papers", "03 - Working papers"]:
+            sub = synthetic_library / "12 - To be sorted" / sub_name
+            sub.mkdir(parents=True, exist_ok=True)
+            make_pdf(sub / f"{sub_name}.pdf")
+
+        summary = bulk_sort(
+            synthetic_library,
+            only="03 - Working papers",
+            dry_run=True,
+            verbose=False,
+        )
+        assert summary["processed"] == 1
