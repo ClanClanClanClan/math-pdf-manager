@@ -46,6 +46,13 @@ logs/
 credentials.enc
 .DS_Store
 
+# Operational state and generated reports (created during pipeline runs)
+.operation_log/
+publication_report.json
+upgrade_summary.json
+maintenance_*.html
+maintenance_*.json
+
 # Credential-bearing scripts
 eth_api_vpn_solution.py
 working_eth_api_downloader.py
