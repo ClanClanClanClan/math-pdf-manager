@@ -25,8 +25,8 @@ Usage::
     # Or batch download from a report
     python -m downloader.cloudflare_session batch siam report.json --limit 50
 """
-
 from __future__ import annotations
+
 
 import argparse
 import asyncio
@@ -42,10 +42,6 @@ from typing import Dict, List, Optional
 import requests
 
 logger = logging.getLogger(__name__)
-
-_src_dir = str(Path(__file__).resolve().parent.parent)
-if _src_dir not in sys.path:
-    sys.path.insert(0, _src_dir)
 
 COOKIE_DIR = Path.home() / ".mathpdf" / "cookies"
 
@@ -77,6 +73,20 @@ PUBLISHERS = {
         "test_url": "https://www.tandfonline.com/",
         "pdf_pattern": "https://www.tandfonline.com/doi/pdf/{doi}",
         "doi_prefix": "10.1080",
+        "wayf_selector": 'a:has-text("Institutional")',
+    },
+    "informs": {
+        "domain": "pubsonline.informs.org",
+        "test_url": "https://pubsonline.informs.org/",
+        "pdf_pattern": "https://pubsonline.informs.org/doi/pdf/{doi}",
+        "doi_prefix": "10.1287",
+        "wayf_selector": 'a:has-text("Institutional")',
+    },
+    "world_scientific": {
+        "domain": "www.worldscientific.com",
+        "test_url": "https://www.worldscientific.com/",
+        "pdf_pattern": "https://www.worldscientific.com/doi/pdf/{doi}",
+        "doi_prefix": "10.1142",
         "wayf_selector": 'a:has-text("Institutional")',
     },
     "annas_archive": {
@@ -129,7 +139,11 @@ def load_cookies(publisher: str) -> Optional[List[Dict]]:
             publisher, age_seconds // 60,
         )
 
-    cookies = json.loads(path.read_text())
+    try:
+        cookies = json.loads(path.read_text())
+    except (json.JSONDecodeError, OSError) as exc:
+        logger.error("Failed to read cookies for %s: %s", publisher, exc)
+        return None
     return cookies
 
 
@@ -210,8 +224,8 @@ async def start_session(publisher: str) -> None:
         save_cookies(publisher, cookies)
 
         print(f"\n✅ Saved {len(cookies)} cookies for {publisher}")
-        print(f"Cookies valid for ~60 minutes.")
-        print(f"\nNow you can run:")
+        print("Cookies valid for ~60 minutes.")
+        print("\nNow you can run:")
         print(f"  python -m downloader.cloudflare_session download {publisher} <DOI>")
         print(f"  python -m downloader.cloudflare_session batch {publisher} report.json")
 
@@ -220,7 +234,7 @@ async def start_session(publisher: str) -> None:
         password = os.environ.get("ETH_PASSWORD", "")
 
         if username and password:
-            print(f"\nAttempting ETH institutional login...")
+            print("\nAttempting ETH institutional login...")
             try:
                 from downloader.eth_institutional import _kill_overlays, _generic_wayf, _eth_shibboleth_login
 
@@ -240,7 +254,7 @@ async def start_session(publisher: str) -> None:
                         # Re-extract cookies (now with institutional auth)
                         cookies = await ctx.cookies()
                         save_cookies(publisher, cookies)
-                        print(f"✅ ETH login successful! Updated cookies.")
+                        print("✅ ETH login successful! Updated cookies.")
                 else:
                     print("  Could not find institutional login — using Cloudflare cookies only")
             except Exception as e:
@@ -253,11 +267,41 @@ async def start_session(publisher: str) -> None:
 # Download with saved cookies
 # ---------------------------------------------------------------------------
 
+def _curl_get(url: str, cookie_str: str = "", referer: str = "", output_path: Optional[Path] = None) -> Optional[bytes]:
+    """Use curl for HTTPS requests (works around Python 3.9 SSL limitations)."""
+    import subprocess
+
+    cmd = [
+        "curl", "-sL",
+        "-A", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120.0.0.0",
+        "--max-time", "60",
+    ]
+    if cookie_str:
+        cmd.extend(["-b", cookie_str])
+    if referer:
+        cmd.extend(["-e", referer])
+    if output_path:
+        cmd.extend(["-o", str(output_path)])
+    cmd.append(url)
+
+    try:
+        result = subprocess.run(cmd, capture_output=True, timeout=65)
+        if output_path:
+            return b"ok" if result.returncode == 0 else None
+        return result.stdout if result.returncode == 0 else None
+    except Exception as exc:
+        logger.debug("curl failed for %s: %s", url[:60], exc)
+        return None
+
+
 def download_annas_archive(
     doi: str,
     output_dir: Path,
 ) -> Optional[Path]:
     """Download via Anna's Archive using saved DDoS-Guard cookies.
+
+    Uses curl for HTTPS (Python 3.9's LibreSSL doesn't support
+    Anna's Archive TLS requirements).
 
     Flow: search by DOI → find md5 → try slow_download servers.
     """
@@ -266,7 +310,8 @@ def download_annas_archive(
         logger.warning("No Anna's Archive cookies — run 'start annas_archive' first")
         return None
 
-    session = cookies_to_session(cookies)
+    # Build cookie string for curl
+    cookie_str = "; ".join(f"{c['name']}={c['value']}" for c in cookies)
     domain = "https://annas-archive.gl"
 
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -274,14 +319,14 @@ def download_annas_archive(
     output_path = output_dir / f"{safe_doi}.pdf"
 
     try:
-        # Step 1: Search by DOI
+        # Step 1: Search by DOI (via curl)
         from bs4 import BeautifulSoup
 
-        resp = session.get(f"{domain}/search?q={doi}", timeout=15)
-        if resp.status_code != 200:
+        html = _curl_get(f"{domain}/search?q={doi}", cookie_str=cookie_str)
+        if not html:
             return None
 
-        soup = BeautifulSoup(resp.text, "html.parser")
+        soup = BeautifulSoup(html, "html.parser")
         md5_links = soup.find_all("a", href=re.compile(r"/md5/"))
         if not md5_links:
             return None
@@ -299,17 +344,11 @@ def download_annas_archive(
         for group in range(2):
             for server in range(8):
                 dl_url = f"{domain}/slow_download/{md5}/{group}/{server}"
-                try:
-                    resp = session.get(
-                        dl_url, timeout=60, allow_redirects=True,
-                        headers={"Referer": detail_url},
-                    )
-                    if resp.content[:4] == b"%PDF" and len(resp.content) > 1000:
-                        output_path.write_bytes(resp.content)
-                        logger.info("Anna's Archive: downloaded %s (%d KB)", doi, len(resp.content) // 1024)
-                        return output_path
-                except Exception:
-                    continue
+                _curl_get(dl_url, cookie_str=cookie_str, referer=detail_url, output_path=output_path)
+                if output_path.exists() and _is_valid_pdf(output_path) and output_path.stat().st_size > 1000:
+                    logger.info("Anna's Archive: downloaded %s (%d KB)", doi, output_path.stat().st_size // 1024)
+                    return output_path
+                output_path.unlink(missing_ok=True)
 
     except Exception as exc:
         logger.debug("Anna's Archive failed for %s: %s", doi, exc)
@@ -393,7 +432,9 @@ def download_with_cookies(
                         if _is_valid_pdf(output_path):
                             return output_path
                         output_path.unlink(missing_ok=True)
-                    break
+                except Exception:
+                    pass
+                break
 
     return None
 

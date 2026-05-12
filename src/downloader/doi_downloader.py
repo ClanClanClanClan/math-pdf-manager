@@ -2,10 +2,13 @@
 """Unified DOI → PDF downloader with layered strategy chain.
 
 Tries multiple sources in order to download a published paper:
-1. Unpaywall (open access — free, no auth)
-2. Direct DOI resolution (follow redirects)
-3. Sci-Hub (mirror rotation)
-4. Anna's Archive (search by DOI)
+1. Unpaywall (open access — free, fastest)
+2. Publisher-specific downloader (19 registered publishers)
+3. Direct DOI resolution (follow redirects)
+4. Sci-Hub (pre-2021 papers, ~80% hit rate)
+5. Cloudflare session (SIAM, Elsevier, etc.)
+6. Anna's Archive (needs DDoS-Guard cookies)
+7. ETH Institutional auth (slowest — opens browser)
 
 Usage::
 
@@ -19,8 +22,8 @@ Usage::
     # Or test from CLI:
     python -m downloader.doi_downloader 10.1007/s00245-023-10001-5
 """
-
 from __future__ import annotations
+
 
 import argparse
 import logging
@@ -35,11 +38,6 @@ import requests
 from bs4 import BeautifulSoup
 
 logger = logging.getLogger(__name__)
-
-_src_dir = str(Path(__file__).resolve().parent.parent)
-if _src_dir not in sys.path:
-    sys.path.insert(0, _src_dir)
-
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -258,10 +256,13 @@ class DOIDownloader:
     """Layered DOI → PDF downloader.
 
     Tries multiple strategies in order:
-    1. Unpaywall (open access)
-    2. Direct DOI resolution
-    3. Sci-Hub (mirror rotation)
-    4. Anna's Archive
+    1. Unpaywall (open access — free, fastest)
+    2. Publisher-specific downloader (19 registered publishers)
+    3. Direct DOI resolution (follow redirects)
+    4. Sci-Hub (pre-2021 papers, ~80% hit rate)
+    5. Cloudflare session (SIAM, Elsevier, etc. — needs CAPTCHA)
+    6. Anna's Archive (needs DDoS-Guard cookies)
+    7. ETH Institutional auth (slowest — opens browser)
     """
 
     def __init__(
@@ -291,6 +292,22 @@ class DOIDownloader:
         except Exception as exc:
             logger.warning("Could not rename %s → %s: %s", source, dest, exc)
             return False
+
+    def _try_publisher(self, doi: str, output_path: Path) -> bool:
+        """Try the registered publisher-specific downloader for this DOI.
+
+        This uses the publisher registry (19 publishers) which knows the
+        exact PDF URL pattern for each publisher, including fallback to
+        Cloudflare cookies and ETH auth as needed.
+        """
+        try:
+            from downloader.publishers import download_by_publisher
+            result = download_by_publisher(doi, output_path.parent)
+            if result:
+                return self._safe_rename(result, output_path)
+        except Exception as exc:
+            logger.debug("Publisher downloader failed for %s: %s", doi, exc)
+        return False
 
     def _try_cloudflare_session(self, doi: str, output_path: Path) -> bool:
         """Try downloading with saved Cloudflare session cookies."""
@@ -341,9 +358,10 @@ class DOIDownloader:
         safe_doi = re.sub(r"[/\\:]", "_", doi)
         output_path = output_dir / f"{safe_doi}.pdf"
 
-        # Ordered: fast/free → cached sessions → slow browser-based
+        # Ordered: fast/free → publisher-specific → cached sessions → browser
         strategies = [
             ("Unpaywall", try_unpaywall),
+            ("Publisher", self._try_publisher),
             ("Direct DOI", try_direct_doi),
             ("Sci-Hub", try_scihub),
             ("Cloudflare Session", self._try_cloudflare_session),
@@ -408,7 +426,7 @@ def main(argv: list[str] | None = None) -> None:
             size_kb = path.stat().st_size // 1024
             print(f"  → {path} ({size_kb} KB)")
         else:
-            print(f"  → FAILED (all strategies exhausted)")
+            print("  → FAILED (all strategies exhausted)")
 
 
 if __name__ == "__main__":

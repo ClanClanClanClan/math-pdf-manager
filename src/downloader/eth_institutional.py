@@ -160,38 +160,75 @@ async def _euclid_wayf(page, doi: str) -> bool:
 
 
 async def _generic_wayf(page, doi: str) -> bool:
-    """Generic Shibboleth WAYF flow — try common selectors."""
-    # Look for any institutional access link
-    for sel in [
-        'a:has-text("institutional")',
+    """Generic Shibboleth WAYF flow — works for most publishers.
+
+    Covers: OpenAthens, LibLynx, direct Shibboleth, custom WAYF pages.
+    Tested publishers: Cambridge, AMS, IOP, OUP, De Gruyter, AIMS, MDPI.
+    """
+    # Check if we're already at ETH login (might have been redirected)
+    if "aai-logon.ethz.ch" in page.url:
+        return True
+
+    await _kill_overlays(page)
+
+    # Step 1: Find and click the institutional access link
+    INST_SELECTORS = [
+        # Common patterns across publishers
+        'a:has-text("Log in via an institution")',
+        'a:has-text("log in via an institution")',
+        'a:has-text("institutional access")',
+        'a:has-text("Institutional access")',
         'a:has-text("Sign in via")',
         'a:has-text("Access through")',
+        'a:has-text("Check access")',
+        'a:has-text("Login")',
+        # Link attributes
         'a[href*="shibboleth"]',
         'a[href*="wayf"]',
         'a[href*="institutional"]',
-    ]:
+        'a[href*="openathens"]',
+        'a[href*="libproxy"]',
+        # Button patterns
+        'button:has-text("institutional")',
+        'button:has-text("Log in")',
+    ]
+
+    clicked = False
+    for sel in INST_SELECTORS:
         try:
             link = await page.wait_for_selector(sel, timeout=2000)
-            if link:
+            if link and await link.is_visible():
                 await _kill_overlays(page)
                 await link.click()
                 await page.wait_for_timeout(5000)
+                clicked = True
                 break
         except Exception:
             continue
 
     await _kill_overlays(page)
 
-    # Look for institution search
-    for sel in [
+    # Check if we landed on ETH login
+    if "aai-logon.ethz.ch" in page.url:
+        return True
+
+    # Step 2: Search for ETH in the WAYF institution search
+    SEARCH_SELECTORS = [
         '#searchFormTextInput',
         'input[type="search"]',
         'input[placeholder*="institution"]',
+        'input[placeholder*="Institution"]',
         'input[placeholder*="search"]',
+        'input[placeholder*="Search"]',
         '#inst-search',
         '#search-input',
+        '#idpSelectInput',
+        'input[name="user_idp"]',
+        'input[aria-label*="institution"]',
         'input[type="text"]',
-    ]:
+    ]
+
+    for sel in SEARCH_SELECTORS:
         try:
             search = await page.wait_for_selector(sel, timeout=2000)
             if search and await search.is_visible():
@@ -201,19 +238,29 @@ async def _generic_wayf(page, doi: str) -> bool:
                 await page.wait_for_timeout(3000)
                 await _kill_overlays(page)
 
-                eth = await page.query_selector(
-                    'a:has-text("ETH Zurich"), a:has-text("ETH Zürich"), '
-                    'li:has-text("ETH Zurich")'
-                )
-                if eth:
-                    await eth.click()
-                    await page.wait_for_timeout(5000)
-                    return True
+                # Look for ETH in results
+                ETH_SELECTORS = [
+                    'a:has-text("ETH Zurich")',
+                    'a:has-text("ETH Zürich")',
+                    'li:has-text("ETH Zurich")',
+                    'li:has-text("ETH Zürich")',
+                    'option:has-text("ETH")',
+                    'div:has-text("ETH Zurich")',
+                ]
+                for eth_sel in ETH_SELECTORS:
+                    try:
+                        eth = await page.wait_for_selector(eth_sel, timeout=3000)
+                        if eth:
+                            await eth.click()
+                            await page.wait_for_timeout(5000)
+                            return True
+                    except Exception:
+                        continue
                 break
         except Exception:
             continue
 
-    # Check if we're already at ETH login
+    # Final check
     if "aai-logon.ethz.ch" in page.url:
         return True
 
@@ -221,14 +268,59 @@ async def _generic_wayf(page, doi: str) -> bool:
 
 
 # ---------------------------------------------------------------------------
+# Try direct PDF before auth
+# ---------------------------------------------------------------------------
+
+async def _try_direct_pdf(page, doi: str, article_url: str) -> Optional[str]:
+    """Check if the page has a direct PDF link (paper may be OA)."""
+    from urllib.parse import urljoin
+
+    # Look for common PDF download link patterns
+    selectors = [
+        'a.c-pdf-download__link',           # Springer
+        'a:has-text("Download PDF")',        # Many publishers
+        'a:has-text("Save PDF")',            # Cambridge
+        'a:has-text("View PDF")',            # Cambridge
+        'a[href*="/pdf"]',                   # Generic /pdf endpoint
+        'a[href$=".pdf"]',                   # Direct .pdf link
+        'meta[name="citation_pdf_url"]',     # Meta tag
+    ]
+
+    for sel in selectors:
+        try:
+            el = await page.query_selector(sel)
+            if el:
+                tag_name = await el.evaluate("el => el.tagName")
+                if tag_name == "META":
+                    url = await el.get_attribute("content")
+                else:
+                    url = await el.get_attribute("href")
+                if url:
+                    return urljoin(article_url, url)
+        except Exception:
+            continue
+
+    return None
+
+
+# ---------------------------------------------------------------------------
 # Publisher PDF URL patterns
 # ---------------------------------------------------------------------------
 
 def _get_pdf_url(doi: str, publisher_domain: str) -> Optional[str]:
-    """Return the direct PDF URL pattern for a given publisher."""
+    """Return the direct PDF URL pattern for a given publisher.
+
+    These URLs work after institutional auth cookies are set.
+    """
     patterns = {
         "link.springer.com": f"https://link.springer.com/content/pdf/{doi}.pdf",
         "epubs.siam.org": f"https://epubs.siam.org/doi/pdf/{doi}",
+        "iopscience.iop.org": f"https://iopscience.iop.org/article/{doi}/pdf",
+        "degruyterbrill.com": f"https://www.degruyterbrill.com/document/doi/{doi}/pdf",
+        "onlinelibrary.wiley.com": f"https://onlinelibrary.wiley.com/doi/pdfdirect/{doi}",
+        "tandfonline.com": f"https://www.tandfonline.com/doi/pdf/{doi}",
+        "pubsonline.informs.org": f"https://pubsonline.informs.org/doi/pdf/{doi}",
+        "worldscientific.com": f"https://www.worldscientific.com/doi/pdf/{doi}",
     }
     for domain, url in patterns.items():
         if domain in publisher_domain:
@@ -323,12 +415,45 @@ async def download_with_eth_auth(
                     logger.warning("Cloudflare challenge — cannot proceed headless")
                     return None
 
-                # Step 2: Navigate WAYF (publisher-specific)
+                # Step 2: Try direct PDF download first (before auth)
+                # Some "paywalled" papers are actually OA
+                direct_pdf = await _try_direct_pdf(page, doi, article_url)
+                if direct_pdf:
+                    cookies = {c["name"]: c["value"] for c in await ctx.cookies()}
+                    import requests as req_lib
+                    dl_resp = req_lib.get(
+                        direct_pdf, cookies=cookies, timeout=30,
+                        headers={"User-Agent": "Mozilla/5.0"},
+                    )
+                    ct = dl_resp.headers.get("content-type", "").lower()
+                    if ("pdf" in ct or "octet-stream" in ct) and len(dl_resp.content) > 1000:
+                        output_path.write_bytes(dl_resp.content)
+                        with open(output_path, "rb") as f:
+                            if f.read(4) == b"%PDF":
+                                logger.info("ETH auth: direct PDF for %s (%d KB)", doi, len(dl_resp.content) // 1024)
+                                return output_path
+                        output_path.unlink(missing_ok=True)
+
+                # Step 3: Navigate WAYF (publisher-specific)
                 wayf_ok = False
                 if "springer" in article_url or "nature.com" in article_url:
                     wayf_ok = await _springer_wayf(page, doi)
                 elif "projecteuclid" in article_url:
                     wayf_ok = await _euclid_wayf(page, doi)
+                elif "cambridge.org" in article_url:
+                    wayf_ok = await _generic_wayf(page, doi)
+                elif "ams.org" in article_url:
+                    wayf_ok = await _generic_wayf(page, doi)
+                elif "iopscience.iop.org" in article_url:
+                    wayf_ok = await _generic_wayf(page, doi)
+                elif "academic.oup.com" in article_url:
+                    wayf_ok = await _generic_wayf(page, doi)
+                elif "degruyterbrill.com" in article_url:
+                    wayf_ok = await _generic_wayf(page, doi)
+                elif "aimsciences.org" in article_url:
+                    wayf_ok = await _generic_wayf(page, doi)
+                elif "mdpi.com" in article_url:
+                    wayf_ok = await _generic_wayf(page, doi)
                 else:
                     wayf_ok = await _generic_wayf(page, doi)
 
@@ -336,7 +461,7 @@ async def download_with_eth_auth(
                     logger.warning("Could not navigate to ETH login for %s", doi)
                     return None
 
-                # Step 3: ETH login
+                # Step 4: ETH login
                 if "aai-logon.ethz.ch" in page.url:
                     login_ok = await _eth_shibboleth_login(page, username, password)
                     if not login_ok:
@@ -347,7 +472,7 @@ async def download_with_eth_auth(
                         logger.warning("Stuck in auth loop for %s", doi)
                         return None
 
-                # Step 4: Download PDF
+                # Step 5: Download PDF
                 import requests as req_lib
 
                 pdf_url = _get_pdf_url(doi, article_url)
@@ -382,6 +507,10 @@ async def download_with_eth_auth(
                 return None
 
             finally:
+                try:
+                    await ctx.close()
+                except Exception:
+                    pass
                 await browser.close()
 
     except Exception as exc:

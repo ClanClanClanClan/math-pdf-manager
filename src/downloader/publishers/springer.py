@@ -7,7 +7,6 @@ Tested: ✅ Both OA and paywalled downloads work headless.
 """
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Optional
 
 import requests

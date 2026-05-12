@@ -7,7 +7,6 @@ Tested: ✅ OA download works headless (561 KB).
 """
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Optional
 
 from downloader.publishers import register

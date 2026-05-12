@@ -60,12 +60,31 @@ def list_publishers() -> list:
 # Import all publisher modules to trigger registration.
 # Each import is wrapped so a single broken module doesn't break the registry.
 _MODULES = [
+    # Tier 1: Open access — direct download
     ("downloader.publishers.springer", "SpringerDownloader"),
     ("downloader.publishers.euclid", "EuclidDownloader"),
     ("downloader.publishers.mdpi", "MDPIDownloader"),
     ("downloader.publishers.centre_mersenne", "CentreMersenneDownloader"),
     ("downloader.publishers.edp_sciences", "EDPSciencesDownloader"),
+    ("downloader.publishers.ems_press", "EMSPressDownloader"),
+    # Tier 2: No Cloudflare — direct or ETH Shibboleth
     ("downloader.publishers.ams", "AMSDownloader"),
+    ("downloader.publishers.cambridge", "CambridgeDownloader"),
+    ("downloader.publishers.aims", "AIMSDownloader"),
+    ("downloader.publishers.iop", "IOPDownloader"),
+    ("downloader.publishers.degruyter", "DeGruyterDownloader"),
+    ("downloader.publishers.oxford", "OxfordDownloader"),
+    ("downloader.publishers.ieee", "IEEEDownloader"),
+    # Niche OA publishers
+    ("downloader.publishers.alea", "ALEADownloader"),
+    ("downloader.publishers.vtex", "VTeXDownloader"),
+    # Tier 3: Cloudflare protected — semi-automated
+    ("downloader.publishers.siam", "SIAMDownloader"),
+    ("downloader.publishers.elsevier", "ElsevierDownloader"),
+    ("downloader.publishers.wiley", "WileyDownloader"),
+    ("downloader.publishers.taylor_francis", "TaylorFrancisDownloader"),
+    ("downloader.publishers.informs", "INFORMSDownloader"),
+    ("downloader.publishers.world_scientific", "WorldScientificDownloader"),
 ]
 
 for _mod_name, _cls_name in _MODULES:

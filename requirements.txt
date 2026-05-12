@@ -19,6 +19,15 @@ langdetect>=1.0
 lz4>=4.3
 pdfplumber>=0.10
 
+# File system watcher (used by src/watcher/daemon.py)
+watchdog>=3.0
+
+# Browser automation (used by src/downloader/eth_institutional.py and cloudflare_session.py)
+playwright>=1.40
+
+# HTML parsing (used by publisher downloaders)
+beautifulsoup4>=4.12
+
 # Security
 cryptography>=41.0
 certifi
