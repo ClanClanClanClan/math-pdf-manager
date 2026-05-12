@@ -38,6 +38,12 @@ SUPPRESSED_LOGGERS = ("fitz", "pdfminer", "pdfplumber")
 DROPBOX_OLD_PATH = Path.home() / "Dropbox"
 DROPBOX_NEW_PATH = Path.home() / "Library/CloudStorage/Dropbox"
 
+# Default library root. Other modules import ``get_library_root()`` from
+# :mod:`core.config_paths` rather than hardcoding the Dropbox path, so the
+# user-specific string only appears here (this file is allow-listed by the
+# security audit ``test_no_dropbox_paths_in_src``).
+DEFAULT_LIBRARY_ROOT = DROPBOX_NEW_PATH / "Work" / "Maths"
+
 # Extended surname particles list
 _SURNAME_PARTICLES = {
     "de", "la", "van", "von", "di", "del", "le", "da", "dos", "der",

@@ -4,7 +4,7 @@ from __future__ import annotations
 import asyncio
 import time
 from dataclasses import asdict
-from datetime import datetime
+from datetime import datetime, timezone
 from math import sqrt
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Sequence
@@ -117,7 +117,7 @@ class ArxivBotIntegration:
 
         elapsed = time.perf_counter() - start
         return {
-            "date": datetime.utcnow().date().isoformat(),
+            "date": datetime.now(timezone.utc).date().isoformat(),
             "harvested": counts,
             "scored": [cmo.external_id for cmo in scored],
             "accepted": [cmo.external_id for cmo in accepted_cmos],

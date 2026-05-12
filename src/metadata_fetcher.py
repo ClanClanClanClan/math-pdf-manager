@@ -137,7 +137,7 @@ _TRANSLIT_TABLE = str.maketrans(
 )
 
 # ────────────────────────── dataclass ──────────────────────────────────────
-@dataclass(slots=True)
+@dataclass
 class Metadata:
     title:      str = ""
     authors:    List[str] | None = None

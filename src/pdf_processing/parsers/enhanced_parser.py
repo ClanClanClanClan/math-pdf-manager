@@ -535,8 +535,6 @@ class EnhancedPDFParser(BaseParser):
 
     def _is_garbage_extraction(self, metadata: PDFMetadata, method: str) -> bool:
         """Detect garbage extractions from any method."""
-        import re
-
         if not metadata.title:
             return True
 
