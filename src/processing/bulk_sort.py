@@ -101,15 +101,22 @@ def _move_to_trash(
         trash_dir.mkdir(parents=True, exist_ok=True)
     target = trash_dir / source.name
 
-    # Disambiguate name collisions in trash by appending a counter
+    # Disambiguate name collisions in trash by appending a counter.
+    # The cap is a safety net so a maliciously-pre-populated trash directory
+    # can't lock us in an unbounded loop; in practice the counter will be
+    # tiny (a paper rarely gets sorted more than once).
     if target.exists() and target.resolve() != source.resolve():
-        i = 1
-        while True:
+        MAX_DISAMBIG_ATTEMPTS = 10000
+        for i in range(1, MAX_DISAMBIG_ATTEMPTS + 1):
             cand = trash_dir / f"{source.stem}.{i}{source.suffix}"
             if not cand.exists():
                 target = cand
                 break
-            i += 1
+        else:
+            raise RuntimeError(
+                f"Cannot find free name for {source.name} in {trash_dir} "
+                f"after {MAX_DISAMBIG_ATTEMPTS} attempts"
+            )
 
     if not dry_run:
         shutil.move(str(source), str(target))
@@ -160,13 +167,19 @@ def sort_one(
     # back), refuse to file it. The user wants raw-named PDFs flagged for
     # manual review, not silently moved into the library where they look
     # filed but are useless.
+    #
+    # Signal of "metadata extraction failed":
+    #   - canonical filename has NO " - " author/title separator
+    #     (the canonical convention is "Author1, I., Author2, I. - Title.pdf")
+    #   - AND canonical equals the source stem + ".pdf"
+    #     (title fell back to the filename stem because no title was found)
+    #
+    # An already-canonical file ("Smith, J. - Already canonical.pdf") DOES
+    # contain " - " so it passes this gate even though canonical == source.
     canonical = ingest_result.get("filename") or ""
     source_stem = pdf.stem
-    # Heuristics for "metadata was unrecoverable":
-    #   1. Canonical filename equals the raw stem + .pdf (no rename happened)
-    #   2. OR canonical starts with the raw stem (filename validator
-    #      gave up and kept the original)
-    if canonical == source_stem + ".pdf" or canonical.startswith(source_stem):
+    canonical_has_author_separator = " - " in canonical
+    if not canonical_has_author_separator and canonical == source_stem + ".pdf":
         result["error"] = (
             f"metadata extraction failed (canonical filename would be {canonical!r}); "
             "needs manual review — left in 12 - To be sorted/"

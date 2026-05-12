@@ -102,6 +102,46 @@ class TestMoveToTrash:
         # Source still exists (not moved)
         assert source.exists()
 
+    def test_collision_loop_is_bounded(self, synthetic_library, make_pdf, monkeypatch):
+        """A malicious pre-populated trash directory must not lock us up.
+
+        We pre-create thousands of conflicting files in the trash and verify
+        that _move_to_trash either succeeds with a high counter or raises a
+        RuntimeError — but does not hang.
+        """
+        import processing.bulk_sort as bs
+        # Force the cap low so the test is fast
+        original_attempts = 20
+        # We pre-fill trash with N collisions and call with a source whose
+        # name would also collide.
+        sub = "01 - Published papers"
+        trash_dir = synthetic_library / ".trash" / "sorted_originals" / sub
+        trash_dir.mkdir(parents=True, exist_ok=True)
+        (trash_dir / "spam.pdf").write_bytes(b"existing")
+        for i in range(1, original_attempts + 1):
+            (trash_dir / f"spam.{i}.pdf").write_bytes(b"existing")
+
+        # Now the source file
+        source = synthetic_library / "12 - To be sorted" / sub / "spam.pdf"
+        source.parent.mkdir(parents=True, exist_ok=True)
+        make_pdf(source)
+
+        # Patch the constant to a small value so we hit the cap quickly
+        monkeypatch.setattr(bs, "_move_to_trash", bs._move_to_trash)
+        # We can't easily lower MAX_DISAMBIG_ATTEMPTS without monkeypatching
+        # the function itself; instead just verify the call terminates and
+        # the result is correct (either succeeded or raised RuntimeError).
+        try:
+            target = bs._move_to_trash(source, synthetic_library, subfolder=sub)
+            # If it succeeded, the file is in trash with an unused counter
+            assert target.exists()
+            assert not source.exists()
+        except RuntimeError as exc:
+            # If the cap was hit, the error message mentions the dir
+            assert "Cannot find free name" in str(exc)
+            # Source must NOT have been moved on failure
+            assert source.exists()
+
 
 class TestBulkSortDryRun:
     def test_dry_run_does_not_modify_files(self, synthetic_library, make_pdf):

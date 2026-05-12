@@ -89,6 +89,27 @@ class TestSettleTimer:
 
         mock_ingest.assert_called_once()
 
+    def test_size_neg_one_sentinel_does_not_settle(self, handler, tmp_path):
+        """If the very first stat() failed, size=-1 is recorded as a sentinel.
+
+        Even if the timer eventually expires, we must NOT ingest — we never
+        proved the file was readable. The next poll should reset the timer
+        with the real size.
+        """
+        pdf = tmp_path / "bad.pdf"
+        pdf.write_bytes(b"%PDF-x")
+        # Sentinel value as if _initial_pending_state's stat() raised
+        handler._pending[str(pdf)] = (-1, time.time() - 10.0)  # "old" too
+
+        with patch.object(handler, "_ingest") as mock_ingest:
+            handler.process_settled()
+
+        mock_ingest.assert_not_called()
+        # The pending entry was reset with the real size, not removed.
+        assert str(pdf) in handler._pending
+        size, _ = handler._pending[str(pdf)]
+        assert size == pdf.stat().st_size
+
 
 class TestEventHandlers:
     def test_pdf_creation_adds_to_pending(self, handler, tmp_path):

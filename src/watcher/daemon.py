@@ -98,6 +98,13 @@ class PDFHandler(FileSystemEventHandler):
                 continue  # transient — try again next tick
 
             last_size, last_change = info
+            # ``-1`` is the sentinel produced by _initial_pending_state when
+            # the very first stat() failed. Never treat that as "settled" —
+            # we have no proof the file was ever readable. Force a reset so
+            # the timer only starts once we get a real size.
+            if last_size < 0:
+                self._pending[path_str] = (current_size, now)
+                continue
             if current_size != last_size:
                 # Still being written — reset timer with new size.
                 self._pending[path_str] = (current_size, now)

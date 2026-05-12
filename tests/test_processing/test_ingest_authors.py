@@ -165,6 +165,40 @@ class TestEdgeCases:
     def test_et_al(self):
         assert parse_authors_string("et al.") == []
 
+    @pytest.mark.parametrize("raw", [
+        "Smith, J., Brown, A., et al.",
+        "Smith, J., Brown, A. et al.",   # no comma before et al.
+        "Smith, J., Brown, A., et al",   # no trailing period
+        "Smith, J., Brown, A., ET AL.",  # case-insensitive
+    ])
+    def test_et_al_trailing_is_stripped(self, raw):
+        # 'et al.' at the END of a list must not be parsed as a fake author
+        result = parse_authors_string(raw)
+        assert _names(result) == [("Smith", "J."), ("Brown", "A.")], (
+            f"failed on {raw!r}: {_names(result)}"
+        )
+
+    def test_et_al_with_full_names(self):
+        result = parse_authors_string(
+            "Romain Abraham, Jean-François Delmas, et al."
+        )
+        assert _names(result) == [
+            ("Abraham", "Romain"),
+            ("Delmas", "Jean-François"),
+        ]
+
+    def test_list_with_blank_entries(self):
+        # PDFs sometimes have empty strings in author lists (PDF metadata bugs)
+        result = parse_authors_string(["Smith, J.", "", "Brown, A."])
+        assert _names(result) == [("Smith", "J."), ("Brown", "A.")]
+
+    def test_only_particle_name(self):
+        # Pathological: family name is ONLY a nobiliary particle
+        # Should not crash; result is one Author with that as family
+        result = parse_authors_string("van der")
+        assert len(result) == 1
+        assert result[0].family == "van der"
+
     def test_single_word(self):
         result = parse_authors_string("Smith")
         assert _names(result) == [("Smith", None)]

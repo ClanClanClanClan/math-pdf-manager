@@ -292,6 +292,14 @@ class FolderRouter:
 
         # Add alphabetical subdirectory (for 01, 02, 03, 06)
         if status in ("published", "unpublished", "working", "thesis"):
+            if not first_lastname:
+                # Falling through to "Z" silently used to mask malformed
+                # metadata. Log so the user can spot data-quality issues
+                # in the maintenance report.
+                logger.warning(
+                    "route: empty first author for %r (authors=%r) — filing under Z",
+                    filename, authors,
+                )
             alpha = self.get_alpha_subdir(first_lastname)
             target = target / alpha
 

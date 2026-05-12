@@ -380,6 +380,18 @@ def parse_authors_string(
     if not raw:
         return []
 
+    # Strip a trailing "et al." (with or without comma/period) so it
+    # doesn't get parsed as a fake author. The cue can appear at the end
+    # of an author list in any format.
+    raw = re.sub(
+        r",?\s+et\s+al\.?\s*$",
+        "",
+        raw,
+        flags=re.IGNORECASE,
+    ).strip()
+    if not raw:
+        return []
+
     # Step 1: Split on strong separators (&, ;, ' and ')
     if _STRONG_SEP_RE.search(raw):
         segments = _STRONG_SEP_RE.split(raw)
@@ -529,13 +541,16 @@ def ingest_paper(
 
     # Step 3: Override status if specified.
     # Routing reads ``metadata["document_type"]`` and DOI/arxiv_id presence
-    # via OrganizationSystem.determine_publication_status. To honor the
-    # caller's hint we have to write into BOTH the document_type (for
-    # books/theses) and the DOI/arxiv presence (for journal-style statuses).
+    # via OrganizationSystem.determine_publication_status. We write into
+    # BOTH so each forced status produces a clean, unambiguous signal that
+    # any future routing change cannot accidentally misinterpret.
     if status:
         metadata["_forced_status"] = status
         if status == "published":
             metadata.setdefault("doi", "forced")
+            # Clear arxiv_id so future routing changes can't downgrade us
+            # to "unpublished" based on a still-present arxiv tag.
+            metadata.pop("arxiv_id", None)
         elif status == "unpublished":
             metadata.setdefault("arxiv_id", "forced")
             metadata.pop("doi", None)
@@ -544,10 +559,16 @@ def ingest_paper(
             metadata.pop("arxiv_id", None)
         elif status == "book":
             metadata["document_type"] = "book"
+            metadata.pop("doi", None)
+            metadata.pop("arxiv_id", None)
         elif status == "lecture_notes":
             metadata["document_type"] = "lecture_notes"
+            metadata.pop("doi", None)
+            metadata.pop("arxiv_id", None)
         elif status == "thesis":
             metadata["document_type"] = "thesis"
+            metadata.pop("doi", None)
+            metadata.pop("arxiv_id", None)
         else:
             logger.warning("ingest_paper: unknown status hint %r — ignoring", status)
 

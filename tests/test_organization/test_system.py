@@ -195,6 +195,19 @@ class TestRouting:
         dest = router.route(meta, "anonymous.pdf")
         assert dest.parent == tmp_path / PUBLISHED / "Z"
 
+    def test_empty_first_lastname_logs_warning(self, router, tmp_path, caplog):
+        # Authors present but first one has empty family name (malformed input)
+        # — should log a warning so the user can spot data-quality issues,
+        # not silently file under Z.
+        meta = {"doi": "10.1007/test", "authors": [{"family": "", "given": "X."}]}
+        with caplog.at_level("WARNING"):
+            dest = router.route(meta, "x.pdf")
+        assert dest.parent == tmp_path / PUBLISHED / "Z"
+        # Warning was emitted (don't pin the exact text — it's only for ops)
+        assert any("empty first author" in r.message for r in caplog.records), (
+            "expected a warning about empty first author"
+        )
+
 
 # ---------------------------------------------------------------------------
 # Constants exports
