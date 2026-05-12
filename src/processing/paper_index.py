@@ -11,8 +11,8 @@ Usage::
     python -m processing.paper_index /path/to/library --duplicates-only
     python -m processing.paper_index /path/to/library --json --output index.json
 """
-
 from __future__ import annotations
+
 
 import argparse
 import json
@@ -24,11 +24,6 @@ from collections import defaultdict
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
-
-_src_dir = str(Path(__file__).resolve().parent.parent)
-if _src_dir not in sys.path:
-    sys.path.insert(0, _src_dir)
-
 
 def _normalize_key(title: str, first_author: str) -> str:
     """Create a canonical identity key from title + first author."""
@@ -62,13 +57,37 @@ def _classify_location(path: Path, library_root: Path) -> dict:
         return {"type": "unknown", "folder": ""}
 
     top = parts[0]
-    is_topic = top.startswith("07")
+    # Topic folders match "07a", "07b", … (lowercase letter after the digits)
+    is_topic = bool(re.match(r"^07[a-z]\b", top))
+    is_to_be_sorted = top.startswith("12 - To be sorted")
 
     def _starts(folder: str, prefix: str) -> bool:
         return folder.startswith(prefix)
 
-    # Check the top-level folder first; for topic folders (07x), check the subfolder
-    check_folder = parts[1] if is_topic and len(parts) > 1 else top
+    # For topic folders (07x): files may live directly in the topic folder
+    # OR in nested subfolders mirroring the main 01/02/03 structure. Check
+    # parts[1] only when it exists and matches a known status prefix —
+    # otherwise treat the whole topic folder as the classification.
+    if is_topic:
+        if len(parts) > 1 and re.match(r"^0[1-6] - ", parts[1]):
+            check_folder = parts[1]
+        else:
+            # File is directly inside the topic folder (no status subfolder)
+            return {
+                "type": "topic",
+                "folder": top,
+                "is_topic": True,
+            }
+    elif is_to_be_sorted:
+        # Files in 12/ are pending classification; subfolders mirror 01/03/05.
+        return {
+            "type": "to_be_sorted",
+            "folder": top,
+            "is_topic": False,
+            "hinted_status": parts[1] if len(parts) > 1 else None,
+        }
+    else:
+        check_folder = top
 
     if _starts(check_folder, "01 - Published"):
         status = "published"
@@ -76,6 +95,8 @@ def _classify_location(path: Path, library_root: Path) -> dict:
         status = "unpublished"
     elif _starts(check_folder, "03 - Working"):
         status = "working"
+    elif _starts(check_folder, "04 - Papers to be downloaded"):
+        status = "to_download"
     elif _starts(check_folder, "05 - Books"):
         status = "book"
     elif _starts(check_folder, "06 - Theses"):
@@ -105,9 +126,12 @@ def build_index(
     if verbose:
         print(f"Indexing {len(pdfs):,} PDFs...")
 
+    # 12 - To be sorted/ contains un-renamed PDFs; they intentionally have
+    # non-canonical filenames so identity-key matching is meaningless there.
+    SKIP_PREFIXES = ("Scripts", "archive", ".", "unicode", "12 - To be sorted")
     for pdf in pdfs:
         rel = pdf.relative_to(library_root)
-        if any(p.startswith(("Scripts", "archive", ".", "unicode")) for p in rel.parts):
+        if any(p.startswith(SKIP_PREFIXES) for p in rel.parts):
             continue
 
         stem = unicodedata.normalize("NFC", pdf.stem)
@@ -202,7 +226,7 @@ def main(argv: list[str] | None = None) -> None:
         print(json.dumps(analysis, indent=2, ensure_ascii=False))
         return
 
-    print(f"\n=== Paper Identity Index ===")
+    print("\n=== Paper Identity Index ===")
     print(f"Unique papers: {analysis['total_unique_papers']:,}")
     print(f"In multiple locations: {analysis['multi_location_papers']:,}")
     print(f"  Cross-filings (intentional): {len(analysis['cross_filings']):,}")
@@ -210,14 +234,14 @@ def main(argv: list[str] | None = None) -> None:
     print(f"  Preprint + published coexist: {len(analysis['preprint_with_published']):,}")
 
     if analysis["preprint_with_published"]:
-        print(f"\n--- Preprints that should be deleted (published version exists) ---")
+        print("\n--- Preprints that should be deleted (published version exists) ---")
         for p in analysis["preprint_with_published"][:20]:
             print(f"\n  {p['first_author']} - {p['title'][:55]}")
             for loc in p["locations"]:
                 print(f"    [{loc['type']:12s}] {loc['folder']}")
 
     if not args.duplicates_only and analysis["true_duplicates"]:
-        print(f"\n--- True duplicates ---")
+        print("\n--- True duplicates ---")
         for d in analysis["true_duplicates"][:20]:
             print(f"\n  {d['first_author']} - {d['title'][:55]}")
             for loc in d["locations"]:

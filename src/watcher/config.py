@@ -14,8 +14,9 @@ import yaml
 logger = logging.getLogger(__name__)
 
 # Defaults
+from core.config_paths import get_library_root as _get_library_root
 _DEFAULT_INBOX = Path.home() / "Downloads" / "MathInbox"
-_DEFAULT_LIBRARY = Path.home() / "Library/CloudStorage/Dropbox/Work/Maths"
+_DEFAULT_LIBRARY = _get_library_root()
 _DEFAULT_LOG_DIR = Path.home() / ".mathpdf"
 _CONFIG_PATHS = [
     Path.home() / ".mathpdf" / "watcher.yaml",
@@ -62,10 +63,38 @@ class WatcherConfig:
 
     @classmethod
     def _from_yaml(cls, path: Path) -> "WatcherConfig":
+        # Distinguish parse errors from I/O errors so the user knows
+        # whether to fix the file or check permissions.
         try:
-            data = yaml.safe_load(path.read_text()) or {}
+            text = path.read_text()
+        except OSError as exc:
+            logger.error(
+                "Cannot read watcher config at %s (%s); falling back to defaults",
+                path, exc,
+            )
+            return cls()
+
+        try:
+            data = yaml.safe_load(text) or {}
+        except yaml.YAMLError as exc:
+            logger.error(
+                "Watcher config at %s has invalid YAML (%s); falling back to defaults. "
+                "Fix the file and restart the watcher to apply settings.",
+                path, exc,
+            )
+            return cls()
         except Exception as exc:
-            logger.warning("Failed to load %s: %s", path, exc)
+            logger.error(
+                "Unexpected error parsing watcher config at %s: %s; falling back to defaults",
+                path, exc,
+            )
+            return cls()
+
+        if not isinstance(data, dict):
+            logger.error(
+                "Watcher config at %s did not produce a mapping (got %s); falling back to defaults",
+                path, type(data).__name__,
+            )
             return cls()
 
         return cls(

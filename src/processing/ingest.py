@@ -12,25 +12,18 @@ Usage::
     python -m processing.ingest paper.pdf --dry-run
     python -m processing.ingest *.pdf --status working --year 2025
 """
-
 from __future__ import annotations
 
 import argparse
 import json
 import logging
+import re
 import sys
 import unicodedata
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional, Set
 
 import fitz  # PyMuPDF
-
-# ---------------------------------------------------------------------------
-# Ensure src/ is on the path when invoked directly
-# ---------------------------------------------------------------------------
-_src_dir = str(Path(__file__).resolve().parent.parent)
-if _src_dir not in sys.path:
-    sys.path.insert(0, _src_dir)
 
 from arxivbot.models.cmo import Author, CMO
 from organization.system import OrganizationSystem
@@ -38,11 +31,10 @@ from processing.undo_log import UndoLog
 
 logger = logging.getLogger(__name__)
 
-# Default library root
-LIBRARY_ROOT = Path(__file__).resolve().parent.parent.parent.parent / "Maths"
-if not LIBRARY_ROOT.exists():
-    # Fallback for Dropbox path
-    LIBRARY_ROOT = Path.home() / "Library/CloudStorage/Dropbox/Work/Maths"
+# Default library root — resolved via ``core.config_paths.get_library_root``
+# so the user-specific Dropbox path lives in only one place (constants.py).
+from core.config_paths import get_library_root as _get_library_root
+LIBRARY_ROOT = _get_library_root()
 
 
 # ---------------------------------------------------------------------------
@@ -74,8 +66,6 @@ def extract_metadata_from_pdf(pdf_path: Path) -> dict:
         text = ""
         for page_num in range(min(3, len(doc))):
             text += doc[page_num].get_text()
-
-        import re
 
         # DOI detection
         doi_match = re.search(r"\b(10\.\d{4,}/\S+)", text)
@@ -197,54 +187,246 @@ def extract_metadata_from_pdf(pdf_path: Path) -> dict:
     return metadata
 
 
-def parse_authors_string(raw: str) -> list[Author]:
-    """Parse a raw author string into Author objects.
+# ---------------------------------------------------------------------------
+# Author parsing
+# ---------------------------------------------------------------------------
 
-    Handles formats like:
-    - ``"Jean-Pierre Dupont; Nicole el Karoui"``
-    - ``"Dupont, J.-P. and el Karoui, N."``
-    - ``"J.-P. Dupont, N. el Karoui"``
+# Nobiliary particles for compound surnames ("van der Waals", "el Karoui", etc.)
+# When a name has the pattern "<Given> <particle> <Family>", treat
+# "<particle> <Family>" as the family name.
+NOBILIARY_PARTICLES = frozenset({
+    "van", "von", "der", "den", "de", "del", "della", "di",
+    "la", "le", "el", "ter", "ten", "da", "do", "du", "dos",
+    "y", "ben", "bin", "abu", "al", "st", "san", "santa",
+    "von der", "van den", "van der", "de la", "de los",
+})
+
+# Initials: capital letter (with possible accents/Cyrillic) followed by period,
+# possibly with hyphens between (e.g. "F.", "F.-J.", "Yu.M.", "É.")
+_INITIAL_TOKEN = (
+    r"[A-ZÀ-ſΑ-ΩА-Я]"   # capital (Latin/Greek/Cyrillic)
+    r"[A-Za-zÀ-ſΑ-ωА-я]*"  # optional letters (e.g. "Yu.")
+    r"\."                                              # required period
+)
+_INITIALS_RE = re.compile(
+    rf"^{_INITIAL_TOKEN}(?:[\s-]*{_INITIAL_TOKEN})*\s*$"
+)
+
+# Strong author separators (NOT comma — comma is ambiguous)
+_STRONG_SEP_RE = re.compile(r"\s*&\s*|\s*;\s*|\s+and\s+", re.IGNORECASE)
+
+
+def _looks_like_initials(s: str) -> bool:
+    """True if the string looks like initials (e.g., "F.", "J.-F.", "Yu.M.")."""
+    if not s:
+        return False
+    return bool(_INITIALS_RE.match(s.strip()))
+
+
+def _split_family_with_particle(words: List[str]) -> tuple[int, str]:
+    """Given the words of a name, find where the family name starts.
+
+    Returns (family_start_index, family_string). Walks backwards from the last
+    word and pulls in nobiliary particles ("van", "der", "el", ...) as part
+    of the family name.
     """
-    import re
+    if not words:
+        return 0, ""
+    family_start = len(words) - 1
+    while family_start > 0 and words[family_start - 1].lower() in NOBILIARY_PARTICLES:
+        family_start -= 1
+    return family_start, " ".join(words[family_start:])
 
-    # Split on semicolons, " and ", or " & "
-    parts = re.split(r"\s*(?:;|\s+and\s+|\s*&\s*)\s*", raw)
 
+def _parse_first_last(name: str, multiword_surnames: Optional[Set[str]] = None) -> Optional[Author]:
+    """Parse a name in 'First [Middle...] [particle] Last' format."""
+    name = name.strip()
+    if not name:
+        return None
+
+    # Check explicit multiword surname whitelist first
+    if multiword_surnames:
+        for surname in multiword_surnames:
+            if name.lower().endswith(" " + surname.lower()):
+                given = name[: -len(surname) - 1].strip()
+                return Author(family=name[-len(surname):], given=given or None)
+
+    if " " not in name:
+        return Author(family=name)
+
+    words = name.split()
+    family_start, family = _split_family_with_particle(words)
+    given = " ".join(words[:family_start]).strip() if family_start > 0 else None
+    return Author(family=family, given=given or None)
+
+
+def _looks_like_filename_format(raw: str) -> bool:
+    """True if the string looks like 'Last, F., Last, F., ...' (filename format).
+
+    The signature: even number of comma-separated parts, where every odd-indexed
+    part is initials.
+    """
+    parts = [p.strip() for p in raw.split(",")]
+    if len(parts) < 2 or len(parts) % 2 != 0:
+        return False
+    for i in range(1, len(parts), 2):
+        if not _looks_like_initials(parts[i]):
+            return False
+    # And the even-indexed parts shouldn't look like initials themselves
+    for i in range(0, len(parts), 2):
+        if not parts[i] or _looks_like_initials(parts[i]):
+            return False
+    return True
+
+
+def _parse_filename_format(raw: str) -> List[Author]:
+    """Parse 'Last, F., Last, F., ...' into Author objects."""
+    parts = [p.strip() for p in raw.split(",")]
     authors = []
-    for part in parts:
-        part = part.strip()
-        if not part:
-            continue
-
-        # Try "Lastname, Given" format
-        if ", " in part:
-            pieces = part.split(", ", 1)
-            authors.append(Author(family=pieces[0].strip(), given=pieces[1].strip()))
-        elif " " in part:
-            # "Given Lastname" — last word is family name (heuristic)
-            words = part.rsplit(" ", 1)
-            authors.append(Author(family=words[-1].strip(), given=words[0].strip()))
-        else:
-            authors.append(Author(family=part))
-
+    for i in range(0, len(parts), 2):
+        family = parts[i]
+        given = parts[i + 1] if i + 1 < len(parts) else None
+        if family:
+            authors.append(Author(family=family, given=given))
     return authors
 
 
+def _parse_segment(seg: str, multiword_surnames: Optional[Set[str]] = None) -> List[Author]:
+    """Parse one segment (post strong-separator split) into one or more authors.
+
+    The segment may be:
+    - "Last, First" / "Last, F." (single author, comma is field separator)
+    - "First Last" / "First Middle Last" (single author, no comma)
+    - "First Last, First Last" (multiple authors, comma is author separator —
+      arises in PDF embedded metadata when authors are listed with full names)
+    """
+    seg = seg.strip()
+    if not seg or seg.lower().rstrip(".") in {"et al", "and others"}:
+        return []
+
+    if "," not in seg:
+        author = _parse_first_last(seg, multiword_surnames)
+        return [author] if author else []
+
+    # Has at least one comma. Decide whether commas separate authors or split Last/First.
+    parts = [p.strip() for p in seg.split(",")]
+
+    # Heuristic 1: Pair-style filename format inside one segment
+    # ("Last, F., Last, F." inside a single &-delimited segment)
+    if _looks_like_filename_format(seg):
+        return _parse_filename_format(seg)
+
+    # Heuristic 2: First part has multiple words, AND the part after the first
+    # comma does NOT look like initials → this is "First Last, First Last"
+    # (comma is author separator).
+    first_part = parts[0]
+    after_first = parts[1] if len(parts) > 1 else ""
+    if (
+        len(first_part.split()) >= 2
+        and not _looks_like_initials(after_first)
+        and not (multiword_surnames and first_part.lower() in {s.lower() for s in multiword_surnames})
+    ):
+        # Multi-author by comma
+        authors = []
+        for p in parts:
+            a = _parse_first_last(p, multiword_surnames)
+            if a:
+                authors.append(a)
+        return authors
+
+    # Heuristic 3: "Last, First" or "Last, Initials" (single author)
+    family = first_part
+    given = ", ".join(parts[1:]).strip() if len(parts) > 1 else None
+    return [Author(family=family, given=given or None)]
+
+
+def parse_authors_string(
+    raw, multiword_surnames: Optional[Set[str]] = None
+) -> List[Author]:
+    """Parse a raw author string into Author objects.
+
+    Handles the following formats robustly:
+
+    Format A (PDF embedded, full names):
+        "Romain Abraham, Jean-François Delmas & Julien Weibel"
+        "Romain Abraham, Jean-François Delmas, Julien Weibel"
+
+    Format B (filename / Crossref):
+        "Abraham, R., Delmas, J.-F., Weibel, J."
+
+    Format C (Crossref-style with 'and'):
+        "Abraham, R. and Delmas, J.-F. and Weibel, J."
+
+    Format D (already a list):
+        ["Romain Abraham", "Jean-François Delmas", ...]
+
+    Multi-part surnames ("van der Waals", "el Karoui") are handled via
+    nobiliary-particle detection or the optional ``multiword_surnames``
+    whitelist.
+
+    Returns a list of :class:`Author` objects (possibly empty).
+    """
+    if raw is None:
+        return []
+
+    # Format D: already a list — recursively parse each item
+    if isinstance(raw, list):
+        result: List[Author] = []
+        for item in raw:
+            result.extend(parse_authors_string(item, multiword_surnames))
+        return result
+
+    raw = str(raw).strip()
+    if not raw:
+        return []
+
+    # Step 1: Split on strong separators (&, ;, ' and ')
+    if _STRONG_SEP_RE.search(raw):
+        segments = _STRONG_SEP_RE.split(raw)
+    else:
+        segments = [raw]
+
+    authors: List[Author] = []
+    for seg in segments:
+        authors.extend(_parse_segment(seg, multiword_surnames))
+    return authors
+
+
+# ---------------------------------------------------------------------------
+# Metadata → CMO conversion
+# ---------------------------------------------------------------------------
+
 def metadata_to_cmo(metadata: dict, pdf_path: Path) -> CMO:
-    """Convert extracted metadata dict into a CMO object."""
-    authors = []
-    if metadata.get("authors") and isinstance(metadata["authors"], list):
-        for a in metadata["authors"]:
+    """Convert extracted metadata dict into a CMO object.
+
+    Author resolution priority:
+        1. Structured ``metadata["authors"]`` from APIs (Crossref, ArXiv, LLM),
+           IF non-empty.
+        2. Raw ``metadata["authors_raw"]`` from PDF embedded metadata,
+           parsed via :func:`parse_authors_string`.
+        3. Empty list (caller decides how to handle).
+    """
+    authors: List[Author] = []
+
+    # Priority 1: structured authors list (must be non-empty to count)
+    structured = metadata.get("authors")
+    if isinstance(structured, list) and structured:
+        for a in structured:
             if isinstance(a, str):
-                # "Firstname Lastname" format from LLM
-                if " " in a:
-                    parts = a.rsplit(" ", 1)
-                    authors.append(Author(family=parts[-1], given=parts[0]))
-                else:
-                    authors.append(Author(family=a))
-            elif isinstance(a, dict):
-                authors.append(Author(**a))
-    elif metadata.get("authors_raw"):
+                # String entry: parse it (handles "First Last" or "Last, First")
+                parsed = parse_authors_string(a)
+                authors.extend(parsed)
+            elif isinstance(a, dict) and (a.get("family") or a.get("name")):
+                # Crossref/ArXiv structured author dict
+                family = a.get("family") or a.get("name") or ""
+                given = a.get("given") or None
+                if family:
+                    authors.append(Author(family=family, given=given))
+            elif isinstance(a, Author):
+                authors.append(a)
+
+    # Priority 2: fall back to raw author string from PDF metadata
+    if not authors and metadata.get("authors_raw"):
         authors = parse_authors_string(metadata["authors_raw"])
 
     title = metadata.get("title", "")
@@ -326,6 +508,16 @@ def ingest_paper(
     canonical_name = cmo.get_canonical_filename()
     result["filename"] = canonical_name
 
+    # Write the parsed authors BACK into the metadata dict so the downstream
+    # OrganizationSystem.route() picks the correct alpha-subdir. Without
+    # this, papers whose authors only existed in ``authors_raw`` (PDF
+    # embedded metadata) all end up filed under "Z".
+    if cmo.authors:
+        metadata["authors"] = [
+            {"family": a.family, "given": a.given}
+            for a in cmo.authors
+        ]
+
     if verbose:
         print(f"  Title: {cmo.title}")
         print(f"  Authors: {', '.join(a.display_name() for a in cmo.authors)}")
@@ -335,7 +527,11 @@ def ingest_paper(
         if metadata.get("arxiv_id"):
             print(f"  ArXiv: {metadata['arxiv_id']}")
 
-    # Step 3: Override status if specified
+    # Step 3: Override status if specified.
+    # Routing reads ``metadata["document_type"]`` and DOI/arxiv_id presence
+    # via OrganizationSystem.determine_publication_status. To honor the
+    # caller's hint we have to write into BOTH the document_type (for
+    # books/theses) and the DOI/arxiv presence (for journal-style statuses).
     if status:
         metadata["_forced_status"] = status
         if status == "published":
@@ -346,6 +542,14 @@ def ingest_paper(
         elif status == "working":
             metadata.pop("doi", None)
             metadata.pop("arxiv_id", None)
+        elif status == "book":
+            metadata["document_type"] = "book"
+        elif status == "lecture_notes":
+            metadata["document_type"] = "lecture_notes"
+        elif status == "thesis":
+            metadata["document_type"] = "thesis"
+        else:
+            logger.warning("ingest_paper: unknown status hint %r — ignoring", status)
 
     # Step 4: Determine year for working papers
     paper_year = year or metadata.get("year")

@@ -13,8 +13,8 @@ Usage::
     python -m processing.duplicate_finder /path/to/library --min-similarity 90
     python -m processing.duplicate_finder /path/to/library --json --output dupes.json
 """
-
 from __future__ import annotations
+
 
 import argparse
 import hashlib
@@ -30,10 +30,6 @@ from typing import Optional
 from rapidfuzz import fuzz
 
 logger = logging.getLogger(__name__)
-
-_src_dir = str(Path(__file__).resolve().parent.parent)
-if _src_dir not in sys.path:
-    sys.path.insert(0, _src_dir)
 
 from processing.undo_log import UndoLog
 
@@ -122,9 +118,13 @@ def find_duplicates(
         print("Scanning library for PDFs...")
 
     entries = []
+    # 12 - To be sorted/ is a staging area for un-renamed bulk imports;
+    # those PDFs haven't been canonicalized yet so duplicate detection across
+    # them is meaningless (would just flag every paper as "different from itself").
+    SKIP_PREFIXES = ("Scripts", "archive", ".", "unicode", "12 - To be sorted")
     for pdf in library_root.rglob("*.pdf"):
         rel = pdf.relative_to(library_root)
-        if any(part.startswith(("Scripts", "archive", ".", "unicode")) for part in rel.parts):
+        if any(part.startswith(SKIP_PREFIXES) for part in rel.parts):
             continue
 
         stem = unicodedata.normalize("NFC", pdf.stem)
@@ -232,17 +232,35 @@ def find_duplicates(
 
 
 def _files_identical(a: Path, b: Path) -> bool:
-    """Check if two files have identical content (SHA-256)."""
-    if a.stat().st_size != b.stat().st_size:
+    """Check if two files have identical content (SHA-256).
+
+    Returns False on any I/O error rather than raising — duplicate detection
+    must never crash the maintenance run because of a transient file lock or
+    a deleted file.
+    """
+    try:
+        if a.stat().st_size != b.stat().st_size:
+            return False
+    except OSError as exc:
+        logger.debug("stat() failed for %s or %s: %s", a, b, exc)
         return False
-    return _file_hash(a) == _file_hash(b)
+    ha = _file_hash(a)
+    hb = _file_hash(b)
+    if ha is None or hb is None:
+        return False
+    return ha == hb
 
 
-def _file_hash(path: Path) -> str:
+def _file_hash(path: Path) -> str | None:
+    """Return SHA-256 of a file, or None if it can't be read."""
     hasher = hashlib.sha256()
-    with open(path, "rb") as f:
-        for chunk in iter(lambda: f.read(8192), b""):
-            hasher.update(chunk)
+    try:
+        with open(path, "rb") as f:
+            for chunk in iter(lambda: f.read(8192), b""):
+                hasher.update(chunk)
+    except OSError as exc:
+        logger.debug("Cannot hash %s: %s", path, exc)
+        return None
     return hasher.hexdigest()
 
 

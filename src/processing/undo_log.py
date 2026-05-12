@@ -18,8 +18,8 @@ Usage::
     # Show details of a transaction
     python -m processing.undo_log show abc123
 """
-
 from __future__ import annotations
+
 
 import argparse
 import hashlib
@@ -130,6 +130,11 @@ class UndoLog:
         if tx.get("undone"):
             raise ValueError(f"Transaction {tx_id} has already been undone")
 
+        # Refuse to "restore" from special device files. Historical bug:
+        # callers used to record deletions as moves to /dev/null, which made
+        # undo try to move the device file and destroy the source.
+        SPECIAL_DEVICES = {"/dev/null", "/dev/zero", "/dev/random", "/dev/urandom"}
+
         results = []
         # Undo in reverse order
         for op in reversed(tx["operations"]):
@@ -138,6 +143,12 @@ class UndoLog:
 
             if op["type"] == "move":
                 # Undo move: move destination back to source
+                if str(dst) in SPECIAL_DEVICES:
+                    results.append({
+                        "action": f"CANNOT UNDO: file was deleted (recorded as move to {dst}); "
+                                  f"source path {src} is unrecoverable from this log"
+                    })
+                    continue
                 if dry_run:
                     results.append({"action": f"WOULD MOVE BACK: {dst.name} → {src}"})
                 else:

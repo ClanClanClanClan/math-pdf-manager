@@ -18,8 +18,8 @@ Usage::
     # Skip specific checks
     python -m maintenance.weekly_report --skip aging --skip duplicates
 """
-
 from __future__ import annotations
+
 
 import argparse
 import json
@@ -32,12 +32,9 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-_src_dir = str(Path(__file__).resolve().parent.parent)
-if _src_dir not in sys.path:
-    sys.path.insert(0, _src_dir)
-
 # Default paths
-LIBRARY_ROOT = Path.home() / "Library/CloudStorage/Dropbox/Work/Maths"
+from core.config_paths import get_library_root as _get_library_root
+LIBRARY_ROOT = _get_library_root()
 REPORT_DIR = Path.home() / ".mathpdf" / "reports"
 
 
@@ -47,10 +44,15 @@ def check_publications(
     limit: Optional[int] = None,
     verbose: bool = False,
 ) -> dict:
-    """Check if unpublished/working papers have been published."""
+    """Check if unpublished/working papers have been published.
+
+    Each folder is wrapped in a try/except so a single failure (e.g., Crossref
+    timeout) doesn't crash the whole maintenance run; the failed folder gets
+    an empty result + an entry in ``results['_errors']``.
+    """
     from processing.publication_checker import scan_directory
 
-    results = {"unpublished": [], "working": []}
+    results: dict = {"unpublished": [], "working": [], "_errors": []}
 
     for folder_name, key in [
         ("02 - Unpublished papers", "unpublished"),
@@ -63,12 +65,20 @@ def check_publications(
         if verbose:
             print(f"\nChecking {folder_name}...")
 
-        found = scan_directory(folder, limit=limit, verbose=verbose)
-        published = [r for r in found if r.get("published")]
-        results[key] = published
-
-        if verbose:
-            print(f"  Found {len(published)} newly published papers")
+        try:
+            found = scan_directory(folder, limit=limit, verbose=verbose)
+            published = [r for r in found if r.get("published")]
+            results[key] = published
+            if verbose:
+                print(f"  Found {len(published)} newly published papers")
+        except Exception as exc:
+            logger.exception("Publication check failed for %s", folder_name)
+            results["_errors"].append({
+                "step": f"check_publications/{folder_name}",
+                "error": str(exc),
+            })
+            if verbose:
+                print(f"  ERROR: {exc} (continuing)")
 
     return results
 
@@ -81,11 +91,15 @@ def check_aging(
 ) -> list[dict]:
     """Find working papers that should move to unpublished (too old)."""
     from processing.aging_checker import find_aged_papers
-
-    candidates = find_aged_papers(
-        library_root, max_age_years=max_age_years, verbose=verbose
-    )
-    return candidates
+    try:
+        return find_aged_papers(
+            library_root, max_age_years=max_age_years, verbose=verbose
+        )
+    except Exception as exc:
+        logger.exception("Aging check failed")
+        if verbose:
+            print(f"  ERROR in check_aging: {exc} (continuing)")
+        return []
 
 
 def check_duplicates(
@@ -95,14 +109,18 @@ def check_duplicates(
 ) -> list[dict]:
     """Find duplicate papers across the library."""
     from processing.duplicate_finder import find_duplicates
-
-    clusters = find_duplicates(
-        library_root,
-        min_title_similarity=95.0,
-        exclude_cross_filings=True,
-        verbose=verbose,
-    )
-    return clusters
+    try:
+        return find_duplicates(
+            library_root,
+            min_title_similarity=95.0,
+            exclude_cross_filings=True,
+            verbose=verbose,
+        )
+    except Exception as exc:
+        logger.exception("Duplicate check failed")
+        if verbose:
+            print(f"  ERROR in check_duplicates: {exc} (continuing)")
+        return []
 
 
 def generate_html_report(
@@ -202,6 +220,24 @@ h2 {{ color: #555; margin-top: 2em; }}
     report_path.write_text(html, encoding="utf-8")
 
 
+def count_to_be_sorted(library_root: Path) -> dict:
+    """Count PDFs awaiting sorting in ``12 - To be sorted/{01,03,05}/``."""
+    try:
+        from organization.system import TO_BE_SORTED
+    except ImportError:
+        TO_BE_SORTED = "12 - To be sorted"
+    base = library_root / TO_BE_SORTED
+    counts: dict = {"total": 0, "by_subfolder": {}}
+    if not base.exists():
+        return counts
+    for child in sorted(base.iterdir()):
+        if child.is_dir():
+            n = sum(1 for _ in child.rglob("*.pdf"))
+            counts["by_subfolder"][child.name] = n
+            counts["total"] += n
+    return counts
+
+
 def run_maintenance(
     library_root: Path = LIBRARY_ROOT,
     *,
@@ -212,6 +248,13 @@ def run_maintenance(
     """Run all maintenance checks and return results."""
     skip = skip or set()
     results = {"timestamp": datetime.now().strftime("%Y-%m-%d %H:%M")}
+
+    # Cheap: count the to-be-sorted backlog so it's always visible.
+    try:
+        results["to_be_sorted"] = count_to_be_sorted(library_root)
+    except Exception as exc:
+        logger.warning("Could not count to-be-sorted backlog: %s", exc)
+        results["to_be_sorted"] = {"total": 0, "by_subfolder": {}}
 
     t0 = time.time()
 
@@ -286,13 +329,14 @@ def main(argv: list[str] | None = None) -> None:
         verbose=args.verbose,
     )
 
-    # Generate report
-    timestamp = datetime.now().strftime("%Y-%m-%d")
+    # Generate report. Include time so two runs on the same day don't
+    # overwrite each other.
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
     report_path = args.report_dir / f"maintenance_{timestamp}.html"
     generate_html_report(results, report_path)
     print(f"\nReport: {report_path}")
 
-    # Also save JSON
+    # Also save JSON (same timestamp keeps html/json paired)
     json_path = args.report_dir / f"maintenance_{timestamp}.json"
     json_path.write_text(json.dumps(results, indent=2, ensure_ascii=False, default=str))
 

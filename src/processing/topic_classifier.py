@@ -15,8 +15,8 @@ Usage::
     python -m processing.topic_classifier --file paper.pdf
     python -m processing.topic_classifier --scan /path/to/library/01/A/ --limit 50
 """
-
 from __future__ import annotations
+
 
 import argparse
 import json
@@ -28,11 +28,6 @@ from pathlib import Path
 from typing import Optional
 
 logger = logging.getLogger(__name__)
-
-_src_dir = str(Path(__file__).resolve().parent.parent)
-if _src_dir not in sys.path:
-    sys.path.insert(0, _src_dir)
-
 
 # ---------------------------------------------------------------------------
 # Topic keyword definitions
@@ -229,15 +224,17 @@ def classify_by_llm(
 
     Falls back gracefully if the LLM is not available.
     """
+    # Cheap check first — don't pay the cost of importing llama_cpp if the
+    # model isn't on disk.
+    model_path = Path.home() / ".mathpdf_models/gguf/qwen2.5-7b-pdfmeta-q4_k_m.gguf"
+    if not model_path.exists():
+        logger.debug("GGUF model not found at %s", model_path)
+        return []
+
     try:
         from llama_cpp import Llama, LlamaGrammar
     except ImportError:
         logger.debug("llama-cpp-python not available, skipping LLM classification")
-        return []
-
-    model_path = Path.home() / ".mathpdf_models/gguf/qwen2.5-7b-pdfmeta-q4_k_m.gguf"
-    if not model_path.exists():
-        logger.debug("GGUF model not found at %s", model_path)
         return []
 
     # Build classification prompt

@@ -7,8 +7,8 @@ processing.  The previous iteration only contained placeholders; this version
 connects the wiring to the real processing helpers so the tool can be executed
 end-to-end again.
 """
-
 from __future__ import annotations
+
 
 import argparse
 import asyncio

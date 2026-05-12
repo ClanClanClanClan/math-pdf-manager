@@ -16,8 +16,8 @@ Usage::
     # Dry run (process but don't move files)
     python -m watcher.daemon --dry-run
 """
-
 from __future__ import annotations
+
 
 import argparse
 import logging
@@ -32,10 +32,6 @@ from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 
 # Ensure src/ is on path
-_src_dir = str(Path(__file__).resolve().parent.parent)
-if _src_dir not in sys.path:
-    sys.path.insert(0, _src_dir)
-
 from watcher.config import WatcherConfig
 from watcher.notifier import notify
 
@@ -49,7 +45,17 @@ class PDFHandler(FileSystemEventHandler):
         super().__init__()
         self.config = config
         self.dry_run = dry_run
-        self._pending: dict[str, float] = {}  # path → first_seen_time
+        # path -> (last_known_size, last_change_time). The settle check
+        # requires both unchanged size AND elapsed settle_seconds.
+        self._pending: dict[str, tuple[int, float]] = {}
+
+    def _initial_pending_state(self, path: Path) -> tuple:
+        """Snapshot size + time so we can detect when writes finish."""
+        try:
+            size = path.stat().st_size
+        except OSError:
+            size = -1  # placeholder; will resolve on next poll
+        return (size, time.time())
 
     def on_created(self, event):
         if event.is_directory:
@@ -57,8 +63,9 @@ class PDFHandler(FileSystemEventHandler):
         path = Path(event.src_path)
         if path.suffix.lower() != ".pdf":
             return
-        # Track as pending — wait for file to finish writing
-        self._pending[str(path)] = time.time()
+        # Record (size, last_change_time). The settle check requires both
+        # an unchanged size AND elapsed settle_seconds before ingesting.
+        self._pending[str(path)] = self._initial_pending_state(path)
         logger.info("Detected new PDF: %s", path.name)
 
     def on_modified(self, event):
@@ -67,22 +74,40 @@ class PDFHandler(FileSystemEventHandler):
         path = Path(event.src_path)
         if path.suffix.lower() != ".pdf":
             return
-        # Reset the settle timer
-        self._pending[str(path)] = time.time()
+        # Reset to current size/time. process_settled will compare on next tick.
+        self._pending[str(path)] = self._initial_pending_state(path)
 
     def process_settled(self) -> None:
-        """Process PDFs that have been stable for settle_seconds."""
-        now = time.time()
-        settled = [
-            p for p, t in self._pending.items()
-            if now - t >= self.config.settle_seconds
-        ]
+        """Process PDFs whose size has been stable for ``settle_seconds``.
 
-        for path_str in settled:
-            del self._pending[path_str]
+        For each pending PDF we re-stat. If the size changed since last poll,
+        the timer resets. Only when the size is unchanged AND
+        ``settle_seconds`` have elapsed do we ingest.
+        """
+        now = time.time()
+        ready: list[str] = []
+        for path_str, info in list(self._pending.items()):
             path = Path(path_str)
-            if path.exists():
-                self._ingest(path)
+            if not path.exists():
+                # File was removed while we waited — drop it.
+                del self._pending[path_str]
+                continue
+            try:
+                current_size = path.stat().st_size
+            except OSError:
+                continue  # transient — try again next tick
+
+            last_size, last_change = info
+            if current_size != last_size:
+                # Still being written — reset timer with new size.
+                self._pending[path_str] = (current_size, now)
+                continue
+            if now - last_change >= self.config.settle_seconds:
+                ready.append(path_str)
+
+        for path_str in ready:
+            del self._pending[path_str]
+            self._ingest(Path(path_str))
 
     def _ingest(self, path: Path) -> None:
         """Ingest a single PDF file."""
@@ -221,10 +246,16 @@ def main(argv: list[str] | None = None) -> None:
     if args.no_notify:
         config.notifications = False
 
-    # Also log to file
+    # Also log to file (rotated: 10 MB × 5 backups = ~50 MB cap)
     config.ensure_dirs()
     log_file = config.log_dir / "watcher.log"
-    file_handler = logging.FileHandler(log_file, encoding="utf-8")
+    from logging.handlers import RotatingFileHandler
+    file_handler = RotatingFileHandler(
+        log_file,
+        maxBytes=10 * 1024 * 1024,  # 10 MB
+        backupCount=5,
+        encoding="utf-8",
+    )
     file_handler.setLevel(logging.INFO)
     file_handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s"))
     logging.getLogger().addHandler(file_handler)

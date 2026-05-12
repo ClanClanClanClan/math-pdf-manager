@@ -14,7 +14,7 @@ import regex as re
 from core.text_processing import math_detector
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class Token:
     """Data class for representing text tokens."""
     kind: str  # 'PHRASE' | 'MATH' | 'WORD' | 'SPACE' | 'PUNCT'

@@ -17,8 +17,8 @@ Usage::
     # Just flag everything for manual download
     python -m processing.upgrade_to_published report.json --manual-only
 """
-
 from __future__ import annotations
+
 
 import argparse
 import json
@@ -28,7 +28,6 @@ import shutil
 import sys
 import tempfile
 import time
-import unicodedata
 from pathlib import Path
 from typing import Optional
 
@@ -36,15 +35,12 @@ import requests
 
 logger = logging.getLogger(__name__)
 
-_src_dir = str(Path(__file__).resolve().parent.parent)
-if _src_dir not in sys.path:
-    sys.path.insert(0, _src_dir)
-
 from processing.undo_log import UndoLog, logged_move, logged_copy
 
-LIBRARY_ROOT = Path.home() / "Library/CloudStorage/Dropbox/Work/Maths"
+from core.config_paths import get_library_root as _get_library_root
+LIBRARY_ROOT = _get_library_root()
 import os as _os
-UNPAYWALL_EMAIL = _os.environ.get("UNPAYWALL_EMAIL", "mathpdf-manager@example.com")
+UNPAYWALL_EMAIL = _os.environ.get("UNPAYWALL_EMAIL", "")
 RATE_LIMIT_SECS = 1.0
 
 
@@ -284,21 +280,25 @@ def upgrade_paper(
                     result["action"] = f"DOWNLOADED + FILED (kept preprint — {pre_size // 1024}KB > {pub_size // 1024}KB, may have extra content)"
                     result["kept_preprint"] = True
                 else:
-                    # Delete preprint
+                    # Move preprint to trash (recoverable) instead of hard delete
                     if preprint_path.exists():
                         try:
+                            trash_dir = library_root / ".trash" / "upgraded_preprints"
+                            trash_dir.mkdir(parents=True, exist_ok=True)
+                            trash_path = trash_dir / preprint_path.name
+
+                            shutil.move(str(preprint_path), str(trash_path))
+
+                            # Record in undo log AFTER successful move
                             if undo_log:
-                                undo_log.record_move(preprint_path, Path("/dev/null"))
-                            preprint_path.unlink()
-                            if preprint_path.exists():
-                                result["action"] = f"DOWNLOADED + FILED but preprint deletion failed (still exists)"
-                            else:
-                                result["action"] = f"DOWNLOADED + FILED + DELETED preprint"
+                                undo_log.record_move(preprint_path, trash_path)
+
+                            result["action"] = "DOWNLOADED + FILED + DELETED preprint"
                         except Exception as exc:
-                            logger.error("Failed to delete preprint %s: %s", preprint_path, exc)
-                            result["action"] = f"DOWNLOADED + FILED but preprint deletion error: {exc}"
+                            logger.error("Failed to move preprint %s: %s", preprint_path, exc)
+                            result["action"] = f"DOWNLOADED + FILED but preprint move error: {exc}"
                     else:
-                        result["action"] = f"DOWNLOADED + FILED (preprint already gone)"
+                        result["action"] = "DOWNLOADED + FILED (preprint already gone)"
                     result["kept_preprint"] = False
 
                 result["destination"] = ingest_result.get("destination", "")

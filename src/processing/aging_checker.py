@@ -10,8 +10,8 @@ Usage::
     python -m processing.aging_checker /path/to/library --max-age 5
     python -m processing.aging_checker /path/to/library --dry-run
 """
-
 from __future__ import annotations
+
 
 import argparse
 import json
@@ -23,10 +23,6 @@ from datetime import datetime
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
-
-_src_dir = str(Path(__file__).resolve().parent.parent)
-if _src_dir not in sys.path:
-    sys.path.insert(0, _src_dir)
 
 from organization.system import UNPUBLISHED, WORKING
 from processing.undo_log import UndoLog, logged_move
@@ -54,17 +50,18 @@ def find_aged_papers(
 
     candidates = []
 
+    loose_files: list[dict] = []  # tracked separately, never transitioned
+
     for alpha_dir in sorted(working_dir.iterdir()):
         if not alpha_dir.is_dir() or len(alpha_dir.name) != 1:
-            # Loose files (not in A-Z subdirs) — check by filename if possible
+            # Loose files (not in A-Z subdirs): record for reporting only.
+            # We deliberately do NOT add them to ``candidates`` because they
+            # have no destination and would crash transition_aged_papers().
             if alpha_dir.suffix.lower() == ".pdf":
-                # Loose PDF in working papers root — flag but no year info
-                candidates.append({
+                loose_files.append({
                     "path": str(alpha_dir),
                     "filename": alpha_dir.name,
-                    "year": None,
-                    "age": None,
-                    "reason": "loose file (no year folder)",
+                    "reason": "loose file (no year folder); needs manual filing",
                 })
             continue
 
@@ -108,6 +105,12 @@ def find_aged_papers(
 
     if verbose:
         print(f"Found {len(candidates)} papers older than {max_age_years} years")
+        if loose_files:
+            print(f"Skipping {len(loose_files)} loose files in working/ root (no year folder)")
+            for lf in loose_files[:5]:
+                print(f"  • {lf['filename']}")
+            if len(loose_files) > 5:
+                print(f"  ... and {len(loose_files) - 5} more")
 
     return candidates
 
@@ -145,6 +148,9 @@ def transition_aged_papers(
     moved = 0
 
     for c in candidates:
+        if not c.get("destination"):
+            results.append({"file": c.get("filename", "?"), "status": "SKIP: no destination (loose file)"})
+            continue
         source = Path(c["path"])
         dest = Path(c["destination"])
 

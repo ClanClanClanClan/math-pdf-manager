@@ -44,75 +44,66 @@ DEBUG_SENTENCE_CASE = False
 
 
 def _load_sentence_case_config() -> Dict:
-    """Load configuration for sentence case conversion"""
+    """Load configuration for sentence case conversion.
+
+    Uses :mod:`core.config_paths` so paths are always resolved relative to
+    the project root (not cwd). This means the validator (called via
+    ``check_filename``) and the canonical-filename generator (CMO) both load
+    the same config files regardless of where Python is invoked from.
+    """
     global _CONFIG_CACHE
-    
+
     if _CONFIG_CACHE:
         return _CONFIG_CACHE
-    
-    # Try to load from config.yaml in known locations
-    config_paths = [
-        "config/config.yaml",
-        "config.yaml",
-        "Scripts/config.yaml",
-        os.path.join(os.path.dirname(__file__), "..", "..", "config", "config.yaml"),
-        os.path.join(os.path.dirname(__file__), "config.yaml"),
-    ]
-    
-    config_data = {}
-    for config_path in config_paths:
-        if os.path.exists(config_path):
-            try:
-                config_data = load_yaml_config(config_path)
-                debug_print(f"Loaded config from: {config_path}")
-                break
-            except Exception as e:
-                debug_print(f"Failed to load config from {config_path}: {e}")
-                continue
-    
-    if not config_data:
+
+    try:
+        from core.config_paths import config_path, load_set_from_files, load_yaml_section
+    except ImportError:
+        # core/ should always be importable, but guard anyway
+        config_path = lambda *a, **kw: None
+        load_set_from_files = lambda *files: set()
+        load_yaml_section = lambda *keys, filename="config.yaml": None
+
+    cfg_path = config_path("config.yaml")
+    config_data: Dict = {}
+    if cfg_path is not None:
+        try:
+            config_data = load_yaml_config(str(cfg_path)) or {}
+            debug_print(f"Loaded config from: {cfg_path}")
+        except Exception as exc:
+            debug_print(f"Failed to load config from {cfg_path}: {exc}")
+    else:
         debug_print("No config file found, using minimal defaults")
-    
+
+    # Capitalization whitelist may live at top level or under exceptions/.
+    cap_wl = (
+        config_data.get("capitalization_whitelist")
+        or config_data.get("exceptions", {}).get("capitalization_whitelist")
+        or []
+    )
+
     # Initialize with config data or minimal defaults
     _CONFIG_CACHE = {
         'common_acronyms': frozenset(config_data.get('common_acronyms', [])),
         'mixed_case_words': frozenset(config_data.get('mixed_case_words', [
-            'LaTeX', 'macOS', 'iOS', 'iPhone', 'iPad', 'iPod', 'eBay', 
-            'PyTorch', 'TensorFlow', 'JavaScript', 'TypeScript', 'CoffeeScript', 
-            'XeLaTeX', 'LuaTeX', 'ConTeXt', 'BibTeX', 'PostScript', 'FaceTime', 
+            'LaTeX', 'macOS', 'iOS', 'iPhone', 'iPad', 'iPod', 'eBay',
+            'PyTorch', 'TensorFlow', 'JavaScript', 'TypeScript', 'CoffeeScript',
+            'XeLaTeX', 'LuaTeX', 'ConTeXt', 'BibTeX', 'PostScript', 'FaceTime',
             'GitHub', 'GitLab', 'LinkedIn', 'YouTube'
         ])),
         'compound_terms': frozenset(config_data.get('compound_terms', [])),
         'proper_adjectives': frozenset(config_data.get('proper_adjectives', [
             'Bayesian', 'Gaussian', 'Markovian', 'Newtonian', 'Euclidean', 'Laplacian'
         ])),
-        'capitalization_whitelist': frozenset(
-            config_data.get('capitalization_whitelist', [])
-            or config_data.get('exceptions', {}).get('capitalization_whitelist', [])
-        ),
-        'name_dash_whitelist': frozenset(),  # Will be loaded from file if specified
-        'known_words': frozenset(),  # Will be loaded from file if specified
+        'capitalization_whitelist': frozenset(cap_wl),
+        'name_dash_whitelist': frozenset(load_set_from_files("name_dash_whitelist.txt")),
+        'known_words': frozenset(),  # caller may populate from data files
     }
-    
-    # Load name_dash_whitelist from data file
-    data_dir = os.path.join(os.path.dirname(__file__), "..", "..", "data")
-    dash_whitelist_paths = [
-        "data/name_dash_whitelist.txt",
-        os.path.join(data_dir, "name_dash_whitelist.txt"),
-    ]
-    for path in dash_whitelist_paths:
-        if os.path.exists(path):
-            try:
-                with open(path, "r", encoding="utf-8") as fh:
-                    names = frozenset(
-                        line.strip() for line in fh
-                        if line.strip() and not line.startswith("#")
-                    )
-                _CONFIG_CACHE['name_dash_whitelist'] = names
-                debug_print(f"Loaded {len(names)} name-dash whitelist entries from {path}")
-            except Exception:
-                pass
-            break
+
+    if _CONFIG_CACHE['name_dash_whitelist']:
+        debug_print(
+            f"Loaded {len(_CONFIG_CACHE['name_dash_whitelist'])} name-dash whitelist entries"
+        )
 
     # Add math technical prefixes to the config
     _CONFIG_CACHE['math_technical_prefixes'] = MATH_TECHNICAL_PREFIXES

@@ -43,6 +43,41 @@ TO_DOWNLOAD = "04 - Papers to be downloaded"
 BOOKS = "05 - Books and lecture notes"
 THESES = "06 - Theses"
 NOT_FULLY_PUBLISHED = "Not fully published version"
+TO_BE_SORTED = "12 - To be sorted"  # staging area for raw bulk-imported PDFs
+
+
+# Nobiliary particles — "el Karoui" files under K (the Family part), not E.
+# Also covers two-word particles like "van der", "de la".
+_ALPHA_PARTICLES = frozenset({
+    "van", "von", "der", "den", "de", "del", "della", "di",
+    "la", "le", "el", "ter", "ten", "da", "do", "du", "dos",
+    "y", "ben", "bin", "abu", "al", "st", "san", "santa",
+    "von der", "van den", "van der", "de la", "de los", "de las",
+})
+
+# Latin letters with strokes/special diacritics that NFD cannot decompose.
+# These are precomposed in Unicode and have no combining-mark form.
+_LATIN_SPECIAL_TO_LATIN = {
+    "Ł": "L", "Ø": "O", "Æ": "A", "Œ": "O", "Þ": "T", "Ð": "D",
+    "ß": "S",
+}
+
+# Greek capital → Latin equivalent (used for filing α-name papers under A, etc.)
+_GREEK_TO_LATIN = {
+    "Α": "A", "Β": "B", "Γ": "G", "Δ": "D", "Ε": "E", "Ζ": "Z",
+    "Η": "E", "Θ": "T", "Ι": "I", "Κ": "K", "Λ": "L", "Μ": "M",
+    "Ν": "N", "Ξ": "X", "Ο": "O", "Π": "P", "Ρ": "R", "Σ": "S",
+    "Τ": "T", "Υ": "Y", "Φ": "F", "Χ": "C", "Ψ": "P", "Ω": "O",
+}
+
+# Cyrillic → Latin (best-effort romanization for filing only)
+_CYRILLIC_TO_LATIN = {
+    "А": "A", "Б": "B", "В": "V", "Г": "G", "Д": "D", "Е": "E",
+    "Ж": "Z", "З": "Z", "И": "I", "Й": "I", "К": "K", "Л": "L",
+    "М": "M", "Н": "N", "О": "O", "П": "P", "Р": "R", "С": "S",
+    "Т": "T", "У": "U", "Ф": "F", "Х": "K", "Ц": "T", "Ч": "C",
+    "Ш": "S", "Щ": "S", "Ы": "Y", "Э": "E", "Ю": "Y", "Я": "Y",
+}
 
 STATUS_DIRS = {
     "published": PUBLISHED,
@@ -155,13 +190,56 @@ class FolderRouter:
         return "working"
 
     def get_alpha_subdir(self, first_author_lastname: str) -> str:
-        """Get the A-Z subdirectory letter from the first author's lastname."""
+        """Get the A-Z subdirectory letter from the first author's lastname.
+
+        Strategy:
+        1. Strip leading nobiliary particles ("van der", "el", "de los", ...)
+           so "el Karoui" files under K (existing convention).
+        2. NFD-decompose to strip accents, then take the first ASCII letter.
+        3. Greek letters are mapped to their Latin equivalents
+           (e.g., "Αλεξανδρης" → A).
+        4. Cyrillic letters are romanised to Latin (best-effort).
+        5. Anything still non-Latin lands in Z, but we log a warning so the
+           user can spot misfiled papers.
+        """
         if not first_author_lastname:
-            return "Z"  # fallback
-        first_char = unicodedata.normalize("NFD", first_author_lastname)[0].upper()
-        if "A" <= first_char <= "Z":
-            return first_char
-        return "Z"  # non-Latin names go to Z
+            return "Z"
+
+        # Remove nobiliary particles from the front so "el Karoui" → "Karoui"
+        name = first_author_lastname.strip()
+        words = name.split()
+        # Try greedy match for two-word particles ("van der", "de la"), then one-word
+        if len(words) >= 3 and " ".join(words[:2]).lower() in _ALPHA_PARTICLES:
+            words = words[2:]
+        elif len(words) >= 2 and words[0].lower() in _ALPHA_PARTICLES:
+            words = words[1:]
+        if words:
+            name = words[0]
+
+        # NFD-decompose then drop combining marks; take the first letter
+        decomposed = unicodedata.normalize("NFD", name)
+        for ch in decomposed:
+            if unicodedata.combining(ch):
+                continue
+            up = ch.upper()
+            if "A" <= up <= "Z":
+                return up
+            # Latin letters with strokes that NFD doesn't decompose (Ł, Ø, ...)
+            if up in _LATIN_SPECIAL_TO_LATIN:
+                return _LATIN_SPECIAL_TO_LATIN[up]
+            # Greek capital letters → Latin (Α=A, Β=B, etc.)
+            if "Α" <= up <= "Ω":
+                return _GREEK_TO_LATIN.get(up, "Z")
+            # Cyrillic letters → Latin (best effort)
+            if "А" <= up <= "Я":
+                return _CYRILLIC_TO_LATIN.get(up, "Z")
+            # Non-letter (digit/punct) — keep scanning
+            if not up.isalpha():
+                continue
+            break  # other script: give up
+
+        logger.warning("get_alpha_subdir: filing %r under Z (no Latin first letter)", first_author_lastname)
+        return "Z"
 
     def route(
         self,

@@ -13,7 +13,7 @@ from typing import Any, Dict, Iterable, List, Optional, Set
 logger = logging.getLogger(__name__)
 
 
-@dataclass(slots=True)
+@dataclass
 class Author:
     """Represents an individual author."""
 
@@ -44,7 +44,7 @@ class Author:
         return ".".join(segments)
 
 
-@dataclass(slots=True)
+@dataclass
 class Citation:
     """Minimal citation representation."""
 
@@ -53,7 +53,7 @@ class Citation:
     score: float | None = None
 
 
-@dataclass(slots=True)
+@dataclass
 class CMO:
     """Core metadata object produced by the harvester layer."""
 
@@ -160,12 +160,36 @@ class CMO:
         # ── Full validation pipeline ──────────────────────────────────
         base = _validate_filename(base)
 
-        # Final byte-limit enforcement (safety net after validation)
+        # Final byte-limit enforcement (safety net after validation).
+        # Decode with errors="ignore" can leave a dangling partial UTF-8
+        # sequence at the cut point, so we explicitly trim to a UTF-8 char
+        # boundary, then to a clean word boundary if possible.
         encoded = base.encode("utf-8")
         max_with_ext = max_bytes + 4  # include .pdf in limit
         if len(encoded) > max_with_ext:
-            # Strip .pdf, truncate, re-add
-            stem = encoded[: max_bytes].decode("utf-8", "ignore").rstrip()
+            # Try to cut at a clean codepoint boundary
+            stem_bytes = encoded[:max_bytes]
+            # Walk back to a UTF-8 lead byte (top bits not 10xxxxxx) so we
+            # don't split a multi-byte character.
+            while stem_bytes and (stem_bytes[-1] & 0xC0) == 0x80:
+                stem_bytes = stem_bytes[:-1]
+            # Decode strictly now that the boundary is clean
+            try:
+                stem = stem_bytes.decode("utf-8")
+            except UnicodeDecodeError:
+                # Belt-and-braces — fall back to lossy decode if the lead-byte
+                # walk-back wasn't enough (shouldn't happen for valid input).
+                stem = stem_bytes.decode("utf-8", "ignore")
+            # Prefer to break at a word boundary so we don't cut mid-word.
+            # Look for the last space or comma in the last 32 chars; if found,
+            # truncate there. Otherwise keep the codepoint-clean cut.
+            tail_window = stem[-32:]
+            for sep in (" ", ", ", "—", "–"):
+                idx = tail_window.rfind(sep)
+                if idx >= 0:
+                    stem = stem[: len(stem) - len(tail_window) + idx]
+                    break
+            stem = stem.rstrip(" ,;:.-—–")
             base = stem + ".pdf"
 
         return base
@@ -228,10 +252,14 @@ def _get_fs_name_max() -> int:
         return _FS_NAME_MAX
 
     try:
-        library = os.path.expanduser(
-            "~/Library/CloudStorage/Dropbox/Work/Maths"
-        )
-        if os.path.isdir(library):
+        # Use the configured library root so we query the actual filesystem
+        # the user is filing into (its PC_NAME_MAX may differ from ".").
+        try:
+            from core.config_paths import get_library_root
+            library = str(get_library_root())
+        except ImportError:
+            library = ""
+        if library and os.path.isdir(library):
             _FS_NAME_MAX = os.pathconf(library, "PC_NAME_MAX")
         else:
             _FS_NAME_MAX = os.pathconf(".", "PC_NAME_MAX")
@@ -261,51 +289,31 @@ _VALIDATOR_CONFIG: Optional[Dict[str, Any]] = None
 def _load_validator_config() -> Dict[str, Any]:
     """Load and cache all whitelists needed by check_filename().
 
-    Searches for data files relative to the project root (detected
-    from ``__file__`` → ``src/arxivbot/models/cmo.py`` → up 4 levels).
+    Delegates path resolution to :mod:`core.config_paths` so that this
+    module and ``core.sentence_case`` always read the same files
+    regardless of cwd.
     """
     global _VALIDATOR_CONFIG
     if _VALIDATOR_CONFIG is not None:
         return _VALIDATOR_CONFIG
 
-    # Find project root: cmo.py is at src/arxivbot/models/cmo.py
-    project_root = Path(__file__).resolve().parent.parent.parent.parent
+    from core.config_paths import load_set_from_files, load_yaml_section
 
-    def _load_set(filename: str) -> Set[str]:
-        """Load a newline-delimited text file into a set."""
-        for candidate in [
-            project_root / "data" / filename,
-            project_root / filename,
-        ]:
-            if candidate.exists():
-                return {
-                    line.strip()
-                    for line in candidate.read_text(encoding="utf-8").splitlines()
-                    if line.strip() and not line.startswith("#")
-                }
-        return set()
-
-    def _load_yaml_whitelist() -> Set[str]:
-        """Load capitalization_whitelist from config.yaml."""
-        config_path = project_root / "config" / "config.yaml"
-        if not config_path.exists():
-            return set()
-        try:
-            import yaml
-            with open(config_path, encoding="utf-8") as f:
-                data = yaml.safe_load(f) or {}
-            wl = data.get("capitalization_whitelist") or data.get("exceptions", {}).get("capitalization_whitelist", [])
-            return set(wl) if wl else set()
-        except Exception:
-            return set()
+    cap_wl = (
+        load_yaml_section("capitalization_whitelist")
+        or load_yaml_section("exceptions", "capitalization_whitelist")
+        or []
+    )
 
     _VALIDATOR_CONFIG = {
-        "known_words": _load_set("known_words_1.txt") | _load_set("known_words.txt"),
-        "capitalization_whitelist": _load_yaml_whitelist(),
-        "name_dash_whitelist": _load_set("name_dash_whitelist.txt"),
-        "exceptions": _load_set("exceptions.txt"),
+        "known_words": load_set_from_files("known_words_1.txt", "known_words.txt"),
+        "capitalization_whitelist": set(cap_wl) if cap_wl else set(),
+        "name_dash_whitelist": load_set_from_files("name_dash_whitelist.txt"),
+        "exceptions": load_set_from_files("exceptions.txt"),
         "compound_terms": set(),  # loaded from config.yaml if available
-        "multiword_surnames": _load_set("multiword_familynames_1.txt") | _load_set("multiword_familynames.txt"),
+        "multiword_surnames": load_set_from_files(
+            "multiword_familynames_1.txt", "multiword_familynames.txt"
+        ),
     }
 
     logger.debug(

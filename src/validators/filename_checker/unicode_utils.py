@@ -110,29 +110,24 @@ def sanitize_unicode_security(text: str) -> Tuple[str, List[str], Set[str]]:
             if label in nm:
                 scripts.add(label)
 
-    # Enhanced mixed script handling for mathematical content
+    # Enhanced mixed-script handling for mathematical content.
+    # Greek mixed with Latin is OK if the Greek looks like math notation,
+    # OR if any superscript/subscript/letterlike-symbol chars appear.
+    # Both checks happen together so the second one is reachable.
     if len(scripts) > 1 and "LATIN" in scripts and "GREEK" in scripts:
-        if has_mathematical_greek(text):
+        mathematical_unicode_ranges = (
+            (0x2070, 0x209F),    # Superscripts and subscripts
+            (0x1D400, 0x1D7FF),  # Mathematical Alphanumeric Symbols
+            (0x2100, 0x214F),    # Letterlike symbols
+        )
+        has_math_unicode = any(
+            any(start <= ord(c) <= end for start, end in mathematical_unicode_ranges)
+            for c in text
+        )
+
+        if has_mathematical_greek(text) or has_math_unicode:
             debug_print(
                 f"Allowing mixed GREEK/LATIN scripts due to mathematical content: {text}"
-            )
-            scripts = {"LATIN"}  # Don't report this as mixed scripts
-        
-        # Check for mathematical superscript/subscript characters
-        mathematical_unicode_ranges = [
-            (0x2070, 0x209F),  # Superscripts and subscripts
-            (0x1D400, 0x1D7FF),  # Mathematical Alphanumeric Symbols
-            (0x2100, 0x214F),  # Letterlike symbols
-        ]
-        
-        has_math_unicode = any(
-            any(start <= ord(char) <= end for start, end in mathematical_unicode_ranges)
-            for char in text
-        )
-        
-        if has_math_unicode:
-            debug_print(
-                f"Allowing mixed scripts due to mathematical Unicode symbols: {text}"
             )
             scripts = {"LATIN"}  # Don't report this as mixed scripts
 

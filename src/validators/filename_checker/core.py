@@ -259,22 +259,27 @@ def check_filename(
         result.add_message("error", "Title is empty or whitespace-only")
 
     # ── Dash pattern validation ────────────────────────────────────────
-    # Check for bad dash patterns: space-hyphen-space, double hyphens, etc.
+    # Bad dash patterns (only inside the *title* — the author-title " - "
+    # separator is already split off before this point):
+    #   - " - "  (ASCII hyphen with spaces) → almost always wants en-dash or em-dash
+    #   - "--"   (consecutive hyphens) → leftover from typewriter conventions
+    # Both are warnings only; the auto-fix pipeline does not silently rewrite
+    # punctuation choices for the user.
     _bad_dash_re = re.compile(
-        r'(?P<shs>\s+-\s+)'        # space-hyphen-space (should be em-dash)
-        r'|(?P<multi>-{2,})'       # multiple consecutive hyphens
+        r'(?P<shs>\s-\s)'          # ASCII space-hyphen-space (one space each side)
+        r'|(?P<multi>-{2,})'       # two or more consecutive hyphens
     )
     for m in _bad_dash_re.finditer(title_after):
         if m.group('shs'):
             result.add_message(
                 "warning",
-                f"Dash pattern: space-hyphen-space at position {m.start()} "
-                "(consider em-dash or en-dash)"
+                f"Dash pattern: ASCII hyphen surrounded by spaces at position {m.start()} "
+                "(consider en-dash or em-dash)"
             )
         elif m.group('multi'):
             result.add_message(
                 "warning",
-                f"Dash pattern: multiple consecutive hyphens at position {m.start()}"
+                f"Dash pattern: {len(m.group('multi'))} consecutive hyphens at position {m.start()}"
             )
 
     # Enhanced author normalization check

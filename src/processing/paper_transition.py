@@ -19,8 +19,8 @@ Usage::
     # Move and re-download journal versions via DOI
     python -m processing.paper_transition report.json --download-published
 """
-
 from __future__ import annotations
+
 
 import argparse
 import json
@@ -34,18 +34,13 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-_src_dir = str(Path(__file__).resolve().parent.parent)
-if _src_dir not in sys.path:
-    sys.path.insert(0, _src_dir)
-
 from arxivbot.models.cmo import Author, CMO
 from organization.system import FolderRouter, PUBLISHED, UNPUBLISHED, WORKING
 from processing.undo_log import UndoLog, logged_move
 
 # Default library root
-LIBRARY_ROOT = Path(__file__).resolve().parent.parent.parent.parent / "Maths"
-if not LIBRARY_ROOT.exists():
-    LIBRARY_ROOT = Path.home() / "Library/CloudStorage/Dropbox/Work/Maths"
+from core.config_paths import get_library_root as _get_library_root
+LIBRARY_ROOT = _get_library_root()
 
 
 def find_preprint_versions(
@@ -248,7 +243,7 @@ def process_report(
             print(f"  [{i}] {entry.get('filename', '?')[:65]}")
             print(f"      → DOI: {m.get('doi', '?')}  |  {m.get('journal', '?')[:40]}  |  Conf: {m['confidence']:.0%}")
 
-        print(f"\nOptions: [a]pprove all, [s]elect individually, [c]ancel")
+        print("\nOptions: [a]pprove all, [s]elect individually, [c]ancel")
         choice = input("> ").strip().lower()
 
         if choice == "c":
@@ -330,8 +325,10 @@ Examples:
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("-i", "--interactive", action="store_true", help="Ask before each move")
     parser.add_argument("-y", "--yes", action="store_true", help="Approve all without asking")
-    parser.add_argument("--cleanup-preprints", action="store_true",
-                        help="After moving, search for and delete preprint versions in 02/03")
+    # Note: there is no --cleanup-preprints flag here because this script
+    # moves the EXISTING file from 02/03 → 01. The file IS the preprint,
+    # not a separate copy. For "download published version + delete preprint",
+    # use processing.upgrade_to_published instead.
     parser.add_argument("-v", "--verbose", action="store_true")
     return parser
 

@@ -560,32 +560,14 @@ def convert_straight_quotes_to_proper(text: str, lang: str, regions: List[Tuple[
     if lang not in QUOTE_CONVERSIONS:
         debug_print(f"No quote conversion rules for language '{lang}', returning unchanged")
         return text
-    
+
     conversions = QUOTE_CONVERSIONS[lang]
-    result = text
-    
-    for straight_quote, proper_quote in conversions.items():
-        if straight_quote in result:
-            # Apply conversions avoiding mathematical regions and exception spans
-            out, last = [], 0
-            for s, e, seg in iterate_nonmath_segments(result, regions):
-                # Simple replacement for now - could be enhanced with context awareness
-                transformed = seg.replace(straight_quote, proper_quote)
-                out.append(result[last:s] + transformed)
-                last = e
-            out.append(result[last:])
-            result = "".join(out)
-    
-    result = text
-    
-    if lang not in QUOTE_CONVERSIONS:
-        debug_print(f"No quote conversion rules for language '{lang}', returning unchanged")
-        return text
-    
-    conversions = QUOTE_CONVERSIONS[lang]
-    result_chars = list(result)
-    
-    for i, char in enumerate(result):
+    # We do per-character conversion (below) because the simple
+    # ``.replace(straight, proper)`` approach can't tell apostrophes from
+    # closing single-quotes — context matters for "don't" vs "'word'".
+    result_chars = list(text)
+
+    for i, char in enumerate(text):
         # Skip if in math region or exception span
         if any(start <= i < end for start, end in regions + spans):
             continue
@@ -597,7 +579,7 @@ def convert_straight_quotes_to_proper(text: str, lang: str, regions: List[Tuple[
 
         elif char == "'":
             # Only convert if it's NOT a contraction apostrophe
-            if not is_contraction_apostrophe(result, i):
+            if not is_contraction_apostrophe(text, i):
                 result_chars[i] = conversions["'"]
                 debug_print(f"Converted straight single quote at position {i}")
             else:

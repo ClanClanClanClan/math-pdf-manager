@@ -12,8 +12,8 @@ Usage::
     python -m processing.filename_normalizer /path/to/library --dry-run
     python -m processing.filename_normalizer /path/to/library
 """
-
 from __future__ import annotations
+
 
 import argparse
 import json
@@ -24,10 +24,6 @@ import unicodedata
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
-
-_src_dir = str(Path(__file__).resolve().parent.parent)
-if _src_dir not in sys.path:
-    sys.path.insert(0, _src_dir)
 
 from processing.undo_log import UndoLog, logged_rename
 

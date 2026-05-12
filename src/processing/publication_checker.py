@@ -22,8 +22,8 @@ Usage::
     # Limit to 50 papers (for testing)
     python -m processing.publication_checker "02 - Unpublished papers/" --limit 50
 """
-
 from __future__ import annotations
+
 
 import argparse
 import hashlib
@@ -39,11 +39,6 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 # Ensure src/ is on the path
-_src_dir = str(Path(__file__).resolve().parent.parent)
-if _src_dir not in sys.path:
-    sys.path.insert(0, _src_dir)
-
-
 # ---------------------------------------------------------------------------
 # Filename parsing (reuse from extract_text if available, else inline)
 # ---------------------------------------------------------------------------
@@ -151,10 +146,10 @@ class CrossrefChecker:
             resp.raise_for_status()
         except requests.exceptions.Timeout as exc:
             logger.warning("Crossref query timed out for '%s': %s", title[:50], exc)
-            return {"error": "timeout"}
+            return None
         except requests.exceptions.RequestException as exc:
             logger.warning("Crossref API request failed for '%s': %s", title[:50], exc)
-            return {"error": str(exc)}
+            return None
         except Exception as exc:
             logger.warning("Crossref query failed for '%s': %s", title[:50], exc)
             return None
@@ -383,7 +378,7 @@ def main(argv: list[str] | None = None) -> None:
         print(f"Not published: {len(not_published)}")
 
         if published:
-            print(f"\n--- Papers that appear to be published ---")
+            print("\n--- Papers that appear to be published ---")
             for r in sorted(published, key=lambda x: -x["match"]["confidence"]):
                 m = r["match"]
                 print(f"\n  {r['filename'][:70]}")
@@ -506,6 +501,9 @@ _REPOSITORY_DOI_PREFIXES = (
     "10.5281/zenodo",     # Zenodo
     "10.3386/",           # NBER
     "10.1101/",           # bioRxiv / medRxiv
+    "10.21203/",          # Research Square (preprints)
+    "10.22541/",          # Authorea (preprints)
+    "10.20944/",          # Preprints.org
 )
 
 _REPOSITORY_JOURNALS = (
@@ -520,6 +518,8 @@ _REPOSITORY_JOURNALS = (
     "working paper",
     "discussion paper",
     "preprint",
+    "research square",
+    "authorea",
 )
 
 
