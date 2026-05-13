@@ -10,7 +10,7 @@ from __future__ import annotations
 import pytest
 
 from arxivbot.models.cmo import Author
-from processing.ingest import parse_authors_string, metadata_to_cmo
+from processing.ingest import parse_authors_string, metadata_to_cmo, _unlatex
 
 
 def _names(authors):
@@ -299,6 +299,38 @@ class TestMetadataToCmo:
 # ---------------------------------------------------------------------------
 # Regression: the exact failure case that motivated this rewrite
 # ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# LaTeX-to-Unicode (PDF metadata frequently contains raw LaTeX source)
+# ---------------------------------------------------------------------------
+
+class TestUnlatex:
+    @pytest.mark.parametrize("raw,expected", [
+        # One-char accent commands, no braces
+        ("Stochastic It\\^o equations", "Stochastic Itô equations"),
+        ("Caf\\'e", "Café"),
+        ("M\\\"obius", "Möbius"),
+        ("\\`a la mode", "à la mode"),
+        ("ma\\~nana", "mañana"),
+        # One-char accent commands with braces
+        ("Stochastic It\\^{o} equations", "Stochastic Itô equations"),
+        ("Caf\\'{e}", "Café"),
+        # Multi-letter accent commands
+        ("\\v{S}roubek", "Šroubek"),
+        ("\\c{c}ag", "çag"),
+        ("\\u{g}", "ğ"),
+        ("Erd\\H{o}s", "Erdős"),
+        # Special standalone characters: \'o resolves, \dh isn't in our map and passes through
+        ("Hr\\'o\\dh", "Hró\\dh"),
+        # No LaTeX in input → passthrough
+        ("Plain ASCII title", "Plain ASCII title"),
+        ("Already Unicode é ô ñ", "Already Unicode é ô ñ"),
+        # Empty / None
+        ("", ""),
+    ])
+    def test_unlatex_cases(self, raw, expected):
+        assert _unlatex(raw) == expected
+
 
 def test_centre_mersenne_paper_filename_round_trip(tmp_path):
     """End-to-end: PDF metadata → CMO → canonical filename.

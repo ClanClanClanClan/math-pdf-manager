@@ -38,6 +38,100 @@ LIBRARY_ROOT = _get_library_root()
 
 
 # ---------------------------------------------------------------------------
+# LaTeX-to-Unicode (PDF metadata frequently stores raw LaTeX source)
+# ---------------------------------------------------------------------------
+# Combining-mark mapping for one-char accent commands like \^o, \'e, \"o:
+_LATEX_ACCENT_TO_COMBINING = {
+    "^": "̂",   # COMBINING CIRCUMFLEX ACCENT (\^o → ô)
+    "'": "́",   # COMBINING ACUTE          (\'e → é)
+    "`": "̀",   # COMBINING GRAVE          (\`a → à)
+    '"': "̈",   # COMBINING DIAERESIS      (\"o → ö)
+    "~": "̃",   # COMBINING TILDE          (\~n → ñ)
+    ".": "̇",   # COMBINING DOT ABOVE      (\.z → ż)
+    "=": "̄",   # COMBINING MACRON         (\=o → ō)
+}
+# Multi-letter accent commands of form \c{X}, \v{X}, \u{X}, \r{X}, etc.
+_LATEX_MULTILETTER_ACCENTS = {
+    "c": "̧",   # COMBINING CEDILLA        (\c{c} → ç)
+    "v": "̌",   # COMBINING CARON          (\v{s} → š)
+    "u": "̆",   # COMBINING BREVE          (\u{g} → ğ)
+    "r": "̊",   # COMBINING RING ABOVE     (\r{a} → å)
+    "k": "̨",   # COMBINING OGONEK         (\k{a} → ą)
+    "H": "̋",   # COMBINING DOUBLE ACUTE   (\H{o} → ő)
+}
+# Special-character commands (no argument)
+_LATEX_SPECIAL_CHARS = {
+    r"\o ": "ø", r"\O ": "Ø",
+    r"\o}": "ø}", r"\O}": "Ø}",
+    r"\ss": "ß",
+    r"\ae": "æ", r"\AE": "Æ",
+    r"\oe": "œ", r"\OE": "Œ",
+    r"\l ": "ł", r"\L ": "Ł",
+    r"\aa": "å", r"\AA": "Å",
+    r"\&": "&",
+    r"\%": "%",
+    r"\$": "$",
+    r"\#": "#",
+    r"\_": "_",
+    r"{\textemdash}": "—",
+    r"{\textendash}": "–",
+    r"\textemdash": "—",
+    r"\textendash": "–",
+    r"\textquotedblleft": "“",
+    r"\textquotedblright": "”",
+    r"\textquoteleft": "‘",
+    r"\textquoteright": "’",
+}
+
+# Patterns for accent commands. Three forms:
+#   \^o     (one-char accent, no braces)
+#   \^{o}   (one-char accent, with braces)
+#   \c{c}   (multi-letter accent name in braces)
+_LATEX_ACCENT_RE = re.compile(
+    r"\\([\^'`\"~.=])\{?([a-zA-Z])\}?"
+)
+_LATEX_MULTILETTER_RE = re.compile(
+    r"\\([cvurkH])\{([a-zA-Z])\}"
+)
+
+
+def _unlatex(text: str) -> str:
+    """Convert common LaTeX commands to their Unicode equivalents.
+
+    PDF metadata fields in academic papers frequently contain raw LaTeX
+    source (e.g. title="Stochastic It\\^o equations"). This function
+    converts that to clean Unicode ("Stochastic Itô equations") so
+    sentence case and filing logic don't get tripped up.
+
+    Conservative: only handles well-known accent commands and a small set
+    of special characters. Anything unrecognised is left as-is.
+    """
+    if not text or "\\" not in text:
+        return text
+
+    def _accent_replace(m: "re.Match[str]") -> str:
+        combining = _LATEX_ACCENT_TO_COMBINING.get(m.group(1))
+        if combining is None:
+            return m.group(0)
+        return unicodedata.normalize("NFC", m.group(2) + combining)
+
+    def _multiletter_replace(m: "re.Match[str]") -> str:
+        combining = _LATEX_MULTILETTER_ACCENTS.get(m.group(1))
+        if combining is None:
+            return m.group(0)
+        return unicodedata.normalize("NFC", m.group(2) + combining)
+
+    text = _LATEX_ACCENT_RE.sub(_accent_replace, text)
+    text = _LATEX_MULTILETTER_RE.sub(_multiletter_replace, text)
+
+    # Multi-character special commands (longest-first so e.g. \aa before \a)
+    for cmd, char in sorted(_LATEX_SPECIAL_CHARS.items(), key=lambda kv: -len(kv[0])):
+        text = text.replace(cmd, char)
+
+    return text
+
+
+# ---------------------------------------------------------------------------
 # Metadata extraction (lightweight — uses PyMuPDF + filename heuristics)
 # ---------------------------------------------------------------------------
 def extract_metadata_from_pdf(pdf_path: Path) -> dict:
@@ -52,15 +146,17 @@ def extract_metadata_from_pdf(pdf_path: Path) -> dict:
         doc = fitz.open(pdf_path)
         pdf_meta = doc.metadata or {}
 
-        # Extract title from PDF metadata
+        # Extract title from PDF metadata. PDF title fields commonly hold
+        # raw LaTeX source (e.g. "It\^o" instead of "Itô"); convert before
+        # any downstream processing.
         title = (pdf_meta.get("title") or "").strip()
         if title and len(title) > 5:
-            metadata["title"] = unicodedata.normalize("NFC", title)
+            metadata["title"] = unicodedata.normalize("NFC", _unlatex(title))
 
-        # Extract author from PDF metadata
+        # Extract author from PDF metadata (same LaTeX cleanup applies)
         author_str = (pdf_meta.get("author") or "").strip()
         if author_str:
-            metadata["authors_raw"] = author_str
+            metadata["authors_raw"] = _unlatex(author_str)
 
         # Check for DOI in first few pages
         text = ""
