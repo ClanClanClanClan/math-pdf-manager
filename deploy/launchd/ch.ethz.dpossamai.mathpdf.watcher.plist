@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Watcher daemon — auto-files PDFs dropped into ~/Downloads/MathInbox/.
+
+  Install:
+      cp deploy/launchd/ch.ethz.dpossamai.mathpdf.watcher.plist ~/Library/LaunchAgents/
+      # Edit the file to replace PROJECT_PATH with the real absolute path
+      launchctl load ~/Library/LaunchAgents/ch.ethz.dpossamai.mathpdf.watcher.plist
+
+  Logs:
+      tail -f ~/.mathpdf/watcher.log
+      tail -f ~/.mathpdf/watcher.stdout
+      tail -f ~/.mathpdf/watcher.stderr
+
+  Uninstall:
+      launchctl unload ~/Library/LaunchAgents/ch.ethz.dpossamai.mathpdf.watcher.plist
+      rm ~/Library/LaunchAgents/ch.ethz.dpossamai.mathpdf.watcher.plist
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>ch.ethz.dpossamai.mathpdf.watcher</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/bin/env</string>
+        <string>python3</string>
+        <string>-m</string>
+        <string>watcher.daemon</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>PROJECT_PATH</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PYTHONPATH</key>
+        <string>PROJECT_PATH/src</string>
+        <!-- Set this to override the default library root: -->
+        <!-- <key>MATH_LIBRARY</key> -->
+        <!-- <string>/path/to/your/library</string> -->
+    </dict>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>HOME/.mathpdf/watcher.stdout</string>
+
+    <key>StandardErrorPath</key>
+    <string>HOME/.mathpdf/watcher.stderr</string>
+
+    <!-- Throttle restart attempts (avoid CPU-spinning if the daemon crashes immediately) -->
+    <key>ThrottleInterval</key>
+    <integer>60</integer>
+
+    <!-- Don't run during low-priority background time so it doesn't compete with the user's work -->
+    <key>ProcessType</key>
+    <string>Background</string>
+</dict>
+</plist>

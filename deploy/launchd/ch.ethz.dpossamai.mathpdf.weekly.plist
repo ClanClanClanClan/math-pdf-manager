@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Weekly maintenance — runs every Monday at 09:00.
+  Produces an HTML report at ~/.mathpdf/reports/maintenance_YYYY-MM-DD_HHMMSS.html.
+
+  Install:
+      cp deploy/launchd/ch.ethz.dpossamai.mathpdf.weekly.plist ~/Library/LaunchAgents/
+      # Edit the file to replace PROJECT_PATH with the real absolute path
+      launchctl load ~/Library/LaunchAgents/ch.ethz.dpossamai.mathpdf.weekly.plist
+
+  Trigger manually:
+      launchctl start ch.ethz.dpossamai.mathpdf.weekly
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>ch.ethz.dpossamai.mathpdf.weekly</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/bin/env</string>
+        <string>python3</string>
+        <string>-m</string>
+        <string>maintenance.weekly_report</string>
+        <string>--no-notify</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>PROJECT_PATH</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PYTHONPATH</key>
+        <string>PROJECT_PATH/src</string>
+    </dict>
+
+    <!-- Run every Monday at 09:00 local time -->
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Weekday</key>
+        <integer>1</integer>
+        <key>Hour</key>
+        <integer>9</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>HOME/.mathpdf/weekly.stdout</string>
+
+    <key>StandardErrorPath</key>
+    <string>HOME/.mathpdf/weekly.stderr</string>
+
+    <!-- Don't run more than once if the previous one is still in progress -->
+    <key>ProcessType</key>
+    <string>Background</string>
+</dict>
+</plist>
