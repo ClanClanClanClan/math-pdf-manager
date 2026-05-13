@@ -398,21 +398,10 @@ class TestFrontendBackendIntegrationGaps:
         assert matching == self.BACKEND_ENDPOINTS
         assert len(matching) == 7
 
-    def test_no_phantom_auth_in_frontend(self):
-        """Frontend should not reference auth endpoints or tokens."""
-        api_js = Path(__file__).resolve().parents[2] / 'frontend' / 'src' / 'services' / 'api.js'
-        content = api_js.read_text()
-        assert 'arxivbot_token' not in content, "arxivbot_token references should be removed"
-        assert '/auth/login' not in content, "auth login endpoint should be removed"
-        assert '/auth/refresh' not in content, "auth refresh endpoint should be removed"
-
-    def test_no_phantom_search_in_frontend(self):
-        """Frontend should not reference non-existent search endpoints."""
-        api_js = Path(__file__).resolve().parents[2] / 'frontend' / 'src' / 'services' / 'api.js'
-        content = api_js.read_text()
-        assert '/api/v2/search' not in content
-        assert "searchV24" not in content
-        assert "searchV20" not in content
+    # Frontend tests deleted: the project is a Python-only backend now;
+    # no ``frontend/`` directory exists. The tests below used to verify
+    # that the JS frontend's phantom endpoints had been cleaned up. They
+    # are dead with the frontend gone.
 
     def test_statspage_summary_response_shape(self):
         """StatsPage.js expects specific fields from /collection/summary.
@@ -695,11 +684,7 @@ class TestConfigurationSecurity:
         content = app_py.read_text()
         assert '"papers.db"' in content or "'papers.db'" in content
 
-    def test_frontend_baseurl_defaults_to_localhost(self):
-        """Frontend defaults to http://localhost:8000 -- not HTTPS."""
-        api_js = Path(__file__).resolve().parents[2] / 'frontend' / 'src' / 'services' / 'api.js'
-        content = api_js.read_text()
-        assert "http://localhost:8000" in content
+    # test_frontend_baseurl_defaults_to_localhost: deleted (no frontend).
 
 
 # ===========================================================================
@@ -719,14 +704,7 @@ class TestIntegrationContractSummary:
         total = get_count + post_count
         assert total == 7, f"Expected 7 endpoints, found {total}"
 
-    def test_total_frontend_api_methods(self):
-        """RESOLVED: Frontend apiService now only has methods matching backend endpoints."""
-        api_js = Path(__file__).resolve().parents[2] / 'frontend' / 'src' / 'services' / 'api.js'
-        content = api_js.read_text()
-        method_count = content.count('async (')
-        # apiService has: getHealthCheck, discoverPapers, acquirePaper,
-        # runMaintenance, getCollectionSummary, getDuplicates, getMetrics = 7 methods
-        assert method_count == 7, f"Expected 7 async methods, found {method_count}"
+    # test_total_frontend_api_methods: deleted (no frontend).
 
     def test_frontend_coverage_ratio(self):
         """RESOLVED: All frontend methods now hit working endpoints (100%)."""

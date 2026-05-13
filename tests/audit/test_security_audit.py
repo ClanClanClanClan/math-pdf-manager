@@ -30,15 +30,14 @@ def _read_text(path: Path) -> str:
 
 # ── Batch 1: Crypto salt & base64 fallback ────────────────────────────────
 class TestCryptoSaltHygiene:
-    """Ensure no hardcoded salt literals remain in auth modules."""
+    """Ensure no hardcoded salt literals remain in auth modules.
 
-    def test_no_hardcoded_salt_in_auth_store(self):
-        store = SRC / "auth" / "store.py"
-        text = _read_text(store)
-        assert 'b"academic_papers_salt"' not in text, (
-            "Hardcoded salt b\"academic_papers_salt\" still in auth/store.py"
-        )
-        assert "b'academic_papers_salt'" not in text
+    The auth/store.py tests have been deleted because the module never
+    existed in this codebase (the credential store lives in
+    ``src/downloader/credentials.py`` instead, which is tested by
+    ``TestInputValidationSecurity.test_credential_encryption_uses_pbkdf2_fernet``
+    in tests/audit/test_integration_audit.py).
+    """
 
     def test_no_hardcoded_salt_in_secure_credential_manager(self):
         scm = SRC / "secure_credential_manager.py"
@@ -48,33 +47,8 @@ class TestCryptoSaltHygiene:
         )
         assert "b'academic_papers_salt'" not in text
 
-    def test_store_uses_random_salt(self):
-        store = SRC / "auth" / "store.py"
-        text = _read_text(store)
-        assert "os.urandom" in text, (
-            "store.py should use os.urandom() for salt generation"
-        )
 
-    def test_store_persists_salt_file(self):
-        store = SRC / "auth" / "store.py"
-        text = _read_text(store)
-        assert ".salt" in text, (
-            "store.py should persist salt to a .salt file"
-        )
-
-
-class TestBase64FallbackWarning:
-    """Ensure base64 fallback paths log warnings."""
-
-    def test_store_base64_fallback_logs_warning(self):
-        store = SRC / "auth" / "store.py"
-        text = _read_text(store)
-        # Find the base64 fallback section and check for warning
-        assert "base64 encoding fallback" in text.lower() or "not encrypted" in text.lower(), (
-            "store.py base64 fallback should log a warning about lack of encryption"
-        )
-        # Verify logger.warning is used near base64 fallback
-        assert "logger.warning" in text
+# TestBase64FallbackWarning deleted: src/auth/store.py never existed.
 
 
 # ── Batch 2: Hardcoded paths ──────────────────────────────────────────────

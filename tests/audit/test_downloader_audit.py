@@ -72,12 +72,32 @@ class _MockUniversalDownloader:
         pass
 
 
+# Module-stub helper. Only injects a mock into sys.modules if the real
+# package is not installed in the environment. Previously these stubs used
+# ``sys.modules.setdefault(name, mock)`` unconditionally — which silently
+# wins over an installed real package as long as nothing has imported it
+# yet, polluting the rest of the pytest session (test_credential_management
+# ended up using the mocked cryptography.fernet, etc.).
+import importlib.util
+
+
+def _stub_if_missing(name: str, stub) -> None:
+    if name in sys.modules:
+        return
+    try:
+        if importlib.util.find_spec(name) is not None:
+            return  # real package is installed — don't override
+    except (ImportError, ValueError):
+        pass  # find_spec raised; treat as missing and install stub
+    sys.modules[name] = stub
+
+
 # ---------- stub out aiohttp ----------
 _mock_aiohttp = MagicMock()
 _mock_aiohttp.ClientSession = MagicMock
 _mock_aiohttp.TCPConnector = MagicMock
 _mock_aiohttp.ClientTimeout = MagicMock
-sys.modules.setdefault("aiohttp", _mock_aiohttp)
+_stub_if_missing("aiohttp", _mock_aiohttp)
 
 # ---------- stub out cryptography ----------
 _mock_crypto = MagicMock()
@@ -131,30 +151,31 @@ _mock_crypto.hazmat.primitives.kdf = MagicMock()
 _mock_crypto.hazmat.primitives.kdf.pbkdf2 = MagicMock()
 _mock_crypto.hazmat.primitives.kdf.pbkdf2.PBKDF2HMAC = _FakePBKDF2HMAC
 
-sys.modules.setdefault("cryptography", _mock_crypto)
-sys.modules.setdefault("cryptography.fernet", _mock_fernet_mod)
-sys.modules.setdefault("cryptography.hazmat", _mock_crypto.hazmat)
-sys.modules.setdefault("cryptography.hazmat.primitives", _mock_crypto.hazmat.primitives)
-sys.modules.setdefault("cryptography.hazmat.primitives.hashes", _mock_crypto.hazmat.primitives.hashes)
-sys.modules.setdefault("cryptography.hazmat.primitives.kdf", _mock_crypto.hazmat.primitives.kdf)
-sys.modules.setdefault("cryptography.hazmat.primitives.kdf.pbkdf2", _mock_crypto.hazmat.primitives.kdf.pbkdf2)
+_stub_if_missing("cryptography", _mock_crypto)
+_stub_if_missing("cryptography.fernet", _mock_fernet_mod)
+_stub_if_missing("cryptography.hazmat", _mock_crypto.hazmat)
+_stub_if_missing("cryptography.hazmat.primitives", _mock_crypto.hazmat.primitives)
+_stub_if_missing("cryptography.hazmat.primitives.hashes", _mock_crypto.hazmat.primitives.hashes)
+_stub_if_missing("cryptography.hazmat.primitives.kdf", _mock_crypto.hazmat.primitives.kdf)
+_stub_if_missing("cryptography.hazmat.primitives.kdf.pbkdf2", _mock_crypto.hazmat.primitives.kdf.pbkdf2)
 
 # ---------- stub out certifi ----------
 _mock_certifi = MagicMock()
 _mock_certifi.where = MagicMock(return_value="/dev/null")
-sys.modules.setdefault("certifi", _mock_certifi)
+_stub_if_missing("certifi", _mock_certifi)
 
 # ---------- stub out bs4 ----------
 _mock_bs4 = MagicMock()
-sys.modules.setdefault("bs4", _mock_bs4)
+_stub_if_missing("bs4", _mock_bs4)
 
 # ---------- stub out universal_downloader for the *package* import path ----------
+# This one IS missing from src/, so the stub is needed.
 _mock_ud_mod = MagicMock()
 _mock_ud_mod.DownloadResult = _MockDownloadResult
 _mock_ud_mod.SearchResult = _MockSearchResult
 _mock_ud_mod.DownloadStrategy = _MockDownloadStrategy
 _mock_ud_mod.UniversalDownloader = _MockUniversalDownloader
-sys.modules.setdefault("downloader.universal_downloader", _mock_ud_mod)
+_stub_if_missing("downloader.universal_downloader", _mock_ud_mod)
 
 # ---------- Now import the modules under test ----------
 
