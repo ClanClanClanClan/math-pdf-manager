@@ -25,15 +25,25 @@ def notify(title: str, message: str, *, sound: str = "Glass") -> None:
         logger.info("[%s] %s", title, message)
         return
 
-    # Escape for AppleScript
-    title_esc = title.replace('"', '\\"').replace("\\", "\\\\")
-    msg_esc = message.replace('"', '\\"').replace("\\", "\\\\")
+    # Escape for AppleScript. ORDER MATTERS: backslashes first (turning
+    # one \ into two), then quotes (so the new \" escape isn't itself
+    # backslash-escaped). The previous order produced syntax errors on
+    # any filename containing a backslash.
+    def _esc(s: str) -> str:
+        return s.replace("\\", "\\\\").replace('"', '\\"')
+
+    # Sound is also user-influenced via config.yaml — escape it too so a
+    # malformed value can't break out of the string literal.
+    title_esc = _esc(title)
+    msg_esc = _esc(message)
+    sound_esc = _esc(sound) if sound else ""
 
     script = (
         f'display notification "{msg_esc}" '
-        f'with title "{title_esc}" '
-        f'sound name "{sound}"'
+        f'with title "{title_esc}"'
     )
+    if sound_esc:
+        script += f' sound name "{sound_esc}"'
 
     try:
         subprocess.run(

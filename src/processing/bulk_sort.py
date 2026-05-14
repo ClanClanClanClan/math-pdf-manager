@@ -130,8 +130,16 @@ def sort_one(
     library_root: Path,
     dry_run: bool,
     undo_log=None,
+    canonical_override: Optional[str] = None,
 ) -> dict:
-    """Ingest a single PDF, then move source to trash. Returns a result dict."""
+    """Ingest a single PDF, then move source to trash. Returns a result dict.
+
+    ``canonical_override``: if supplied (e.g. by the cockpit UI when the
+    user edited the proposed filename), use this exact name instead of
+    re-computing the canonical filename from metadata. The override still
+    goes through the same routing logic for choosing the destination
+    folder, so the status hint and alpha-subdir behaviour are preserved.
+    """
     from processing.ingest import ingest_paper
 
     result: dict = {
@@ -148,6 +156,7 @@ def sort_one(
             status=status,
             dry_run=dry_run,
             undo_log=undo_log,
+            canonical_override=canonical_override,
         )
     except Exception as exc:
         logger.exception("Ingest crashed for %s", pdf.name)

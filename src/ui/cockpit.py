@@ -308,15 +308,31 @@ def _proposed_destination(lib: Path, canonical_name: str, status: str) -> Path:
 
 
 def _approve_sort(pdf: Path, canonical_name: str, status: str, lib: Path) -> tuple[bool, str]:
-    """Actually file the paper. Returns (ok, message)."""
+    """Actually file the paper. Returns (ok, message).
+
+    ``canonical_name`` is what the user saw and approved. It's passed
+    through to ``ingest_paper`` as a canonical_override so the user's
+    edits are honoured (the pipeline no longer re-derives the name from
+    metadata and silently overwrites the user's choice).
+    """
     from processing.bulk_sort import sort_one
     from processing.undo_log import UndoLog
+
+    # Guard against the file vanishing between listing and approval
+    if not pdf.exists():
+        return False, f"source disappeared: {pdf}"
 
     undo_log = UndoLog()
     tx_id = undo_log.begin_transaction(f"Cockpit sort: {pdf.name}")
 
     try:
-        result = sort_one(pdf, status, library_root=lib, dry_run=False, undo_log=undo_log)
+        result = sort_one(
+            pdf, status,
+            library_root=lib,
+            dry_run=False,
+            undo_log=undo_log,
+            canonical_override=canonical_name,
+        )
         if result.get("ok"):
             undo_log.commit()
             _log_activity(

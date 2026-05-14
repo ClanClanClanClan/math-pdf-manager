@@ -563,6 +563,7 @@ def ingest_paper(
     year: Optional[int] = None,
     dry_run: bool = False,
     verbose: bool = False,
+    canonical_override: Optional[str] = None,
     **kwargs,
 ) -> dict:
     """Ingest a single PDF into the library.
@@ -584,6 +585,9 @@ def ingest_paper(
         If True, report actions without moving files.
     verbose : bool
         If True, print detailed progress.
+    canonical_override : str or None
+        If supplied, use this filename verbatim instead of generating one
+        from metadata. Used by the cockpit UI to honour user edits.
 
     Returns
     -------
@@ -620,8 +624,28 @@ def ingest_paper(
 
     # Step 2: Build CMO and generate canonical filename
     cmo = metadata_to_cmo(metadata, pdf_path)
-    canonical_name = cmo.get_canonical_filename()
+    if canonical_override:
+        # User override — preserve verbatim but enforce .pdf suffix
+        canonical_name = canonical_override
+        if not canonical_name.lower().endswith(".pdf"):
+            canonical_name += ".pdf"
+        result["canonical_overridden"] = True
+    else:
+        canonical_name = cmo.get_canonical_filename()
     result["filename"] = canonical_name
+
+    # Fallback for already-canonical filenames with empty metadata: if the
+    # source filename has the "Authors - Title.pdf" shape but metadata
+    # extraction yielded no authors, parse the filename's author segment
+    # so the file can route to the correct alpha-subdir instead of "Z/".
+    if not cmo.authors and " - " in pdf_path.stem:
+        authors_part = pdf_path.stem.split(" - ", 1)[0]
+        try:
+            parsed = parse_authors_string(authors_part)
+        except Exception:
+            parsed = []
+        if parsed:
+            cmo.authors = parsed
 
     # Write the parsed authors BACK into the metadata dict so the downstream
     # OrganizationSystem.route() picks the correct alpha-subdir. Without
@@ -647,15 +671,24 @@ def ingest_paper(
     # via OrganizationSystem.determine_publication_status. We write into
     # BOTH so each forced status produces a clean, unambiguous signal that
     # any future routing change cannot accidentally misinterpret.
+    #
+    # IMPORTANT: ``dict.setdefault`` does not replace a key whose existing
+    # value is ``None``. extract_metadata_from_pdf initialises ``doi``/
+    # ``arxiv_id`` to ``None``, so we must use unconditional assignment
+    # (gated on the current value being truthy) instead of setdefault.
+    def _force_field(key: str, sentinel: str) -> None:
+        if not metadata.get(key):
+            metadata[key] = sentinel
+
     if status:
         metadata["_forced_status"] = status
         if status == "published":
-            metadata.setdefault("doi", "forced")
+            _force_field("doi", "forced")
             # Clear arxiv_id so future routing changes can't downgrade us
             # to "unpublished" based on a still-present arxiv tag.
             metadata.pop("arxiv_id", None)
         elif status == "unpublished":
-            metadata.setdefault("arxiv_id", "forced")
+            _force_field("arxiv_id", "forced")
             metadata.pop("doi", None)
         elif status == "working":
             metadata.pop("doi", None)

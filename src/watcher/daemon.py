@@ -77,6 +77,27 @@ class PDFHandler(FileSystemEventHandler):
         # Reset to current size/time. process_settled will compare on next tick.
         self._pending[str(path)] = self._initial_pending_state(path)
 
+    def on_moved(self, event):
+        """Files moved INTO the inbox (or renamed to .pdf after download).
+
+        Browsers commonly download with a temporary suffix (.crdownload,
+        .partial) then rename to .pdf — that's an on_moved, not on_created.
+        Without this handler, those downloads would be invisible to the
+        watcher and silently never ingested.
+        """
+        if event.is_directory:
+            return
+        dest = getattr(event, "dest_path", None) or event.src_path
+        path = Path(dest)
+        if path.suffix.lower() != ".pdf":
+            return
+        # Drop the old name (if any) from pending; track the new one.
+        old = getattr(event, "src_path", None)
+        if old and old != dest:
+            self._pending.pop(old, None)
+        self._pending[str(path)] = self._initial_pending_state(path)
+        logger.info("Detected moved-in PDF: %s", path.name)
+
     def process_settled(self) -> None:
         """Process PDFs whose size has been stable for ``settle_seconds``.
 
