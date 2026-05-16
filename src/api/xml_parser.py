@@ -8,6 +8,10 @@ import logging
 import re
 from typing import Optional, Dict, Any, List
 import defusedxml.ElementTree as ET
+# defusedxml.ElementTree does NOT re-export Element. Import the type
+# from the stdlib only for annotation purposes; parsing still goes
+# through the defused wrapper above.
+from xml.etree.ElementTree import Element as _XMLElement  # noqa: S405 (type-only)
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +26,7 @@ class XMLParser:
             'arxiv': 'http://arxiv.org/schemas/atom'
         }
     
-    def parse_arxiv_entry(self, entry: ET.Element) -> Optional[Dict[str, Any]]:
+    def parse_arxiv_entry(self, entry: _XMLElement) -> Optional[Dict[str, Any]]:
         """
         Parse a single ArXiv entry from XML
         
@@ -121,7 +125,7 @@ class XMLParser:
             logger.error(f"Failed to parse ArXiv entry: {e}")
             return None
     
-    def extract_text_from_element(self, element: ET.Element) -> str:
+    def extract_text_from_element(self, element: _XMLElement) -> str:
         """Extract text content from XML element"""
         if element is None:
             return ""

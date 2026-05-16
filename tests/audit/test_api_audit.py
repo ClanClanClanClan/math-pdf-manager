@@ -62,12 +62,22 @@ except ImportError:
     _MODULES_TO_MOCK.append("aiosqlite")
 
 for _mod_name in _MODULES_TO_MOCK:
-    if _mod_name not in sys.modules:
+    if _mod_name in sys.modules:
+        continue
+    # Prefer the real module if it's importable -- replacing it with a
+    # MagicMock here would poison every later test that needs the real
+    # one (e.g. tests/unit/test_acquisition_engine.py).
+    try:
+        __import__(_mod_name)
+    except Exception:
         sys.modules[_mod_name] = MagicMock()
 
-# Mock ``publishers.DownloadResult`` so AcquisitionEngine can reference it.
+# Mock ``publishers.DownloadResult`` so AcquisitionEngine can reference it,
+# but only if the existing ``publishers`` module entry is a MagicMock (the
+# real package already exposes the symbol).
 _mock_publishers = sys.modules["publishers"]
-_mock_publishers.DownloadResult = MagicMock()
+if isinstance(_mock_publishers, MagicMock):
+    _mock_publishers.DownloadResult = MagicMock()
 
 # Mock prometheus_client with just enough surface area for the app
 if "prometheus_client" not in sys.modules:

@@ -74,9 +74,15 @@ def extractor(llm_module):
 class TestLLMMetadataExtractor:
     """Test LLMMetadataExtractor with mocked llama_cpp."""
 
+    # ``extract()`` short-circuits inputs shorter than 100 characters to
+    # avoid hallucinated metadata on empty/scanned PDFs.  All tests that
+    # exercise the post-LLM logic therefore pad their inputs above this
+    # threshold via ``_LONG_TEXT``.
+    _LONG_TEXT = "Some PDF text about convergence of SGD. " * 4  # 160 chars
+
     def test_extract_returns_title_and_authors(self, extractor):
         """extract() should return dict with title and authors list."""
-        result = extractor.extract("Some PDF text about convergence of SGD")
+        result = extractor.extract(self._LONG_TEXT)
 
         assert result["title"] == "On the Convergence of SGD"
         assert result["authors"] == ["John Smith", "Jane Doe"]
@@ -96,7 +102,7 @@ class TestLLMMetadataExtractor:
         extractor._llm.create_completion.return_value = {
             "choices": [{"text": "not valid json at all"}]
         }
-        result = extractor.extract("Some text")
+        result = extractor.extract(self._LONG_TEXT)
 
         assert result == {"title": "", "authors": []}
 
@@ -107,7 +113,7 @@ class TestLLMMetadataExtractor:
                 {"text": json.dumps({"title": "Test", "authors": "Solo Author"})}
             ]
         }
-        result = extractor.extract("Some text")
+        result = extractor.extract(self._LONG_TEXT)
 
         assert result["authors"] == ["Solo Author"]
 
@@ -118,7 +124,7 @@ class TestLLMMetadataExtractor:
                 {"text": json.dumps({"title": "T", "authors": ["  Alice  ", "", " Bob "]})}
             ]
         }
-        result = extractor.extract("text")
+        result = extractor.extract(self._LONG_TEXT)
 
         assert result["authors"] == ["Alice", "Bob"]
 
@@ -127,7 +133,7 @@ class TestLLMMetadataExtractor:
         extractor._llm.create_completion.return_value = {
             "choices": [{"text": '{"title": "Test", "authors": ["A"]'}]
         }
-        result = extractor.extract("text")
+        result = extractor.extract(self._LONG_TEXT)
 
         assert result["title"] == "Test"
         assert result["authors"] == ["A"]
@@ -149,7 +155,7 @@ class TestLLMMetadataExtractor:
 
     def test_create_completion_called_with_grammar(self, extractor):
         """extract() should pass the grammar to create_completion."""
-        extractor.extract("text")
+        extractor.extract(self._LONG_TEXT)
 
         call_kwargs = extractor._llm.create_completion.call_args
         assert "grammar" in call_kwargs.kwargs or (
@@ -158,7 +164,7 @@ class TestLLMMetadataExtractor:
 
     def test_temperature_is_zero(self, extractor):
         """Extraction should be deterministic (temperature=0.0)."""
-        extractor.extract("text")
+        extractor.extract(self._LONG_TEXT)
 
         call_kwargs = extractor._llm.create_completion.call_args.kwargs
         assert call_kwargs.get("temperature") == 0.0

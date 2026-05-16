@@ -11,14 +11,15 @@ import pytest
 httpx = pytest.importorskip("httpx")
 
 # ---------------------------------------------------------------------------
-# Mock the publishers module before importing acquisition engine.
+# Mock the publishers module before importing acquisition engine -- but ONLY
+# if the real ``publishers`` package can't be imported.  Unconditionally
+# replacing ``sys.modules["publishers"]`` poisons every other test in the
+# session (e.g. ``tests/unit/test_acquisition_engine.py``), which then
+# imports a MagicMock instead of the real ``DownloadResult``.
 #
-# The acquisition engine does:
-#   from publishers import DownloadResult
-#   from publishers.unified_downloader import UnifiedDownloader
-#
-# These packages may not be installed in the test environment, so we
-# inject lightweight stand-ins into sys.modules.
+# Today the real package lives in ``src/publishers/`` and is always
+# importable from a normal checkout, so the mock branch is a no-op in
+# practice; it remains as a safety net for stripped environments.
 # ---------------------------------------------------------------------------
 import sys
 from unittest.mock import MagicMock as _MagicMock
@@ -52,8 +53,12 @@ class MockUnifiedDownloader:
 mock_publishers.unified_downloader = _MagicMock()
 mock_publishers.unified_downloader.UnifiedDownloader = MockUnifiedDownloader
 
-sys.modules["publishers"] = mock_publishers
-sys.modules["publishers.unified_downloader"] = mock_publishers.unified_downloader
+try:  # Prefer the real package when present
+    import publishers as _real_publishers  # noqa: F401
+    import publishers.unified_downloader as _real_unified  # noqa: F401
+except Exception:
+    sys.modules["publishers"] = mock_publishers
+    sys.modules["publishers.unified_downloader"] = mock_publishers.unified_downloader
 
 from acquisition.engine import (
     AcquisitionConfig,
