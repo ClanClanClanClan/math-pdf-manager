@@ -81,19 +81,64 @@ def _init_state() -> None:
     if "upgrade_report_path" not in st.session_state:
         st.session_state.upgrade_report_path = ""
     if "activity_log" not in st.session_state:
-        st.session_state.activity_log = []      # list of dicts
+        st.session_state.activity_log = _load_activity_log()
+
+
+# ---------------------------------------------------------------------------
+# Activity log: in-memory + disk persistence so a browser reload doesn't
+# lose the undo handles for transactions whose effects are already on disk.
+# ---------------------------------------------------------------------------
+
+def _activity_log_path() -> Path:
+    """The on-disk JSONL file the cockpit appends every action to."""
+    p = Path.home() / ".mathpdf" / "cockpit_activity.jsonl"
+    p.parent.mkdir(parents=True, exist_ok=True)
+    return p
+
+
+def _load_activity_log() -> list[dict]:
+    """Load up to 100 most-recent entries from disk on cold start.
+
+    Returned newest-first so it slots straight into ``session_state``.
+    """
+    path = _activity_log_path()
+    if not path.exists():
+        return []
+    entries: list[dict] = []
+    try:
+        for line in path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                entries.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue  # skip corrupt lines
+    except OSError:
+        return []
+    # File is append-only chronological; flip to newest-first and bound it.
+    return list(reversed(entries))[:100]
 
 
 def _log_activity(action: str, source: str, destination: str = "", tx_id: str = "") -> None:
-    st.session_state.activity_log.insert(0, {
-        "time": datetime.now().strftime("%H:%M:%S"),
+    entry = {
+        "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "action": action,
         "source": source,
         "destination": destination,
         "tx_id": tx_id,
-    })
-    # Keep the activity log bounded
-    st.session_state.activity_log = st.session_state.activity_log[:50]
+    }
+    # Append to disk first — if the session dies, the user still has the
+    # entry and can undo from a later session.
+    try:
+        with open(_activity_log_path(), "a", encoding="utf-8") as f:
+            f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    except OSError as exc:
+        logger.warning("Failed to persist activity log entry: %s", exc)
+
+    # Then update the in-session view
+    st.session_state.activity_log.insert(0, entry)
+    st.session_state.activity_log = st.session_state.activity_log[:100]
 
 
 def _library() -> Path:
@@ -104,18 +149,49 @@ def _library() -> Path:
 # Sidebar — global controls and stats
 # ---------------------------------------------------------------------------
 
+def _validate_library_root(raw: str) -> tuple[bool, str]:
+    """Validate that ``raw`` is a safe absolute path to an existing
+    directory. Returns (ok, message_or_resolved_path).
+
+    Rejects empty strings, control characters, and anything that doesn't
+    resolve to an existing directory after ``expanduser``/``resolve``.
+    Doesn't enforce "must live under home" because some users have their
+    library outside ~ — but we DO require the resolved path to exist.
+    """
+    s = (raw or "").strip()
+    if not s:
+        return False, "Library root is empty"
+    if any(ch in s for ch in ("\x00", "\n", "\r")):
+        return False, "Library root contains control characters"
+    try:
+        p = Path(s).expanduser().resolve(strict=False)
+    except (OSError, RuntimeError) as exc:
+        return False, f"Cannot resolve path: {exc}"
+    if not p.exists():
+        return False, f"Path does not exist: {p}"
+    if not p.is_dir():
+        return False, f"Path is not a directory: {p}"
+    return True, str(p)
+
+
 def render_sidebar() -> None:
     with st.sidebar:
         st.title("📚 Library Cockpit")
         st.caption("Math-PDF management — review & act")
 
-        # Library root
+        # Library root — validated each rerun so an obviously-bad path
+        # doesn't silently break every subsequent operation.
         new_root = st.text_input(
             "Library root", value=st.session_state.library_root,
             help="Absolute path or ~ for home. Defaults to $MATH_LIBRARY env var.",
         )
         if new_root != st.session_state.library_root:
-            st.session_state.library_root = new_root
+            ok, msg = _validate_library_root(new_root)
+            if ok:
+                st.session_state.library_root = msg  # resolved path
+            else:
+                st.error(f"Library root rejected: {msg}")
+                # Don't update session_state — keep the previous valid one.
 
         lib = _library()
         if not lib.exists():
@@ -219,12 +295,10 @@ def render_sort_queue() -> None:
         if prev.year:
             st.markdown(f"**Year** &nbsp; `{prev.year}`")
 
-        # Topic-classifier suggestions (heuristic, no LLM needed)
-        try:
-            from processing.topic_classifier import classify_by_keywords
-            topics = classify_by_keywords(prev.title, prev.first_page_text[:1500])
-        except Exception:
-            topics = []
+        # Topic-classifier suggestions (heuristic, no LLM needed).
+        # Cached per-(title, first 1500 chars) so we don't re-classify on
+        # every Streamlit rerun while the user is staring at the same paper.
+        topics = _classify_cached(prev.title, prev.first_page_text[:1500])
         if topics:
             st.markdown("**Topic suggestions**")
             for t in topics[:3]:
@@ -569,8 +643,44 @@ def render_maintenance() -> None:
 # Page: Stats
 # ---------------------------------------------------------------------------
 
+@st.cache_data(ttl=1800, show_spinner=False)
+def _classify_cached(title: str, text_snippet: str) -> list[dict]:
+    """Cached topic classifier (30-minute TTL). Skips work when the user
+    stares at the same paper across multiple Streamlit reruns."""
+    if not title:
+        return []
+    try:
+        from processing.topic_classifier import classify_by_keywords
+        return classify_by_keywords(title, text_snippet)
+    except Exception as exc:
+        logger.debug("topic classify failed: %s", exc)
+        return []
+
+
+@st.cache_data(ttl=300, show_spinner=False)
+def _count_pdfs_cached(folder_str: str) -> int:
+    """Cached count of PDFs under a folder. TTL = 5 minutes.
+
+    rglob over a 28k-paper library takes seconds; we don't want it to run
+    on every Streamlit rerun. The folder path is keyed as a string because
+    ``st.cache_data`` only hashes JSON-able args.
+    """
+    p = Path(folder_str)
+    if not p.exists():
+        return 0
+    return sum(1 for _ in p.rglob("*.pdf"))
+
+
 def render_stats() -> None:
     st.header("📊 Library Stats")
+    st.caption(
+        "Counts are cached for 5 minutes. Use the button to recompute "
+        "immediately after a batch of approvals."
+    )
+
+    if st.button("↻ Recompute now"):
+        _count_pdfs_cached.clear()
+        st.rerun()
 
     lib = _library()
     if not lib.exists():
@@ -579,7 +689,7 @@ def render_stats() -> None:
 
     from maintenance.weekly_report import count_to_be_sorted
 
-    # Folder counts
+    # Folder counts (cached)
     folders = [
         "01 - Published papers",
         "02 - Unpublished papers",
@@ -591,10 +701,8 @@ def render_stats() -> None:
     st.subheader("Folder counts")
     cols = st.columns(len(folders))
     for col, f in zip(cols, folders):
-        p = lib / f
-        if p.exists():
-            n = sum(1 for _ in p.rglob("*.pdf"))
-            col.metric(f.split(" - ")[1] if " - " in f else f, n)
+        n = _count_pdfs_cached(str(lib / f))
+        col.metric(f.split(" - ")[1] if " - " in f else f, n)
 
     st.divider()
     st.subheader("12 - To be sorted/ backlog")
