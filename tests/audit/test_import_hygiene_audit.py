@@ -61,6 +61,11 @@ class TestNoSysPathHacks:
         "src/core/utils/check_python.py",           # Standalone utility
         "src/core/config/migrate_insecure_config.py",  # Migration script
         "src/pdf_processing/parsers/enhanced_parser.py",  # Parser with grobid deps
+        # Streamlit invokes the cockpit as ``streamlit run src/ui/cockpit.py``
+        # which runs the file as a script (no -m). Needs sys.path setup to
+        # find sibling packages. PYTHONPATH=src works too but isn't enforced
+        # by the streamlit launcher.
+        "src/ui/cockpit.py",
     }
 
     def test_no_sys_path_manipulation_in_src(self):

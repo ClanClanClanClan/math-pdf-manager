@@ -111,13 +111,10 @@ class TestCredentialExamplesUseEnvVars:
         assert "your_university_username" not in text
         assert "your_university_password" not in text
 
-    def test_orchestrator_py_example_uses_environ(self):
-        orch_py = SRC / "downloader" / "orchestrator.py"
-        text = _read_text(orch_py)
-        assert "os.environ" in text, (
-            "orchestrator.py example should use os.environ for master password"
-        )
-        assert '"your_secure_password"' not in text
+    # test_orchestrator_py_example_uses_environ deleted: the legacy
+    # downloader/orchestrator.py module was removed during dead-code cleanup
+    # (its responsibilities are now handled by downloader/doi_downloader.py
+    # and downloader/publishers/*).
 
 
 # ── no credential.enc or .env committed ──────────────────────────────────

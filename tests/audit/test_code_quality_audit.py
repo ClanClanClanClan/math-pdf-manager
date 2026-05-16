@@ -93,24 +93,6 @@ class TestNoDeadExpressions:
 
 
 # ── Batch 7: variable shadowing ──────────────────────────────────────────
-class TestNoVariableShadowing:
-    """Ensure loop variables don't shadow important builtins."""
-
-    def test_no_field_variable_shadowing_in_quality_scoring(self):
-        qscore = SRC / "metadata" / "quality_scoring.py"
-        if not qscore.exists():
-            pytest.skip("quality_scoring.py not found")
-        text = _read_text(qscore)
-        try:
-            tree = ast.parse(text)
-        except SyntaxError:
-            pytest.skip("Cannot parse quality_scoring.py")
-
-        for node in ast.walk(tree):
-            if isinstance(node, ast.For):
-                target = node.target
-                if isinstance(target, ast.Name) and target.id == "field":
-                    pytest.fail(
-                        f"Loop variable 'field' at line {node.lineno} shadows potential builtin. "
-                        "Rename to 'field_name'."
-                    )
+# TestNoVariableShadowing deleted: the only test (loop variable shadowing
+# in src/metadata/quality_scoring.py) targeted a module that was removed
+# during dead-code cleanup.

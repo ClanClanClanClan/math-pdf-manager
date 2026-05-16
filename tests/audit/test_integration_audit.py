@@ -508,21 +508,12 @@ class TestInputValidationSecurity:
         content = proc_py.read_text()
         assert 'hashlib.sha256' in content
 
-    def test_path_traversal_protection_in_orchestrator(self):
-        """downloader/orchestrator.py has path traversal protections."""
-        orch_py = Path(__file__).resolve().parents[2] / 'src' / 'downloader' / 'orchestrator.py'
-        content = orch_py.read_text()
-        assert 'path traversal' in content.lower()
-        assert '.resolve()' in content
-
-    def test_path_traversal_protection_in_academic_downloader(self):
-        """downloader/academic_downloader.py also has path traversal checks."""
-        dl_py = Path(__file__).resolve().parents[2] / 'src' / 'downloader' / 'academic_downloader.py'
-        if dl_py.exists():
-            content = dl_py.read_text()
-            assert 'is_relative_to' in content
-        else:
-            pytest.skip("academic_downloader.py not found")
+    # test_path_traversal_protection_in_orchestrator and
+    # test_path_traversal_protection_in_academic_downloader deleted: both
+    # modules (src/downloader/orchestrator.py,
+    # src/downloader/academic_downloader.py) were removed during dead-code
+    # cleanup. Their responsibilities are now handled by
+    # downloader/doi_downloader.py and downloader/publishers/*.
 
     def test_credential_encryption_uses_pbkdf2_fernet(self):
         """downloader/credentials.py uses PBKDF2HMAC + Fernet."""

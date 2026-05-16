@@ -29,25 +29,12 @@ def _read_text(path: Path) -> str:
 
 
 # ── Batch 1: Crypto salt & base64 fallback ────────────────────────────────
-class TestCryptoSaltHygiene:
-    """Ensure no hardcoded salt literals remain in auth modules.
-
-    The auth/store.py tests have been deleted because the module never
-    existed in this codebase (the credential store lives in
-    ``src/downloader/credentials.py`` instead, which is tested by
-    ``TestInputValidationSecurity.test_credential_encryption_uses_pbkdf2_fernet``
-    in tests/audit/test_integration_audit.py).
-    """
-
-    def test_no_hardcoded_salt_in_secure_credential_manager(self):
-        scm = SRC / "secure_credential_manager.py"
-        text = _read_text(scm)
-        assert 'b"academic_papers_salt"' not in text, (
-            "Hardcoded salt b\"academic_papers_salt\" still in secure_credential_manager.py"
-        )
-        assert "b'academic_papers_salt'" not in text
-
-
+# TestCryptoSaltHygiene deleted: src/secure_credential_manager.py was
+# removed during dead-code cleanup. The credential store now lives in
+# src/downloader/credentials.py and is tested by
+# TestInputValidationSecurity.test_credential_encryption_uses_pbkdf2_fernet
+# in tests/audit/test_integration_audit.py.
+#
 # TestBase64FallbackWarning deleted: src/auth/store.py never existed.
 
 
