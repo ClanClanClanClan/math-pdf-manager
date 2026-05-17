@@ -220,6 +220,25 @@ class UndoLog:
 # ---------------------------------------------------------------------------
 # Helper: wrap shutil operations with logging
 # ---------------------------------------------------------------------------
+
+def _maybe_sidecar_pair(source: Path, destination: Path) -> Optional[tuple[Path, Path]]:
+    """Return ``(src_sidecar, dst_sidecar)`` if a sidecar should travel
+    with this move, otherwise ``None``.
+
+    Conditions:
+    * the source is a .pdf (we only attach identity sidecars to PDFs);
+    * a ``<source>.meta.json`` exists;
+    * we're not moving the sidecar itself (avoid sidecar-of-sidecar).
+    """
+    if source.suffix.lower() != ".pdf":
+        return None
+    src_sidecar = source.with_suffix(".meta.json")
+    if not src_sidecar.exists():
+        return None
+    dst_sidecar = destination.with_suffix(".meta.json")
+    return src_sidecar, dst_sidecar
+
+
 def logged_move(
     source: Path, destination: Path, *, undo_log: Optional[UndoLog] = None
 ) -> None:
@@ -227,21 +246,47 @@ def logged_move(
 
     Records the operation BEFORE moving so that a crash mid-move
     still leaves a recoverable undo entry.
+
+    If the source is a PDF with a ``<stem>.meta.json`` sidecar next to
+    it, the sidecar moves with it as part of the same transaction.
+    The PDF op is recorded first; the undo loop reverses the order so
+    the sidecar is restored before the PDF, keeping the pair
+    consistent throughout.
     """
     if not source.exists():
         raise FileNotFoundError(f"Source does not exist: {source}")
     if destination.exists():
         raise FileExistsError(f"Destination already exists: {destination}")
+
+    pair = _maybe_sidecar_pair(source, destination)
+    if pair and pair[1].exists():
+        raise FileExistsError(
+            f"Destination sidecar already exists: {pair[1]}; refusing to "
+            f"clobber another paper's identity"
+        )
+
     if undo_log:
         undo_log.record_move(source, destination)
     destination.parent.mkdir(parents=True, exist_ok=True)
     shutil.move(str(source), str(destination))
 
+    if pair:
+        src_sidecar, dst_sidecar = pair
+        if undo_log:
+            undo_log.record_move(src_sidecar, dst_sidecar)
+        shutil.move(str(src_sidecar), str(dst_sidecar))
+
 
 def logged_copy(
     source: Path, destination: Path, *, undo_log: Optional[UndoLog] = None
 ) -> None:
-    """Copy a file and record the operation in the undo log."""
+    """Copy a file and record the operation in the undo log.
+
+    Sidecars are *not* copied automatically: a copy creates a new
+    identity (different physical PDF) which deserves its own sidecar
+    written by the caller.  Copying the sidecar would point at the
+    wrong file's history.
+    """
     if not source.exists():
         raise FileNotFoundError(f"Source does not exist: {source}")
     if destination.exists():
@@ -255,15 +300,33 @@ def logged_copy(
 def logged_rename(
     old_path: Path, new_path: Path, *, undo_log: Optional[UndoLog] = None
 ) -> None:
-    """Rename a file and record the operation in the undo log."""
+    """Rename a file and record the operation in the undo log.
+
+    Same sidecar-attachment semantics as ``logged_move``: a PDF rename
+    carries its sidecar along.
+    """
     if not old_path.exists():
         raise FileNotFoundError(f"Source does not exist: {old_path}")
     if new_path.exists() and old_path != new_path:
         raise FileExistsError(f"Destination already exists: {new_path}")
+
+    pair = _maybe_sidecar_pair(old_path, new_path)
+    if pair and pair[1].exists() and pair[0] != pair[1]:
+        raise FileExistsError(
+            f"Destination sidecar already exists: {pair[1]}; refusing to "
+            f"clobber another paper's identity"
+        )
+
     if undo_log:
         undo_log.record_rename(old_path, new_path)
     new_path.parent.mkdir(parents=True, exist_ok=True)
     old_path.rename(new_path)
+
+    if pair and pair[0] != pair[1]:
+        src_sidecar, dst_sidecar = pair
+        if undo_log:
+            undo_log.record_rename(src_sidecar, dst_sidecar)
+        src_sidecar.rename(dst_sidecar)
 
 
 # ---------------------------------------------------------------------------

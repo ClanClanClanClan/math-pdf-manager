@@ -720,6 +720,45 @@ def ingest_paper(
     result["actions"] = org_result.actions
     result["success"] = not any("ERROR" in a for a in org_result.actions)
 
+    # Step 6: Write the paper identity sidecar next to the filed PDF.
+    # Best-effort: a sidecar-write failure does NOT fail the ingest --
+    # the PDF is already in the right place, the sidecar is just extra
+    # metadata.  Skip in dry-run mode and when the destination doesn't
+    # actually exist (e.g. dry-run org with no copy performed).
+    if result["success"] and not dry_run:
+        try:
+            from processing.identity import PaperIdentity
+            from datetime import datetime, timezone
+
+            dest_path = Path(org_result.destination)
+            if dest_path.exists() and dest_path.suffix.lower() == ".pdf":
+                # Preserve any existing sidecar (re-ingest of an
+                # already-filed paper); we don't want to wipe DOI/arxiv
+                # data that earlier passes recorded.
+                identity = PaperIdentity.load(dest_path)
+                if identity.is_new():
+                    identity.original_filename = pdf_path.name
+                    identity.first_ingested_at = datetime.now(timezone.utc).isoformat(
+                        timespec="seconds"
+                    )
+                    tx = kwargs.get("undo_log")
+                    if tx is not None and getattr(tx, "_tx_id", None):
+                        identity.first_ingest_tx_id = tx._tx_id
+                # Fill in identifiers we now know.
+                if not identity.doi and metadata.get("doi"):
+                    identity.doi = metadata["doi"]
+                if not identity.arxiv_id and metadata.get("arxiv_id"):
+                    identity.arxiv_id = metadata["arxiv_id"]
+                # The primary location should always appear in
+                # copy_locations so the topic router can later append
+                # secondary copies without losing the original.
+                primary = str(dest_path)
+                if primary not in identity.copy_locations:
+                    identity.copy_locations.append(primary)
+                identity.save(dest_path)
+        except Exception as exc:  # pragma: no cover -- best effort
+            logger.warning("sidecar write failed for %s: %s", org_result.destination, exc)
+
     if verbose:
         print(f"  Status: {org_result.publication_status}")
         for action in org_result.actions:
