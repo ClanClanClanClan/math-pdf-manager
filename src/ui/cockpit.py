@@ -202,9 +202,11 @@ def render_sidebar() -> None:
         st.divider()
         # The Attention tab shows a count badge so the user can tell at
         # a glance whether anything wants their attention right now.
+        # Streamlit reruns the sidebar on every interaction so we cache
+        # the count for 60s — collectors glob the whole library and a
+        # 28k-PDF rglob would dominate the UI loop otherwise.
         try:
-            from ui.attention_queue import gather_attention_items
-            _attn_count = len(gather_attention_items(lib)) if lib else 0
+            _attn_count = _attention_count_cached(str(lib)) if lib else 0
         except Exception:  # pragma: no cover -- never break the sidebar
             _attn_count = 0
         attention_label = (
@@ -679,6 +681,19 @@ def _classify_cached(title: str, text_snippet: str) -> list[dict]:
         return []
 
 
+@st.cache_data(ttl=60, show_spinner=False)
+def _attention_count_cached(library_str: str) -> int:
+    """Sidebar attention-badge count. TTL = 60s.
+
+    Every collector globs the library or scans a log; running them on
+    every Streamlit rerun would make the sidebar feel sluggish.  60s
+    is a good compromise: badge updates within a minute, but the user
+    can click into the Attention tab to force a fresh scan.
+    """
+    from ui.attention_queue import gather_attention_items
+    return len(gather_attention_items(Path(library_str)))
+
+
 @st.cache_data(ttl=300, show_spinner=False)
 def _count_pdfs_cached(folder_str: str) -> int:
     """Cached count of PDFs under a folder. TTL = 5 minutes.
@@ -835,6 +850,7 @@ def render_attention() -> None:
         "upgrade_flag": "Manual download requests",
         "aging": "Aging working papers",
         "conflict_copy": "Dropbox conflict copies",
+        "permanently_unpublished": "Marked permanently unpublished",
     }
 
     for source_key, source_items in by_source.items():
@@ -852,7 +868,19 @@ def render_attention() -> None:
                     if it.created_at:
                         st.caption(f"first seen: {it.created_at}")
                 with cols[1]:
+                    # "Open DOI" gets rendered as a real link_button so
+                    # macOS doesn't steal focus the way webbrowser.open
+                    # would; everything else stays an action button.
+                    doi_for_link = it.payload.get("doi", "")
+                    if any(a_id == "open_doi" for _, a_id in it.actions) and doi_for_link:
+                        st.link_button(
+                            "Open DOI",
+                            f"https://doi.org/{doi_for_link}",
+                            use_container_width=True,
+                        )
                     for label, action_id in it.actions:
+                        if action_id == "open_doi":
+                            continue  # already rendered as link above
                         btn_key = f"attn_{it.key}_{action_id}"
                         if not st.button(label, key=btn_key, use_container_width=True):
                             continue
@@ -864,18 +892,15 @@ def render_attention() -> None:
                             elif action_id == "dismiss_30d":
                                 dismiss(it.key, days=30)
                                 st.toast(f"Dismissed for 30 days: {it.title}")
-                            elif action_id == "open_doi":
-                                doi = it.payload.get("doi", "")
-                                if doi:
-                                    webbrowser.open(f"https://doi.org/{doi}")
-                                    st.toast(f"Opened DOI {doi}")
-                            elif action_id == "show_flag":
-                                st.code(it.detail)
                             elif action_id == "mark_flag_done":
                                 fp = Path(it.payload.get("flag_file", ""))
                                 if fp.exists():
                                     fp.unlink()
                                     st.toast(f"Removed flag {fp.name}")
+                                    # Invalidate cached count so the
+                                    # sidebar badge updates immediately
+                                    # rather than after the 60s TTL.
+                                    _attention_count_cached.clear()
                             elif action_id == "reveal_in_finder":
                                 p = it.payload.get("path", "")
                                 if p:
@@ -889,17 +914,55 @@ def render_attention() -> None:
                                     trash.mkdir(parents=True, exist_ok=True)
                                     p.rename(trash / p.name)
                                     st.toast("Moved conflict copy to .trash/")
+                                    _attention_count_cached.clear()
                             elif action_id == "watcher_retry":
                                 st.info(
                                     "Drop the failing file back into the inbox to "
                                     "retry — the watcher will re-ingest it."
                                 )
                             elif action_id == "transition_aged":
-                                st.info(
-                                    "Run `python -m processing.aging_checker --apply` "
-                                    "to execute the aging transitions.  Cockpit "
-                                    "auto-apply is coming in the next phase."
+                                # Actually do the move via aging_checker.
+                                # Single-paper transition: build a minimal
+                                # candidate dict the way find_aged_papers
+                                # does and call transition_aged_papers.
+                                from processing.aging_checker import (
+                                    find_aged_papers, transition_aged_papers,
                                 )
+                                # Find this paper in the global candidate
+                                # list — safer than reconstructing the
+                                # destination by hand because the alpha
+                                # routing has edge cases (nobiliary
+                                # particles, Greek/Cyrillic, …).
+                                all_aged = find_aged_papers(lib)
+                                target_path = it.payload.get("path", "")
+                                match = next(
+                                    (c for c in all_aged if c["path"] == target_path),
+                                    None,
+                                )
+                                if match is None:
+                                    st.warning(
+                                        "Paper no longer in aging set; refresh and retry."
+                                    )
+                                else:
+                                    results = transition_aged_papers([match], dry_run=False)
+                                    status = results[0]["status"] if results else "no-op"
+                                    st.toast(f"Aging: {status}")
+                                    _attention_count_cached.clear()
+                            elif action_id == "reset_recheck":
+                                # Restore a paper the state machine
+                                # gave up on.  Backs the Phase 2
+                                # publication_state.reset_recheck_state.
+                                from processing.publication_state import (
+                                    reset_recheck_state,
+                                )
+                                p = Path(it.payload.get("path", ""))
+                                if p.exists():
+                                    out = reset_recheck_state(p)
+                                    if out is None:
+                                        st.warning("No sidecar — nothing to reset.")
+                                    else:
+                                        st.toast(f"Recheck state reset for {p.name}")
+                                        _attention_count_cached.clear()
                             else:
                                 st.warning(f"Unknown action: {action_id}")
                         except Exception as exc:

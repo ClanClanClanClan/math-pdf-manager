@@ -164,11 +164,16 @@ def _filter_dismissed(items: list[AttentionItem], dismissals: dict[str, str]) ->
 # ---------------------------------------------------------------------------
 
 # Pattern to extract structured info from watcher.log ERROR/WARNING
-# lines.  RotatingFileHandler default format used by daemon.py:
-#   2026-05-17 12:34:56,789 watcher.daemon ERROR Failed to ingest foo.pdf: bar
+# lines.  Format used by ``src/watcher/daemon.py``:
+#   logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
+# Default ``asctime`` is ``YYYY-MM-DD HH:MM:SS,mmm``.  Example:
+#   2026-05-17 12:34:56,789 [ERROR] Failed to ingest foo.pdf: bad metadata
+# We accept both ``Failed to ingest <file>: <reason>`` (warning path,
+# ingest returned False) and ``Error ingesting <file>: <exc>`` (error
+# path, exception escaped) — the two messages daemon.py emits.
 _WATCHER_LINE_RE = re.compile(
     r"^(?P<ts>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}[,.]?\d*)\s+"
-    r"(?P<logger>\S+)\s+(?P<level>ERROR|WARNING)\s+"
+    r"\[(?P<level>ERROR|WARNING)\]\s+"
     r"(?P<msg>Failed to ingest|Error ingesting)\s+(?P<file>\S+):\s*(?P<reason>.+)$"
 )
 
@@ -246,6 +251,16 @@ def collect_upgrade_flags(library_root: Path) -> list[AttentionItem]:
         journal = txt.parent.name
         # Stable key based on flag path
         key = f"upgrade_flag::{txt.relative_to(library_root)}"
+        # If there's a DOI we always include the "Open DOI" action so
+        # the cockpit can render it as a focus-safe st.link_button; the
+        # "show_flag" placeholder action (which just re-rendered the
+        # body we already show in the Details expander) is gone.
+        actions = []
+        if doi:
+            actions.append(("Open DOI", "open_doi"))
+        actions.append(("Mark done", "mark_flag_done"))
+        actions.append(("Dismiss 7d", "dismiss_7d"))
+
         items.append(
             AttentionItem(
                 key=key,
@@ -261,11 +276,7 @@ def collect_upgrade_flags(library_root: Path) -> list[AttentionItem]:
                     "doi": doi,
                     "journal": journal,
                 },
-                actions=[
-                    ("Open DOI", "open_doi") if doi else ("Show flag file", "show_flag"),
-                    ("Mark done", "mark_flag_done"),
-                    ("Dismiss 7d", "dismiss_7d"),
-                ],
+                actions=actions,
             )
         )
     return items
@@ -352,6 +363,55 @@ def collect_conflict_copies(library_root: Path) -> list[AttentionItem]:
     return items
 
 
+def collect_permanently_unpublished(library_root: Path) -> list[AttentionItem]:
+    """Surface papers the state machine has given up on.
+
+    These are not "errors" — they're decisions the system made on the
+    user's behalf that the user might want to review or override.  We
+    show them as INFO severity (sorted last) with a one-click "reset
+    recheck" action that drops them back into the live queue.
+    """
+    try:
+        from processing.publication_state import list_permanently_unpublished
+    except ImportError as exc:
+        logger.warning("publication_state unavailable: %s", exc)
+        return []
+    try:
+        paths = list_permanently_unpublished(library_root)
+    except Exception as exc:
+        logger.warning("permanently-unpublished scan raised: %s", exc)
+        return []
+    items: list[AttentionItem] = []
+    for pdf in paths:
+        key = f"permanent::{pdf.relative_to(library_root)}"
+        items.append(
+            AttentionItem(
+                key=key,
+                source="permanently_unpublished",
+                severity=SEVERITY_INFO,
+                title=f"Stopped checking: {pdf.stem}",
+                detail=(
+                    f"Path: `{pdf}`\n\n"
+                    f"The publication-state machine ran out its recheck "
+                    f"budget on this paper with zero Crossref hits and "
+                    f"marked it as permanently unpublished.  Click "
+                    f"**Reset recheck** to drop it back into the live "
+                    f"queue (e.g. you have new information that it was "
+                    f"in fact published)."
+                ),
+                created_at=datetime.fromtimestamp(
+                    pdf.stat().st_mtime, tz=timezone.utc
+                ).isoformat(timespec="seconds"),
+                payload={"path": str(pdf)},
+                actions=[
+                    ("Reset recheck", "reset_recheck"),
+                    ("Dismiss 30d", "dismiss_30d"),
+                ],
+            )
+        )
+    return items
+
+
 # ---------------------------------------------------------------------------
 # Aggregator
 # ---------------------------------------------------------------------------
@@ -364,6 +424,7 @@ COLLECTORS: list[tuple[str, Callable[[Path], list[AttentionItem]]]] = [
     ("upgrade_flag", collect_upgrade_flags),
     ("aging", collect_aging_candidates),
     ("conflict_copy", collect_conflict_copies),
+    ("permanently_unpublished", collect_permanently_unpublished),
 ]
 
 

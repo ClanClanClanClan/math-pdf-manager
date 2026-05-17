@@ -13,6 +13,7 @@ from ui.attention_queue import (
     SEVERITY_INFO,
     SEVERITY_WARNING,
     collect_conflict_copies,
+    collect_permanently_unpublished,
     collect_upgrade_flags,
     collect_watcher_failures,
     dismiss,
@@ -103,9 +104,11 @@ class TestWatcherFailures:
         assert collect_watcher_failures(tmp_path / "missing.log") == []
 
     def test_parses_error_line(self, tmp_path):
+        # Format must match what src/watcher/daemon.py actually emits:
+        #   logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
         log = tmp_path / "watcher.log"
         log.write_text(
-            "2026-05-17 12:34:56,789 watcher.daemon ERROR Failed to ingest paper.pdf: bad metadata\n"
+            "2026-05-17 12:34:56,789 [ERROR] Failed to ingest paper.pdf: bad metadata\n"
         )
         items = collect_watcher_failures(log)
         assert len(items) == 1
@@ -115,12 +118,34 @@ class TestWatcherFailures:
         assert it.payload["file"] == "paper.pdf"
         assert "bad metadata" in it.payload["reason"]
 
+    def test_parses_real_daemon_format(self, tmp_path):
+        """Smoke test against a real log entry recorded by the daemon."""
+        import logging
+        log = tmp_path / "watcher.log"
+        # Build a real log line via the same logging machinery the
+        # daemon uses, so this test breaks if the daemon's format
+        # changes upstream.
+        h = logging.FileHandler(log)
+        h.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s"))
+        logger_obj = logging.getLogger("test_real_daemon_format")
+        logger_obj.setLevel(logging.DEBUG)
+        logger_obj.addHandler(h)
+        try:
+            logger_obj.error("Failed to ingest realpaper.pdf: real reason here")
+        finally:
+            logger_obj.removeHandler(h)
+            h.close()
+        items = collect_watcher_failures(log)
+        assert len(items) == 1
+        assert items[0].payload["file"] == "realpaper.pdf"
+        assert "real reason here" in items[0].payload["reason"]
+
     def test_dedupes_per_file_keeping_latest(self, tmp_path):
         log = tmp_path / "watcher.log"
         log.write_text(
-            "2026-05-15 10:00:00,000 watcher.daemon ERROR Failed to ingest p.pdf: first\n"
-            "2026-05-16 11:00:00,000 watcher.daemon ERROR Failed to ingest p.pdf: second\n"
-            "2026-05-17 12:00:00,000 watcher.daemon ERROR Failed to ingest p.pdf: third\n"
+            "2026-05-15 10:00:00,000 [ERROR] Failed to ingest p.pdf: first\n"
+            "2026-05-16 11:00:00,000 [ERROR] Failed to ingest p.pdf: second\n"
+            "2026-05-17 12:00:00,000 [ERROR] Failed to ingest p.pdf: third\n"
         )
         items = collect_watcher_failures(log)
         assert len(items) == 1
@@ -129,16 +154,27 @@ class TestWatcherFailures:
     def test_warning_level_recorded(self, tmp_path):
         log = tmp_path / "watcher.log"
         log.write_text(
-            "2026-05-17 12:34:56 watcher.daemon WARNING Failed to ingest q.pdf: no metadata\n"
+            "2026-05-17 12:34:56 [WARNING] Failed to ingest q.pdf: no metadata\n"
         )
         items = collect_watcher_failures(log)
         assert items[0].severity == SEVERITY_WARNING
 
+    def test_error_ingesting_line_also_matched(self, tmp_path):
+        # daemon.py emits two distinct messages: "Failed to ingest" on
+        # graceful failure, "Error ingesting" on exception path.
+        log = tmp_path / "watcher.log"
+        log.write_text(
+            "2026-05-17 12:00:00 [ERROR] Error ingesting boom.pdf: ValueError boom\n"
+        )
+        items = collect_watcher_failures(log)
+        assert len(items) == 1
+        assert items[0].payload["file"] == "boom.pdf"
+
     def test_unrelated_lines_ignored(self, tmp_path):
         log = tmp_path / "watcher.log"
         log.write_text(
-            "2026-05-17 12:00:00 watcher.daemon INFO Watching /inbox\n"
-            "2026-05-17 12:01:00 watcher.daemon INFO Filed: x.pdf → /lib/03/S/Smith.pdf\n"
+            "2026-05-17 12:00:00 [INFO] Watching /inbox\n"
+            "2026-05-17 12:01:00 [INFO] Filed: x.pdf → /lib/03/S/Smith.pdf\n"
         )
         assert collect_watcher_failures(log) == []
 
@@ -186,6 +222,38 @@ class TestUpgradeFlags:
         k1 = collect_upgrade_flags(tmp_path)[0].key
         k2 = collect_upgrade_flags(tmp_path)[0].key
         assert k1 == k2
+
+
+class TestPermanentlyUnpublished:
+
+    def _make_pdf(self, path):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(b"%PDF-1.4 test")
+        return path
+
+    def test_finds_marked_papers(self, tmp_path):
+        from processing.identity import PaperIdentity
+        live = self._make_pdf(tmp_path / "live.pdf")
+        permanent = self._make_pdf(tmp_path / "perm.pdf")
+        PaperIdentity().save(live)
+        PaperIdentity(permanently_unpublished=True).save(permanent)
+        items = collect_permanently_unpublished(tmp_path)
+        assert len(items) == 1
+        it = items[0]
+        assert it.source == "permanently_unpublished"
+        assert it.severity == SEVERITY_INFO
+        assert it.payload["path"].endswith("perm.pdf")
+        # The reset action is exposed so the user can override.
+        assert any(a_id == "reset_recheck" for _, a_id in it.actions)
+
+    def test_no_marked_papers_yields_empty(self, tmp_path):
+        from processing.identity import PaperIdentity
+        live = self._make_pdf(tmp_path / "p.pdf")
+        PaperIdentity().save(live)
+        assert collect_permanently_unpublished(tmp_path) == []
+
+    def test_missing_root_returns_empty(self, tmp_path):
+        assert collect_permanently_unpublished(tmp_path / "nope") == []
 
 
 class TestConflictCopies:

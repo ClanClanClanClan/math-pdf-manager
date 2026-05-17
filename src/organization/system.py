@@ -204,8 +204,18 @@ class FolderRouter:
             paper_year = metadata.get("year")
             if paper_year:
                 if isinstance(paper_year, str):
-                    paper_year = int(paper_year.strip()[:4])
-                if isinstance(paper_year, int) and (current_year - paper_year) > age_cutoff_years:
+                    stripped = paper_year.strip()
+                    # Require a 4-digit prefix that's a plausible year.
+                    # Rejects "n.d.", "202", "  ", and anything else
+                    # ambiguous; falls through to default routing.
+                    if not (len(stripped) >= 4 and stripped[:4].isdigit()):
+                        raise ValueError(f"unparseable year: {paper_year!r}")
+                    paper_year = int(stripped[:4])
+                if (
+                    isinstance(paper_year, int)
+                    and 1000 <= paper_year <= 9999  # sanity gate against year=202
+                    and (current_year - paper_year) > age_cutoff_years
+                ):
                     return "unpublished"
         except (ValueError, TypeError):
             pass  # year unparseable — fall through to default routing

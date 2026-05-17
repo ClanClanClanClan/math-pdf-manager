@@ -273,3 +273,29 @@ class TestAgeBasedRouting:
             "doi": "10.1007/s12345-024-0001-x",  # real publisher DOI
         })
         assert status == "published"
+
+    def test_three_digit_year_does_not_trigger_unpublished(self, tmp_path):
+        """Defensive: "202" (3 digits) must not be read as the year 202 CE
+        and route the paper to Unpublished as 1800-years-old."""
+        from organization.system import OrganizationSystem
+        org = OrganizationSystem(tmp_path)
+        assert org.router.determine_publication_status({"year": "202"}) == "working"
+        assert org.router.determine_publication_status({"year": "20"}) == "working"
+        # Pure-int 202 also rejected by the sanity gate (1000-9999)
+        assert org.router.determine_publication_status({"year": 202}) == "working"
+
+    def test_iso_date_string_uses_first_four_digits(self, tmp_path):
+        from organization.system import OrganizationSystem
+        org = OrganizationSystem(tmp_path)
+        from datetime import datetime
+        recent = f"{datetime.now().year - 1}-05-13"
+        old = f"{datetime.now().year - 12}-05-13"
+        assert org.router.determine_publication_status({"year": recent}) == "working"
+        assert org.router.determine_publication_status({"year": old}) == "unpublished"
+
+    def test_garbage_year_strings_fall_through(self, tmp_path):
+        from organization.system import OrganizationSystem
+        org = OrganizationSystem(tmp_path)
+        for v in ("n.d.", "forthcoming", "tba", "", "  ", "year=2024"):
+            assert org.router.determine_publication_status({"year": v}) == "working", \
+                f"unexpected route for {v!r}"
