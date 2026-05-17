@@ -170,6 +170,13 @@ class FolderRouter:
         A paper is considered "published" only if it has a DOI from an
         actual journal or publisher.  DOIs from repositories (SSRN, arXiv,
         HAL, Zenodo, NBER, RePEc, etc.) are preprints, not publications.
+
+        Age-based rule (matches user's library policy): a paper whose
+        publication year is more than ``working_to_unpublished_years``
+        years old at the time of ingest goes straight to Unpublished
+        rather than Working.  This keeps Working as a "recent /
+        actively pursued" folder rather than letting a 12-year-old
+        preprint sit there forever.
         """
         doc_type = metadata.get("document_type", "").lower()
         if doc_type in ("book", "lecture_notes"):
@@ -185,6 +192,24 @@ class FolderRouter:
             return "published"
         if journal and not _is_repository_journal(journal):
             return "published"
+
+        # Distinguish "preprint we still believe in" (working) from
+        # "preprint we've long stopped chasing" (unpublished) by age.
+        # Threshold mirrors ``maintenance.weekly_report.check_aging``
+        # default of 5 years.
+        age_cutoff_years = 5
+        try:
+            from datetime import datetime as _dt
+            current_year = _dt.now().year
+            paper_year = metadata.get("year")
+            if paper_year:
+                if isinstance(paper_year, str):
+                    paper_year = int(paper_year.strip()[:4])
+                if isinstance(paper_year, int) and (current_year - paper_year) > age_cutoff_years:
+                    return "unpublished"
+        except (ValueError, TypeError):
+            pass  # year unparseable — fall through to default routing
+
         if metadata.get("arxiv_id"):
             return "unpublished"
         return "working"
