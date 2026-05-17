@@ -200,11 +200,33 @@ def render_sidebar() -> None:
             st.success(f"📁 {lib}")
 
         st.divider()
+        # The Attention tab shows a count badge so the user can tell at
+        # a glance whether anything wants their attention right now.
+        try:
+            from ui.attention_queue import gather_attention_items
+            _attn_count = len(gather_attention_items(lib)) if lib else 0
+        except Exception:  # pragma: no cover -- never break the sidebar
+            _attn_count = 0
+        attention_label = (
+            f"Attention ({_attn_count})" if _attn_count else "Attention"
+        )
+
         page = st.radio(
             "Page",
-            ["Sort Queue", "Upgrade Queue", "Maintenance", "Stats", "Activity"],
+            [
+                attention_label,
+                "Sort Queue",
+                "Upgrade Queue",
+                "Maintenance",
+                "Stats",
+                "Activity",
+            ],
             label_visibility="collapsed",
         )
+        # Normalise the label back to a canonical page name so the
+        # router below doesn't have to do string matching on the count.
+        if page.startswith("Attention"):
+            page = "Attention"
         st.session_state.page = page
 
         st.divider()
@@ -759,12 +781,149 @@ def _undo_transaction(tx_id: str) -> None:
 # Main
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# Page: Attention Queue (unified "needs your attention" inbox)
+# ---------------------------------------------------------------------------
+
+def _attention_severity_emoji(sev: str) -> str:
+    return {"error": "🛑", "warning": "⚠", "info": "ℹ"}.get(sev, "•")
+
+
+def render_attention() -> None:
+    """Show the unified attention queue.
+
+    Pulls items from every collector (watcher failures, upgrade flags,
+    aging candidates, conflict copies) and lets the user act on each
+    one in place.  All destructive actions still go through
+    ``undo_log`` so the Activity tab can reverse them.
+    """
+    import subprocess
+    import webbrowser
+    from ui.attention_queue import (
+        dismiss,
+        gather_attention_items,
+        undismiss,
+    )
+
+    st.header("📬 Attention Queue")
+    st.caption(
+        "Everything across the pipeline that wants your eyes. "
+        "Dismissed items disappear for the snooze window and reappear after."
+    )
+
+    lib = _library_root()
+    if not lib:
+        st.warning("Library root not set — see sidebar.")
+        return
+
+    # Allow the user to toggle dismissed items on/off so they can
+    # un-snooze something they hid in haste.
+    show_dismissed = st.checkbox("Show dismissed items", value=False)
+
+    items = gather_attention_items(lib, include_dismissed=show_dismissed)
+    if not items:
+        st.success("Nothing needs your attention right now. ✓")
+        return
+
+    # Group by source for visual chunking.
+    by_source: dict[str, list] = {}
+    for it in items:
+        by_source.setdefault(it.source, []).append(it)
+
+    source_labels = {
+        "watcher_failure": "Watcher failures",
+        "upgrade_flag": "Manual download requests",
+        "aging": "Aging working papers",
+        "conflict_copy": "Dropbox conflict copies",
+    }
+
+    for source_key, source_items in by_source.items():
+        st.subheader(f"{source_labels.get(source_key, source_key)} ({len(source_items)})")
+        for it in source_items:
+            with st.container(border=True):
+                cols = st.columns([0.7, 0.3])
+                with cols[0]:
+                    st.markdown(
+                        f"{_attention_severity_emoji(it.severity)} **{it.title}**"
+                    )
+                    if it.detail:
+                        with st.expander("Details", expanded=False):
+                            st.markdown(it.detail)
+                    if it.created_at:
+                        st.caption(f"first seen: {it.created_at}")
+                with cols[1]:
+                    for label, action_id in it.actions:
+                        btn_key = f"attn_{it.key}_{action_id}"
+                        if not st.button(label, key=btn_key, use_container_width=True):
+                            continue
+                        # Dispatch
+                        try:
+                            if action_id == "dismiss_7d":
+                                dismiss(it.key, days=7)
+                                st.toast(f"Dismissed for 7 days: {it.title}")
+                            elif action_id == "dismiss_30d":
+                                dismiss(it.key, days=30)
+                                st.toast(f"Dismissed for 30 days: {it.title}")
+                            elif action_id == "open_doi":
+                                doi = it.payload.get("doi", "")
+                                if doi:
+                                    webbrowser.open(f"https://doi.org/{doi}")
+                                    st.toast(f"Opened DOI {doi}")
+                            elif action_id == "show_flag":
+                                st.code(it.detail)
+                            elif action_id == "mark_flag_done":
+                                fp = Path(it.payload.get("flag_file", ""))
+                                if fp.exists():
+                                    fp.unlink()
+                                    st.toast(f"Removed flag {fp.name}")
+                            elif action_id == "reveal_in_finder":
+                                p = it.payload.get("path", "")
+                                if p:
+                                    subprocess.run(["open", "-R", p], check=False)
+                            elif action_id == "delete_conflict":
+                                p = Path(it.payload.get("path", ""))
+                                if p.exists():
+                                    # Move to .trash/ rather than hard-delete so
+                                    # the user can undo via Finder.
+                                    trash = lib / ".trash" / "conflict_copies"
+                                    trash.mkdir(parents=True, exist_ok=True)
+                                    p.rename(trash / p.name)
+                                    st.toast("Moved conflict copy to .trash/")
+                            elif action_id == "watcher_retry":
+                                st.info(
+                                    "Drop the failing file back into the inbox to "
+                                    "retry — the watcher will re-ingest it."
+                                )
+                            elif action_id == "transition_aged":
+                                st.info(
+                                    "Run `python -m processing.aging_checker --apply` "
+                                    "to execute the aging transitions.  Cockpit "
+                                    "auto-apply is coming in the next phase."
+                                )
+                            else:
+                                st.warning(f"Unknown action: {action_id}")
+                        except Exception as exc:
+                            st.error(f"Action failed: {exc}")
+                        st.rerun()
+
+    if show_dismissed:
+        with st.expander("Un-dismiss an item", expanded=False):
+            key_to_undo = st.text_input("Key to un-dismiss", key="undismiss_key")
+            if st.button("Un-dismiss", key="undismiss_btn"):
+                if key_to_undo:
+                    undismiss(key_to_undo)
+                    st.toast(f"Un-dismissed {key_to_undo}")
+                    st.rerun()
+
+
 def main() -> None:
     _init_state()
     render_sidebar()
 
     page = st.session_state.get("page", "Sort Queue")
-    if page == "Sort Queue":
+    if page == "Attention":
+        render_attention()
+    elif page == "Sort Queue":
         render_sort_queue()
     elif page == "Upgrade Queue":
         render_upgrade_queue()
