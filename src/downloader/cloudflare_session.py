@@ -188,10 +188,13 @@ async def start_session(publisher: str) -> None:
     print("Then press Enter here to continue.\n")
 
     async with async_playwright() as p:
-        # Use headed mode so user can interact
+        # Use headed mode so user can interact -- but park it in the
+        # corner so it stays out of the user's way (see
+        # ``utils.browser_window`` for the quiet-window contract).
+        from utils.browser_window import quiet_args
         browser = await p.chromium.launch(
             headless=False,
-            args=["--disable-blink-features=AutomationControlled"],
+            args=quiet_args(["--disable-blink-features=AutomationControlled"]),
         )
         ctx = await browser.new_context(
             user_agent=(

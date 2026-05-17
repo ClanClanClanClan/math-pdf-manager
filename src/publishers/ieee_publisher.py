@@ -73,6 +73,7 @@ class IEEEPublisher(PublisherInterface):
             # Import browser automation tools
             import asyncio
             from playwright.async_api import async_playwright
+from utils.browser_window import quiet_args
             
             # Get the DOI/identifier to authenticate with (if available)
             doi_to_auth = getattr(self, '_pending_download_identifier', None)
@@ -131,7 +132,7 @@ class IEEEPublisher(PublisherInterface):
         async with async_playwright() as p:
             browser = await p.chromium.launch(
                 headless=use_headless,
-                args=[
+                args=quiet_args([
                     '--disable-blink-features=AutomationControlled',
                     '--disable-web-security',
                     '--disable-features=VizDisplayCompositor',
@@ -142,7 +143,7 @@ class IEEEPublisher(PublisherInterface):
                     '--disable-background-timer-throttling',
                     '--disable-backgrounding-occluded-windows',
                     '--disable-renderer-backgrounding'
-                ]
+                ])
             )
             context = await browser.new_context(
                 user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',

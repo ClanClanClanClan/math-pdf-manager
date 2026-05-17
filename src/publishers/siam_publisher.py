@@ -105,6 +105,7 @@ class SIAMPublisher(PublisherInterface):
             # Import browser automation tools
             import asyncio
             from playwright.async_api import async_playwright
+from utils.browser_window import quiet_args
             
             # Store pending download identifier if available
             self._pending_download_identifier = getattr(self, '_pending_download_identifier', None)
@@ -151,7 +152,7 @@ class SIAMPublisher(PublisherInterface):
             # Launch browser with IEEE-proven settings
             browser = await p.chromium.launch(
                 headless=use_headless,
-                args=[
+                args=quiet_args([
                     '--disable-blink-features=AutomationControlled',
                     '--disable-web-security',
                     '--disable-features=VizDisplayCompositor',
@@ -162,7 +163,7 @@ class SIAMPublisher(PublisherInterface):
                     '--disable-background-timer-throttling',
                     '--disable-backgrounding-occluded-windows',
                     '--disable-renderer-backgrounding'
-                ]
+                ])
             )
             
             context = await browser.new_context(

@@ -17,6 +17,7 @@ from typing import Dict, List, Optional, Union
 from urllib.parse import urljoin, urlparse
 
 from playwright.async_api import async_playwright, BrowserContext, Page
+from utils.browser_window import quiet_args
 
 from . import DownloadResult, AuthenticationConfig
 
@@ -88,13 +89,12 @@ class AIMSPublisher:
             # Launch browser with anti-detection settings
             browser = await p.chromium.launch(
                 headless=False,  # Keep visible for debugging institutional access
-                args=[
+                args=quiet_args([
                     '--disable-blink-features=AutomationControlled',
                     '--disable-web-security',
                     '--disable-features=VizDisplayCompositor',
-                    '--start-maximized',
                     '--no-sandbox'
-                ]
+                ])
             )
             
             try:

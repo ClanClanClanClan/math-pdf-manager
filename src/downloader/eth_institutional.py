@@ -378,9 +378,12 @@ async def download_with_eth_auth(
 
     try:
         async with async_playwright() as p:
+            from utils.browser_window import quiet_args
             browser = await p.chromium.launch(
                 headless=headless,
-                args=["--disable-blink-features=AutomationControlled"],
+                # quiet_args is a no-op when headless=True so this is
+                # safe regardless of caller's preference.
+                args=quiet_args(["--disable-blink-features=AutomationControlled"]),
             )
             try:
                 ctx = await browser.new_context(

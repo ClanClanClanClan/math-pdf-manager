@@ -28,7 +28,8 @@ async def focused_download():
     output_dir.mkdir(exist_ok=True)
     
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=False)
+        from utils.browser_window import quiet_args
+        browser = await p.chromium.launch(headless=False, args=quiet_args())
         page = await browser.new_page()
         
         try:

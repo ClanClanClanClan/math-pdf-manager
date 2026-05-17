@@ -31,7 +31,8 @@ async def actually_download_pdf():
     output_dir.mkdir(exist_ok=True)
     
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=False)
+        from utils.browser_window import quiet_args
+        browser = await p.chromium.launch(headless=False, args=quiet_args())
         context = await browser.new_context()
         page = await context.new_page()
         
