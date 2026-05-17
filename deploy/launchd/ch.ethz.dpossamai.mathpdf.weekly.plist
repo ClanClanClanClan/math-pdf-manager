@@ -24,6 +24,13 @@
         <string>-m</string>
         <string>maintenance.weekly_report</string>
         <string>--no-notify</string>
+        <!-- Auto-apply only the SAFE subset of findings:
+             * single-author Crossref hits at >= 0.95 confidence
+             * working papers that are both >5y old AND marked
+               permanently_unpublished by the state machine.
+             Borderline cases stay in the HTML report and surface
+             in the cockpit Attention Queue for review. -->
+        <string>--auto-apply-safe</string>
     </array>
 
     <key>WorkingDirectory</key>

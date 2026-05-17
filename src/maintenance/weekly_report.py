@@ -49,10 +49,23 @@ def check_publications(
     Each folder is wrapped in a try/except so a single failure (e.g., Crossref
     timeout) doesn't crash the whole maintenance run; the failed folder gets
     an empty result + an entry in ``results['_errors']``.
+
+    Side effect: every Crossref query result is fed through
+    ``processing.publication_state.update_publication_state`` so the
+    per-paper recheck counter advances and papers tip into
+    ``permanently_unpublished`` after enough consecutive misses.  This
+    is what makes the Phase 2 state machine actually run -- without
+    this hook the sidecars would never update.
     """
     from processing.publication_checker import scan_directory
+    from processing.publication_state import update_publication_state
 
-    results: dict = {"unpublished": [], "working": [], "_errors": []}
+    results: dict = {
+        "unpublished": [],
+        "working": [],
+        "newly_permanent": [],
+        "_errors": [],
+    }
 
     for folder_name, key in [
         ("02 - Unpublished papers", "unpublished"),
@@ -67,6 +80,20 @@ def check_publications(
 
         try:
             found = scan_directory(folder, limit=limit, verbose=verbose)
+            # Advance the per-paper state machine over every entry in
+            # ``found`` (hits and misses both).  Errors here don't
+            # abort the report -- they're a soft, optional layer.
+            try:
+                state = update_publication_state(found)
+                results["newly_permanent"].extend(state.newly_permanent)
+                if verbose and state.newly_permanent:
+                    print(
+                        f"  {len(state.newly_permanent)} paper(s) tipped into "
+                        f"permanently_unpublished after this scan"
+                    )
+            except Exception as exc:
+                logger.warning("update_publication_state failed: %s", exc)
+
             published = [r for r in found if r.get("published")]
             results[key] = published
             if verbose:
@@ -238,12 +265,150 @@ def count_to_be_sorted(library_root: Path) -> dict:
     return counts
 
 
+# ---------------------------------------------------------------------------
+# Phase 3: auto-apply only the safe subset of weekly findings
+# ---------------------------------------------------------------------------
+
+# Confidence at or above which a Crossref hit is considered "safe to
+# auto-upgrade".  Borderline matches still appear in the report; the
+# user reviews them via the Upgrade Queue / Attention Queue tabs.
+SAFE_UPGRADE_CONFIDENCE = 0.95
+
+
+def auto_apply_safe_transitions(
+    results: dict,
+    library_root: Path,
+    *,
+    upgrade_confidence_threshold: float = SAFE_UPGRADE_CONFIDENCE,
+    dry_run: bool = False,
+    verbose: bool = False,
+) -> dict:
+    """Auto-execute only the SAFE subset of the weekly maintenance results.
+
+    Two kinds of transitions are considered safe enough to run without
+    user confirmation:
+
+    1. **High-confidence upgrade**: a Crossref hit with confidence at
+       or above ``upgrade_confidence_threshold`` AND exactly one
+       parsed author (multi-author papers carry a real merge risk if
+       the title collides).  These are passed to
+       ``upgrade_to_published.upgrade_paper`` which downloads the
+       published PDF, files it, and moves the preprint to .trash/.
+
+    2. **Aged + permanently unpublished**: working papers older than
+       the aging cutoff whose sidecar says
+       ``permanently_unpublished=True`` (we already tried Crossref
+       three times and failed).  These are moved 03 → 02 via
+       ``aging_checker.transition_aged_papers``.
+
+    Everything else stays in the report and surfaces in the Attention
+    Queue for user review.
+    """
+    summary: dict = {
+        "upgraded": [],
+        "aged_moved": [],
+        "skipped_borderline": [],
+        "errors": [],
+    }
+
+    # -----------------------------------------------------------------
+    # 1. Safe upgrades
+    # -----------------------------------------------------------------
+    pubs = results.get("publications", {})
+    all_hits = list(pubs.get("unpublished", [])) + list(pubs.get("working", []))
+
+    def _is_safe_upgrade(entry: dict) -> bool:
+        match = entry.get("match") or {}
+        conf = float(match.get("confidence", 0))
+        authors = entry.get("parsed_authors") or []
+        return conf >= upgrade_confidence_threshold and len(authors) == 1
+
+    safe_upgrades = [e for e in all_hits if _is_safe_upgrade(e)]
+    borderline = [
+        {"file": e["file"], "reason": "confidence or multi-author below auto-apply threshold"}
+        for e in all_hits if not _is_safe_upgrade(e)
+    ]
+    summary["skipped_borderline"].extend(borderline)
+
+    if safe_upgrades:
+        if verbose:
+            print(f"\nAuto-upgrading {len(safe_upgrades)} safe candidate(s)"
+                  + (" (dry run)" if dry_run else ""))
+        if not dry_run:
+            try:
+                from processing.upgrade_to_published import upgrade_paper
+            except ImportError as exc:
+                summary["errors"].append(f"upgrade module unavailable: {exc}")
+                return summary
+            for entry in safe_upgrades:
+                try:
+                    r = upgrade_paper(entry, library_root, dry_run=False)
+                    if r.get("success"):
+                        summary["upgraded"].append(entry["file"])
+                    else:
+                        summary["skipped_borderline"].append({
+                            "file": entry["file"],
+                            "reason": r.get("error", "upgrade returned no success"),
+                        })
+                except Exception as exc:
+                    summary["errors"].append(f"{entry.get('file')}: {exc}")
+        else:
+            # In dry-run mode we still report what *would* upgrade.
+            for entry in safe_upgrades:
+                summary["upgraded"].append(entry["file"] + "  (WOULD)")
+
+    # -----------------------------------------------------------------
+    # 2. Aged AND permanently_unpublished -> move to 02
+    # -----------------------------------------------------------------
+    aging_candidates = results.get("aging", [])
+    if aging_candidates:
+        try:
+            from processing.identity import PaperIdentity
+            from processing.aging_checker import transition_aged_papers
+        except ImportError as exc:
+            summary["errors"].append(f"aging modules unavailable: {exc}")
+            return summary
+
+        # Only safe to auto-move papers we've already given up on.  A
+        # 6-year-old paper we never Crossref-checked might still get
+        # published next month; we don't want to pre-emptively bury it.
+        safe_age = []
+        for cand in aging_candidates:
+            try:
+                ident = PaperIdentity.load(Path(cand["path"]))
+            except Exception:
+                continue
+            if ident.permanently_unpublished:
+                safe_age.append(cand)
+
+        if safe_age:
+            if verbose:
+                print(f"\nAuto-aging {len(safe_age)} permanent + aged paper(s)"
+                      + (" (dry run)" if dry_run else ""))
+            if not dry_run:
+                age_results = transition_aged_papers(safe_age, dry_run=False)
+                for r in age_results:
+                    if r.get("status") == "MOVED":
+                        summary["aged_moved"].append(r["file"])
+                    elif "ERROR" in (r.get("status") or ""):
+                        summary["errors"].append(
+                            f"aging {r.get('file')}: {r.get('status')}"
+                        )
+            else:
+                for cand in safe_age:
+                    summary["aged_moved"].append(cand["filename"] + "  (WOULD)")
+
+    return summary
+
+
 def run_maintenance(
     library_root: Path = LIBRARY_ROOT,
     *,
     limit: Optional[int] = None,
     skip: Optional[set] = None,
     verbose: bool = False,
+    auto_apply_safe: bool = False,
+    auto_apply_dry_run: bool = False,
 ) -> dict:
     """Run all maintenance checks and return results."""
     skip = skip or set()
@@ -290,6 +455,23 @@ def run_maintenance(
     else:
         results["duplicates"] = []
 
+    # 4. Optional: auto-apply only the safe subset of findings.
+    # Borderline cases stay in the report.
+    if auto_apply_safe:
+        if verbose:
+            print("\n" + "=" * 60)
+            print("AUTO-APPLY SAFE TRANSITIONS"
+                  + (" (DRY RUN)" if auto_apply_dry_run else ""))
+            print("=" * 60)
+        results["auto_applied"] = auto_apply_safe_transitions(
+            results, library_root,
+            dry_run=auto_apply_dry_run, verbose=verbose,
+        )
+    else:
+        results["auto_applied"] = {
+            "upgraded": [], "aged_moved": [], "skipped_borderline": [], "errors": [],
+        }
+
     elapsed = time.time() - t0
     results["elapsed_seconds"] = round(elapsed, 1)
 
@@ -311,6 +493,19 @@ def main(argv: list[str] | None = None) -> None:
                         help="Skip a check")
     parser.add_argument("--report-dir", type=Path, default=REPORT_DIR)
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument(
+        "--auto-apply-safe",
+        action="store_true",
+        help="Auto-execute only the safe subset (single-author Crossref "
+             "hits at confidence >= 0.95 and aged + permanently-unpublished "
+             "papers).  Borderline cases stay in the report.",
+    )
+    parser.add_argument(
+        "--auto-apply-dry-run",
+        action="store_true",
+        help="With --auto-apply-safe, list what would be applied without "
+             "actually moving anything.",
+    )
     parser.add_argument("-v", "--verbose", action="store_true")
     parser.add_argument("--no-notify", action="store_true")
     args = parser.parse_args(argv)
@@ -327,6 +522,8 @@ def main(argv: list[str] | None = None) -> None:
         limit=args.limit,
         skip=set(args.skip),
         verbose=args.verbose,
+        auto_apply_safe=args.auto_apply_safe,
+        auto_apply_dry_run=args.auto_apply_dry_run,
     )
 
     # Generate report. Include time so two runs on the same day don't
@@ -347,6 +544,12 @@ def main(argv: list[str] | None = None) -> None:
     n_dupes = len(results.get("duplicates", []))
 
     summary = f"{n_pub} published, {n_aging} aging, {n_dupes} duplicates"
+    auto = results.get("auto_applied") or {}
+    if auto.get("upgraded") or auto.get("aged_moved"):
+        summary += (
+            f", auto-upgraded {len(auto['upgraded'])}, "
+            f"auto-aged {len(auto['aged_moved'])}"
+        )
     print(f"\nSummary: {summary}")
     print(f"Elapsed: {results.get('elapsed_seconds', 0)}s")
 
