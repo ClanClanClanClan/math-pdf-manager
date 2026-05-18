@@ -51,8 +51,21 @@ def _make_pdf(path: Path) -> Path:
     return path
 
 
-def _hit(path: Path, *, confidence: float, authors: int) -> dict:
-    """Build a publication_checker-shaped 'published' result."""
+def _hit(
+    path: Path,
+    *,
+    confidence: float,
+    authors: int,
+    cr_author_count: int | None = None,
+) -> dict:
+    """Build a publication_checker-shaped 'published' result.
+
+    ``authors`` controls the *parsed_authors* list length (from
+    filename); ``cr_author_count`` controls the *Crossref* author
+    count.  The auto-upgrade selector now requires BOTH to be 1.
+    """
+    if cr_author_count is None:
+        cr_author_count = authors
     return {
         "file": str(path),
         "filename": path.name,
@@ -64,6 +77,7 @@ def _hit(path: Path, *, confidence: float, authors: int) -> dict:
             "confidence": confidence,
             "journal": "Test Journal",
             "year": 2024,
+            "author_count": cr_author_count,
         },
     }
 
@@ -114,6 +128,33 @@ class TestSafeUpgradeSelection:
             summary = auto_apply_safe_transitions(results, lib, dry_run=False)
         assert summary["upgraded"] == []
         up.assert_not_called()
+
+    def test_crossref_says_multi_author_blocks_even_if_filename_single(self, lib):
+        """A multi-author paper filed with only the first author in the
+        filename used to slip past safe-upgrade.  Now blocked by the
+        Crossref author_count check."""
+        pdf = _make_pdf(lib / "02 - Unpublished papers" / "p.pdf")
+        results = {"publications": {"unpublished": [
+            _hit(pdf, confidence=0.99, authors=1, cr_author_count=5),
+        ], "working": []}}
+        with patch("processing.upgrade_to_published.upgrade_paper") as up:
+            summary = auto_apply_safe_transitions(results, lib, dry_run=False)
+        assert summary["upgraded"] == []
+        up.assert_not_called()
+
+    def test_legacy_match_without_author_count_still_safe_when_single(self, lib):
+        """Older cached match dicts have no ``author_count`` key.  Falling
+        back to ``1`` is the safe-by-default behaviour: callers always
+        also pass the parsed-author check so we're not blindly
+        upgrading."""
+        pdf = _make_pdf(lib / "02 - Unpublished papers" / "p.pdf")
+        entry = _hit(pdf, confidence=0.99, authors=1)
+        del entry["match"]["author_count"]
+        results = {"publications": {"unpublished": [entry], "working": []}}
+        with patch("processing.upgrade_to_published.upgrade_paper") as up:
+            up.return_value = {"success": True}
+            summary = auto_apply_safe_transitions(results, lib, dry_run=False)
+        assert summary["upgraded"] == [str(pdf)]
 
     def test_exact_threshold_is_safe(self, lib):
         pdf = _make_pdf(lib / "02 - Unpublished papers" / "p.pdf")

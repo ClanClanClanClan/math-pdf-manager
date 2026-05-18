@@ -280,6 +280,37 @@ class TestMoveAndRename:
         assert sidecar_path(dst).exists()
         assert PaperIdentity.load(dst).arxiv_id == "2401.01234"
 
+    def test_move_repaths_copy_locations(self, tmp_path):
+        """After logged_move, the sidecar's copy_locations must reflect
+        the destination, not the source.  Audit caught this as a real
+        bug -- the topic router would otherwise chase a path that
+        doesn't exist anymore."""
+        from processing.undo_log import logged_move
+        src = _make_pdf(tmp_path / "src.pdf")
+        ident = PaperIdentity()
+        ident.copy_locations = [str(src), "/some/other/copy.pdf"]
+        ident.save(src)
+
+        dst = tmp_path / "subdir" / "dst.pdf"
+        logged_move(src, dst)
+
+        reloaded = PaperIdentity.load(dst)
+        assert str(dst) in reloaded.copy_locations
+        assert str(src) not in reloaded.copy_locations
+        assert "/some/other/copy.pdf" in reloaded.copy_locations  # unrelated entries preserved
+
+    def test_rename_repaths_copy_locations(self, tmp_path):
+        from processing.undo_log import logged_rename
+        old = _make_pdf(tmp_path / "old.pdf")
+        ident = PaperIdentity()
+        ident.copy_locations = [str(old)]
+        ident.save(old)
+
+        new = tmp_path / "new.pdf"
+        logged_rename(old, new)
+        reloaded = PaperIdentity.load(new)
+        assert reloaded.copy_locations == [str(new)]
+
     def test_move_with_undo_log_records_both_ops(self, tmp_path):
         from processing.undo_log import UndoLog
 

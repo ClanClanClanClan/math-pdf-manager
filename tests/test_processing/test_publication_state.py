@@ -215,6 +215,63 @@ class TestListPermanent:
         assert list_permanently_unpublished(tmp_path / "nope") == []
 
 
+class TestListBorderlineMatches:
+
+    def test_finds_borderline_hit(self, tmp_path):
+        from processing.publication_state import list_borderline_matches
+        pdf = _pdf(tmp_path / "p.pdf")
+        ident = PaperIdentity()
+        # One borderline hit recorded
+        ident.record_publication_check(
+            hit=True, source="crossref", confidence=0.85,
+            details={"doi": "10.1/borderline"},
+        )
+        ident.save(pdf)
+        out = list_borderline_matches(tmp_path)
+        assert len(out) == 1
+        assert out[0]["confidence"] == 0.85
+        assert out[0]["doi"] == "10.1/borderline"
+
+    def test_high_confidence_hit_not_borderline(self, tmp_path):
+        from processing.publication_state import list_borderline_matches
+        pdf = _pdf(tmp_path / "p.pdf")
+        ident = PaperIdentity()
+        ident.record_publication_check(
+            hit=True, source="crossref", confidence=0.99,
+        )
+        ident.save(pdf)
+        assert list_borderline_matches(tmp_path) == []
+
+    def test_miss_only_history_not_borderline(self, tmp_path):
+        from processing.publication_state import list_borderline_matches
+        pdf = _pdf(tmp_path / "p.pdf")
+        ident = PaperIdentity()
+        ident.record_publication_check(hit=False, source="crossref")
+        ident.save(pdf)
+        assert list_borderline_matches(tmp_path) == []
+
+    def test_most_recent_hit_wins(self, tmp_path):
+        """If the paper had a strong hit later, it's not borderline anymore."""
+        from processing.publication_state import list_borderline_matches
+        pdf = _pdf(tmp_path / "p.pdf")
+        ident = PaperIdentity()
+        ident.record_publication_check(hit=True, source="crossref", confidence=0.85)
+        ident.record_publication_check(hit=True, source="crossref", confidence=0.97)
+        ident.save(pdf)
+        assert list_borderline_matches(tmp_path) == []
+
+    def test_custom_band(self, tmp_path):
+        from processing.publication_state import list_borderline_matches
+        pdf = _pdf(tmp_path / "p.pdf")
+        ident = PaperIdentity()
+        ident.record_publication_check(hit=True, source="crossref", confidence=0.60)
+        ident.save(pdf)
+        # Default band [0.75, 0.95) excludes 0.60
+        assert list_borderline_matches(tmp_path) == []
+        # Widen the band -> includes it
+        assert len(list_borderline_matches(tmp_path, low=0.50, high=0.95)) == 1
+
+
 class TestResetRecheckState:
 
     def test_clears_flag_and_counter(self, tmp_path):

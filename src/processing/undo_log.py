@@ -275,6 +275,19 @@ def logged_move(
         if undo_log:
             undo_log.record_move(src_sidecar, dst_sidecar)
         shutil.move(str(src_sidecar), str(dst_sidecar))
+        # Rewrite the sidecar's ``copy_locations`` so the recorded
+        # primary path matches the move's destination.  Without this
+        # the sidecar would still claim the paper lives at the OLD
+        # location, leaking lies to the topic router and the
+        # cockpit Activity tab.  Best-effort: failure here logs and
+        # continues since the move itself already succeeded.
+        try:
+            from processing.identity import repath_copy_locations
+            repath_copy_locations(destination, old_path=source, new_path=destination)
+        except Exception as exc:  # pragma: no cover -- defensive
+            logger.warning(
+                "could not repath copy_locations for %s: %s", destination, exc
+            )
 
 
 def logged_copy(
@@ -327,6 +340,14 @@ def logged_rename(
         if undo_log:
             undo_log.record_rename(src_sidecar, dst_sidecar)
         src_sidecar.rename(dst_sidecar)
+        # See logged_move above -- keep copy_locations honest.
+        try:
+            from processing.identity import repath_copy_locations
+            repath_copy_locations(new_path, old_path=old_path, new_path=new_path)
+        except Exception as exc:  # pragma: no cover
+            logger.warning(
+                "could not repath copy_locations for %s: %s", new_path, exc
+            )
 
 
 # ---------------------------------------------------------------------------

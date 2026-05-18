@@ -198,6 +198,11 @@ class CrossrefChecker:
                     "title_score": round(title_score, 3),
                     "author_score": round(author_score, 3),
                     "confidence": round(combined, 3),
+                    # Phase 3 auto-apply needs to know how many authors
+                    # Crossref says the paper has, not just how many
+                    # the filename happens to mention.  Saving the
+                    # count keeps the safe-upgrade selector honest.
+                    "author_count": len(cr_lastnames),
                 }
 
         # Only accept high-confidence matches from real journals

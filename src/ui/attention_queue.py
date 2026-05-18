@@ -211,13 +211,22 @@ def collect_watcher_failures(
         filename = m.group("file")
         reason = m.group("reason").strip()
         ts = m.group("ts").replace(",", ".")
+        # The watcher logs paths as the daemon sees them (relative to
+        # the inbox).  If a user ever runs two daemons with overlapping
+        # inboxes the same basename could appear twice; key on the full
+        # path so they don't collapse into one Attention item.
         key = f"watcher_failure::{filename}"
+        # ...but when the log only carries a basename (older daemon
+        # format) we lose nothing -- the key just falls back to that.
         latest[key] = AttentionItem(
             key=key,
             source="watcher_failure",
             severity=SEVERITY_ERROR if m.group("level") == "ERROR" else SEVERITY_WARNING,
-            title=f"Watcher failed to ingest {filename}",
-            detail=f"Last error: `{reason}`",
+            title=f"Watcher failed to ingest {Path(filename).name}",
+            detail=(
+                f"Path: `{filename}`\n\n"
+                f"Last error: `{reason}`"
+            ),
             created_at=ts,
             payload={"file": filename, "reason": reason},
             actions=[
@@ -331,12 +340,11 @@ _CONFLICT_RE = re.compile(r"conflicted copy", re.IGNORECASE)
 
 def collect_conflict_copies(library_root: Path) -> list[AttentionItem]:
     """Find Dropbox conflict copies in the library."""
+    from processing.identity import iter_pdfs
     items: list[AttentionItem] = []
     if not library_root.exists():
         return items
-    for pdf in library_root.rglob("*.pdf"):
-        if ".trash" in pdf.parts:
-            continue
+    for pdf in iter_pdfs(library_root):
         if not _CONFLICT_RE.search(pdf.name):
             continue
         key = f"conflict::{pdf.relative_to(library_root)}"
@@ -358,6 +366,61 @@ def collect_conflict_copies(library_root: Path) -> list[AttentionItem]:
                     ("Delete conflict copy", "delete_conflict"),
                     ("Dismiss 7d", "dismiss_7d"),
                 ],
+            )
+        )
+    return items
+
+
+def collect_borderline_matches(library_root: Path) -> list[AttentionItem]:
+    """Papers stuck in the 0.75-0.95 confidence band.
+
+    The state machine treats these as hits (so they never tip
+    permanent), but auto-apply ignores them (confidence below 0.95).
+    Without this collector they'd quietly accumulate.  Surface them
+    here with an "Open DOI" action so the user can decide whether to
+    upgrade manually.
+    """
+    try:
+        from processing.publication_state import list_borderline_matches
+    except ImportError as exc:
+        logger.warning("publication_state unavailable: %s", exc)
+        return []
+    try:
+        rows = list_borderline_matches(library_root)
+    except Exception as exc:
+        logger.warning("borderline scan raised: %s", exc)
+        return []
+    items: list[AttentionItem] = []
+    for row in rows:
+        pdf_path = Path(row["path"])
+        conf = row["confidence"]
+        doi = row["doi"]
+        key = f"borderline::{pdf_path.relative_to(library_root)}"
+        actions: list[tuple[str, str]] = []
+        if doi:
+            actions.append(("Open DOI", "open_doi"))
+        actions.extend([
+            ("Reveal in Finder", "reveal_in_finder"),
+            ("Dismiss 30d", "dismiss_30d"),
+        ])
+        items.append(
+            AttentionItem(
+                key=key,
+                source="borderline_match",
+                severity=SEVERITY_INFO,
+                title=f"Borderline match ({conf:.0%}): {pdf_path.stem}",
+                detail=(
+                    f"Path: `{pdf_path}`\n\n"
+                    f"Crossref hit at {conf:.0%} confidence, between the "
+                    f"state-machine threshold (75%) and the auto-upgrade "
+                    f"threshold (95%).  The system kept the paper in the "
+                    f"recheck loop but won't promote it automatically.  "
+                    f"Review the match and trigger upgrade by hand if it's "
+                    f"correct."
+                ),
+                created_at=row.get("last_check_date", ""),
+                payload={"path": str(pdf_path), "doi": doi, "confidence": conf},
+                actions=actions,
             )
         )
     return items
@@ -424,6 +487,7 @@ COLLECTORS: list[tuple[str, Callable[[Path], list[AttentionItem]]]] = [
     ("upgrade_flag", collect_upgrade_flags),
     ("aging", collect_aging_candidates),
     ("conflict_copy", collect_conflict_copies),
+    ("borderline_match", collect_borderline_matches),
     ("permanently_unpublished", collect_permanently_unpublished),
 ]
 

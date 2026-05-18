@@ -65,6 +65,29 @@ def sidecar_path(pdf_path: Path) -> Path:
     return pdf_path.with_suffix(".meta.json")
 
 
+# Case-insensitive PDF glob.  ``Path.rglob("*.pdf")`` is
+# case-sensitive on Linux and case-insensitive on macOS HFS+/APFS by
+# default, but APFS volumes can be configured case-sensitive.  Using a
+# character-class pattern matches both ``.pdf`` and ``.PDF`` everywhere
+# without depending on volume settings.
+PDF_GLOB = "*.[Pp][Dd][Ff]"
+
+
+def iter_pdfs(root: Path):
+    """Yield every PDF under ``root`` (case-insensitive suffix match).
+
+    Skips files under any ``.trash`` directory so library scans don't
+    fold trash entries back into live workflows.  Callers that *want*
+    trash should iterate with ``root.rglob(PDF_GLOB)`` directly.
+    """
+    if not root.exists():
+        return
+    for pdf in root.rglob(PDF_GLOB):
+        if ".trash" in pdf.parts:
+            continue
+        yield pdf
+
+
 def compute_content_hash(pdf_path: Path) -> str:
     """SHA-256 of the first ``HASH_PREFIX_BYTES`` of the file.
 
@@ -317,6 +340,57 @@ def rename_with_sidecar(
     logged_rename(old_path, new_path, undo_log=undo_log)
 
 
+def repath_copy_locations(
+    sidecar_pdf_path: Path,
+    *,
+    old_path: Path,
+    new_path: Path,
+) -> bool:
+    """Swap ``old_path`` → ``new_path`` inside the sidecar's ``copy_locations``.
+
+    Called after every PDF move so the sidecar's recorded copy
+    locations stay in sync with reality.  Returns True if the sidecar
+    actually changed (or False if there was nothing to fix up).
+
+    The caller passes ``sidecar_pdf_path`` (where the sidecar lives
+    NOW, post-move).  We swap ``str(old_path)`` for ``str(new_path)``
+    inside copy_locations and re-save without recomputing the hash.
+    """
+    if not sidecar_path(sidecar_pdf_path).exists():
+        return False
+    identity = load_sidecar(sidecar_pdf_path)
+    if identity.is_new():
+        return False
+    old_str = str(old_path)
+    new_str = str(new_path)
+    if old_str not in identity.copy_locations and new_str in identity.copy_locations:
+        return False
+    changed = False
+    out: list[str] = []
+    seen: set[str] = set()
+    for loc in identity.copy_locations:
+        repl = new_str if loc == old_str else loc
+        if repl in seen:
+            continue  # dedup
+        out.append(repl)
+        seen.add(repl)
+        if repl != loc:
+            changed = True
+    if new_str not in seen:
+        out.append(new_str)
+        changed = True
+    if not changed:
+        return False
+    identity.copy_locations = out
+    identity.save(sidecar_pdf_path, recompute_hash=False)
+    return True
+
+
+# Module-level alias to keep call sites readable: ``load_sidecar(pdf)``
+# is clearer than ``PaperIdentity.load(pdf)`` from outside.
+load_sidecar = PaperIdentity.load
+
+
 # ---------------------------------------------------------------------------
 # Backfill — best-effort sidecar construction for legacy PDFs
 # ---------------------------------------------------------------------------
@@ -376,10 +450,7 @@ def backfill_directory(
         {"scanned": N, "written": M, "skipped": K, "errors": E}
     """
     summary = {"scanned": 0, "written": 0, "skipped": 0, "errors": 0}
-    for pdf in root.rglob("*.pdf"):
-        # Skip the trash — those PDFs are recoverable but not active.
-        if ".trash" in pdf.parts:
-            continue
+    for pdf in iter_pdfs(root):
         summary["scanned"] += 1
         try:
             if backfill_sidecar(pdf, overwrite=overwrite):

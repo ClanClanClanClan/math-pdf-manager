@@ -199,24 +199,33 @@ class FolderRouter:
         # default of 5 years.
         age_cutoff_years = 5
         try:
-            from datetime import datetime as _dt
+            from datetime import date as _date, datetime as _dt
             current_year = _dt.now().year
             paper_year = metadata.get("year")
-            if paper_year:
-                if isinstance(paper_year, str):
-                    stripped = paper_year.strip()
-                    # Require a 4-digit prefix that's a plausible year.
-                    # Rejects "n.d.", "202", "  ", and anything else
-                    # ambiguous; falls through to default routing.
-                    if not (len(stripped) >= 4 and stripped[:4].isdigit()):
-                        raise ValueError(f"unparseable year: {paper_year!r}")
-                    paper_year = int(stripped[:4])
-                if (
-                    isinstance(paper_year, int)
-                    and 1000 <= paper_year <= 9999  # sanity gate against year=202
-                    and (current_year - paper_year) > age_cutoff_years
-                ):
-                    return "unpublished"
+            # Normalise to ``int`` covering the realistic input shapes
+            # we've seen in the wild: ``int``, ``float`` (JSON parsed
+            # 2024.0), ``str`` ("2024", "2024-05-13", "  2024 "),
+            # ``date`` / ``datetime`` objects (BibTeX libraries),
+            # and 1-element ``list`` / ``tuple`` (some API wrappers).
+            if isinstance(paper_year, (list, tuple)) and len(paper_year) == 1:
+                paper_year = paper_year[0]
+            if isinstance(paper_year, (_date, _dt)):
+                paper_year = paper_year.year
+            if isinstance(paper_year, float):
+                paper_year = int(paper_year)
+            if isinstance(paper_year, str):
+                stripped = paper_year.strip()
+                # Require a 4-digit prefix that's a plausible year.
+                # Rejects "n.d.", "202", "  ", "forthcoming", etc.
+                if not (len(stripped) >= 4 and stripped[:4].isdigit()):
+                    raise ValueError(f"unparseable year: {paper_year!r}")
+                paper_year = int(stripped[:4])
+            if (
+                isinstance(paper_year, int)
+                and 1000 <= paper_year <= 9999  # sanity gate against year=202
+                and (current_year - paper_year) > age_cutoff_years
+            ):
+                return "unpublished"
         except (ValueError, TypeError):
             pass  # year unparseable — fall through to default routing
 

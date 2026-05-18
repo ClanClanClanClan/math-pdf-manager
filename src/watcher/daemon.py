@@ -190,12 +190,16 @@ class PDFHandler(FileSystemEventHandler):
                         logger.info("Deleted source: %s", path.name)
             else:
                 error = result.get("error", "Unknown error")
-                logger.warning("Failed to ingest %s: %s", path.name, error)
+                # Log the *full* path so the cockpit Attention Queue
+                # can dedupe across multiple inbox folders that happen
+                # to contain a same-named PDF.  The notification still
+                # uses the short name for readability.
+                logger.warning("Failed to ingest %s: %s", str(path), error)
                 if self.config.notifications:
                     notify("Ingestion Failed", f"{path.name}\n{error}", sound="Basso")
 
         except Exception as exc:
-            logger.error("Error ingesting %s: %s", path.name, exc, exc_info=True)
+            logger.error("Error ingesting %s: %s", str(path), exc, exc_info=True)
             if self.config.notifications:
                 notify("Ingestion Error", f"{path.name}\n{exc}", sound="Basso")
 

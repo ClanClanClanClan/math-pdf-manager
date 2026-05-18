@@ -323,12 +323,19 @@ def render_sort_queue() -> None:
         # Cached per-(title, first 1500 chars) so we don't re-classify on
         # every Streamlit rerun while the user is staring at the same paper.
         topics = _classify_cached(prev.title, prev.first_page_text[:1500])
+        topic_selections: dict[str, bool] = {}
         if topics:
-            st.markdown("**Topic suggestions**")
-            for t in topics[:3]:
-                st.markdown(
-                    f"&nbsp;&nbsp;`{t['topic_code']}` {t['topic_name']} "
-                    f"_(score {t['score']:.1f})_"
+            st.markdown("**Topic copies**")
+            st.caption(
+                "Checked boxes will get hardlinked into the matching `07x` "
+                "folder when you approve.  Pre-checked above score 2.0."
+            )
+            for t in topics[:5]:  # cap at 5 to keep the card compact
+                default = t["score"] >= 2.0
+                topic_selections[t["topic_code"]] = st.checkbox(
+                    f"`{t['topic_code']}` {t['topic_name']} _(score {t['score']:.1f})_",
+                    value=default,
+                    key=f"topic_{pdf}_{t['topic_code']}",
                 )
 
         st.markdown("---")
@@ -357,9 +364,18 @@ def render_sort_queue() -> None:
     cols = st.columns([1, 1, 1, 1, 4])
 
     if cols[0].button("✅ Approve", key=f"approve_{pdf}", type="primary"):
-        ok, msg = _approve_sort(pdf, edited_name, status, lib)
+        # Hand the user's topic checkbox selections through to the
+        # approve flow so they get hardlinked into 07x folders.
+        selected_topics = [
+            code for code, checked in topic_selections.items() if checked
+        ]
+        ok, msg = _approve_sort(pdf, edited_name, status, lib,
+                                topic_codes=selected_topics,
+                                preview=prev)
         if ok:
             st.toast(f"Filed → {destination.relative_to(lib)}")
+            if selected_topics:
+                st.toast(f"Topic links: {', '.join(selected_topics)}")
         else:
             st.toast(f"Failed: {msg}", icon="⚠️")
         st.rerun()
@@ -405,13 +421,28 @@ def _proposed_destination(lib: Path, canonical_name: str, status: str) -> Path:
     return router.route(meta, canonical_name)
 
 
-def _approve_sort(pdf: Path, canonical_name: str, status: str, lib: Path) -> tuple[bool, str]:
+def _approve_sort(
+    pdf: Path,
+    canonical_name: str,
+    status: str,
+    lib: Path,
+    *,
+    topic_codes: Optional[list[str]] = None,
+    preview=None,
+) -> tuple[bool, str]:
     """Actually file the paper. Returns (ok, message).
 
     ``canonical_name`` is what the user saw and approved. It's passed
     through to ``ingest_paper`` as a canonical_override so the user's
     edits are honoured (the pipeline no longer re-derives the name from
     metadata and silently overwrites the user's choice).
+
+    ``topic_codes`` (Phase 4) is the list of 07x codes the user
+    ticked in the topic-copies section.  After the paper lands at its
+    canonical destination, we hardlink it into each requested topic
+    folder as part of the same undo transaction.  ``preview`` carries
+    the title + first-page text for the classifier; pass the same
+    ``PaperPreview`` object the card was rendered from.
     """
     from processing.bulk_sort import sort_one
     from processing.undo_log import UndoLog
@@ -431,17 +462,46 @@ def _approve_sort(pdf: Path, canonical_name: str, status: str, lib: Path) -> tup
             undo_log=undo_log,
             canonical_override=canonical_name,
         )
-        if result.get("ok"):
-            undo_log.commit()
-            _log_activity(
-                "sort.approve",
-                str(pdf.relative_to(lib)),
-                result.get("destination", ""),
-                tx_id,
-            )
-            return True, "ok"
-        else:
+        if not result.get("ok"):
             return False, result.get("error", "unknown")
+
+        # Phase 4: topic-folder hardlinks.  Run BEFORE commit so any
+        # failures land in the same undo transaction and can be
+        # reversed together with the main file move.
+        if topic_codes and result.get("destination"):
+            try:
+                from processing.topic_router import classify_and_link
+                canonical = Path(result["destination"])
+                title = preview.title if preview else ""
+                text = (
+                    preview.first_page_text[:1500]
+                    if preview and preview.first_page_text else ""
+                )
+                routing = classify_and_link(
+                    canonical, lib,
+                    title=title, text=text,
+                    only_codes=topic_codes,
+                    undo_log=undo_log,
+                )
+                if routing.errors:
+                    logger.warning(
+                        "topic routing errors for %s: %s",
+                        canonical, routing.errors,
+                    )
+            except Exception as exc:
+                # A topic-link failure doesn't roll back the file
+                # move; the paper is filed correctly even if the
+                # topic copy didn't go through.
+                logger.warning("topic routing failed: %s", exc)
+
+        undo_log.commit()
+        _log_activity(
+            "sort.approve",
+            str(pdf.relative_to(lib)),
+            result.get("destination", ""),
+            tx_id,
+        )
+        return True, "ok"
     except Exception as exc:
         return False, str(exc)
 
@@ -682,16 +742,30 @@ def _classify_cached(title: str, text_snippet: str) -> list[dict]:
 
 
 @st.cache_data(ttl=60, show_spinner=False)
-def _attention_count_cached(library_str: str) -> int:
-    """Sidebar attention-badge count. TTL = 60s.
+def _gather_attention_cached(library_str: str, include_dismissed: bool) -> list:
+    """Cache the FULL attention list for 60s.
 
-    Every collector globs the library or scans a log; running them on
-    every Streamlit rerun would make the sidebar feel sluggish.  60s
-    is a good compromise: badge updates within a minute, but the user
-    can click into the Attention tab to force a fresh scan.
+    The sidebar count and the Attention tab body both call into this,
+    so without caching every interaction in the tab re-globs the
+    library.  Returning the full list (rather than just the count)
+    means the tab body reuses the same data and stays snappy on a
+    28k-PDF library.
     """
     from ui.attention_queue import gather_attention_items
-    return len(gather_attention_items(Path(library_str)))
+    return gather_attention_items(
+        Path(library_str), include_dismissed=include_dismissed
+    )
+
+
+def _attention_count_cached(library_str: str) -> int:
+    """Thin wrapper that returns the length of the cached attention list."""
+    return len(_gather_attention_cached(library_str, False))
+
+
+# Expose ``.clear()`` for action handlers that want to invalidate the
+# cache after a destructive op (so the sidebar badge updates instantly
+# rather than waiting for the TTL).
+_attention_count_cached.clear = _gather_attention_cached.clear  # type: ignore[attr-defined]
 
 
 @st.cache_data(ttl=300, show_spinner=False)
@@ -826,7 +900,7 @@ def render_attention() -> None:
         "Dismissed items disappear for the snooze window and reappear after."
     )
 
-    lib = _library_root()
+    lib = _library()
     if not lib:
         st.warning("Library root not set — see sidebar.")
         return
@@ -835,7 +909,9 @@ def render_attention() -> None:
     # un-snooze something they hid in haste.
     show_dismissed = st.checkbox("Show dismissed items", value=False)
 
-    items = gather_attention_items(lib, include_dismissed=show_dismissed)
+    # Use the same 60s cache the sidebar count uses so clicking around
+    # the Attention tab doesn't re-glob the library on every rerun.
+    items = _gather_attention_cached(str(lib), show_dismissed)
     if not items:
         st.success("Nothing needs your attention right now. ✓")
         return
@@ -850,6 +926,7 @@ def render_attention() -> None:
         "upgrade_flag": "Manual download requests",
         "aging": "Aging working papers",
         "conflict_copy": "Dropbox conflict copies",
+        "borderline_match": "Borderline Crossref matches",
         "permanently_unpublished": "Marked permanently unpublished",
     }
 

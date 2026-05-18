@@ -320,8 +320,24 @@ def auto_apply_safe_transitions(
     def _is_safe_upgrade(entry: dict) -> bool:
         match = entry.get("match") or {}
         conf = float(match.get("confidence", 0))
-        authors = entry.get("parsed_authors") or []
-        return conf >= upgrade_confidence_threshold and len(authors) == 1
+        if conf < upgrade_confidence_threshold:
+            return False
+        # Single-author check: BOTH the filename parse AND the Crossref
+        # match must agree the paper has exactly one author.  A
+        # multi-author paper filed with only the first author in the
+        # filename (legitimate filing convention) would otherwise
+        # auto-upgrade with a real merge risk if the title collides.
+        parsed_authors = entry.get("parsed_authors") or []
+        if len(parsed_authors) != 1:
+            return False
+        # ``author_count`` is set by publication_checker.py when it
+        # builds the match dict.  Older cached results without it fall
+        # back to ``1`` so we don't break existing pipelines, but a
+        # *non-1* count is a hard block.
+        cr_count = match.get("author_count", 1)
+        if cr_count != 1:
+            return False
+        return True
 
     safe_upgrades = [e for e in all_hits if _is_safe_upgrade(e)]
     borderline = [

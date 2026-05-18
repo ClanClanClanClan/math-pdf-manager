@@ -161,14 +161,59 @@ def update_publication_state(
     return summary
 
 
+def list_borderline_matches(
+    library_root: Path,
+    *,
+    low: float = 0.75,
+    high: float = 0.95,
+) -> list[dict]:
+    """Papers whose most recent Crossref hit sits between ``low`` and ``high``.
+
+    These are the "stuck state" papers identified in the audit: the
+    state machine sees a hit (so it never tips into
+    ``permanently_unpublished``), but ``auto_upgrade_safe`` won't
+    touch them (confidence below threshold).  Without surfacing them
+    here, they'd sit in the queue forever.
+
+    Returns ``[{"path": ..., "confidence": ..., "doi": ...}, ...]``,
+    ordered by most-recent check first.
+    """
+    from processing.identity import iter_pdfs
+    out: list[dict] = []
+    if not library_root.exists():
+        return out
+    for pdf in iter_pdfs(library_root):
+        identity = PaperIdentity.load(pdf)
+        if identity.is_new() or not identity.publication_checks:
+            continue
+        # Walk backwards to find the most recent recorded hit.
+        last_hit = None
+        for entry in reversed(identity.publication_checks):
+            if entry.get("hit"):
+                last_hit = entry
+                break
+        if last_hit is None:
+            continue
+        conf = float(last_hit.get("confidence", 0))
+        if low <= conf < high:
+            details = last_hit.get("details") or {}
+            out.append({
+                "path": str(pdf),
+                "confidence": conf,
+                "doi": details.get("doi", ""),
+                "last_check_date": last_hit.get("date", ""),
+            })
+    out.sort(key=lambda d: d["last_check_date"], reverse=True)
+    return out
+
+
 def list_permanently_unpublished(library_root: Path) -> list[Path]:
     """Walk the library and return every PDF whose sidecar says permanent."""
+    from processing.identity import iter_pdfs
     out: list[Path] = []
     if not library_root.exists():
         return out
-    for pdf in library_root.rglob("*.pdf"):
-        if ".trash" in pdf.parts:
-            continue
+    for pdf in iter_pdfs(library_root):
         identity = PaperIdentity.load(pdf)
         if identity.is_new():
             continue
