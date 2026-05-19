@@ -186,6 +186,15 @@ def list_borderline_matches(
         identity = PaperIdentity.load(pdf)
         if identity.is_new() or not identity.publication_checks:
             continue
+        # Defensive dedup with collect_permanently_unpublished: a
+        # paper marked permanent shouldn't ALSO show up here.  The
+        # current state-machine logic prevents the combination (the
+        # tip-permanent gate requires zero historical hits, and a
+        # borderline IS a hit), but a future relaxation of either
+        # threshold could create the duplicate -- skip permanents
+        # here as a forward-compatibility guard.
+        if identity.permanently_unpublished:
+            continue
         # Walk backwards to find the most recent recorded hit.
         last_hit = None
         for entry in reversed(identity.publication_checks):

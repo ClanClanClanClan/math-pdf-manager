@@ -260,6 +260,18 @@ class TestListBorderlineMatches:
         ident.save(pdf)
         assert list_borderline_matches(tmp_path) == []
 
+    def test_permanently_unpublished_excluded(self, tmp_path):
+        """A paper marked permanent must not also surface as borderline
+        (defensive dedup added in audit-3)."""
+        from processing.publication_state import list_borderline_matches
+        pdf = _pdf(tmp_path / "p.pdf")
+        ident = PaperIdentity(permanently_unpublished=True)
+        ident.record_publication_check(
+            hit=True, source="crossref", confidence=0.85,
+        )
+        ident.save(pdf)
+        assert list_borderline_matches(tmp_path) == []
+
     def test_custom_band(self, tmp_path):
         from processing.publication_state import list_borderline_matches
         pdf = _pdf(tmp_path / "p.pdf")

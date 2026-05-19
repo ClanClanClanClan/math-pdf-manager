@@ -282,8 +282,15 @@ def logged_move(
         # cockpit Activity tab.  Best-effort: failure here logs and
         # continues since the move itself already succeeded.
         try:
-            from processing.identity import repath_copy_locations
+            from processing.identity import repath_copy_locations, repath_topic_copies
             repath_copy_locations(destination, old_path=source, new_path=destination)
+            # If the basename changed, also rename the topic-folder
+            # hardlinks so users browsing 07a/ don't see the old
+            # filename forever.
+            repath_topic_copies(
+                destination, old_path=source, new_path=destination,
+                undo_log=undo_log,
+            )
         except Exception as exc:  # pragma: no cover -- defensive
             logger.warning(
                 "could not repath copy_locations for %s: %s", destination, exc
@@ -340,10 +347,15 @@ def logged_rename(
         if undo_log:
             undo_log.record_rename(src_sidecar, dst_sidecar)
         src_sidecar.rename(dst_sidecar)
-        # See logged_move above -- keep copy_locations honest.
+        # See logged_move above -- keep copy_locations honest AND
+        # rename the topic-folder hardlinks.
         try:
-            from processing.identity import repath_copy_locations
+            from processing.identity import repath_copy_locations, repath_topic_copies
             repath_copy_locations(new_path, old_path=old_path, new_path=new_path)
+            repath_topic_copies(
+                new_path, old_path=old_path, new_path=new_path,
+                undo_log=undo_log,
+            )
         except Exception as exc:  # pragma: no cover
             logger.warning(
                 "could not repath copy_locations for %s: %s", new_path, exc

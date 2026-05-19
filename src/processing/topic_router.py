@@ -224,15 +224,17 @@ def classify_and_link(
                     identity.copy_locations.append(str(dest))
                 if code not in identity.topic_codes:
                     identity.topic_codes.append(code)
+                # Save AFTER each successful link rather than once at
+                # the loop end.  If the process is interrupted
+                # mid-batch the sidecar correctly reflects the
+                # hardlinks that DID land, instead of orphaning them
+                # silently for the next backfill to puzzle over.
+                try:
+                    identity.save(canonical_pdf, recompute_hash=False)
+                except Exception as exc:
+                    result.errors.append(f"sidecar save failed: {exc}")
         except Exception as exc:
             result.errors.append(f"{code}: {exc}")
-
-    # Persist sidecar updates exactly once
-    if not identity.is_new() and not dry_run and (result.linked or result.errors):
-        try:
-            identity.save(canonical_pdf, recompute_hash=False)
-        except Exception as exc:
-            result.errors.append(f"sidecar save failed: {exc}")
 
     return result
 
@@ -241,16 +243,18 @@ def unlink_topic(
     canonical_pdf: Path,
     library_root: Path,
     topic_code: str,
-    *,
-    undo_log=None,  # type: ignore[no-untyped-def]
 ) -> bool:
     """Remove the topic copy of ``canonical_pdf`` from ``topic_code``'s folder.
 
     Returns True if a link was removed, False if it didn't exist.
-    The deletion is recorded as a ``move`` (to /dev/null) in the undo
-    log so the operation appears in the Activity tab -- but undo
-    cannot resurrect a hardlink, only the canonical inode (which
-    wasn't removed by this call) so it's logged as a soft action.
+
+    Note on undo: this function is intentionally NOT undo-log
+    integrated.  The undo_log's primitives (``move``, ``copy``,
+    ``rename``) don't have an op type that means "recreate this
+    hardlink"; the inverse of an unlink is a new hardlink/copy which
+    isn't expressible in the current schema.  If you need to revert
+    an unlink, call ``classify_and_link`` again with
+    ``only_codes=[topic_code]``.
     """
     from processing.identity import PaperIdentity
 

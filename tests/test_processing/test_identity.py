@@ -311,6 +311,62 @@ class TestMoveAndRename:
         reloaded = PaperIdentity.load(new)
         assert reloaded.copy_locations == [str(new)]
 
+    def test_rename_renames_topic_hardlinks(self, tmp_path):
+        """When the canonical's basename changes, topic hardlinks
+        recorded in copy_locations follow along (Phase 4 + audit-3).
+
+        Without this, the user would see the old filename forever
+        in 07a - BSDEs/, while the canonical lives under the new
+        name elsewhere."""
+        import os
+        from processing.undo_log import logged_rename
+
+        canonical = _make_pdf(tmp_path / "old.pdf")
+        topic_folder = tmp_path / "07a - BSDEs"
+        topic_folder.mkdir()
+        topic_link = topic_folder / "old.pdf"
+        os.link(canonical, topic_link)
+
+        ident = PaperIdentity()
+        ident.copy_locations = [str(canonical), str(topic_link)]
+        ident.topic_codes = ["07a"]
+        ident.save(canonical)
+
+        new_canonical = tmp_path / "renamed.pdf"
+        logged_rename(canonical, new_canonical)
+
+        # Topic hardlink should also be renamed in its folder.
+        expected_topic = topic_folder / "renamed.pdf"
+        assert expected_topic.exists()
+        assert not topic_link.exists()
+        reloaded = PaperIdentity.load(new_canonical)
+        assert str(new_canonical) in reloaded.copy_locations
+        assert str(expected_topic) in reloaded.copy_locations
+        assert str(topic_link) not in reloaded.copy_locations
+
+    def test_move_to_different_folder_keeps_topic_basename_in_sync(self, tmp_path):
+        import os
+        from processing.undo_log import logged_move
+
+        canonical = _make_pdf(tmp_path / "src" / "paper.pdf")
+        topic_folder = tmp_path / "07a - BSDEs"
+        topic_folder.mkdir()
+        topic_link = topic_folder / "paper.pdf"
+        os.link(canonical, topic_link)
+
+        ident = PaperIdentity()
+        ident.copy_locations = [str(canonical), str(topic_link)]
+        ident.save(canonical)
+
+        # Move with same basename -> no topic rename needed
+        new = tmp_path / "dst" / "paper.pdf"
+        logged_move(canonical, new)
+        reloaded = PaperIdentity.load(new)
+        # Canonical entry updated, topic entry preserved as-is
+        assert str(new) in reloaded.copy_locations
+        assert str(topic_link) in reloaded.copy_locations
+        assert topic_link.exists()
+
     def test_move_with_undo_log_records_both_ops(self, tmp_path):
         from processing.undo_log import UndoLog
 

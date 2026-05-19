@@ -340,6 +340,79 @@ def rename_with_sidecar(
     logged_rename(old_path, new_path, undo_log=undo_log)
 
 
+def repath_topic_copies(
+    sidecar_pdf_path: Path,
+    *,
+    old_path: Path,
+    new_path: Path,
+    undo_log=None,  # type: ignore[no-untyped-def]
+) -> int:
+    """Rename topic-folder hardlinks to match the new canonical basename.
+
+    When the canonical PDF moves from ``old_path`` to ``new_path``,
+    any topic-folder copies recorded in ``copy_locations`` retain
+    their original directory entries -- POSIX hardlinks are
+    independent of the canonical's pathname.  Their inode is shared
+    but their NAMES diverge from the canonical, so users browsing
+    ``07a - BSDEs/`` would see the paper under the OLD name forever.
+
+    This helper finds every non-canonical entry in copy_locations
+    whose basename matches the OLD canonical, and renames it to the
+    new basename in-place.  The parent directory is preserved (the
+    topic copy stays in its 07x folder).
+
+    Returns the number of topic copies actually renamed.  Failures
+    on individual copies are logged but don't abort the rest.
+    """
+    if not sidecar_path(sidecar_pdf_path).exists():
+        return 0
+    identity = PaperIdentity.load(sidecar_pdf_path)
+    if identity.is_new() or not identity.copy_locations:
+        return 0
+    old_name = old_path.name
+    new_name = new_path.name
+    if old_name == new_name:
+        return 0  # parent changed, basename didn't -- nothing to rename
+    renamed = 0
+    new_locations: list[str] = []
+    new_path_str = str(new_path)
+    for loc in identity.copy_locations:
+        p = Path(loc)
+        # Canonical entry is updated separately by repath_copy_locations.
+        if p == new_path or loc == new_path_str:
+            new_locations.append(loc)
+            continue
+        # Only consider locations whose basename matches the OLD
+        # canonical -- anything else is something we didn't create.
+        if p.name != old_name:
+            new_locations.append(loc)
+            continue
+        new_loc = p.parent / new_name
+        if new_loc.exists():
+            # Collision: keep the old entry, log a warning.  The user
+            # will see two distinct entries (which is honest -- there
+            # ARE two distinct files at that point).
+            logger.warning(
+                "topic-copy rename would collide at %s; leaving %s",
+                new_loc, p,
+            )
+            new_locations.append(loc)
+            continue
+        try:
+            if undo_log is not None:
+                undo_log.record_rename(p, new_loc)
+            p.rename(new_loc)
+            new_locations.append(str(new_loc))
+            renamed += 1
+        except OSError as exc:
+            logger.warning("could not rename topic copy %s: %s", p, exc)
+            new_locations.append(loc)
+    if renamed > 0:
+        identity.copy_locations = new_locations
+        identity.save(sidecar_pdf_path, recompute_hash=False)
+    return renamed
+
+
 def repath_copy_locations(
     sidecar_pdf_path: Path,
     *,
