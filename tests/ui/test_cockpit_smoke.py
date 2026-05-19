@@ -99,11 +99,11 @@ class _StreamlitModule(types.ModuleType):
                     "empty", "popover", "status"}:
             return lambda *a, **kw: _NullCM()
         if name == "rerun":
-            class _StopRerun(BaseException):
-                pass
-            def _r():
-                raise _StopRerun("rerun")
-            return _r
+            # No-op rerun.  Streamlit's real ``rerun`` short-circuits
+            # the script via an internal exception, but for smoke
+            # tests we just want the function to keep going past the
+            # rerun call so we exercise everything below it.
+            return lambda: None
         return lambda *a, **kw: None
 
 
@@ -119,17 +119,38 @@ def st_stub(monkeypatch):
 
 
 class _NullCM:
-    """No-op context manager that swallows every method call."""
+    """No-op context manager that masquerades as a streamlit column.
+
+    Streamlit code does ``cols[1].button("X")`` -- the column object
+    needs to behave like the streamlit module itself for the duration
+    of the call.  We intercept the known UI methods to return their
+    inert defaults (button=False, text_input="", etc.) so the surface
+    behaves predictably under smoke tests; everything else falls
+    through to another _NullCM (still callable, still a context
+    manager) so deeper accesses don't explode.
+    """
     def __enter__(self):
         return self
     def __exit__(self, *exc):
         return False
-    def __getattr__(self, name):
-        return _NullCM()
     def __call__(self, *a, **kw):
         return _NullCM()
     def __iter__(self):
         return iter([])
+    def __getattr__(self, name):
+        # Match the top-level streamlit stub's defaults for the inputs
+        # smoke tests care about.
+        if name in {"button", "checkbox", "toggle", "form_submit_button"}:
+            return lambda *a, **kw: False
+        if name in {"text_input", "text_area"}:
+            return lambda *a, **kw: ""
+        if name in {"number_input", "slider"}:
+            return lambda *a, **kw: 0
+        if name == "selectbox":
+            return lambda label, options=(), *a, **kw: (
+                options[0] if options else None
+            )
+        return _NullCM()
 
 
 # ---------------------------------------------------------------------------
@@ -153,12 +174,58 @@ def test_all_render_functions_exist(st_stub):
         "render_attention",
         "render_sort_queue",
         "render_upgrade_queue",
+        "render_to_download",
         "render_maintenance",
         "render_stats",
         "render_activity",
+        "render_settings",
     ]
     for name in required:
         assert callable(getattr(cockpit, name, None)), f"{name} not defined"
+
+
+def test_render_to_download_does_not_raise(st_stub, tmp_path, monkeypatch):
+    """Phase 5 page: 04/ browser + DOI form."""
+    (tmp_path / "04 - Papers to be downloaded" / "J").mkdir(parents=True)
+    flag = tmp_path / "04 - Papers to be downloaded" / "J" / "p.txt"
+    flag.write_text("DOI: 10.1/x\nURL: https://doi.org/10.1/x\n", encoding="utf-8")
+    monkeypatch.setenv("MATH_LIBRARY", str(tmp_path))
+    import ui.cockpit as cockpit
+    cockpit.render_to_download()
+
+
+def test_render_settings_does_not_raise(st_stub, tmp_path, monkeypatch):
+    """Phase 5 page: config form."""
+    monkeypatch.setenv("MATH_LIBRARY", str(tmp_path))
+    import ui.cockpit as cockpit
+    cockpit.render_settings()
+
+
+def test_render_sort_queue_with_real_pdf_does_not_raise(st_stub, tmp_path, monkeypatch):
+    """Drive render_sort_queue() with a PDF in 12/ to exercise the
+    Phase 4 topic-router integration.  A typo in the topic-checkbox
+    wiring or the classify_and_link call would surface here.
+
+    The stub leaves Approve as ``False`` (default) so no actual filing
+    happens -- this is purely a render-path smoke test.
+    """
+    # Build a synth library with the staging folder and one PDF
+    staging = tmp_path / "12 - To be sorted" / "03 - Working papers"
+    staging.mkdir(parents=True)
+    pdf = staging / "drop.pdf"
+    pdf.write_bytes(
+        b"%PDF-1.4\n"
+        b"1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n"
+        b"2 0 obj\n<< /Type /Pages /Kids [] /Count 0 >>\nendobj\n"
+        b"trailer\n<< /Root 1 0 R >>\n"
+        b"%%EOF\n"
+    )
+    # Topic folders so find_topic_folder has somewhere to discover
+    (tmp_path / "07a - BSDEs").mkdir()
+    monkeypatch.setenv("MATH_LIBRARY", str(tmp_path))
+
+    import ui.cockpit as cockpit
+    cockpit.render_sort_queue()
 
 
 def test_main_does_not_raise(st_stub, tmp_path, monkeypatch):

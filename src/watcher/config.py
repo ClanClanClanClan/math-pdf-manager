@@ -119,3 +119,44 @@ class WatcherConfig:
         """Create inbox and log directories if they don't exist."""
         self.inbox_dir.mkdir(parents=True, exist_ok=True)
         self.log_dir.mkdir(parents=True, exist_ok=True)
+
+    def save(self, path: Optional[Path] = None) -> Path:
+        """Atomically persist this config to YAML.
+
+        If ``path`` is None, writes to the first writable candidate in
+        ``_CONFIG_PATHS`` (creating it if missing).  Atomic write via
+        tmp + rename so a crash mid-write leaves the previous config
+        intact.
+        """
+        target = path
+        if target is None:
+            # Prefer an existing path (the user already chose a
+            # location); otherwise the first candidate that we can
+            # create.
+            for candidate in _CONFIG_PATHS:
+                if candidate.exists():
+                    target = candidate
+                    break
+            if target is None:
+                target = _CONFIG_PATHS[0]
+        target.parent.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "inbox_dir": str(self.inbox_dir),
+            "library_root": str(self.library_root),
+            "log_dir": str(self.log_dir),
+            "default_status": self.default_status,
+            "default_year": (
+                "current" if self.default_year == datetime.now().year
+                else int(self.default_year)
+            ),
+            "auto_classify_topic": bool(self.auto_classify_topic),
+            "settle_seconds": float(self.settle_seconds),
+            "poll_interval": float(self.poll_interval),
+            "delete_source": bool(self.delete_source),
+            "notifications": bool(self.notifications),
+            "notification_sound": self.notification_sound,
+        }
+        tmp = target.with_suffix(target.suffix + ".tmp")
+        tmp.write_text(yaml.safe_dump(payload, sort_keys=True), encoding="utf-8")
+        os.replace(tmp, target)
+        return target

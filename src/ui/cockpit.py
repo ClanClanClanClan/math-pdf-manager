@@ -219,9 +219,11 @@ def render_sidebar() -> None:
                 attention_label,
                 "Sort Queue",
                 "Upgrade Queue",
+                "To Download",
                 "Maintenance",
                 "Stats",
                 "Activity",
+                "Settings",
             ],
             label_visibility="collapsed",
         )
@@ -230,6 +232,35 @@ def render_sidebar() -> None:
         if page.startswith("Attention"):
             page = "Attention"
         st.session_state.page = page
+
+        st.divider()
+        # Phase 5: watcher controls live in the sidebar so they're one
+        # click away from anywhere in the cockpit.  Status is read on
+        # every rerun (it's cheap -- a single launchctl print) so the
+        # badge stays accurate.
+        try:
+            from ui.cockpit_actions import (
+                start_watcher, stop_watcher, watcher_status,
+            )
+            wstatus = watcher_status()
+            if wstatus.get("running"):
+                st.success(
+                    f"Watcher: ON  (pid {wstatus.get('pid') or '?'})"
+                )
+                if st.button("Stop watcher", use_container_width=True,
+                             key="sidebar_stop_watcher"):
+                    ok, msg = stop_watcher()
+                    st.toast(msg)
+                    st.rerun()
+            else:
+                st.warning("Watcher: OFF")
+                if st.button("Start watcher", use_container_width=True,
+                             key="sidebar_start_watcher"):
+                    ok, msg = start_watcher()
+                    st.toast(msg)
+                    st.rerun()
+        except Exception as exc:  # pragma: no cover -- never break the sidebar
+            st.caption(f"Watcher status unavailable: {exc}")
 
         st.divider()
         st.caption(
@@ -666,6 +697,41 @@ def render_maintenance() -> None:
 
     lib = _library()
 
+    # Phase 5: one-click full weekly run (the Monday plist's equivalent)
+    # via the cockpit so users don't need a terminal to trigger it.
+    with st.expander("Full weekly run (subprocess + report)", expanded=False):
+        cols_full = st.columns([2, 2, 1])
+        auto_apply = cols_full[0].checkbox(
+            "Auto-apply safe transitions",
+            value=False,
+            help=(
+                "Single-author Crossref hits at >= 0.95 confidence get "
+                "upgraded; aged + permanently-unpublished get moved to 02."
+            ),
+        )
+        limit = cols_full[1].number_input(
+            "Crossref query limit (0 = no limit)",
+            min_value=0, value=0,
+        )
+        if cols_full[2].button("▶ Run weekly now", key="run_weekly_now"):
+            from ui.cockpit_actions import run_publication_check
+            with st.spinner("Running weekly maintenance (may take a few minutes)..."):
+                out = run_publication_check(
+                    lib,
+                    auto_apply_safe=auto_apply,
+                    limit=(limit or None),
+                )
+            if out.ok:
+                st.success(f"Done.  Report: `{out.report_path}`")
+                if out.summary:
+                    st.session_state.maintenance_results = out.summary
+                _log_activity("maintenance.run_full", str(lib),
+                              out.report_path or "")
+            else:
+                st.error(out.message)
+
+    st.divider()
+
     cols = st.columns(4)
     do_pub = cols[0].checkbox("Publications", value=True)
     do_age = cols[1].checkbox("Aging", value=True)
@@ -1056,6 +1122,149 @@ def render_attention() -> None:
                     st.rerun()
 
 
+# ---------------------------------------------------------------------------
+# Page: To Download (04/ browser + DOI form) -- Phase 5
+# ---------------------------------------------------------------------------
+
+def render_to_download() -> None:
+    """Browse the manual-download queue and download papers by DOI."""
+    from ui.cockpit_actions import (
+        download_doi_to_inbox,
+        list_download_flags,
+        mark_flag_done,
+    )
+    from watcher.config import WatcherConfig
+
+    st.header("⬇ To Download")
+    st.caption(
+        "Papers the upgrade pipeline flagged for manual download, plus a "
+        "one-shot form for resolving a known DOI right now."
+    )
+
+    lib = _library()
+
+    # Inbox is where downloaded PDFs land for the watcher to pick up.
+    try:
+        inbox = WatcherConfig.load().inbox_dir
+    except Exception:
+        inbox = Path.home() / "Downloads" / "MathInbox"
+
+    # --- DOI download form -----------------------------------------
+    with st.container(border=True):
+        st.subheader("Download by DOI")
+        st.caption(f"PDF will be saved to `{inbox}` for the watcher to ingest.")
+        cols = st.columns([4, 1])
+        doi = cols[0].text_input(
+            "DOI or https://doi.org/... URL", key="doi_form_input"
+        )
+        if cols[1].button("Download", key="doi_form_go", type="primary",
+                          use_container_width=True):
+            if not doi.strip():
+                st.warning("Enter a DOI first.")
+            else:
+                with st.spinner("Trying download strategies..."):
+                    result = download_doi_to_inbox(doi.strip(), inbox)
+                if result.ok:
+                    st.success(f"Saved: {result.pdf_path}")
+                    _log_activity("download.doi", doi, result.pdf_path or "")
+                    _attention_count_cached.clear()
+                else:
+                    st.error(result.message)
+
+    # --- Flag browser ---------------------------------------------
+    flags = list_download_flags(lib)
+    st.subheader(f"Manual-download queue ({len(flags)})")
+    if not flags:
+        st.success("Nothing pending — the upgrade pipeline didn't queue anything.")
+        return
+
+    for flag in flags:
+        with st.container(border=True):
+            cols = st.columns([3, 1])
+            with cols[0]:
+                st.markdown(f"**{flag['title']}**")
+                st.caption(f"Journal: {flag['journal']}")
+                if flag["doi"]:
+                    st.code(f"DOI: {flag['doi']}", language=None)
+                with st.expander("Flag body", expanded=False):
+                    st.code(flag["body"], language=None)
+            with cols[1]:
+                if flag["doi"]:
+                    st.link_button(
+                        "Open DOI",
+                        f"https://doi.org/{flag['doi']}",
+                        use_container_width=True,
+                    )
+                if flag["doi"] and st.button(
+                    "Download now", key=f"flag_dl_{flag['flag']}",
+                    use_container_width=True,
+                ):
+                    with st.spinner("Downloading..."):
+                        result = download_doi_to_inbox(flag["doi"], inbox)
+                    if result.ok:
+                        st.toast(f"Saved → {result.pdf_path}")
+                        _log_activity("download.flag", flag["doi"],
+                                      result.pdf_path or "")
+                    else:
+                        st.error(result.message)
+                if st.button(
+                    "Mark done", key=f"flag_done_{flag['flag']}",
+                    use_container_width=True,
+                ):
+                    if mark_flag_done(flag["flag"], lib):
+                        st.toast(f"Cleared flag {flag['flag'].name}")
+                        _attention_count_cached.clear()
+                        st.rerun()
+
+
+# ---------------------------------------------------------------------------
+# Page: Settings (config editor) -- Phase 5
+# ---------------------------------------------------------------------------
+
+def render_settings() -> None:
+    """Form-driven editor for the watcher config + Unpaywall email."""
+    from ui.cockpit_actions import (
+        EDITABLE_CONFIG_KEYS,
+        load_cockpit_config,
+        save_cockpit_config,
+    )
+
+    st.header("⚙ Settings")
+    st.caption(
+        "Persists watcher config to YAML.  ``UNPAYWALL_EMAIL`` is an "
+        "environment variable -- the cockpit prints the export line so you "
+        "can paste it into your shell rc."
+    )
+
+    current = load_cockpit_config()
+    with st.form(key="settings_form"):
+        new_values: dict = {}
+        for key, label, kind in EDITABLE_CONFIG_KEYS:
+            cur = current.get(key, "")
+            if kind is bool:
+                new_values[key] = st.checkbox(label, value=bool(cur), key=f"set_{key}")
+            elif kind is float:
+                try:
+                    fcur = float(cur) if cur != "" else 0.0
+                except (TypeError, ValueError):
+                    fcur = 0.0
+                new_values[key] = st.number_input(
+                    label, value=fcur, step=0.5, key=f"set_{key}",
+                )
+            else:
+                new_values[key] = st.text_input(
+                    label, value=str(cur), key=f"set_{key}",
+                )
+        submitted = st.form_submit_button("Save", type="primary")
+    if submitted:
+        ok, msg = save_cockpit_config(new_values)
+        if ok:
+            st.success(msg)
+            _log_activity("settings.save", "", "")
+        else:
+            st.error(msg)
+
+
 def main() -> None:
     _init_state()
     render_sidebar()
@@ -1067,12 +1276,16 @@ def main() -> None:
         render_sort_queue()
     elif page == "Upgrade Queue":
         render_upgrade_queue()
+    elif page == "To Download":
+        render_to_download()
     elif page == "Maintenance":
         render_maintenance()
     elif page == "Stats":
         render_stats()
     elif page == "Activity":
         render_activity()
+    elif page == "Settings":
+        render_settings()
 
 
 main()
