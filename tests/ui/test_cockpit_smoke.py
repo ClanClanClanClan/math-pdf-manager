@@ -175,6 +175,7 @@ def test_all_render_functions_exist(st_stub):
         "render_sort_queue",
         "render_upgrade_queue",
         "render_to_download",
+        "render_conflicts",
         "render_maintenance",
         "render_stats",
         "render_activity",
@@ -199,6 +200,24 @@ def test_render_settings_does_not_raise(st_stub, tmp_path, monkeypatch):
     monkeypatch.setenv("MATH_LIBRARY", str(tmp_path))
     import ui.cockpit as cockpit
     cockpit.render_settings()
+
+
+def test_render_conflicts_does_not_raise(st_stub, tmp_path, monkeypatch):
+    """Phase 6 page: conflict-copy diff/decide.  Should render the
+    'no conflicts' success state on an empty library, and the
+    per-conflict cards when a real conflict pair is present."""
+    monkeypatch.setenv("MATH_LIBRARY", str(tmp_path))
+    import ui.cockpit as cockpit
+
+    # Empty library -> success state
+    cockpit.render_conflicts()
+
+    # One conflict + canonical pair -> renders the diff card
+    (tmp_path / "Foo.pdf").write_bytes(b"%PDF-1.4 a")
+    (tmp_path / "Foo (conflicted copy 2024-05-13).pdf").write_bytes(
+        b"%PDF-1.4 a"
+    )
+    cockpit.render_conflicts()
 
 
 def test_render_sort_queue_with_real_pdf_does_not_raise(st_stub, tmp_path, monkeypatch):
