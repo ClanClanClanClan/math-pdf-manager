@@ -355,7 +355,15 @@ class DOIDownloader:
         Strategy order: fast/free first, slow/browser-based last.
         """
         output_dir.mkdir(parents=True, exist_ok=True)
-        safe_doi = re.sub(r"[/\\:]", "_", doi)
+        # Whitelist alphanumerics + a small set of safe punctuation.
+        # DOIs are user-supplied strings and shouldn't be trusted to
+        # only contain `/` `\` `:` -- semicolons, ampersands, pipes,
+        # backticks, $() and quoted substrings are all valid Unicode
+        # but produce confusing filenames and shell hazards if the
+        # path is ever passed unquoted (it isn't today, but
+        # defence-in-depth).  Collapses runs of unsafe chars to a
+        # single underscore so the result stays readable.
+        safe_doi = re.sub(r"[^A-Za-z0-9._-]+", "_", doi).strip("_") or "doi"
         output_path = output_dir / f"{safe_doi}.pdf"
 
         # Ordered: fast/free → publisher-specific → cached sessions → browser

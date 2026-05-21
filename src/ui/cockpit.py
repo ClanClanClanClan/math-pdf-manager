@@ -220,6 +220,7 @@ def render_sidebar() -> None:
                 "Sort Queue",
                 "Upgrade Queue",
                 "To Download",
+                "Conflicts",
                 "Maintenance",
                 "Stats",
                 "Activity",
@@ -239,10 +240,8 @@ def render_sidebar() -> None:
         # every rerun (it's cheap -- a single launchctl print) so the
         # badge stays accurate.
         try:
-            from ui.cockpit_actions import (
-                start_watcher, stop_watcher, watcher_status,
-            )
-            wstatus = watcher_status()
+            from ui.cockpit_actions import start_watcher, stop_watcher
+            wstatus = _watcher_status_cached()
             if wstatus.get("running"):
                 st.success(
                     f"Watcher: ON  (pid {wstatus.get('pid') or '?'})"
@@ -251,6 +250,9 @@ def render_sidebar() -> None:
                              key="sidebar_stop_watcher"):
                     ok, msg = stop_watcher()
                     st.toast(msg)
+                    # Invalidate the cache so the badge flips
+                    # immediately rather than after the 10s TTL.
+                    _watcher_status_cached.clear()
                     st.rerun()
             else:
                 st.warning("Watcher: OFF")
@@ -258,6 +260,7 @@ def render_sidebar() -> None:
                              key="sidebar_start_watcher"):
                     ok, msg = start_watcher()
                     st.toast(msg)
+                    _watcher_status_cached.clear()
                     st.rerun()
         except Exception as exc:  # pragma: no cover -- never break the sidebar
             st.caption(f"Watcher status unavailable: {exc}")
@@ -407,6 +410,14 @@ def render_sort_queue() -> None:
             st.toast(f"Filed → {destination.relative_to(lib)}")
             if selected_topics:
                 st.toast(f"Topic links: {', '.join(selected_topics)}")
+            # Surface topic-router warnings (e.g. sidecar save failed,
+            # folder missing, collision) so they don't get swallowed
+            # silently.  The Sort Queue card rendered the topic
+            # suggestions so the user is already invested in seeing
+            # the outcome.
+            topic_errors = st.session_state.pop("last_topic_errors", None)
+            if topic_errors:
+                st.warning("Topic routing notes:\n  - " + "\n  - ".join(topic_errors))
         else:
             st.toast(f"Failed: {msg}", icon="⚠️")
         st.rerun()
@@ -519,6 +530,14 @@ def _approve_sort(
                         "topic routing errors for %s: %s",
                         canonical, routing.errors,
                     )
+                    # Stash for the cockpit render path to surface
+                    # to the user -- silent log lines aren't enough
+                    # when a user just asked us to file a paper.
+                    st.session_state["last_topic_errors"] = routing.errors
+                if routing.skipped:
+                    st.session_state.setdefault(
+                        "last_topic_errors", []
+                    ).extend(routing.skipped)
             except Exception as exc:
                 # A topic-link failure doesn't roll back the file
                 # move; the paper is filed correctly even if the
@@ -805,6 +824,20 @@ def _classify_cached(title: str, text_snippet: str) -> list[dict]:
     except Exception as exc:
         logger.debug("topic classify failed: %s", exc)
         return []
+
+
+@st.cache_data(ttl=10, show_spinner=False)
+def _watcher_status_cached() -> dict:
+    """Cache ``launchctl print`` output for 10s.
+
+    The sidebar re-renders on every Streamlit interaction and the
+    subprocess spawn is ~50-100ms.  10s is short enough that a user
+    who just clicked Start sees the new state on the next rerun, but
+    long enough that clicking other buttons doesn't pay the
+    subprocess cost each time.
+    """
+    from ui.cockpit_actions import watcher_status
+    return watcher_status()
 
 
 @st.cache_data(ttl=60, show_spinner=False)
@@ -1205,6 +1238,13 @@ def render_to_download() -> None:
                         st.toast(f"Saved → {result.pdf_path}")
                         _log_activity("download.flag", flag["doi"],
                                       result.pdf_path or "")
+                        # Auto-clear the flag now that the download
+                        # succeeded -- otherwise the user has to click
+                        # Mark done as a separate step and the
+                        # Attention badge stays stuck on this item.
+                        if mark_flag_done(flag["flag"], lib):
+                            _attention_count_cached.clear()
+                        st.rerun()
                     else:
                         st.error(result.message)
                 if st.button(
@@ -1265,6 +1305,109 @@ def render_settings() -> None:
             st.error(msg)
 
 
+# ---------------------------------------------------------------------------
+# Page: Conflicts (Phase 6 -- Dropbox conflict-copy diff/decide)
+# ---------------------------------------------------------------------------
+
+def render_conflicts() -> None:
+    """Side-by-side conflict-copy resolver."""
+    from processing.conflict_resolver import (
+        resolve_keep_both,
+        resolve_keep_canonical,
+        resolve_keep_conflict,
+        scan_conflicts,
+    )
+    from processing.undo_log import UndoLog
+
+    st.header("🌪 Conflicts")
+    st.caption(
+        "Dropbox conflict copies, paired with their canonical for "
+        "side-by-side comparison.  Every resolution goes through the "
+        "undo log so the Activity tab can reverse it."
+    )
+
+    lib = _library()
+    conflicts = scan_conflicts(lib)
+    if not conflicts:
+        st.success("No conflict copies detected. ✓")
+        return
+
+    st.caption(f"{len(conflicts)} conflict(s) found")
+    for c in conflicts:
+        with st.container(border=True):
+            conflict_p = Path(c.conflict)
+            canonical_p = Path(c.canonical) if c.canonical else None
+            st.markdown(f"**{conflict_p.name}**")
+            cols = st.columns(2)
+            with cols[0]:
+                st.markdown("**Conflict copy**")
+                st.code(str(conflict_p.relative_to(lib)), language=None)
+                st.caption(
+                    f"size: {c.conflict_size:,} bytes · "
+                    f"pages: {c.conflict_pages if c.conflict_pages is not None else '?'} · "
+                    f"mtime: {c.conflict_mtime}"
+                )
+            with cols[1]:
+                st.markdown("**Canonical**")
+                if canonical_p:
+                    st.code(str(canonical_p.relative_to(lib)), language=None)
+                    if c.canonical_exists:
+                        st.caption(
+                            f"size: {c.canonical_size:,} bytes · "
+                            f"pages: {c.canonical_pages if c.canonical_pages is not None else '?'} · "
+                            f"mtime: {c.canonical_mtime}"
+                        )
+                    else:
+                        st.warning("Canonical does not exist on disk.")
+                else:
+                    st.warning("Could not derive a canonical filename.")
+
+            # Heuristic hint -- nudges the user without removing
+            # agency.
+            if c.notes:
+                st.info(" ".join(c.notes))
+            suggested = c.suggested
+
+            def _do(verb: str, fn, *args, **kwargs):
+                undo_log = UndoLog()
+                tx_id = undo_log.begin_transaction(f"conflict {verb}: {conflict_p.name}")
+                ok, msg = fn(*args, undo_log=undo_log, **kwargs)
+                if ok:
+                    undo_log.commit()
+                    st.toast(msg)
+                    _log_activity(f"conflict.{verb}", str(conflict_p.relative_to(lib)),
+                                  msg, tx_id)
+                    _attention_count_cached.clear()
+                else:
+                    st.error(msg)
+                st.rerun()
+
+            act_cols = st.columns(4)
+            kc_label = "Keep canonical" + (" ⭐" if suggested == "keep_canonical" else "")
+            kf_label = "Keep conflict" + (" ⭐" if suggested == "keep_conflict" else "")
+            if act_cols[0].button(
+                kc_label, key=f"kc_{c.conflict}", use_container_width=True
+            ):
+                _do("keep_canonical", resolve_keep_canonical, conflict_p, lib)
+            if act_cols[1].button(
+                kf_label, key=f"kf_{c.conflict}", use_container_width=True
+            ):
+                _do("keep_conflict", resolve_keep_conflict, conflict_p, lib,
+                    canonical=canonical_p)
+            if act_cols[2].button(
+                "Keep both (rename -v2)",
+                key=f"kb_{c.conflict}", use_container_width=True
+            ):
+                _do("keep_both", resolve_keep_both, conflict_p, lib)
+            if act_cols[3].button(
+                "Open both", key=f"open_{c.conflict}", use_container_width=True
+            ):
+                import subprocess as _sp
+                _sp.run(["open", str(conflict_p)], capture_output=True)
+                if canonical_p and canonical_p.exists():
+                    _sp.run(["open", str(canonical_p)], capture_output=True)
+
+
 def main() -> None:
     _init_state()
     render_sidebar()
@@ -1278,6 +1421,8 @@ def main() -> None:
         render_upgrade_queue()
     elif page == "To Download":
         render_to_download()
+    elif page == "Conflicts":
+        render_conflicts()
     elif page == "Maintenance":
         render_maintenance()
     elif page == "Stats":

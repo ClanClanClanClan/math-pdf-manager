@@ -20,8 +20,10 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 import shutil
 import subprocess
+import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Optional
@@ -140,16 +142,17 @@ def watcher_status() -> dict:
                     "raw": line,
                 }
         return {"running": False, "pid": None, "raw": "not loaded"}
-    # Parse `print` output: look for "pid = NNN" and "state = running"
-    pid = None
+    # Parse `print` output: look for "pid = NNN" and "state = running".
+    # Use a regex match for the pid so trailing tokens (rare but
+    # possible across launchctl versions) don't break parsing.
+    pid: Optional[int] = None
     running = False
     for line in raw.splitlines():
         s = line.strip()
         if s.startswith("pid ="):
-            try:
-                pid = int(s.split("=", 1)[1].strip())
-            except ValueError:
-                pass
+            m = re.search(r"\d+", s)
+            if m:
+                pid = int(m.group())
         if s.startswith("state ="):
             running = "running" in s
     return {"running": running, "pid": pid, "raw": raw}
@@ -219,8 +222,11 @@ def run_publication_check(
     Returns the JSON report's path so the cockpit can load it into
     the Upgrade Queue without making the user paste the path by hand.
     """
+    # Use ``sys.executable`` so pyenv / conda / uv users keep their
+    # active interpreter (and its installed deps) instead of falling
+    # back to whatever ``python3`` happens to be first on PATH.
     cmd = [
-        "python3", "-m", "maintenance.weekly_report",
+        sys.executable, "-m", "maintenance.weekly_report",
         "--library", str(library_root),
         "--no-notify",
     ]
