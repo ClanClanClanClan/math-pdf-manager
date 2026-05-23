@@ -243,6 +243,35 @@ class TestUnlinkTopic:
 
 class TestUndoIntegration:
 
+    def test_undo_also_cleans_sidecar_copy_locations(self, library_with_topics):
+        """Audit-5 #1: after undoing a topic-link transaction, the
+        canonical's sidecar must no longer advertise the dead link."""
+        from processing.undo_log import UndoLog
+        pdf = _make_pdf(library_with_topics / "p.pdf")
+        PaperIdentity().save(pdf)
+
+        log = UndoLog(log_dir=library_with_topics / ".ops")
+        tx_id = log.begin_transaction("link then undo")
+        classify_and_link(
+            pdf, library_with_topics,
+            title="BSDE methods",
+            only_codes=["07a"],
+            undo_log=log,
+        )
+        log.commit()
+
+        # Sanity: sidecar has the link
+        ident = PaperIdentity.load(pdf)
+        assert any("07a" in loc for loc in ident.copy_locations)
+        assert "07a" in ident.topic_codes
+
+        # Undo and re-read
+        log.undo_transaction(tx_id)
+        reloaded = PaperIdentity.load(pdf)
+        # The dead link entry is gone; only the canonical remains.
+        assert all("07a" not in loc for loc in reloaded.copy_locations)
+        assert "07a" not in reloaded.topic_codes
+
     def test_undo_removes_hardlinks(self, library_with_topics):
         from processing.undo_log import UndoLog
         pdf = _make_pdf(library_with_topics / "p.pdf")

@@ -167,6 +167,36 @@ class UndoLog:
                     if dst.exists():
                         dst.unlink()
                         results.append({"action": f"DELETED COPY: {dst}"})
+                        # When the undone copy was a topic-router
+                        # hardlink, the canonical's sidecar still
+                        # advertises the now-dead path in
+                        # ``copy_locations`` (and probably has the
+                        # topic code in ``topic_codes``).  Walk back to
+                        # the canonical (the original ``src`` of the
+                        # copy op) and clean up so the sidecar matches
+                        # filesystem reality.  Best-effort: a missing
+                        # canonical sidecar is logged and skipped.
+                        try:
+                            from processing.identity import remove_dead_location
+                            if src.exists():
+                                # Topic code is the prefix of the
+                                # destination's parent (e.g.
+                                # "07a - BSDEs" -> "07a").
+                                parent_name = dst.parent.name
+                                topic_code = (
+                                    parent_name.split(" ", 1)[0]
+                                    if " " in parent_name
+                                    else None
+                                )
+                                remove_dead_location(
+                                    src, dst,
+                                    also_remove_topic_code=topic_code,
+                                )
+                        except Exception as exc:  # pragma: no cover
+                            logger.warning(
+                                "could not clean dead location %s "
+                                "from %s sidecar: %s", dst, src, exc,
+                            )
                     else:
                         results.append({"action": f"SKIP: copy already gone: {dst}"})
 

@@ -1304,6 +1304,71 @@ def render_settings() -> None:
         else:
             st.error(msg)
 
+    st.divider()
+
+    # Library-wide identity-sidecar tools.  Backfill is the
+    # one-shot bootstrap for the existing 28k papers (Phase 2's state
+    # machine has nothing to chew on until sidecars exist for the
+    # corpus).  Verify runs drift_check against every PDF so the
+    # user can catch Dropbox resync corruption.
+    lib = _library()
+    st.subheader("Identity sidecars")
+    st.caption(
+        f"Library: `{lib}`.  Backfill creates a minimal `.meta.json` "
+        f"sidecar next to every PDF that doesn't have one yet.  Verify "
+        f"recomputes the content hash and reports drift."
+    )
+    bf_cols = st.columns([1, 1, 2])
+    bf_limit = bf_cols[2].number_input(
+        "Limit (0 = no cap)", min_value=0, value=0, key="bf_limit",
+    )
+    if bf_cols[0].button("Backfill sidecars", key="bf_run",
+                         use_container_width=True):
+        from processing.identity import backfill_directory
+        with st.spinner("Walking the library..."):
+            summary = backfill_directory(
+                lib, limit=(bf_limit or None), verbose=False,
+            )
+        st.success(
+            f"Scanned {summary['scanned']} · wrote {summary['written']} · "
+            f"skipped {summary['skipped']} · errors {summary['errors']}"
+        )
+        _log_activity("settings.backfill", str(lib),
+                      f"wrote={summary['written']}")
+    if bf_cols[1].button("Verify sidecars", key="bf_verify",
+                         use_container_width=True):
+        from processing.identity import verify_all_sidecars
+        with st.spinner("Verifying every sidecar (reads 1MB per PDF)..."):
+            summary = verify_all_sidecars(lib, limit=(bf_limit or None))
+        st.success(
+            f"Scanned {summary['scanned']} · "
+            f"drifted {len(summary['drifted'])} · "
+            f"missing sidecar {len(summary['missing_sidecar'])} · "
+            f"errors {len(summary['errors'])}"
+        )
+        if summary["drifted"]:
+            with st.expander(f"{len(summary['drifted'])} drifted PDF(s)",
+                             expanded=True):
+                for d in summary["drifted"][:50]:
+                    st.markdown(
+                        f"- `{Path(d['pdf']).relative_to(lib)}` — {d['reason']}"
+                    )
+                if len(summary["drifted"]) > 50:
+                    st.caption(f"... and {len(summary['drifted']) - 50} more")
+        if summary["missing_sidecar"]:
+            with st.expander(
+                f"{len(summary['missing_sidecar'])} PDF(s) without a sidecar",
+                expanded=False,
+            ):
+                for p in summary["missing_sidecar"][:50]:
+                    st.markdown(f"- `{Path(p).relative_to(lib)}`")
+                if len(summary["missing_sidecar"]) > 50:
+                    st.caption(
+                        f"... and {len(summary['missing_sidecar']) - 50} more"
+                    )
+        _log_activity("settings.verify", str(lib),
+                      f"drifted={len(summary['drifted'])}")
+
 
 # ---------------------------------------------------------------------------
 # Page: Conflicts (Phase 6 -- Dropbox conflict-copy diff/decide)

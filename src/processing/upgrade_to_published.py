@@ -271,6 +271,55 @@ def upgrade_paper(
             )
 
             if ingest_result["success"]:
+                # Bridge the preprint's publication-state history
+                # into the newly-filed published sidecar BEFORE the
+                # preprint moves to .trash.  Without this the
+                # published version starts with an empty history and
+                # we lose the trail of "we found this paper because
+                # we kept checking the preprint for X months".
+                try:
+                    from processing.identity import PaperIdentity, sidecar_path as _scp
+                    if (
+                        preprint_path.exists()
+                        and _scp(preprint_path).exists()
+                        and ingest_result.get("destination")
+                    ):
+                        new_canonical = Path(ingest_result["destination"])
+                        old_ident = PaperIdentity.load(preprint_path)
+                        new_ident = PaperIdentity.load(new_canonical)
+                        if not old_ident.is_new() and not new_ident.is_new():
+                            # Preserve the preprint's lineage on the
+                            # new sidecar.  DOI/arxiv_id stay on the
+                            # new one (came from the published file);
+                            # everything else is history we want.
+                            if old_ident.publication_checks:
+                                new_ident.publication_checks = (
+                                    list(old_ident.publication_checks)
+                                    + list(new_ident.publication_checks)
+                                )
+                            if old_ident.first_ingested_at:
+                                # Preserve the EARLIEST timestamp -- the
+                                # preprint was in the library first.
+                                if (not new_ident.first_ingested_at
+                                        or old_ident.first_ingested_at < new_ident.first_ingested_at):
+                                    new_ident.first_ingested_at = old_ident.first_ingested_at
+                            for code in old_ident.topic_codes:
+                                if code not in new_ident.topic_codes:
+                                    new_ident.topic_codes.append(code)
+                            # Reset the recheck machinery: the paper
+                            # IS published now, no further Crossref
+                            # checks needed.  recheck_count=0 +
+                            # permanently_unpublished=False is the
+                            # accurate state.
+                            new_ident.recheck_count = 0
+                            new_ident.permanently_unpublished = False
+                            new_ident.save(new_canonical, recompute_hash=False)
+                except Exception as exc:
+                    logger.warning(
+                        "could not bridge preprint sidecar history: %s",
+                        exc,
+                    )
+
                 # Compare file sizes
                 pub_size = published_pdf.stat().st_size
                 pre_size = preprint_path.stat().st_size if preprint_path.exists() else 0

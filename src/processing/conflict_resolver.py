@@ -190,6 +190,56 @@ def resolve_keep_canonical(
     return True, f"moved to {dest.relative_to(library_root)}"
 
 
+def _merge_sidecars(loser: "PaperIdentity", winner: "PaperIdentity") -> bool:
+    """Fold ``loser``'s knowledge into ``winner`` without overwriting.
+
+    Used when keep_conflict promotes the conflict's sidecar to the
+    canonical slot but the OLD canonical also had a sidecar we don't
+    want to lose entirely.  We:
+
+    * Keep the *winner*'s DOI/arxiv when present, fill in from loser
+      otherwise.
+    * Concatenate ``publication_checks`` (winner's older entries
+      first, loser's appended).
+    * Sum ``recheck_count``.  Conservative but accurate -- both
+      counters reflect real wasted lookups.
+    * OR ``permanently_unpublished`` (sticky).
+    * Union ``topic_codes`` and ``copy_locations``.
+    * Keep the EARLIEST ``first_ingested_at``.
+
+    Returns True if anything actually changed.
+    """
+    changed = False
+    if not winner.doi and loser.doi:
+        winner.doi = loser.doi
+        changed = True
+    if not winner.arxiv_id and loser.arxiv_id:
+        winner.arxiv_id = loser.arxiv_id
+        changed = True
+    if loser.publication_checks:
+        winner.publication_checks = list(loser.publication_checks) + list(winner.publication_checks)
+        changed = True
+    if loser.recheck_count:
+        winner.recheck_count = (winner.recheck_count or 0) + loser.recheck_count
+        changed = True
+    if loser.permanently_unpublished and not winner.permanently_unpublished:
+        winner.permanently_unpublished = True
+        changed = True
+    for code in loser.topic_codes:
+        if code not in winner.topic_codes:
+            winner.topic_codes.append(code)
+            changed = True
+    for loc in loser.copy_locations:
+        if loc not in winner.copy_locations:
+            winner.copy_locations.append(loc)
+            changed = True
+    if loser.first_ingested_at:
+        if not winner.first_ingested_at or loser.first_ingested_at < winner.first_ingested_at:
+            winner.first_ingested_at = loser.first_ingested_at
+            changed = True
+    return changed
+
+
 def resolve_keep_conflict(
     conflict: Path,
     library_root: Path,
@@ -203,7 +253,14 @@ def resolve_keep_conflict(
     so the user can recover it.  Then the conflict is renamed to the
     canonical path.  Both ops go through ``logged_move`` so a single
     undo restores the prior state.
+
+    If BOTH files carry sidecars (each was ingested separately at
+    some point), the canonical's sidecar history is merged into the
+    promoted sidecar before the canonical is retired -- otherwise the
+    historical ``publication_checks`` of the slot the user kept would
+    be lost.
     """
+    from processing.identity import PaperIdentity, sidecar_path
     from processing.undo_log import logged_move
 
     if canonical is None:
@@ -213,6 +270,26 @@ def resolve_keep_conflict(
 
     trash = library_root / ".trash" / "conflict_copies"
     trash.mkdir(parents=True, exist_ok=True)
+
+    # Step 0 (optional): merge sidecars so the canonical's
+    # publication-check history survives the swap.  We mutate the
+    # conflict's sidecar in place; logged_move will then carry the
+    # enriched sidecar with the promoted file.
+    if canonical.exists() and sidecar_path(canonical).exists() and sidecar_path(conflict).exists():
+        try:
+            promoted = PaperIdentity.load(conflict)
+            retiring = PaperIdentity.load(canonical)
+            if _merge_sidecars(retiring, promoted):
+                promoted.save(conflict, recompute_hash=False)
+                logger.info(
+                    "merged canonical sidecar into conflict's sidecar "
+                    "before promotion: %s",
+                    canonical,
+                )
+        except Exception as exc:
+            # Don't abort -- worst case the old history goes to .trash
+            # with the retiring sidecar, recoverable.
+            logger.warning("sidecar merge failed: %s", exc)
 
     # Step 1: shove the old canonical aside if it exists.
     if canonical.exists():

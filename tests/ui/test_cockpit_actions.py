@@ -337,11 +337,45 @@ class TestConfigEditor:
         # the candidate list at a non-existent path.
         import watcher.config as wc
         monkeypatch.setattr(wc, "_CONFIG_PATHS", [tmp_path / "watcher.yaml"])
+        # The new library_root must exist on disk before save so the
+        # audit-5 validation gate doesn't reject it.
+        newlib = tmp_path / "newlib"
+        newlib.mkdir()
         ok, msg = save_cockpit_config({
-            "library_root": str(tmp_path / "newlib"),
+            "library_root": str(newlib),
             "default_status": "published",
         })
         assert ok, msg
         reloaded = WatcherConfig.load(tmp_path / "watcher.yaml")
         assert reloaded.default_status == "published"
-        assert reloaded.library_root == (tmp_path / "newlib")
+        assert reloaded.library_root == newlib
+
+    def test_save_rejects_nonexistent_library_root(self, tmp_path, monkeypatch):
+        """Audit-5 #8: a typo in the library_root field used to silently
+        write garbage that broke every subsequent operation.  The
+        validation gate now bounces the form before the save."""
+        import watcher.config as wc
+        monkeypatch.setattr(wc, "_CONFIG_PATHS", [tmp_path / "watcher.yaml"])
+        ok, msg = save_cockpit_config({
+            "library_root": "/this/path/does/not/exist",
+        })
+        assert not ok
+        assert "does not exist" in msg
+
+    def test_save_rejects_library_root_that_is_a_file(self, tmp_path, monkeypatch):
+        import watcher.config as wc
+        monkeypatch.setattr(wc, "_CONFIG_PATHS", [tmp_path / "watcher.yaml"])
+        f = tmp_path / "not_a_dir.txt"
+        f.write_text("oops")
+        ok, msg = save_cockpit_config({"library_root": str(f)})
+        assert not ok
+        assert "not a directory" in msg
+
+    def test_save_with_validation_off_for_migrations(self, tmp_path, monkeypatch):
+        import watcher.config as wc
+        monkeypatch.setattr(wc, "_CONFIG_PATHS", [tmp_path / "watcher.yaml"])
+        ok, _ = save_cockpit_config(
+            {"library_root": str(tmp_path / "not_yet")},
+            require_existing_paths=False,
+        )
+        assert ok

@@ -380,18 +380,37 @@ def load_cockpit_config() -> dict:
     return out
 
 
-def save_cockpit_config(values: dict) -> tuple[bool, str]:
+def save_cockpit_config(values: dict, *, require_existing_paths: bool = True) -> tuple[bool, str]:
     """Write the cockpit-relevant config back to disk.
 
     Watcher keys go to the YAML file.  ``unpaywall_email`` is an env
     var; the cockpit cannot persist env vars itself, so we print a
     line the user can paste into their shell rc.  Returns ``(ok,
     message)`` for cockpit display.
+
+    ``require_existing_paths``: when True (default), bounces the form
+    if ``library_root`` or ``inbox_dir`` don't exist on disk.  Set to
+    False for migrations that need to seed a path before creating it.
     """
     try:
         from watcher.config import WatcherConfig
     except ImportError as exc:
         return False, f"watcher.config unavailable: {exc}"
+    # Pre-flight path validation so a typo doesn't silently break
+    # every subsequent operation that touches the library.  Sentinel
+    # check: the watcher inbox is allowed to not exist yet (we'll
+    # create it on first ensure_dirs() call), but the library root
+    # MUST already exist -- creating it implicitly would mask
+    # configuration mistakes.
+    if require_existing_paths and "library_root" in values:
+        lib_path = Path(str(values["library_root"])).expanduser()
+        if not lib_path.exists():
+            return False, (
+                f"library_root does not exist: {lib_path}.  "
+                f"Create the folder first or correct the path."
+            )
+        if not lib_path.is_dir():
+            return False, f"library_root is not a directory: {lib_path}"
     try:
         cfg = WatcherConfig.load()
         if "library_root" in values:

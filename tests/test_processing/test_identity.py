@@ -452,6 +452,89 @@ class TestBackfill:
 
 
 # ---------------------------------------------------------------------------
+# Audit-5 helpers: remove_dead_location, find_canonical_for_link, verify_all
+# ---------------------------------------------------------------------------
+
+class TestRemoveDeadLocation:
+
+    def test_drops_dead_path_from_copy_locations(self, tmp_path):
+        from processing.identity import remove_dead_location
+        pdf = _make_pdf(tmp_path / "p.pdf")
+        ident = PaperIdentity()
+        ident.copy_locations = [str(pdf), "/lib/07a - BSDEs/p.pdf"]
+        ident.topic_codes = ["07a"]
+        ident.save(pdf)
+
+        changed = remove_dead_location(
+            pdf, Path("/lib/07a - BSDEs/p.pdf"),
+            also_remove_topic_code="07a",
+        )
+        assert changed
+        reloaded = PaperIdentity.load(pdf)
+        assert reloaded.copy_locations == [str(pdf)]
+        assert reloaded.topic_codes == []
+
+    def test_no_op_when_already_clean(self, tmp_path):
+        from processing.identity import remove_dead_location
+        pdf = _make_pdf(tmp_path / "p.pdf")
+        ident = PaperIdentity()
+        ident.copy_locations = [str(pdf)]
+        ident.save(pdf)
+        # Nothing to remove
+        assert not remove_dead_location(pdf, Path("/never/was/here.pdf"))
+
+
+class TestFindCanonicalForLink:
+
+    def test_finds_canonical_via_copy_locations(self, tmp_path):
+        from processing.identity import find_canonical_for_link
+        canonical = _make_pdf(tmp_path / "canonical.pdf")
+        link = tmp_path / "07a - BSDEs" / "canonical.pdf"
+        link.parent.mkdir()
+        link.write_bytes(b"%PDF")
+        ident = PaperIdentity()
+        ident.copy_locations = [str(canonical), str(link)]
+        ident.save(canonical)
+        out = find_canonical_for_link(link)
+        assert out == canonical
+
+    def test_returns_none_when_no_sidecar_references_link(self, tmp_path):
+        from processing.identity import find_canonical_for_link
+        canonical = _make_pdf(tmp_path / "x.pdf")
+        PaperIdentity().save(canonical)
+        out = find_canonical_for_link(tmp_path / "07a - BSDEs" / "ghost.pdf")
+        assert out is None
+
+
+class TestVerifyAllSidecars:
+
+    def test_reports_drift_and_missing(self, tmp_path):
+        from processing.identity import verify_all_sidecars
+        # Three PDFs: one drift-free, one drifted, one without sidecar.
+        clean = _make_pdf(tmp_path / "clean.pdf")
+        PaperIdentity().save(clean)
+        drifted = _make_pdf(tmp_path / "drifted.pdf", content=b"%PDF original")
+        PaperIdentity().save(drifted)
+        # Mutate the file after sidecar saved -> drift
+        drifted.write_bytes(b"%PDF something completely different")
+        # Third has no sidecar
+        _make_pdf(tmp_path / "lonely.pdf")
+        summary = verify_all_sidecars(tmp_path)
+        assert summary["scanned"] == 3
+        assert len(summary["drifted"]) == 1
+        assert summary["drifted"][0]["pdf"].endswith("drifted.pdf")
+        assert any(p.endswith("lonely.pdf") for p in summary["missing_sidecar"])
+
+    def test_respects_limit(self, tmp_path):
+        from processing.identity import verify_all_sidecars
+        for i in range(5):
+            p = _make_pdf(tmp_path / f"p{i}.pdf")
+            PaperIdentity().save(p)
+        summary = verify_all_sidecars(tmp_path, limit=2)
+        assert summary["scanned"] == 2
+
+
+# ---------------------------------------------------------------------------
 # CLI smoke
 # ---------------------------------------------------------------------------
 

@@ -87,6 +87,11 @@ class CrossrefChecker:
 
     API_URL = "https://api.crossref.org/works"
     RATE_LIMIT_SECS = 1.0  # Polite rate limit
+    # Bump when the match dict schema changes so old entries get
+    # re-queried instead of silently feeding auto-apply with stale
+    # data.  v2 added ``author_count`` (Phase 3 auto-apply gate); any
+    # cached entry without ``author_count`` is v1 and dropped on load.
+    CACHE_VERSION = 2
 
     def __init__(self, *, cache_path: Optional[Path] = None):
         import requests
@@ -100,10 +105,38 @@ class CrossrefChecker:
         self._cache_path = cache_path
         if cache_path and cache_path.exists():
             try:
-                self._cache = json.loads(cache_path.read_text())
-                logger.info("Loaded %d cached results", len(self._cache))
+                raw = json.loads(cache_path.read_text())
             except Exception:
-                pass
+                raw = {}
+            # Schema v2 wraps the entries in
+            # ``{"_version": 2, "entries": {...}}``.  v1 was a flat
+            # ``{cache_key: result}`` mapping.  We accept both on load
+            # but always WRITE v2; v1 entries that lack the auto-apply
+            # gate (``match.author_count``) are dropped so the cache
+            # doesn't poison the safety check.
+            if isinstance(raw, dict) and raw.get("_version") == self.CACHE_VERSION:
+                self._cache = raw.get("entries", {}) or {}
+            else:
+                migrated = 0
+                dropped = 0
+                for k, v in (raw or {}).items():
+                    if k.startswith("_"):
+                        continue
+                    match = (v or {}).get("match") or {}
+                    if match and "author_count" not in match:
+                        dropped += 1
+                        continue
+                    self._cache[k] = v
+                    migrated += 1
+                if dropped:
+                    logger.info(
+                        "Dropped %d cached results without author_count; "
+                        "they will be re-queried.",
+                        dropped,
+                    )
+                if migrated:
+                    logger.info("Migrated %d cache entries to v%d", migrated, self.CACHE_VERSION)
+            logger.info("Loaded %d cached results", len(self._cache))
 
     def _rate_limit(self) -> None:
         elapsed = time.time() - self._last_request_time
@@ -256,8 +289,12 @@ class CrossrefChecker:
         if self._cache_path:
             try:
                 self._cache_path.parent.mkdir(parents=True, exist_ok=True)
+                payload = {
+                    "_version": self.CACHE_VERSION,
+                    "entries": self._cache,
+                }
                 self._cache_path.write_text(
-                    json.dumps(self._cache, indent=2, ensure_ascii=False)
+                    json.dumps(payload, indent=2, ensure_ascii=False)
                 )
             except Exception:
                 pass

@@ -57,6 +57,31 @@ class PDFHandler(FileSystemEventHandler):
             size = -1  # placeholder; will resolve on next poll
         return (size, time.time())
 
+    def scan_existing_inbox(self) -> int:
+        """Add every PDF already in the inbox to the pending queue.
+
+        Run once at daemon startup so files dropped while the watcher
+        was offline get ingested on the next ``process_settled()`` cycle
+        instead of waiting forever for a fresh on_created event that
+        will never fire.  Returns the number of files added.
+        """
+        added = 0
+        try:
+            for entry in self.config.inbox_dir.iterdir():
+                if entry.is_dir():
+                    continue
+                if entry.suffix.lower() != ".pdf":
+                    continue
+                key = str(entry)
+                if key in self._pending:
+                    continue
+                self._pending[key] = self._initial_pending_state(entry)
+                added += 1
+                logger.info("Picked up pre-existing PDF: %s", entry.name)
+        except OSError as exc:
+            logger.warning("scan_existing_inbox failed: %s", exc)
+        return added
+
     def on_created(self, event):
         if event.is_directory:
             return
@@ -211,6 +236,16 @@ def run_daemon(config: WatcherConfig, *, dry_run: bool = False) -> None:
     handler = PDFHandler(config, dry_run=dry_run)
     observer = Observer()
     observer.schedule(handler, str(config.inbox_dir), recursive=False)
+
+    # If files were dropped while the daemon was offline, they
+    # wouldn't trigger fresh on_created events.  Seed the pending
+    # queue with whatever is sitting in the inbox right now.
+    n_preexisting = handler.scan_existing_inbox()
+    if n_preexisting:
+        logger.info(
+            "Found %d PDF(s) already in inbox; will ingest on settle.",
+            n_preexisting,
+        )
 
     logger.info("Watching %s for new PDFs...", config.inbox_dir)
     logger.info("Library root: %s", config.library_root)

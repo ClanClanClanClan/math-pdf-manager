@@ -172,6 +172,43 @@ class TestResolveKeepConflict:
         assert ok
         assert (tmp_path / "Foo.pdf").exists()
 
+    def test_merges_sidecars_when_both_have_history(self, tmp_path):
+        """Audit-5 #4: keep_conflict must NOT silently drop the
+        canonical's publication-check history when promoting a
+        conflict that also has a sidecar."""
+        from processing.identity import PaperIdentity, sidecar_path
+        canonical = _write_pdf(tmp_path / "Foo.pdf", content=b"%PDF-old")
+        conflict = _write_pdf(
+            tmp_path / "Foo (conflicted copy 2024-05-13).pdf",
+            content=b"%PDF-new",
+        )
+        # Canonical has months of recheck history
+        canonical_id = PaperIdentity(doi="10.1/canonical")
+        canonical_id.record_publication_check(
+            hit=False, source="crossref", confidence=0.0,
+        )
+        canonical_id.record_publication_check(
+            hit=False, source="crossref", confidence=0.0,
+        )
+        canonical_id.save(canonical)
+        # Conflict has a different DOI and topic code, fresh history
+        conflict_id = PaperIdentity(arxiv_id="2401.01234")
+        conflict_id.topic_codes = ["07a"]
+        conflict_id.save(conflict)
+
+        ok, msg = resolve_keep_conflict(conflict, tmp_path)
+        assert ok
+
+        promoted = PaperIdentity.load(canonical)
+        # DOI from the canonical's history is preserved (conflict had none)
+        assert promoted.doi == "10.1/canonical"
+        # arxiv_id from the conflict is preserved
+        assert promoted.arxiv_id == "2401.01234"
+        # Publication-check history concatenated (canonical's 2 + 0)
+        assert len(promoted.publication_checks) == 2
+        # Topic code carried forward
+        assert "07a" in promoted.topic_codes
+
     def test_undo_restores_state(self, tmp_path):
         from processing.undo_log import UndoLog
         canonical = _write_pdf(tmp_path / "Foo.pdf", content=b"old")

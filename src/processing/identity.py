@@ -413,6 +413,81 @@ def repath_topic_copies(
     return renamed
 
 
+def find_canonical_for_link(link_path: Path) -> Optional[Path]:
+    """Reverse-lookup the canonical sidecar that lists ``link_path``.
+
+    The topic router (and any future copier) registers each
+    derivative location in the canonical's ``copy_locations`` list.
+    When a link gets deleted -- via undo, manual removal, or
+    ``unlink_topic`` -- we need to find the canonical to clean up
+    that stale entry.
+
+    Walks every sidecar under ``link_path``'s top-level parent until
+    one matches.  Returns ``None`` if no sidecar references the
+    link (likely because the link was created without a sidecar
+    update -- e.g. ``classify_and_link`` on a sidecar-less PDF).
+    """
+    # Heuristic: search from the deepest reasonable ancestor.  We
+    # don't know the canonical's location a priori, but it's almost
+    # always a sibling in the same library tree.  Walk up to the
+    # filesystem root and try each ancestor as the search root.
+    link_str = str(link_path)
+    parent = link_path.parent
+    while parent != parent.parent:
+        try:
+            for pdf in iter_pdfs(parent):
+                if pdf == link_path:
+                    continue
+                identity = PaperIdentity.load(pdf)
+                if identity.is_new():
+                    continue
+                if link_str in identity.copy_locations:
+                    return pdf
+        except (OSError, PermissionError):
+            pass
+        # Stop after walking 4 levels up -- avoids reading the
+        # entire library when the link's canonical lives elsewhere.
+        if len(parent.parts) <= len(link_path.parts) - 4:
+            break
+        parent = parent.parent
+    return None
+
+
+def remove_dead_location(
+    canonical_pdf: Path,
+    dead_location: Path,
+    *,
+    also_remove_topic_code: Optional[str] = None,
+) -> bool:
+    """Drop ``dead_location`` from the canonical's ``copy_locations``.
+
+    Used after a topic-link is deleted (e.g. via undo) so the
+    sidecar doesn't keep advertising a path that no longer exists.
+    Optionally also removes ``also_remove_topic_code`` from
+    ``topic_codes`` so the bookkeeping stays consistent.
+
+    Returns True if the sidecar was modified.
+    """
+    identity = PaperIdentity.load(canonical_pdf)
+    if identity.is_new():
+        return False
+    dead = str(dead_location)
+    if dead not in identity.copy_locations and (
+        also_remove_topic_code is None
+        or also_remove_topic_code not in identity.topic_codes
+    ):
+        return False
+    identity.copy_locations = [
+        loc for loc in identity.copy_locations if loc != dead
+    ]
+    if also_remove_topic_code and also_remove_topic_code in identity.topic_codes:
+        identity.topic_codes = [
+            c for c in identity.topic_codes if c != also_remove_topic_code
+        ]
+    identity.save(canonical_pdf, recompute_hash=False)
+    return True
+
+
 def repath_copy_locations(
     sidecar_pdf_path: Path,
     *,
@@ -507,6 +582,53 @@ def backfill_sidecar(
 
     identity.save(pdf_path, recompute_hash=False)
     return True
+
+
+def verify_all_sidecars(root: Path, *, limit: Optional[int] = None) -> dict:
+    """Walk the library and report sidecar drift for every PDF.
+
+    Returns::
+
+        {
+          "scanned": N,
+          "drifted": [{"pdf": str, "reason": str}, ...],
+          "missing_sidecar": [str, ...],
+          "errors": [str, ...],
+        }
+
+    A "drifted" sidecar means the stored content hash no longer
+    matches the first 1MB of the PDF on disk -- most commonly the
+    user re-OCRed or re-saved the file (benign; refresh the hash),
+    but it could also mean Dropbox restored an older revision or two
+    files swapped sidecars somehow.
+
+    Best-effort: per-PDF failures land in ``errors`` rather than
+    aborting the walk.  Safe to call on the full library; reads
+    sidecars and 1MB of each PDF, so on a 28k-paper library
+    expect ~85s of I/O.
+    """
+    summary: dict = {
+        "scanned": 0,
+        "drifted": [],
+        "missing_sidecar": [],
+        "errors": [],
+    }
+    for pdf in iter_pdfs(root):
+        summary["scanned"] += 1
+        try:
+            sc = sidecar_path(pdf)
+            if not sc.exists():
+                summary["missing_sidecar"].append(str(pdf))
+                continue
+            identity = PaperIdentity.load(pdf)
+            drift = identity.drift_check(pdf)
+            if drift is not None:
+                summary["drifted"].append({"pdf": str(pdf), "reason": drift})
+        except Exception as exc:
+            summary["errors"].append(f"{pdf}: {exc}")
+        if limit is not None and summary["scanned"] >= limit:
+            break
+    return summary
 
 
 def backfill_directory(

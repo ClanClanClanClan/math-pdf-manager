@@ -146,3 +146,34 @@ class TestEventHandlers:
         # Now reflects current size and recent time
         assert size == pdf.stat().st_size
         assert last > 1.0
+
+
+class TestScanExistingInbox:
+    """Audit-5 #7: files dropped while the daemon was offline must be
+    picked up on the next startup rather than waiting for an
+    on_created event that will never fire."""
+
+    def test_picks_up_pre_existing_pdfs(self, handler):
+        inbox = handler.config.inbox_dir
+        (inbox / "a.pdf").write_bytes(b"%PDF a")
+        (inbox / "b.pdf").write_bytes(b"%PDF b")
+        (inbox / "notes.txt").write_text("not a pdf")
+        added = handler.scan_existing_inbox()
+        assert added == 2
+        assert str(inbox / "a.pdf") in handler._pending
+        assert str(inbox / "b.pdf") in handler._pending
+        assert str(inbox / "notes.txt") not in handler._pending
+
+    def test_does_not_re_add_already_pending(self, handler):
+        inbox = handler.config.inbox_dir
+        (inbox / "a.pdf").write_bytes(b"%PDF")
+        handler.scan_existing_inbox()
+        # Second invocation should be a no-op
+        assert handler.scan_existing_inbox() == 0
+
+    def test_directories_ignored(self, handler):
+        inbox = handler.config.inbox_dir
+        (inbox / "subdir").mkdir()
+        (inbox / "subdir" / "deep.pdf").write_bytes(b"%PDF")
+        # Non-recursive by design -- we only scan the top of the inbox.
+        assert handler.scan_existing_inbox() == 0
