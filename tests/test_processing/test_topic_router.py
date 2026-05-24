@@ -272,6 +272,36 @@ class TestUndoIntegration:
         assert all("07a" not in loc for loc in reloaded.copy_locations)
         assert "07a" not in reloaded.topic_codes
 
+    def test_link_failure_does_not_pollute_undo_log(self, library_with_topics):
+        """Audit-6 #4: if ``_create_link`` raises (e.g. a race adds
+        the destination between the existence check and the link
+        call), the undo log must not retain a record for an action
+        that never happened."""
+        from processing.undo_log import UndoLog
+        from unittest.mock import patch
+
+        pdf = _make_pdf(library_with_topics / "p.pdf")
+        PaperIdentity().save(pdf)
+
+        log = UndoLog(log_dir=library_with_topics / ".ops")
+        tx_id = log.begin_transaction("flaky link")
+        with patch("processing.topic_router._create_link",
+                   side_effect=OSError("simulated race")):
+            result = classify_and_link(
+                pdf, library_with_topics,
+                title="BSDE",
+                only_codes=["07a"],
+                undo_log=log,
+            )
+        log.commit()
+        # The error landed in result.errors but the undo log has
+        # zero recorded ops (because we now record AFTER the link
+        # succeeds).
+        assert result.errors
+        import json
+        tx = json.loads((library_with_topics / ".ops" / f"{tx_id}.json").read_text())
+        assert tx["operations"] == []
+
     def test_undo_removes_hardlinks(self, library_with_topics):
         from processing.undo_log import UndoLog
         pdf = _make_pdf(library_with_topics / "p.pdf")

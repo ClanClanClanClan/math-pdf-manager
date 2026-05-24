@@ -133,6 +133,18 @@ def update_publication_state(
             # and have zero historical hits.  This means a paper with
             # 2 misses + 1 hit + 2 misses doesn't auto-tip; the hit
             # earned a clean slate.
+            #
+            # Audit-6 #1 surfaced the deliberate corner: a paper with
+            # ONE borderline hit (e.g. 0.85 confidence) followed by N
+            # misses NEVER tips permanent because the borderline IS a
+            # hit at the state-machine's 0.75 threshold.  Those papers
+            # stay in the recheck loop forever -- the
+            # ``borderline_match`` collector surfaces them in the
+            # Attention Queue so the user can either upgrade by hand
+            # or hit "Reset recheck" to discard the borderline and
+            # start over.  Auto-tipping borderlines would mean we'd
+            # silently archive papers Crossref keeps finding plausible
+            # matches for; that's data loss waiting to happen.
             became_permanent = False
             if (
                 not is_hit

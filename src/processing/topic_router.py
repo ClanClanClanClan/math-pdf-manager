@@ -214,9 +214,15 @@ def classify_and_link(
             continue
 
         try:
+            # Audit-6 #4: create the link FIRST so we don't record an
+            # undo op for an action that ended up failing.  If
+            # _create_link raises (e.g. a race adds the destination
+            # between our check above and the link call), we never
+            # touched the undo log and the surrounding ``except``
+            # catches the exception cleanly.
+            verb = _create_link(canonical_pdf, dest)
             if undo_log is not None:
                 undo_log.record_copy(canonical_pdf, dest)
-            verb = _create_link(canonical_pdf, dest)
             result.linked.append(str(dest))
             logger.info("topic link %s: %s -> %s", verb, canonical_pdf, dest)
             if not identity.is_new():

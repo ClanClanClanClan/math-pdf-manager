@@ -36,8 +36,16 @@ logger = logging.getLogger(__name__)
 # Matches the Dropbox conflict-copy suffix.  Tolerates the older
 # ``(<name>'s conflicted copy <date>)`` shape and the newer
 # ``(conflicted copy <date>)`` variant without a user name.
+#
+# The bracket pattern ``[^()]*?`` deliberately excludes parens (so we
+# match a single ``(...)`` chunk, not anything that crosses a paren
+# boundary) and is non-greedy so a filename with TWO conflict markers
+# (``foo (conflicted copy 2024-01-01) (conflicted copy 2024-05-13).pdf``,
+# observed when Dropbox produces a conflict on a conflict) gets both
+# stripped by the ``re.sub`` call below rather than a single greedy
+# span swallowing the middle paper title.
 _CONFLICT_SUFFIX_RE = re.compile(
-    r"\s*\([^()]*conflicted copy[^()]*\)\s*",
+    r"\s*\([^()]*?conflicted copy[^()]*?\)\s*",
     re.IGNORECASE,
 )
 

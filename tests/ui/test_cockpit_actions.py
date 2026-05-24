@@ -371,6 +371,36 @@ class TestConfigEditor:
         assert not ok
         assert "not a directory" in msg
 
+    def test_default_year_dynamic_preserved_round_trip(self, tmp_path):
+        """Audit-6 #6: a YAML that says ``default_year: current`` must
+        re-save as ``current``, not get silently frozen to the year
+        the save happened in."""
+        import yaml
+        from watcher.config import WatcherConfig
+        target = tmp_path / "watcher.yaml"
+        target.write_text(yaml.safe_dump({"default_year": "current"}))
+        cfg = WatcherConfig.load(target)
+        assert cfg._default_year_is_dynamic is True
+        cfg.save(target)
+        re = yaml.safe_load(target.read_text())
+        assert re["default_year"] == "current"
+
+    def test_default_year_explicit_year_preserved_round_trip(self, tmp_path):
+        """The inverse: an explicit year (``2023``) must NOT collapse
+        to ``current`` even if it equals the current year on save."""
+        import yaml
+        from watcher.config import WatcherConfig
+        from datetime import datetime
+        target = tmp_path / "watcher.yaml"
+        # Use this year explicitly (the worst case for the old logic).
+        this_year = datetime.now().year
+        target.write_text(yaml.safe_dump({"default_year": this_year}))
+        cfg = WatcherConfig.load(target)
+        assert cfg._default_year_is_dynamic is False
+        cfg.save(target)
+        re = yaml.safe_load(target.read_text())
+        assert re["default_year"] == this_year
+
     def test_save_with_validation_off_for_migrations(self, tmp_path, monkeypatch):
         import watcher.config as wc
         monkeypatch.setattr(wc, "_CONFIG_PATHS", [tmp_path / "watcher.yaml"])

@@ -97,15 +97,15 @@ class WatcherConfig:
             )
             return cls()
 
-        return cls(
+        raw_year = data.get("default_year")
+        is_dynamic = raw_year in (None, "current")
+        obj = cls(
             inbox_dir=Path(os.path.expanduser(data.get("inbox_dir", str(_DEFAULT_INBOX)))),
             library_root=Path(os.path.expanduser(data.get("library_root", str(_DEFAULT_LIBRARY)))),
             log_dir=Path(os.path.expanduser(data.get("log_dir", str(_DEFAULT_LOG_DIR)))),
             default_status=data.get("default_status", "working"),
             default_year=(
-                datetime.now().year
-                if data.get("default_year") in (None, "current")
-                else int(data["default_year"])
+                datetime.now().year if is_dynamic else int(raw_year)
             ),
             auto_classify_topic=data.get("auto_classify_topic", True),
             settle_seconds=data.get("settle_seconds", 2.0),
@@ -114,6 +114,12 @@ class WatcherConfig:
             notifications=data.get("notifications", True),
             notification_sound=data.get("notification_sound", "Glass"),
         )
+        # Preserve the "always use current year" intent across
+        # save/load round-trips.  Without this, opening a YAML that
+        # said "current" and resaving it would freeze the current
+        # year on disk and silently change behaviour next January.
+        obj._default_year_is_dynamic = is_dynamic
+        return obj
 
     def ensure_dirs(self) -> None:
         """Create inbox and log directories if they don't exist."""
@@ -140,15 +146,24 @@ class WatcherConfig:
             if target is None:
                 target = _CONFIG_PATHS[0]
         target.parent.mkdir(parents=True, exist_ok=True)
+        # ``default_year`` semantics:
+        # We only collapse the value to ``"current"`` if the caller
+        # has explicitly tagged the config with that intent via
+        # ``self._default_year_is_dynamic`` (e.g. set by the cockpit
+        # Settings form when the user wants "always use the current
+        # year").  Otherwise we freeze the year so a save on Dec 31
+        # doesn't silently change semantics on Jan 1.  Audit-6 #6
+        # caught the earlier date-dependent inference.
+        if getattr(self, "_default_year_is_dynamic", False):
+            year_payload = "current"
+        else:
+            year_payload = int(self.default_year)
         payload = {
             "inbox_dir": str(self.inbox_dir),
             "library_root": str(self.library_root),
             "log_dir": str(self.log_dir),
             "default_status": self.default_status,
-            "default_year": (
-                "current" if self.default_year == datetime.now().year
-                else int(self.default_year)
-            ),
+            "default_year": year_payload,
             "auto_classify_topic": bool(self.auto_classify_topic),
             "settle_seconds": float(self.settle_seconds),
             "poll_interval": float(self.poll_interval),

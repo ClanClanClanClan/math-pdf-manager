@@ -172,6 +172,17 @@ class TestResolveKeepConflict:
         assert ok
         assert (tmp_path / "Foo.pdf").exists()
 
+    def test_double_conflict_marker_stripped(self, tmp_path):
+        """Audit-6 #7: Dropbox can produce a conflict on a conflict,
+        leaving two ``(conflicted copy ...)`` parens.  The non-greedy
+        regex now strips both."""
+        from processing.conflict_resolver import find_canonical_for_conflict
+        f = tmp_path / "paper (DESKTOP-A's conflicted copy 2024-01-01) (DESKTOP-B's conflicted copy 2024-05-13).pdf"
+        f.write_bytes(b"%PDF")
+        out = find_canonical_for_conflict(f)
+        assert out is not None
+        assert out.name == "paper.pdf"
+
     def test_merges_sidecars_when_both_have_history(self, tmp_path):
         """Audit-5 #4: keep_conflict must NOT silently drop the
         canonical's publication-check history when promoting a
