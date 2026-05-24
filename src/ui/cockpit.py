@@ -31,6 +31,7 @@ from pathlib import Path
 from typing import Optional
 
 import streamlit as st
+from processing.identity import iter_pdfs
 
 # Make src/ importable when streamlit invokes this file directly
 _THIS_FILE = Path(__file__).resolve()
@@ -131,8 +132,21 @@ def _log_activity(action: str, source: str, destination: str = "", tx_id: str = 
     # Append to disk first — if the session dies, the user still has the
     # entry and can undo from a later session.
     try:
-        with open(_activity_log_path(), "a", encoding="utf-8") as f:
+        path = _activity_log_path()
+        with open(path, "a", encoding="utf-8") as f:
             f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+        # Cheap rotation: when the file passes ~10MB (roughly 50-100k
+        # entries depending on action density), rotate to ``.1`` and
+        # start fresh.  Keeps the activity log unbounded over years
+        # without forcing the user to manually prune.  Audit-6 #9.
+        try:
+            if path.stat().st_size > 10 * 1024 * 1024:
+                rotated = path.with_suffix(path.suffix + ".1")
+                if rotated.exists():
+                    rotated.unlink()
+                path.rename(rotated)
+        except OSError:
+            pass
     except OSError as exc:
         logger.warning("Failed to persist activity log entry: %s", exc)
 
@@ -286,7 +300,7 @@ def _iter_sort_candidates(lib: Path) -> list[tuple[Path, str]]:
         sub = staging / sub_name
         if not sub.is_dir():
             continue
-        for pdf in sorted(sub.rglob("*.pdf")):
+        for pdf in sorted(iter_pdfs(sub)):
             if pdf.name.startswith("."):
                 continue
             if str(pdf) in st.session_state.sort_skipped:
@@ -487,6 +501,7 @@ def _approve_sort(
     ``PaperPreview`` object the card was rendered from.
     """
     from processing.bulk_sort import sort_one
+    from processing.identity import iter_pdfs  # noqa: F401
     from processing.undo_log import UndoLog
 
     # Guard against the file vanishing between listing and approval
@@ -560,7 +575,7 @@ def _count_trash(lib: Path, sub: str) -> int:
     p = lib / ".trash" / sub
     if not p.exists():
         return 0
-    return sum(1 for _ in p.rglob("*.pdf"))
+    return sum(1 for _ in iter_pdfs(p))
 
 
 # ---------------------------------------------------------------------------
@@ -878,7 +893,7 @@ def _count_pdfs_cached(folder_str: str) -> int:
     p = Path(folder_str)
     if not p.exists():
         return 0
-    return sum(1 for _ in p.rglob("*.pdf"))
+    return sum(1 for _ in iter_pdfs(p))
 
 
 def render_stats() -> None:
@@ -1029,10 +1044,70 @@ def render_attention() -> None:
         "permanently_unpublished": "Marked permanently unpublished",
     }
 
+    # Bulk dismiss bar: a session-state set of keys the user has
+    # checked.  Pruned to live items each render so a previously-
+    # selected key that no longer exists doesn't pollute the bulk
+    # action.
+    attn_sel_key = "attention_selected"
+    if attn_sel_key not in st.session_state:
+        st.session_state[attn_sel_key] = set()
+    live_keys = {it.key for it in items}
+    st.session_state[attn_sel_key] &= live_keys
+    attn_selected: set[str] = st.session_state[attn_sel_key]
+    bar = st.columns([1, 1, 2, 2])
+    if bar[0].button("Select all", key="attn_sel_all",
+                     use_container_width=True):
+        st.session_state[attn_sel_key] = set(live_keys)
+        st.rerun()
+    if bar[1].button("Clear", key="attn_sel_clear",
+                     use_container_width=True,
+                     disabled=not attn_selected):
+        st.session_state[attn_sel_key] = set()
+        st.rerun()
+    if bar[2].button(
+        f"Dismiss {len(attn_selected)} for 7 days",
+        key="attn_bulk_dismiss_7d",
+        use_container_width=True,
+        disabled=not attn_selected,
+    ):
+        from ui.attention_queue import dismiss as _dismiss
+        for k in list(attn_selected):
+            _dismiss(k, days=7)
+        st.toast(f"Dismissed {len(attn_selected)} for 7 days")
+        st.session_state[attn_sel_key] = set()
+        _attention_count_cached.clear()
+        st.rerun()
+    if bar[3].button(
+        f"Dismiss {len(attn_selected)} for 30 days",
+        key="attn_bulk_dismiss_30d",
+        use_container_width=True,
+        disabled=not attn_selected,
+    ):
+        from ui.attention_queue import dismiss as _dismiss
+        for k in list(attn_selected):
+            _dismiss(k, days=30)
+        st.toast(f"Dismissed {len(attn_selected)} for 30 days")
+        st.session_state[attn_sel_key] = set()
+        _attention_count_cached.clear()
+        st.rerun()
+    st.divider()
+
     for source_key, source_items in by_source.items():
         st.subheader(f"{source_labels.get(source_key, source_key)} ({len(source_items)})")
         for it in source_items:
             with st.container(border=True):
+                # Per-item checkbox in front of the existing content
+                # column.  Toggles fold into the session_state set.
+                ck = st.checkbox(
+                    "select",
+                    value=it.key in attn_selected,
+                    key=f"attn_sel_{it.key}",
+                    label_visibility="collapsed",
+                )
+                if ck:
+                    attn_selected.add(it.key)
+                else:
+                    attn_selected.discard(it.key)
                 cols = st.columns([0.7, 0.3])
                 with cols[0]:
                     st.markdown(
@@ -1301,6 +1376,14 @@ def render_settings() -> None:
         if ok:
             st.success(msg)
             _log_activity("settings.save", "", "")
+            # Sync the sidebar's library_root text input with the new
+            # value so a tab-switch immediately after save doesn't
+            # operate on the stale path.  Force rerun to refresh.
+            if "library_root" in new_values:
+                st.session_state.library_root = str(
+                    Path(new_values["library_root"]).expanduser().resolve()
+                )
+            st.rerun()
         else:
             st.error(msg)
 
@@ -1374,6 +1457,66 @@ def render_settings() -> None:
 # Page: Conflicts (Phase 6 -- Dropbox conflict-copy diff/decide)
 # ---------------------------------------------------------------------------
 
+def _conflicts_bulk_apply(conflicts, paths, library_root, action: str):
+    """Apply one resolver across many conflicts in a single undo transaction.
+
+    ``action`` is one of ``"keep_canonical" | "keep_conflict" | "keep_both" |
+    "suggested"``.  ``suggested`` dispatches per item according to the
+    resolver's own heuristic.
+
+    Returns ``(n_ok, n_fail, errors)``.
+    """
+    from processing.conflict_resolver import (
+        resolve_keep_both,
+        resolve_keep_canonical,
+        resolve_keep_conflict,
+    )
+    from processing.undo_log import UndoLog
+    by_path = {c.conflict: c for c in conflicts}
+    log = UndoLog()
+    tx_id = log.begin_transaction(
+        f"bulk conflict {action} ({len(paths)})"
+    )
+    n_ok = n_fail = 0
+    errors: list[str] = []
+    for path in sorted(paths):
+        c = by_path.get(path)
+        if c is None:
+            continue
+        chosen = c.suggested if action == "suggested" else action
+        conflict_p = Path(c.conflict)
+        canonical_p = Path(c.canonical) if c.canonical else None
+        try:
+            if chosen == "keep_canonical":
+                ok, msg = resolve_keep_canonical(
+                    conflict_p, library_root, undo_log=log,
+                )
+            elif chosen == "keep_conflict":
+                ok, msg = resolve_keep_conflict(
+                    conflict_p, library_root, canonical=canonical_p, undo_log=log,
+                )
+            elif chosen == "keep_both":
+                ok, msg = resolve_keep_both(
+                    conflict_p, library_root, undo_log=log,
+                )
+            else:
+                ok, msg = False, f"no suggested action for {conflict_p.name}"
+            if ok:
+                n_ok += 1
+            else:
+                n_fail += 1
+                errors.append(f"{conflict_p.name}: {msg}")
+        except Exception as exc:
+            n_fail += 1
+            errors.append(f"{conflict_p.name}: {exc}")
+    log.commit()
+    _log_activity(
+        f"conflict.bulk_{action}", "",
+        f"ok={n_ok} fail={n_fail}", tx_id,
+    )
+    return n_ok, n_fail, errors
+
+
 def render_conflicts() -> None:
     """Side-by-side conflict-copy resolver."""
     from processing.conflict_resolver import (
@@ -1394,15 +1537,100 @@ def render_conflicts() -> None:
     lib = _library()
     conflicts = scan_conflicts(lib)
     if not conflicts:
+        st.session_state.pop("conflicts_selected", None)
         st.success("No conflict copies detected. ✓")
         return
 
-    st.caption(f"{len(conflicts)} conflict(s) found")
+    # Multi-select bookkeeping: a session-state set keyed by the
+    # conflict's path string.  Selections survive Streamlit reruns
+    # but reset when no conflicts remain.
+    sel_key = "conflicts_selected"
+    if sel_key not in st.session_state:
+        st.session_state[sel_key] = set()
+    all_paths = {c.conflict for c in conflicts}
+    # Prune stale selections (a previously-selected conflict that has
+    # since been resolved no longer appears in the new scan).
+    st.session_state[sel_key] &= all_paths
+    selected: set[str] = st.session_state[sel_key]
+
+    st.caption(f"{len(conflicts)} conflict(s) found  ·  {len(selected)} selected")
+    bar = st.columns([1, 1, 2, 2, 2])
+    if bar[0].button("Select all", key="conf_sel_all",
+                     use_container_width=True):
+        st.session_state[sel_key] = set(all_paths)
+        st.rerun()
+    if bar[1].button("Clear", key="conf_clear",
+                     use_container_width=True,
+                     disabled=not selected):
+        st.session_state[sel_key] = set()
+        st.rerun()
+    # Bulk actions live in the same bar.  Disabled when no selection.
+    if bar[2].button(
+        f"Apply suggested to {len(selected)}",
+        key="conf_bulk_suggested",
+        use_container_width=True,
+        disabled=not selected,
+    ):
+        n_ok, n_fail, errors = _conflicts_bulk_apply(
+            conflicts, selected, lib, "suggested",
+        )
+        st.toast(f"bulk suggested: ok={n_ok} fail={n_fail}")
+        if errors:
+            st.warning("Errors:\n  - " + "\n  - ".join(errors[:8]))
+        st.session_state[sel_key] = set()
+        _attention_count_cached.clear()
+        st.rerun()
+    if bar[3].button(
+        f"Keep canonical for {len(selected)}",
+        key="conf_bulk_kc",
+        use_container_width=True,
+        disabled=not selected,
+    ):
+        n_ok, n_fail, errors = _conflicts_bulk_apply(
+            conflicts, selected, lib, "keep_canonical",
+        )
+        st.toast(f"bulk keep canonical: ok={n_ok} fail={n_fail}")
+        if errors:
+            st.warning("Errors:\n  - " + "\n  - ".join(errors[:8]))
+        st.session_state[sel_key] = set()
+        _attention_count_cached.clear()
+        st.rerun()
+    if bar[4].button(
+        f"Keep conflict for {len(selected)}",
+        key="conf_bulk_kf",
+        use_container_width=True,
+        disabled=not selected,
+    ):
+        n_ok, n_fail, errors = _conflicts_bulk_apply(
+            conflicts, selected, lib, "keep_conflict",
+        )
+        st.toast(f"bulk keep conflict: ok={n_ok} fail={n_fail}")
+        if errors:
+            st.warning("Errors:\n  - " + "\n  - ".join(errors[:8]))
+        st.session_state[sel_key] = set()
+        _attention_count_cached.clear()
+        st.rerun()
+
+    st.divider()
+
     for c in conflicts:
         with st.container(border=True):
             conflict_p = Path(c.conflict)
             canonical_p = Path(c.canonical) if c.canonical else None
-            st.markdown(f"**{conflict_p.name}**")
+            # Header row: checkbox + filename.  The checkbox key is
+            # tied to the conflict path so toggles persist across
+            # Streamlit reruns.
+            head = st.columns([0.05, 0.95])
+            checked = head[0].checkbox(
+                "select", value=c.conflict in selected,
+                key=f"conf_sel_{c.conflict}",
+                label_visibility="collapsed",
+            )
+            if checked:
+                selected.add(c.conflict)
+            else:
+                selected.discard(c.conflict)
+            head[1].markdown(f"**{conflict_p.name}**")
             cols = st.columns(2)
             with cols[0]:
                 st.markdown("**Conflict copy**")

@@ -203,6 +203,47 @@ def test_render_settings_does_not_raise(st_stub, tmp_path, monkeypatch):
 
 
 def test_render_conflicts_does_not_raise(st_stub, tmp_path, monkeypatch):
+    """Phase 6 page + Task #8 multi-select renders without crashing."""
+    monkeypatch.setenv("MATH_LIBRARY", str(tmp_path))
+    # Seed one conflict so the bulk-select bar actually renders.
+    (tmp_path / "Foo (DESKTOP-X's conflicted copy 2024-05-13).pdf").write_bytes(
+        b"%PDF-1.4 fake"
+    )
+    (tmp_path / "Foo.pdf").write_bytes(b"%PDF-1.4 canon")
+    import ui.cockpit as cockpit
+    cockpit.render_conflicts()
+
+
+def test_conflicts_bulk_apply_single_transaction(st_stub, tmp_path, monkeypatch):
+    """Task #8: bulk resolution wraps every conflict in one undo
+    transaction so users can reverse the batch as a unit."""
+    monkeypatch.setenv("MATH_LIBRARY", str(tmp_path))
+    # Three conflicts of the canonical-wins flavour.
+    for stem in ("A", "B", "C"):
+        (tmp_path / f"{stem}.pdf").write_bytes(b"%PDF canon")
+        (tmp_path / f"{stem} (host's conflicted copy 2024-05-13).pdf").write_bytes(
+            b"%PDF conflict"
+        )
+    from processing.conflict_resolver import scan_conflicts
+    found = scan_conflicts(tmp_path)
+    assert len(found) == 3
+
+    import ui.cockpit as cockpit
+    paths = {c.conflict for c in found}
+    n_ok, n_fail, errors = cockpit._conflicts_bulk_apply(
+        found, paths, tmp_path, "keep_canonical",
+    )
+    assert n_ok == 3, errors
+    assert n_fail == 0
+    # All conflicts moved to trash; canonicals untouched
+    for stem in ("A", "B", "C"):
+        assert (tmp_path / f"{stem}.pdf").exists()
+        assert not (
+            tmp_path / f"{stem} (host's conflicted copy 2024-05-13).pdf"
+        ).exists()
+
+
+def test_render_conflicts_does_not_raise(st_stub, tmp_path, monkeypatch):
     """Phase 6 page: conflict-copy diff/decide.  Should render the
     'no conflicts' success state on an empty library, and the
     per-conflict cards when a real conflict pair is present."""
