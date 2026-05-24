@@ -39,6 +39,7 @@ import sys
 import time
 from pathlib import Path
 from typing import Iterable, Optional
+from processing.identity import iter_pdfs
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +79,7 @@ def iter_pdfs_with_hint(staging_root: Path) -> Iterable[tuple[Path, str]]:
                 child.name, ", ".join(sorted(SUBFOLDER_STATUS)),
             )
             continue
-        for pdf in sorted(child.rglob("*.pdf")):
+        for pdf in sorted(iter_pdfs(child)):
             if pdf.name.startswith("."):
                 continue
             yield pdf, status
@@ -141,6 +142,7 @@ def sort_one(
     folder, so the status hint and alpha-subdir behaviour are preserved.
     """
     from processing.ingest import ingest_paper
+    from processing.identity import iter_pdfs  # noqa: F401
 
     result: dict = {
         "source": str(pdf),

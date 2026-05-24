@@ -29,6 +29,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
+from processing.identity import iter_pdfs
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +59,7 @@ def check_publications(
     this hook the sidecars would never update.
     """
     from processing.publication_checker import scan_directory
+    from processing.identity import iter_pdfs  # noqa: F401 -- used elsewhere in module
     from processing.publication_state import update_publication_state
 
     results: dict = {
@@ -259,7 +261,7 @@ def count_to_be_sorted(library_root: Path) -> dict:
         return counts
     for child in sorted(base.iterdir()):
         if child.is_dir():
-            n = sum(1 for _ in child.rglob("*.pdf"))
+            n = sum(1 for _ in iter_pdfs(child))
             counts["by_subfolder"][child.name] = n
             counts["total"] += n
     return counts

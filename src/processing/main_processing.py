@@ -13,6 +13,7 @@ import re
 import time
 import asyncio
 from pathlib import Path
+from processing.identity import iter_pdfs
 from typing import Dict, Any, Optional, List, Tuple
 import logging
 
@@ -381,7 +382,7 @@ def _collect_pdf_files(root: Path, max_files: Optional[int] = None) -> List[Path
     if not root.exists() or not root.is_dir():
         raise FileNotFoundError(f"Root directory not found: {root}")
 
-    pdf_files = sorted(path for path in root.rglob("*.pdf") if path.is_file())
+    pdf_files = sorted(path for path in iter_pdfs(root) if path.is_file())
 
     if max_files is not None and max_files >= 0:
         pdf_files = pdf_files[:max_files]

@@ -32,6 +32,7 @@ from rapidfuzz import fuzz
 logger = logging.getLogger(__name__)
 
 from processing.undo_log import UndoLog
+from processing.identity import iter_pdfs
 
 
 def normalize_for_comparison(filename: str) -> str:
@@ -122,7 +123,7 @@ def find_duplicates(
     # those PDFs haven't been canonicalized yet so duplicate detection across
     # them is meaningless (would just flag every paper as "different from itself").
     SKIP_PREFIXES = ("Scripts", "archive", ".", "unicode", "12 - To be sorted")
-    for pdf in library_root.rglob("*.pdf"):
+    for pdf in iter_pdfs(library_root):
         rel = pdf.relative_to(library_root)
         if any(part.startswith(SKIP_PREFIXES) for part in rel.parts):
             continue

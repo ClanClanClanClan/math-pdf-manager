@@ -26,6 +26,7 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 from processing.undo_log import UndoLog, logged_rename
+from processing.identity import iter_pdfs
 
 
 def normalize_filename(name: str) -> str:
@@ -80,7 +81,7 @@ def scan_and_propose(
     """
     proposals = []
 
-    pattern = directory.rglob("*.pdf") if recursive else directory.glob("*.pdf")
+    pattern = iter_pdfs(directory) if recursive else iter_pdfs(directory, recursive=False)
 
     for pdf in sorted(pattern):
         # Skip non-library directories

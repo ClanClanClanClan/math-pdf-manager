@@ -12,6 +12,7 @@ Usage::
     python -m processing.paper_index /path/to/library --json --output index.json
 """
 from __future__ import annotations
+from processing.identity import iter_pdfs
 
 
 import argparse
@@ -122,7 +123,7 @@ def build_index(
     """
     index = defaultdict(list)
 
-    pdfs = list(library_root.rglob("*.pdf"))
+    pdfs = list(iter_pdfs(library_root))
     if verbose:
         print(f"Indexing {len(pdfs):,} PDFs...")
 

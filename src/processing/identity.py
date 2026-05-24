@@ -73,16 +73,22 @@ def sidecar_path(pdf_path: Path) -> Path:
 PDF_GLOB = "*.[Pp][Dd][Ff]"
 
 
-def iter_pdfs(root: Path):
+def iter_pdfs(root: Path, *, recursive: bool = True):
     """Yield every PDF under ``root`` (case-insensitive suffix match).
 
     Skips files under any ``.trash`` directory so library scans don't
     fold trash entries back into live workflows.  Callers that *want*
     trash should iterate with ``root.rglob(PDF_GLOB)`` directly.
+
+    ``recursive=False`` matches only direct children of ``root`` (the
+    non-recursive ``glob`` equivalent), used by callers like
+    ``filename_normalizer`` that already loop over subfolders
+    themselves.
     """
     if not root.exists():
         return
-    for pdf in root.rglob(PDF_GLOB):
+    walker = root.rglob(PDF_GLOB) if recursive else root.glob(PDF_GLOB)
+    for pdf in walker:
         if ".trash" in pdf.parts:
             continue
         yield pdf

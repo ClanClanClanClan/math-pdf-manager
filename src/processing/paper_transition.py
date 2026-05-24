@@ -37,6 +37,7 @@ logger = logging.getLogger(__name__)
 from arxivbot.models.cmo import Author, CMO
 from organization.system import FolderRouter, PUBLISHED, UNPUBLISHED, WORKING
 from processing.undo_log import UndoLog, logged_move
+from processing.identity import iter_pdfs
 
 # Default library root
 from core.config_paths import get_library_root as _get_library_root
@@ -63,7 +64,7 @@ def find_preprint_versions(
         folder = library_root / folder_name
         if not folder.exists():
             continue
-        for pdf in folder.rglob("*.pdf"):
+        for pdf in iter_pdfs(folder):
             if pdf == published_path:
                 continue
             pdf_stem = unicodedata.normalize("NFC", pdf.stem)

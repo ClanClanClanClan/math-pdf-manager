@@ -16,6 +16,7 @@ Usage::
     python -m processing.topic_classifier --scan /path/to/library/01/A/ --limit 50
 """
 from __future__ import annotations
+from processing.identity import iter_pdfs
 
 
 import argparse
@@ -341,7 +342,7 @@ def main(argv: list[str] | None = None) -> None:
 
     if args.scan:
         # Batch classification
-        pdfs = sorted(args.scan.rglob("*.pdf"))
+        pdfs = sorted(iter_pdfs(args.scan))
         if args.limit:
             pdfs = pdfs[: args.limit]
 

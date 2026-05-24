@@ -23,6 +23,7 @@ Usage::
     python -m processing.publication_checker "02 - Unpublished papers/" --limit 50
 """
 from __future__ import annotations
+from processing.identity import iter_pdfs
 
 
 import argparse
@@ -318,7 +319,7 @@ def scan_directory(
         cache_path = directory / ".publication_check_cache.json"
         checker = CrossrefChecker(cache_path=cache_path)
 
-    pdfs = sorted(directory.rglob("*.pdf"))
+    pdfs = sorted(iter_pdfs(directory))
     if limit:
         pdfs = pdfs[:limit]
 
@@ -472,7 +473,7 @@ def check_arxiv_versions(
     import requests
 
     results = []
-    pdfs = sorted(directory.rglob("*.pdf"))
+    pdfs = sorted(iter_pdfs(directory))
     if limit:
         pdfs = pdfs[:limit]
 
