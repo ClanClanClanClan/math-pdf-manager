@@ -272,6 +272,33 @@ class TestUndoIntegration:
         assert all("07a" not in loc for loc in reloaded.copy_locations)
         assert "07a" not in reloaded.topic_codes
 
+    def test_record_copy_failure_unlinks_orphaned_hardlink(self, library_with_topics):
+        """Audit-7 #6: if undo_log.record_copy raises AFTER the link
+        was created (rare: disk full, undo dir suddenly read-only),
+        we must NOT leave the hardlink on disk untracked."""
+        from processing.undo_log import UndoLog
+        from unittest.mock import patch
+
+        pdf = _make_pdf(library_with_topics / "p.pdf")
+        PaperIdentity().save(pdf)
+
+        log = UndoLog(log_dir=library_with_topics / ".ops")
+        log.begin_transaction("flaky undo")
+        # Patch record_copy to raise; the link succeeds but the
+        # undo entry fails.
+        with patch.object(log, "record_copy",
+                          side_effect=OSError("undo dir read-only")):
+            result = classify_and_link(
+                pdf, library_with_topics,
+                title="BSDE",
+                only_codes=["07a"],
+                undo_log=log,
+            )
+        # The link was unlinked again, so no orphan on disk.
+        assert not (library_with_topics / "07a - BSDEs" / "p.pdf").exists()
+        # The failure was recorded for the caller.
+        assert result.errors
+
     def test_link_failure_does_not_pollute_undo_log(self, library_with_topics):
         """Audit-6 #4: if ``_create_link`` raises (e.g. a race adds
         the destination between the existence check and the link

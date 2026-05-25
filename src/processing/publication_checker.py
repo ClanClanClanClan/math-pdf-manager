@@ -167,6 +167,16 @@ class CrossrefChecker:
         query_title = re.sub(r"[^\w\s]", " ", title)
         query_title = re.sub(r"\s+", " ", query_title).strip()
 
+        # Audit-7 #2/#4: retriable errors (429 rate-limited, 5xx
+        # server errors, timeouts) must NOT be cached as negative
+        # results.  The earlier code returned None and then cached
+        # ``self._cache[cache_key] = None`` below; if Crossref had a
+        # bad five minutes during the weekly run, every paper queried
+        # in that window got permanently marked "not published".
+        # Now we differentiate: real "no items" (HTTP 200, empty
+        # results) caches; transient errors propagate as None
+        # WITHOUT touching the cache so the next run retries.
+        retriable = False
         try:
             resp = self.session.get(
                 self.API_URL,
@@ -177,16 +187,34 @@ class CrossrefChecker:
                 },
                 timeout=15,
             )
+            if resp.status_code in (429, 500, 502, 503, 504):
+                retry_after = resp.headers.get("Retry-After")
+                wait_s = float(retry_after) if retry_after else 5.0
+                logger.warning(
+                    "Crossref returned %d for '%s'; backing off %.1fs and treating as retriable",
+                    resp.status_code, title[:50], wait_s,
+                )
+                time.sleep(min(wait_s, 60.0))  # cap at 60s
+                retriable = True
+                return None
             resp.raise_for_status()
         except requests.exceptions.Timeout as exc:
             logger.warning("Crossref query timed out for '%s': %s", title[:50], exc)
+            retriable = True
             return None
         except requests.exceptions.RequestException as exc:
             logger.warning("Crossref API request failed for '%s': %s", title[:50], exc)
+            retriable = True
             return None
         except Exception as exc:
             logger.warning("Crossref query failed for '%s': %s", title[:50], exc)
+            retriable = True
             return None
+        finally:
+            if retriable:
+                # Make sure we DON'T poison the cache with a None for
+                # this title -- the next scan should retry.
+                self._cache.pop(cache_key, None)
 
         items = resp.json().get("message", {}).get("items", [])
         if not items:
@@ -409,6 +437,24 @@ def main(argv: list[str] | None = None) -> None:
         limit=args.limit,
         verbose=args.verbose,
     )
+
+    # Audit-7 #3: tell CI / scripts about empty scans rather than
+    # silently exiting 0.  An empty results list could mean
+    # "nothing to check" (legitimate, exit 0) or "scan failed
+    # internally" (worth surfacing).  We distinguish by checking
+    # whether the directory contains any PDFs at all.
+    if not results:
+        # Any PDFs in here?  If yes, the scanner skipped them all,
+        # which is interesting; if no, an empty directory is fine.
+        has_pdfs = next(iter_pdfs(directory), None) is not None
+        if has_pdfs:
+            print(
+                "Warning: directory contains PDFs but scan returned 0 "
+                "results.  Check that filenames match "
+                "'Author, I. - Title.pdf' format.",
+                file=sys.stderr,
+            )
+            sys.exit(2)
 
     published = [r for r in results if r.get("published")]
     not_published = [r for r in results if not r.get("published")]

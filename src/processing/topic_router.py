@@ -222,7 +222,21 @@ def classify_and_link(
             # catches the exception cleanly.
             verb = _create_link(canonical_pdf, dest)
             if undo_log is not None:
-                undo_log.record_copy(canonical_pdf, dest)
+                # Audit-7 #6: if recording the undo entry fails (e.g.
+                # the undo log directory becomes read-only), unlink
+                # the freshly-created hardlink so we don't leave an
+                # untracked orphan on disk.  Without this, the user
+                # would have a topic copy they can't undo and can't
+                # see via the sidecar (which we also haven't updated
+                # yet because that happens after).
+                try:
+                    undo_log.record_copy(canonical_pdf, dest)
+                except Exception:
+                    try:
+                        dest.unlink()
+                    except OSError:
+                        pass
+                    raise
             result.linked.append(str(dest))
             logger.info("topic link %s: %s -> %s", verb, canonical_pdf, dest)
             if not identity.is_new():

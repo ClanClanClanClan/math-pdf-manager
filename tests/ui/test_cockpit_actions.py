@@ -385,6 +385,22 @@ class TestConfigEditor:
         re = yaml.safe_load(target.read_text())
         assert re["default_year"] == "current"
 
+    def test_default_year_dynamic_survives_replace(self, tmp_path):
+        """Audit-7 #7: ``dataclasses.replace`` must carry the dynamic
+        flag.  Earlier code stored it as an instance attribute that
+        replace() dropped, silently freezing the year on the new
+        config's first save."""
+        import dataclasses
+        import yaml
+        from watcher.config import WatcherConfig
+        target = tmp_path / "watcher.yaml"
+        target.write_text(yaml.safe_dump({"default_year": "current"}))
+        cfg = WatcherConfig.load(target)
+        assert cfg._default_year_is_dynamic is True
+        # Replace clones the dataclass; the flag must come along
+        cfg2 = dataclasses.replace(cfg, default_status="published")
+        assert cfg2._default_year_is_dynamic is True
+
     def test_default_year_explicit_year_preserved_round_trip(self, tmp_path):
         """The inverse: an explicit year (``2023``) must NOT collapse
         to ``current`` even if it equals the current year on save."""

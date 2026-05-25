@@ -139,6 +139,14 @@ def _log_activity(action: str, source: str, destination: str = "", tx_id: str = 
         # entries depending on action density), rotate to ``.1`` and
         # start fresh.  Keeps the activity log unbounded over years
         # without forcing the user to manually prune.  Audit-6 #9.
+        #
+        # Audit-7 #5: not atomic across multiple cockpit instances
+        # writing the same file -- between ``rename`` and the next
+        # append, a second writer would land in the freshly-renamed
+        # ``.1`` file.  The cockpit is single-user-single-process
+        # by design (Streamlit serves one tab from one venv); if
+        # you ever run two instances in parallel, the activity log
+        # could lose entries during rotation.  Documented limit.
         try:
             if path.stat().st_size > 10 * 1024 * 1024:
                 rotated = path.with_suffix(path.suffix + ".1")
@@ -417,6 +425,20 @@ def render_sort_queue() -> None:
         selected_topics = [
             code for code, checked in topic_selections.items() if checked
         ]
+        # Audit-7 #1: Streamlit caches widget state by key.  The
+        # topic checkboxes are keyed by ``pdf``, which is stable
+        # across reruns.  When the user later comes back to a
+        # different paper (cursor moves on), the OLD topic
+        # checkbox state would leak into the new paper if the
+        # new paper happened to share a topic_code key.  Purge
+        # the topic_* keys for THIS pdf so the next render is
+        # clean.
+        stale_keys = [
+            k for k in st.session_state.keys()
+            if isinstance(k, str) and k.startswith(f"topic_{pdf}_")
+        ]
+        for k in stale_keys:
+            st.session_state.pop(k, None)
         ok, msg = _approve_sort(pdf, edited_name, status, lib,
                                 topic_codes=selected_topics,
                                 preview=prev)
@@ -1420,9 +1442,17 @@ def render_settings() -> None:
                       f"wrote={summary['written']}")
     if bf_cols[1].button("Verify sidecars", key="bf_verify",
                          use_container_width=True):
-        from processing.identity import verify_all_sidecars
+        from processing.identity import verify_all_sidecars, list_hash_collisions
         with st.spinner("Verifying every sidecar (reads 1MB per PDF)..."):
             summary = verify_all_sidecars(lib, limit=(bf_limit or None))
+            # Audit-7 #8: also surface content-hash collisions so
+            # the user knows when two PDFs share the same 1MB
+            # prefix (template-heavy publishers can do this
+            # legitimately, but it's also how duplicate PDFs
+            # masquerading as distinct papers would slip past
+            # drift detection).
+            collisions = list_hash_collisions(lib)
+            summary["hash_collisions"] = collisions
         st.success(
             f"Scanned {summary['scanned']} · "
             f"drifted {len(summary['drifted'])} · "
@@ -1449,6 +1479,25 @@ def render_settings() -> None:
                     st.caption(
                         f"... and {len(summary['missing_sidecar']) - 50} more"
                     )
+        if summary.get("hash_collisions"):
+            n_colls = len(summary["hash_collisions"])
+            with st.expander(
+                f"{n_colls} content-hash collision(s) "
+                f"(template boilerplate or duplicates?)",
+                expanded=False,
+            ):
+                st.caption(
+                    "The first 1MB of these PDFs is byte-identical.  "
+                    "Often this is just publisher boilerplate (Elsevier, "
+                    "Springer ...) on distinct papers; sometimes it's a "
+                    "real duplicate.  Compare the files to be sure."
+                )
+                for h, paths in list(summary["hash_collisions"].items())[:20]:
+                    st.markdown(f"**`{h[:12]}…`** — {len(paths)} files")
+                    for p in paths[:6]:
+                        st.markdown(f"  - `{Path(p).relative_to(lib)}`")
+                    if len(paths) > 6:
+                        st.caption(f"    ... and {len(paths) - 6} more")
         _log_activity("settings.verify", str(lib),
                       f"drifted={len(summary['drifted'])}")
 

@@ -534,6 +534,45 @@ class TestVerifyAllSidecars:
         assert summary["scanned"] == 2
 
 
+class TestListHashCollisions:
+    """Audit-7 #8: surface PDFs that share the same 1MB hash prefix.
+
+    Template-heavy publishers (Elsevier, Springer ...) can legitimately
+    produce distinct papers with identical first-1MB byte streams.
+    Drift detection can't tell them apart; this helper does."""
+
+    def test_finds_collision(self, tmp_path):
+        from processing.identity import list_hash_collisions
+        # Two papers with identical content: same hash by design
+        a = _make_pdf(tmp_path / "a.pdf", content=b"%PDF identical " * 100)
+        b = _make_pdf(tmp_path / "b.pdf", content=b"%PDF identical " * 100)
+        c = _make_pdf(tmp_path / "c.pdf", content=b"%PDF different")
+        for p in (a, b, c):
+            PaperIdentity().save(p)
+        out = list_hash_collisions(tmp_path)
+        # Exactly one hash colliding, mapped to the two paths
+        assert len(out) == 1
+        (h, paths), = out.items()
+        assert sorted(Path(p).name for p in paths) == ["a.pdf", "b.pdf"]
+
+    def test_no_collisions_returns_empty(self, tmp_path):
+        from processing.identity import list_hash_collisions
+        a = _make_pdf(tmp_path / "a.pdf", content=b"unique A")
+        b = _make_pdf(tmp_path / "b.pdf", content=b"unique B")
+        for p in (a, b):
+            PaperIdentity().save(p)
+        assert list_hash_collisions(tmp_path) == {}
+
+    def test_skips_unhashed_sidecars(self, tmp_path):
+        from processing.identity import list_hash_collisions
+        a = _make_pdf(tmp_path / "a.pdf")
+        ident = PaperIdentity()
+        ident.content_sha256 = ""  # explicitly unset
+        ident.save(a, recompute_hash=False)
+        # Should not bucket the empty-hash PDFs together
+        assert list_hash_collisions(tmp_path) == {}
+
+
 # ---------------------------------------------------------------------------
 # CLI smoke
 # ---------------------------------------------------------------------------

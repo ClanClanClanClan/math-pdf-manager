@@ -59,3 +59,57 @@ def test_corrupt_cache_resets_to_empty(tmp_path):
 def test_missing_cache_starts_empty(tmp_path):
     c = CrossrefChecker(cache_path=tmp_path / "no.json")
     assert c._cache == {}
+
+
+# ---------------------------------------------------------------------------
+# Audit-7 #2/#4: 429/503 must NOT poison the cache.
+# ---------------------------------------------------------------------------
+
+class TestRetriableErrorsDoNotPoisonCache:
+
+    def _mk_resp(self, status_code, headers=None, json_body=None):
+        from unittest.mock import MagicMock
+        r = MagicMock()
+        r.status_code = status_code
+        r.headers = headers or {}
+        r.json.return_value = json_body or {}
+        r.raise_for_status.side_effect = (
+            None if 200 <= status_code < 400 else Exception(f"http {status_code}")
+        )
+        return r
+
+    def test_429_does_not_cache(self, tmp_path, monkeypatch):
+        c = CrossrefChecker(cache_path=tmp_path / "c.json")
+        # Skip the 1s rate-limit pause in tests
+        monkeypatch.setattr(c, "_rate_limit", lambda: None)
+        # First call returns 429 with a tiny Retry-After
+        from unittest.mock import patch
+        with patch.object(c.session, "get",
+                          return_value=self._mk_resp(429, {"Retry-After": "0"})):
+            out = c.check_title("Some Title", [])
+        assert out is None
+        # The cache must NOT contain a poisoned None for this title
+        cache_key = c._cache_key("Some Title")
+        assert cache_key not in c._cache
+
+    def test_500_does_not_cache(self, tmp_path, monkeypatch):
+        c = CrossrefChecker(cache_path=tmp_path / "c.json")
+        monkeypatch.setattr(c, "_rate_limit", lambda: None)
+        from unittest.mock import patch
+        with patch.object(c.session, "get",
+                          return_value=self._mk_resp(503, {"Retry-After": "0"})):
+            c.check_title("Another Title", [])
+        assert c._cache_key("Another Title") not in c._cache
+
+    def test_200_empty_result_does_cache(self, tmp_path, monkeypatch):
+        """A real "no match" from a healthy Crossref should cache so we
+        don't re-query forever."""
+        c = CrossrefChecker(cache_path=tmp_path / "c.json")
+        monkeypatch.setattr(c, "_rate_limit", lambda: None)
+        from unittest.mock import patch
+        with patch.object(c.session, "get",
+                          return_value=self._mk_resp(200, json_body={"message": {"items": []}})):
+            out = c.check_title("Genuine Miss", [])
+        assert out is None
+        # Real miss is cached
+        assert c._cache_key("Genuine Miss") in c._cache

@@ -47,6 +47,20 @@ class WatcherConfig:
     notifications: bool = True
     notification_sound: str = "Glass"
 
+    # ``default_year`` semantics flag.  When True the value persists
+    # as the literal string ``"current"`` on disk and is re-resolved
+    # to ``datetime.now().year`` on every load -- "always use the
+    # current year" intent.  When False, the int is frozen on disk.
+    # Audit-7 #7 promoted this from an instance attribute to a real
+    # dataclass field so it survives ``dataclasses.replace`` and
+    # pickle round-trips (the previous instance-attribute version
+    # silently dropped the intent under either).  ``repr=False``
+    # keeps log output clean; ``compare=False`` so configs with
+    # different intent but identical values still compare equal.
+    _default_year_is_dynamic: bool = field(
+        default=False, repr=False, compare=False,
+    )
+
     @classmethod
     def load(cls, path: Optional[Path] = None) -> "WatcherConfig":
         """Load config from YAML file, falling back to defaults."""
@@ -99,7 +113,7 @@ class WatcherConfig:
 
         raw_year = data.get("default_year")
         is_dynamic = raw_year in (None, "current")
-        obj = cls(
+        return cls(
             inbox_dir=Path(os.path.expanduser(data.get("inbox_dir", str(_DEFAULT_INBOX)))),
             library_root=Path(os.path.expanduser(data.get("library_root", str(_DEFAULT_LIBRARY)))),
             log_dir=Path(os.path.expanduser(data.get("log_dir", str(_DEFAULT_LOG_DIR)))),
@@ -113,13 +127,9 @@ class WatcherConfig:
             delete_source=data.get("delete_source", False),
             notifications=data.get("notifications", True),
             notification_sound=data.get("notification_sound", "Glass"),
+            # Dataclass field so ``dataclasses.replace`` carries it.
+            _default_year_is_dynamic=is_dynamic,
         )
-        # Preserve the "always use current year" intent across
-        # save/load round-trips.  Without this, opening a YAML that
-        # said "current" and resaving it would freeze the current
-        # year on disk and silently change behaviour next January.
-        obj._default_year_is_dynamic = is_dynamic
-        return obj
 
     def ensure_dirs(self) -> None:
         """Create inbox and log directories if they don't exist."""

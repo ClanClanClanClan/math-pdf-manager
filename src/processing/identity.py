@@ -590,6 +590,33 @@ def backfill_sidecar(
     return True
 
 
+def list_hash_collisions(root: Path) -> dict[str, list[str]]:
+    """Return ``{content_sha256: [paths, ...]}`` for hashes shared by 2+ PDFs.
+
+    Audit-7 #8 documented: ``compute_content_hash`` hashes only the
+    first 1MB, which means two distinct papers from template-heavy
+    publishers (Elsevier, Springer ...) can legitimately collide.
+    Drift detection won't tell them apart.  This helper lets the
+    cockpit surface "two papers in your library have the same
+    content fingerprint" so the user can verify they aren't
+    accidental duplicates.
+
+    Only hashes shared by at least two PDFs are returned.  Empty
+    string hashes (unreadable sidecars) are skipped to avoid a
+    massive false-positive bucket on a library with many
+    sidecar-less PDFs.
+    """
+    buckets: dict[str, list[str]] = {}
+    if not root.exists():
+        return {}
+    for pdf in iter_pdfs(root):
+        identity = PaperIdentity.load(pdf)
+        if identity.is_new() or not identity.content_sha256:
+            continue
+        buckets.setdefault(identity.content_sha256, []).append(str(pdf))
+    return {h: paths for h, paths in buckets.items() if len(paths) > 1}
+
+
 def verify_all_sidecars(root: Path, *, limit: Optional[int] = None) -> dict:
     """Walk the library and report sidecar drift for every PDF.
 
