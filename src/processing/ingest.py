@@ -139,11 +139,51 @@ def extract_metadata_from_pdf(pdf_path: Path) -> dict:
 
     Tries embedded PDF metadata first, then falls back to the LLM extractor
     if available, then to filename parsing.
+
+    Audit-8 defensive add: refuses to even open files that don't
+    start with the PDF magic bytes (truncated downloads, accidental
+    .pdf-renamed images) and surfaces password-protected PDFs as a
+    structured warning rather than swallowing the failure into an
+    empty metadata dict.
     """
     metadata = {"title": "", "authors": [], "doi": None, "arxiv_id": None, "year": None}
 
+    # Magic-byte check.  A truncated browser download often ends as a
+    # partial PDF with the trailer missing -- ``fitz.open`` will
+    # cheerfully return an "empty document" instead of raising.  By
+    # rejecting non-PDF magic up front we avoid silently filing
+    # garbage.
+    try:
+        with open(pdf_path, "rb") as _f:
+            magic = _f.read(5)
+    except OSError as exc:
+        logger.warning("Cannot read PDF %s: %s", pdf_path, exc)
+        metadata["extraction_error"] = f"cannot read: {exc}"
+        return metadata
+    if not magic.startswith(b"%PDF-"):
+        logger.warning(
+            "File %s does not start with %%PDF- magic bytes "
+            "(got %r); skipping metadata extraction",
+            pdf_path, magic,
+        )
+        metadata["extraction_error"] = "not a PDF (missing magic bytes)"
+        return metadata
+
     try:
         doc = fitz.open(pdf_path)
+        # Encrypted / password-protected PDFs: PyMuPDF returns a doc
+        # object but most operations fail until ``authenticate``
+        # succeeds.  Flag the condition so the watcher / cockpit can
+        # surface "please unlock me" rather than dropping the paper
+        # into the catch-all "no metadata" fallback.
+        if getattr(doc, "needs_pass", False) or getattr(doc, "is_encrypted", False):
+            logger.warning(
+                "PDF %s is encrypted / password-protected; skipping extraction",
+                pdf_path,
+            )
+            metadata["extraction_error"] = "encrypted PDF (needs password)"
+            doc.close()
+            return metadata
         pdf_meta = doc.metadata or {}
 
         # Extract title from PDF metadata. PDF title fields commonly hold

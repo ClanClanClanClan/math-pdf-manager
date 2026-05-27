@@ -272,6 +272,26 @@ class TestUndoIntegration:
         assert all("07a" not in loc for loc in reloaded.copy_locations)
         assert "07a" not in reloaded.topic_codes
 
+    def test_hardlink_fallback_logs_errno_name(self, library_with_topics, caplog):
+        """Audit-8: when os.link fails (SMB / NFS / iCloud / WebDAV
+        mount), the log message must name the errno so a user
+        debugging a mount-point issue can grep for it.  Old log
+        just said 'hardlink failed' which made diagnosis hopeless."""
+        import logging
+        from unittest.mock import patch
+        from processing.topic_router import _create_link
+
+        src = _make_pdf(library_with_topics / "p.pdf")
+        dst = library_with_topics / "07a - BSDEs" / "p.pdf"
+        with caplog.at_level(logging.INFO, logger="processing.topic_router"):
+            with patch("processing.topic_router.os.link",
+                       side_effect=OSError(18, "Cross-device link")):
+                verb = _create_link(src, dst)
+        assert verb == "copy"
+        # EXDEV is errno 18 on most platforms
+        assert any("EXDEV" in r.message or "errno=18" in r.message
+                   for r in caplog.records)
+
     def test_record_copy_failure_unlinks_orphaned_hardlink(self, library_with_topics):
         """Audit-7 #6: if undo_log.record_copy raises AFTER the link
         was created (rare: disk full, undo dir suddenly read-only),

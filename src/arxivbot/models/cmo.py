@@ -198,14 +198,24 @@ class CMO:
     # Internal helpers
     # ------------------------------------------------------------------
     def _author_segments(self) -> List[str]:
-        """Format each author as ``Lastname, I.`` and return a list."""
+        """Format each author as ``Lastname, I.`` and return a list.
+
+        Audit-8: NFC-normalise each segment so the byte-length
+        accounting in ``_build_with_max_authors`` is deterministic
+        regardless of input form.  Without this, "Möbius" arriving
+        as ``M + U+0308 + öbius`` (decomposed combining mark) would
+        encode to one more byte than its precomposed equivalent
+        ``Möbius``, and the et-al truncation would inconsistently
+        clip one extra author.
+        """
         segments: List[str] = []
         for author in self.authors:
-            initials = author.initials()
+            family = unicodedata.normalize("NFC", author.family or "")
+            initials = unicodedata.normalize("NFC", author.initials() or "")
             if initials:
-                segments.append(f"{author.family}, {initials}.")
+                segments.append(f"{family}, {initials}.")
             else:
-                segments.append(author.family)
+                segments.append(family)
         return segments
 
     def _build_with_max_authors(

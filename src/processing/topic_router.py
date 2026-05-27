@@ -93,17 +93,22 @@ def _create_link(source: Path, destination: Path) -> str:
     """Create a hardlink, falling back to copy on cross-device errors.
 
     Returns the verb used ("hardlink" or "copy") for logging.
+
+    Audit-8: log the OSError's errno symbolic name so SMB / NFS /
+    iCloud / WebDAV mount failures are diagnosable from the log.
+    Previously the message just said "hardlink failed" -- correct
+    but useless when debugging a mount-point issue.
     """
+    import errno as _errno
     destination.parent.mkdir(parents=True, exist_ok=True)
     try:
         os.link(source, destination)
         return "hardlink"
     except OSError as exc:
-        # ``EXDEV`` (cross-device) and ``EPERM`` (filesystem refuses
-        # hardlinks, e.g. some network mounts) both fall back to copy.
+        errno_name = _errno.errorcode.get(exc.errno or 0, f"errno={exc.errno}")
         logger.info(
-            "hardlink failed (%s); falling back to copy: %s -> %s",
-            exc, source, destination,
+            "hardlink failed (%s: %s); falling back to copy: %s -> %s",
+            errno_name, exc, source, destination,
         )
         shutil.copy2(source, destination)
         return "copy"

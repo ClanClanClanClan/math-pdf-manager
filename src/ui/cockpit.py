@@ -101,24 +101,37 @@ def _load_activity_log() -> list[dict]:
     """Load up to 100 most-recent entries from disk on cold start.
 
     Returned newest-first so it slots straight into ``session_state``.
+
+    Audit-8: previously read EVERY line of the (potentially 10MB)
+    log file before truncating to 100.  At ~100 bytes per entry
+    that's ~100k JSON parses for a result the user discards 99% of.
+    Now we read the file once with ``readlines()`` (a single syscall)
+    and walk the bottom backwards, stopping after we've parsed 100
+    valid entries.
     """
     path = _activity_log_path()
     if not path.exists():
         return []
-    entries: list[dict] = []
     try:
-        for line in path.read_text(encoding="utf-8").splitlines():
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                entries.append(json.loads(line))
-            except json.JSONDecodeError:
-                continue  # skip corrupt lines
+        with open(path, "rb") as f:
+            raw_lines = f.readlines()
     except OSError:
         return []
-    # File is append-only chronological; flip to newest-first and bound it.
-    return list(reversed(entries))[:100]
+    entries: list[dict] = []
+    # Walk from the newest line backwards, only parsing as many as
+    # we need.  Most of the file gets ignored without ever paying
+    # the JSON cost.
+    for raw in reversed(raw_lines):
+        line = raw.strip()
+        if not line:
+            continue
+        try:
+            entries.append(json.loads(line))
+        except json.JSONDecodeError:
+            continue  # skip corrupt lines
+        if len(entries) >= 100:
+            break
+    return entries
 
 
 def _log_activity(action: str, source: str, destination: str = "", tx_id: str = "") -> None:
