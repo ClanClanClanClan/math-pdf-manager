@@ -55,14 +55,40 @@ HASH_PREFIX_BYTES = 1024 * 1024
 SCHEMA_VERSION = 1
 
 
+# Maximum filename basename length on the user's filesystem.  macOS APFS
+# and most Linux ext4 setups cap at 255 bytes (NOT 255 chars -- multi-byte
+# characters count).  Querying ``os.pathconf(path, "PC_NAME_MAX")`` would
+# be more portable but requires the path to exist; we hard-code 255 since
+# every realistic target filesystem uses that limit.
+MAX_BASENAME_BYTES = 255
+
+
 def sidecar_path(pdf_path: Path) -> Path:
     """Return the sidecar path for ``pdf_path``.
 
-    Format: ``<pdf with .pdf swapped for .meta.json>``.  Living next to
+    Normally ``<pdf with .pdf swapped for .meta.json>``.  Living next to
     the PDF (rather than in a central index) means moves via the
     filesystem keep the pair together.
+
+    Live-trial finding: ``.meta.json`` is 6 bytes longer than ``.pdf``,
+    so a PDF whose canonical filename was generated right up against
+    the 255-byte limit can have a sidecar path that EXCEEDS the limit
+    -- every ``.exists()`` / read / write on it raises ``OSError(63)``
+    "File name too long" on macOS.  When this happens, we fall back
+    to a hash-named sidecar in a hidden ``.sidecars/`` subfolder
+    co-located with the PDF.  The hash is derived from the PDF's
+    original basename so subsequent loads find the same file
+    deterministically.
     """
-    return pdf_path.with_suffix(".meta.json")
+    natural = pdf_path.with_suffix(".meta.json")
+    if len(natural.name.encode("utf-8")) <= MAX_BASENAME_BYTES:
+        return natural
+    # Fallback: hash-named sidecar in a hidden sibling directory.
+    # SHA-1 over the original basename, 16 hex chars = 64 bits of
+    # collision space (plenty for a per-folder bucket).
+    import hashlib as _hashlib
+    h = _hashlib.sha1(pdf_path.name.encode("utf-8")).hexdigest()[:16]
+    return pdf_path.parent / ".sidecars" / f"{h}.meta.json"
 
 
 # Case-insensitive PDF glob.  ``Path.rglob("*.pdf")`` is
@@ -225,6 +251,12 @@ class PaperIdentity:
             self.original_filename = pdf_path.name
 
         path = sidecar_path(pdf_path)
+        # Live-trial finding: when ``sidecar_path`` falls back to
+        # ``.sidecars/<hash>.meta.json``, the parent directory doesn't
+        # exist yet.  ``mkdir(parents=True)`` is safe either way --
+        # for the natural path it's a no-op since the PDF's parent
+        # already exists.
+        path.parent.mkdir(parents=True, exist_ok=True)
         tmp = path.with_suffix(path.suffix + ".tmp")
         # ``asdict`` includes the underscore-prefixed sentinel; strip
         # it so the on-disk schema is clean.

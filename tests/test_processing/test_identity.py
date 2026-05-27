@@ -47,6 +47,55 @@ def _make_pdf(path: Path, content: bytes = b"%PDF-1.4 fake content for test") ->
 # load / save round trip
 # ---------------------------------------------------------------------------
 
+class TestOverlongPdfFallback:
+    """Live-trial finding (round 9): a PDF whose canonical filename is
+    at the 255-byte limit produces a sidecar path 6 bytes longer
+    (``.meta.json`` vs ``.pdf``), exceeding the filesystem limit and
+    making every sidecar operation raise OSError.  The fallback
+    routes those PDFs to ``.sidecars/<hash>.meta.json``."""
+
+    def test_short_pdf_uses_natural_sidecar(self, tmp_path):
+        pdf = tmp_path / "Smith - Paper.pdf"
+        pdf.write_bytes(b"%PDF")
+        assert sidecar_path(pdf) == tmp_path / "Smith - Paper.meta.json"
+
+    def test_overlong_pdf_uses_hash_fallback(self, tmp_path):
+        # 251-byte stem + .pdf = 255 bytes (right at the limit)
+        long_stem = "x" * 251
+        pdf = tmp_path / f"{long_stem}.pdf"
+        # Note: we don't actually write the file (the OS would reject
+        # the create too); we only need sidecar_path to compute its
+        # answer from the basename.
+        sc = sidecar_path(pdf)
+        assert ".sidecars" in sc.parts
+        assert sc.name.endswith(".meta.json")
+        assert len(sc.name.encode("utf-8")) <= 255
+
+    def test_overlong_pdf_sidecar_is_deterministic(self, tmp_path):
+        long_stem = "y" * 251
+        pdf = tmp_path / f"{long_stem}.pdf"
+        # Same PDF -> same sidecar path every time
+        assert sidecar_path(pdf) == sidecar_path(pdf)
+
+    def test_overlong_save_load_round_trip(self, tmp_path):
+        """End-to-end: save a sidecar for a too-long PDF name, then
+        reload it.  The fallback must be transparent to callers."""
+        # We can't actually write the 251-byte-named PDF to disk on
+        # APFS without hitting other limits in pytest's tmp paths,
+        # so we mock the PDF existence by working purely on the
+        # sidecar.  PaperIdentity.save() ``mkdir(parents=True)`` for
+        # the .sidecars/ folder.
+        long_stem = "z" * 251
+        pdf = tmp_path / f"{long_stem}.pdf"
+        ident = PaperIdentity(doi="10.1/long")
+        ident.save(pdf, recompute_hash=False)  # no PDF on disk needed
+        sc = sidecar_path(pdf)
+        assert sc.exists()
+        assert ".sidecars" in sc.parts
+        loaded = PaperIdentity.load(pdf)
+        assert loaded.doi == "10.1/long"
+
+
 class TestRoundTrip:
 
     def test_missing_sidecar_yields_new_object(self, tmp_path):
