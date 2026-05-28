@@ -257,15 +257,23 @@ def _maybe_sidecar_pair(source: Path, destination: Path) -> Optional[tuple[Path,
 
     Conditions:
     * the source is a .pdf (we only attach identity sidecars to PDFs);
-    * a ``<source>.meta.json`` exists;
+    * the sidecar resolved by ``sidecar_path()`` actually exists;
     * we're not moving the sidecar itself (avoid sidecar-of-sidecar).
+
+    Delegates to ``processing.identity.sidecar_path`` so the same
+    resolution logic (natural sibling vs. mirror tree vs. overlong
+    fallback) applies everywhere.
     """
     if source.suffix.lower() != ".pdf":
         return None
-    src_sidecar = source.with_suffix(".meta.json")
-    if not src_sidecar.exists():
-        return None
-    dst_sidecar = destination.with_suffix(".meta.json")
+    from processing.identity import sidecar_path
+    src_sidecar = sidecar_path(source)
+    try:
+        if not src_sidecar.exists():
+            return None
+    except OSError:
+        return None  # path too long etc -- treat as no sidecar
+    dst_sidecar = sidecar_path(destination)
     return src_sidecar, dst_sidecar
 
 
@@ -304,6 +312,10 @@ def logged_move(
         src_sidecar, dst_sidecar = pair
         if undo_log:
             undo_log.record_move(src_sidecar, dst_sidecar)
+        # Mirror-tree dest may not exist yet -- create it.  No-op
+        # for the natural-sibling case (the parent is the PDF's
+        # parent which already exists post-move).
+        dst_sidecar.parent.mkdir(parents=True, exist_ok=True)
         shutil.move(str(src_sidecar), str(dst_sidecar))
         # Rewrite the sidecar's ``copy_locations`` so the recorded
         # primary path matches the move's destination.  Without this
@@ -376,6 +388,8 @@ def logged_rename(
         src_sidecar, dst_sidecar = pair
         if undo_log:
             undo_log.record_rename(src_sidecar, dst_sidecar)
+        # Mirror-tree dest may not exist yet -- create it.
+        dst_sidecar.parent.mkdir(parents=True, exist_ok=True)
         src_sidecar.rename(dst_sidecar)
         # See logged_move above -- keep copy_locations honest AND
         # rename the topic-folder hardlinks.

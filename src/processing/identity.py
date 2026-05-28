@@ -62,30 +62,103 @@ SCHEMA_VERSION = 1
 # every realistic target filesystem uses that limit.
 MAX_BASENAME_BYTES = 255
 
+# Name of the hidden mirror folder where every paper's sidecar lives,
+# rooted at the library root.  The library tree itself stays free of
+# .meta.json files; only this single dotfolder appears.  It syncs via
+# Dropbox so laptop <-> desktop share the same sidecar state without
+# re-backfilling.
+MIRROR_DIR_NAME = ".mathpdf-sidecars"
+
+
+def _library_root_for(pdf_path: Path) -> Optional[Path]:
+    """Find the library root that owns ``pdf_path``, or None.
+
+    Walks up the directory tree looking for the
+    ``.mathpdf-sidecars/`` marker.  If not found, falls back to the
+    configured library root from ``core.config_paths.get_library_root``.
+
+    Returns None for PDFs that aren't under any known library
+    (synth-library tests in tmp_path, ad-hoc PDFs outside Dropbox).
+    Those callers get the natural-path sidecar (next-to-PDF) so the
+    test suite keeps working unchanged.
+    """
+    # Walk-up via the marker.  This makes ``enable_sidecar_mirror``
+    # idempotent: once the marker exists, every call resolves to that
+    # library root regardless of where ``get_library_root()`` points.
+    for ancestor in [pdf_path.parent, *pdf_path.parents]:
+        try:
+            if (ancestor / MIRROR_DIR_NAME).is_dir():
+                return ancestor
+        except OSError:
+            pass
+        if ancestor == Path.home() or ancestor.parent == ancestor:
+            break
+    # Fallback: configured library root.  Only adopt it if the PDF
+    # actually lives under it -- a test in tmp_path with no marker
+    # should NOT inherit the real Dropbox library's mirror tree.
+    try:
+        from core.config_paths import get_library_root
+        root = get_library_root().resolve()
+    except Exception:
+        return None
+    if not root.exists():
+        return None
+    try:
+        pdf_path.resolve().relative_to(root)
+    except (ValueError, OSError):
+        return None
+    return root
+
+
+def enable_sidecar_mirror(library_root: Path) -> Path:
+    """Create the ``<library>/.mathpdf-sidecars/`` marker dir.
+
+    Idempotent: returns the existing path if already present.
+    After this runs, every ``sidecar_path()`` for a PDF under
+    ``library_root`` resolves to a mirrored path rather than the
+    natural next-to-PDF location.
+    """
+    marker = library_root / MIRROR_DIR_NAME
+    marker.mkdir(parents=True, exist_ok=True)
+    return marker
+
 
 def sidecar_path(pdf_path: Path) -> Path:
     """Return the sidecar path for ``pdf_path``.
 
-    Normally ``<pdf with .pdf swapped for .meta.json>``.  Living next to
-    the PDF (rather than in a central index) means moves via the
-    filesystem keep the pair together.
+    Primary location: ``<library>/.mathpdf-sidecars/<relative-path>.meta.json``
+    where ``<relative-path>`` mirrors the PDF's path under the library
+    root.  Keeps the library tree itself free of sidecar JSONs while
+    letting Dropbox sync the hidden mirror to other machines.
 
-    Live-trial finding: ``.meta.json`` is 6 bytes longer than ``.pdf``,
-    so a PDF whose canonical filename was generated right up against
-    the 255-byte limit can have a sidecar path that EXCEEDS the limit
-    -- every ``.exists()`` / read / write on it raises ``OSError(63)``
-    "File name too long" on macOS.  When this happens, we fall back
-    to a hash-named sidecar in a hidden ``.sidecars/`` subfolder
-    co-located with the PDF.  The hash is derived from the PDF's
-    original basename so subsequent loads find the same file
-    deterministically.
+    Fallbacks:
+    * PDF not under any known library (synth tests, ad-hoc) -> natural
+      ``<pdf>.with_suffix(".meta.json")`` next to the PDF.
+    * Mirror path exceeds 255 bytes (the 13-author papers in the
+      library) -> hash-named entry in a nested ``.sidecars/`` folder
+      inside the mirror parent.
     """
+    library_root = _library_root_for(pdf_path)
+    if library_root is not None:
+        try:
+            relative = pdf_path.resolve().relative_to(library_root)
+        except (ValueError, OSError):
+            library_root = None
+    if library_root is not None:
+        mirror = (
+            library_root / MIRROR_DIR_NAME / relative.with_suffix(".meta.json")
+        )
+        if len(mirror.name.encode("utf-8")) <= MAX_BASENAME_BYTES:
+            return mirror
+        import hashlib as _hashlib
+        h = _hashlib.sha1(pdf_path.name.encode("utf-8")).hexdigest()[:16]
+        return mirror.parent / ".sidecars" / f"{h}.meta.json"
+
+    # No library context: natural sibling (backward-compat for tests
+    # and ad-hoc PDFs).
     natural = pdf_path.with_suffix(".meta.json")
     if len(natural.name.encode("utf-8")) <= MAX_BASENAME_BYTES:
         return natural
-    # Fallback: hash-named sidecar in a hidden sibling directory.
-    # SHA-1 over the original basename, 16 hex chars = 64 bits of
-    # collision space (plenty for a per-folder bucket).
     import hashlib as _hashlib
     h = _hashlib.sha1(pdf_path.name.encode("utf-8")).hexdigest()[:16]
     return pdf_path.parent / ".sidecars" / f"{h}.meta.json"

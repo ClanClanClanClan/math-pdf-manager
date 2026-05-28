@@ -47,6 +47,79 @@ def _make_pdf(path: Path, content: bytes = b"%PDF-1.4 fake content for test") ->
 # load / save round trip
 # ---------------------------------------------------------------------------
 
+class TestMirrorSidecarLocation:
+    """Sidecars live under ``<library>/.mathpdf-sidecars/`` so the
+    library tree itself stays free of metadata JSONs.  These tests
+    pin down the routing: marker present -> mirror; no marker ->
+    natural sibling (backward compat for synth-library tests)."""
+
+    def test_no_marker_uses_natural_path(self, tmp_path):
+        # tmp_path has no .mathpdf-sidecars/, and isn't under the
+        # configured library root, so we should fall through to the
+        # natural-sibling sidecar.
+        pdf = tmp_path / "Smith - Paper.pdf"
+        pdf.write_bytes(b"%PDF")
+        assert sidecar_path(pdf) == tmp_path / "Smith - Paper.meta.json"
+
+    def test_marker_present_uses_mirror_tree(self, tmp_path):
+        from processing.identity import enable_sidecar_mirror, MIRROR_DIR_NAME
+        # Build a synth library with the marker
+        (tmp_path / "01 - Published papers" / "A").mkdir(parents=True)
+        pdf = tmp_path / "01 - Published papers" / "A" / "Smith - Paper.pdf"
+        pdf.write_bytes(b"%PDF")
+        enable_sidecar_mirror(tmp_path)
+        sc = sidecar_path(pdf)
+        # Path mirrors the PDF's relative position
+        assert sc == (
+            tmp_path / MIRROR_DIR_NAME / "01 - Published papers" / "A"
+            / "Smith - Paper.meta.json"
+        )
+
+    def test_mirror_save_then_load_round_trip(self, tmp_path):
+        from processing.identity import enable_sidecar_mirror
+        enable_sidecar_mirror(tmp_path)
+        sub = tmp_path / "03 - Working papers" / "S"
+        sub.mkdir(parents=True)
+        pdf = sub / "Smith - Test.pdf"
+        pdf.write_bytes(b"%PDF data")
+        ident = PaperIdentity(doi="10.1/mirror-test")
+        ident.save(pdf)
+        # The mirror parent was auto-created by save()
+        assert sidecar_path(pdf).exists()
+        # The library tree proper has NO new files next to the PDF
+        siblings = list(sub.iterdir())
+        assert sub / "Smith - Test.pdf" in siblings
+        # No .meta.json in the PDF's own folder
+        assert not any(s.suffix == ".json" for s in siblings)
+        # Reload works
+        loaded = PaperIdentity.load(pdf)
+        assert loaded.doi == "10.1/mirror-test"
+
+    def test_mirror_move_carries_sidecar(self, tmp_path):
+        from processing.identity import enable_sidecar_mirror, MIRROR_DIR_NAME
+        from processing.undo_log import logged_move
+        enable_sidecar_mirror(tmp_path)
+        src_dir = tmp_path / "03 - Working papers" / "S" / "2020"
+        src_dir.mkdir(parents=True)
+        src = src_dir / "Smith - Paper.pdf"
+        src.write_bytes(b"%PDF")
+        PaperIdentity(doi="10.1/x").save(src)
+        # Sidecar landed in the mirror, not next to the PDF
+        old_sc = sidecar_path(src)
+        assert MIRROR_DIR_NAME in old_sc.parts
+        assert old_sc.exists()
+
+        # Move PDF to a different mirror destination
+        dst_dir = tmp_path / "02 - Unpublished papers" / "S"
+        dst = dst_dir / "Smith - Paper.pdf"
+        logged_move(src, dst)
+        # Sidecar followed
+        new_sc = sidecar_path(dst)
+        assert new_sc.exists()
+        assert not old_sc.exists()
+        assert PaperIdentity.load(dst).doi == "10.1/x"
+
+
 class TestOverlongPdfFallback:
     """Live-trial finding (round 9): a PDF whose canonical filename is
     at the 255-byte limit produces a sidecar path 6 bytes longer
