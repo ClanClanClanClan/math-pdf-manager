@@ -60,7 +60,14 @@ SCHEMA_VERSION = 1
 # characters count).  Querying ``os.pathconf(path, "PC_NAME_MAX")`` would
 # be more portable but requires the path to exist; we hard-code 255 since
 # every realistic target filesystem uses that limit.
-MAX_BASENAME_BYTES = 255
+#
+# We budget 4 fewer bytes because ``PaperIdentity.save`` writes to a
+# transient ``<sidecar>.tmp`` file before ``os.replace``.  A sidecar at
+# 254 bytes would have a 258-byte tmp -- creating it fails with
+# ENAMETOOLONG.  Live-trial finding: 11 papers in the user's library
+# sit in the [252, 255]-byte sidecar-name range; without this budget
+# 3 of them errored during the first real backfill.
+MAX_BASENAME_BYTES = 251
 
 # Name of the hidden mirror folder where every paper's sidecar lives,
 # rooted at the library root.  The library tree itself stays free of
