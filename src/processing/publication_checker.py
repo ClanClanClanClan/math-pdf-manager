@@ -116,16 +116,51 @@ class CrossrefChecker:
             # gate (``match.author_count``) are dropped so the cache
             # doesn't poison the safety check.
             if isinstance(raw, dict) and raw.get("_version") == self.CACHE_VERSION:
-                self._cache = raw.get("entries", {}) or {}
+                # Live-trial finding: a v2 cache can still contain
+                # entries that pre-date later validation rules
+                # (repository filter, author_count gate).  Re-validate
+                # on every load so a cache written months ago doesn't
+                # poison today's pipeline.
+                raw_entries = raw.get("entries", {}) or {}
+                kept = dropped = 0
+                for k, v in raw_entries.items():
+                    if v and "author_count" not in v:
+                        dropped += 1
+                        continue
+                    if v and _is_repository_match(v):
+                        # Convert repository hits to negative cache
+                        # entries so we don't re-query Crossref for
+                        # them every time -- they're known not to be
+                        # real publications.
+                        self._cache[k] = None
+                        kept += 1
+                        continue
+                    self._cache[k] = v
+                    kept += 1
+                if dropped:
+                    logger.info(
+                        "Dropped %d stale v2 cache entries missing author_count "
+                        "during load.", dropped,
+                    )
             else:
+                # v1 migration.  Cache stores match dicts directly
+                # (NOT nested under a "match" key -- earlier
+                # migration code wrongly assumed otherwise and
+                # silently kept all entries).  Live-trial finding.
                 migrated = 0
                 dropped = 0
                 for k, v in (raw or {}).items():
                     if k.startswith("_"):
                         continue
-                    match = (v or {}).get("match") or {}
-                    if match and "author_count" not in match:
+                    # v is either None (negative) or the match dict.
+                    if v and "author_count" not in v:
                         dropped += 1
+                        continue
+                    if v and _is_repository_match(v):
+                        # Repository hit -- neutralise so the next
+                        # scan_directory doesn't surface it.
+                        self._cache[k] = None
+                        migrated += 1
                         continue
                     self._cache[k] = v
                     migrated += 1
@@ -159,7 +194,29 @@ class CrossrefChecker:
         """
         cache_key = self._cache_key(title)
         if cache_key in self._cache:
-            return self._cache[cache_key]
+            cached = self._cache[cache_key]
+            # Live-trial finding: the repository filter only runs on
+            # FRESH Crossref queries.  A cached SSRN / arXiv / HAL
+            # match (e.g. from a session before the filter existed,
+            # or one with stale schema) bypassed it forever.  Validate
+            # cache hits on the way out so the filter is enforced
+            # universally.  ``cached`` is either None (negative miss
+            # we already chose to cache) or a match dict; only the
+            # latter needs re-validation.
+            if cached and _is_repository_match(cached):
+                self._cache[cache_key] = None
+                self._save_cache()
+                return None
+            # Audit-3's safe-upgrade gate needs ``author_count``.  An
+            # old cached match that pre-dates that field would
+            # silently fall back to author_count=1 and could trigger
+            # a wrong auto-upgrade.  Invalidate and re-query.
+            if cached and "author_count" not in cached:
+                del self._cache[cache_key]
+                self._save_cache()
+                # Fall through to re-query Crossref below
+            else:
+                return cached
 
         self._rate_limit()
 
