@@ -650,6 +650,8 @@ _REPOSITORY_DOI_PREFIXES = (
     "10.21203/",          # Research Square (preprints)
     "10.22541/",          # Authorea (preprints)
     "10.20944/",          # Preprints.org
+    "10.31219/",          # OSF (Open Science Framework) preprints -- live trial #54
+    "10.21236/",          # DTIC (Defense Tech Info Center) tech reports -- live trial #54
 )
 
 _REPOSITORY_JOURNALS = (
@@ -666,6 +668,10 @@ _REPOSITORY_JOURNALS = (
     "preprint",
     "research square",
     "authorea",
+    "open science framework",
+    "osf preprints",
+    "defense technical information center",
+    "dtic",
 )
 
 

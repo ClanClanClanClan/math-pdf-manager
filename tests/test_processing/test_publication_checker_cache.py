@@ -63,6 +63,24 @@ def test_v1_cache_entries_dropped_when_author_count_missing(tmp_path):
     assert c._cache["miss"] is None
 
 
+def test_repository_filter_covers_osf_and_dtic():
+    """Live-trial finding: OSF (10.31219) preprints and DTIC
+    (10.21236) tech reports were leaking past the repository
+    filter and showing up in the auto-upgrade pool.  Both should
+    be classified as 'not a real publication'."""
+    from processing.publication_checker import _is_repository_match
+    cases = [
+        # The two cases that surfaced live
+        {"doi": "10.31219/osf.io/h9zfn", "journal": "OSF Preprints"},
+        {"doi": "10.21236/ada186012", "journal": "Defense Technical Information Center"},
+        # Generic prefix sanity (no journal field set)
+        {"doi": "10.31219/osf.io/anything"},
+        {"doi": "10.21236/anything"},
+    ]
+    for c in cases:
+        assert _is_repository_match(c), f"should be repo: {c}"
+
+
 def test_v1_cache_repo_match_neutralised(tmp_path):
     """v1 cache with an SSRN match should become a NEGATIVE entry
     on load -- otherwise scan_directory keeps surfacing the
