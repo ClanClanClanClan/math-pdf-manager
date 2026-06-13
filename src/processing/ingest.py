@@ -751,6 +751,41 @@ def ingest_paper(
     # Step 4: Determine year for working papers
     paper_year = year or metadata.get("year")
 
+    # Step 4.5: Auto-resolve the topic folder when the caller didn't
+    # pin one.  The library's six 07x topic folders (BSDEs, Contract
+    # theory, Time-inconsistent control, Stackelberg, Control on
+    # networks, Non-commutative calculus) each mirror the standard
+    # 01-Published / 02-Unpublished / ... structure.  A paper whose
+    # title clearly matches a topic should land in that topic's
+    # subtree rather than the flat top-level folder -- this is what
+    # the user asked for when papers leave "12 - To be sorted" or get
+    # upgraded out of "02 - Unpublished".
+    #
+    # Conservative: ``resolve_topic`` only returns a code on a
+    # confident keyword match, so the common case (no match) keeps
+    # the existing top-level routing.  Sub-sub-topics (Numerical
+    # methods, 2BSDEs, G-BSDEs, ESG) are NOT auto-routed -- the
+    # classifier has no patterns for them -- so a BSDE paper lands in
+    # ``07a - BSDEs/01 - Published papers/`` and the user can refile
+    # into a finer bucket by hand.
+    if topic is None:
+        try:
+            from processing.publication_topic_router import resolve_topic
+            classify_text = metadata.get("title") or ""
+            decision = resolve_topic(classify_text)
+            if decision.topic_code:
+                topic = decision.topic_code
+                result["auto_topic"] = decision.topic_code
+                result["auto_topic_name"] = decision.topic_name
+                result["auto_topic_score"] = decision.score
+                if verbose:
+                    print(
+                        f"  Auto-topic: {decision.topic_code} "
+                        f"({decision.topic_name}, score {decision.score:.1f})"
+                    )
+        except Exception as exc:  # pragma: no cover -- never block ingest
+            logger.warning("auto topic resolution failed: %s", exc)
+
     # Step 5: Organize (route to correct directory, with undo logging)
     org = OrganizationSystem(library_root, topic=topic, dry_run=dry_run)
     org_result = org.organize(pdf_path, metadata, canonical_name, year=paper_year, undo_log=kwargs.get("undo_log"))
