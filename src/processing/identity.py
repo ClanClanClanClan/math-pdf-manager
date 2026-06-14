@@ -267,6 +267,14 @@ class PaperIdentity:
     # Topic classification cache (e.g. ``["07a", "07b"]``).
     topic_codes: list[str] = field(default_factory=list)
 
+    # Topic the classifier SUGGESTED but wasn't confident enough to
+    # auto-file (confidence in [REVIEW, AUTO)).  The paper currently
+    # lives in a standard folder; the cockpit Attention Queue surfaces
+    # this so the user can confirm a move into the topic folder.
+    # Cleared once the user accepts or rejects.
+    topic_suggestion: str = ""
+    topic_confidence: float = 0.0
+
     # Marker for "this object was constructed because no sidecar
     # existed yet".  Not persisted.
     _is_new: bool = field(default=True, repr=False)

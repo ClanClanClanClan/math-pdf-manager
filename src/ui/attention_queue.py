@@ -482,12 +482,65 @@ def collect_permanently_unpublished(library_root: Path) -> list[AttentionItem]:
 # Registry of collectors -- (name, callable that takes library_root) pairs.
 # Kept as a list (not a dict) so the order is deterministic and the UI
 # can sort by severity within each source.
+def collect_topic_suggestions(library_root: Path) -> list[AttentionItem]:
+    """Papers the classifier thinks belong to a topic but wasn't sure
+    enough to auto-file -- the user confirms or rejects the move.
+
+    These are the medium-confidence band (review) from
+    ``publication_topic_router.resolve_topic``.  Accepting moves the
+    paper into ``<topic>/<status>/`` via the undo log (reversible);
+    rejecting clears the suggestion.
+    """
+    try:
+        from processing.publication_topic_router import list_topic_suggestions
+    except ImportError as exc:
+        logger.warning("topic router unavailable: %s", exc)
+        return []
+    try:
+        rows = list_topic_suggestions(library_root)
+    except Exception as exc:
+        logger.warning("topic-suggestion scan raised: %s", exc)
+        return []
+    items: list[AttentionItem] = []
+    for row in rows:
+        pdf = Path(row["path"])
+        code = row["topic"]
+        conf = row["confidence"]
+        key = f"topic_suggestion::{pdf.relative_to(library_root)}"
+        items.append(
+            AttentionItem(
+                key=key,
+                source="topic_suggestion",
+                severity=SEVERITY_INFO,
+                title=f"Topic? {code} ({conf:.0%}): {pdf.stem}",
+                detail=(
+                    f"Path: `{pdf}`\n\n"
+                    f"The classifier suggests this belongs in topic "
+                    f"**{code}** with {conf:.0%} confidence -- below the "
+                    f"auto-file threshold, so it's in a standard folder "
+                    f"pending your call.  Accept to move it into the "
+                    f"topic folder (reversible via Activity), or reject "
+                    f"to keep it where it is."
+                ),
+                created_at="",
+                payload={"path": str(pdf), "topic": code, "confidence": conf},
+                actions=[
+                    ("Accept -> move to topic", "accept_topic"),
+                    ("Reject suggestion", "reject_topic"),
+                    ("Reveal in Finder", "reveal_in_finder"),
+                ],
+            )
+        )
+    return items
+
+
 COLLECTORS: list[tuple[str, Callable[[Path], list[AttentionItem]]]] = [
     ("watcher_failure", lambda root: collect_watcher_failures()),
     ("upgrade_flag", collect_upgrade_flags),
     ("aging", collect_aging_candidates),
     ("conflict_copy", collect_conflict_copies),
     ("borderline_match", collect_borderline_matches),
+    ("topic_suggestion", collect_topic_suggestions),
     ("permanently_unpublished", collect_permanently_unpublished),
 ]
 

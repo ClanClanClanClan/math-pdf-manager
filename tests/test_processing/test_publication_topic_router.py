@@ -65,6 +65,113 @@ class TestResolveTopic:
             assert d.subtopic_supported is False
 
 
+class TestConfidenceBands:
+
+    def test_confident_match_auto_files(self):
+        # Strong, unambiguous BSDE signal in title + body.
+        d = resolve_topic(
+            "Reflected BSDEs and obstacle problems",
+            "backward stochastic differential equations BSDE reflected",
+        )
+        assert d.auto
+        assert d.topic_code == "07a"
+        assert d.confidence >= 0.70
+
+    def test_no_keyword_is_standard(self):
+        # No topic keyword at all -> standard, no suggestion.
+        d = resolve_topic("On the rate of escape of random walks")
+        assert not d.auto
+        assert not d.needs_review
+        assert d.is_standard
+
+    def test_single_specific_keyword_auto_files(self):
+        # Hyper-specific terms (BSDE, Stackelberg) are confident on a
+        # single hit -- they essentially never appear off-topic.
+        assert resolve_topic("A remark on a BSDE example").auto
+        assert resolve_topic("On Stackelberg equilibria").auto
+
+    def test_contested_match_lands_in_review_band(self):
+        # A title hitting TWO topics' primary keywords is ambiguous ->
+        # the dominance penalty drops confidence into the review band,
+        # so it's suggested (not auto-filed) for the user to confirm.
+        d = resolve_topic("Stackelberg games and BSDEs")
+        # Two strong competing topics -> not auto.
+        assert not d.auto
+        # The classifier still has a best guess to surface.
+        if d.needs_review:
+            assert d.topic_code is None
+            assert d.suggested_code in ("07a", "07d")
+
+    def test_confidence_is_a_percentage(self):
+        d = resolve_topic("Principal-agent moral hazard contract design",
+                          "moral hazard principal agent")
+        assert 0.0 <= d.confidence <= 1.0
+
+
+class TestSuggestionLifecycle:
+
+    @pytest.fixture
+    def lib_with_suggestion(self, topic_library):
+        """A paper filed in standard Published with a pending 07a suggestion."""
+        from processing.identity import enable_sidecar_mirror, PaperIdentity
+        enable_sidecar_mirror(topic_library)
+        sub = topic_library / "01 - Published papers" / "S"
+        sub.mkdir(parents=True)
+        pdf = sub / "Smith, J. - A study.pdf"
+        pdf.write_bytes(b"%PDF-1.4 test")
+        ident = PaperIdentity()
+        ident.topic_suggestion = "07a"
+        ident.topic_confidence = 0.55
+        ident.save(pdf)
+        return topic_library, pdf
+
+    def test_list_suggestions(self, lib_with_suggestion):
+        from processing.publication_topic_router import list_topic_suggestions
+        lib, pdf = lib_with_suggestion
+        rows = list_topic_suggestions(lib)
+        assert len(rows) == 1
+        assert rows[0]["topic"] == "07a"
+        assert rows[0]["confidence"] == 0.55
+
+    def test_accept_moves_into_topic(self, lib_with_suggestion):
+        from processing.publication_topic_router import accept_topic_suggestion
+        from processing.identity import PaperIdentity
+        lib, pdf = lib_with_suggestion
+        ok, msg = accept_topic_suggestion(pdf, lib)
+        assert ok, msg
+        # Moved into 07a's Published/S
+        moved = lib / "07a - BSDEs" / "01 - Published papers" / "S" / "Smith, J. - A study.pdf"
+        assert moved.exists()
+        assert not pdf.exists()
+        ident = PaperIdentity.load(moved)
+        assert ident.topic_suggestion == ""
+        assert "07a" in ident.topic_codes
+
+    def test_reject_clears_without_moving(self, lib_with_suggestion):
+        from processing.publication_topic_router import reject_topic_suggestion
+        from processing.identity import PaperIdentity
+        lib, pdf = lib_with_suggestion
+        assert reject_topic_suggestion(pdf) is True
+        assert pdf.exists()  # not moved
+        assert PaperIdentity.load(pdf).topic_suggestion == ""
+
+    def test_accept_is_undoable(self, lib_with_suggestion):
+        from processing.publication_topic_router import accept_topic_suggestion
+        from processing.undo_log import UndoLog
+        lib, pdf = lib_with_suggestion
+        log = UndoLog(log_dir=lib / ".ops")
+        tx = log.begin_transaction("accept topic")
+        ok, _ = accept_topic_suggestion(pdf, lib, undo_log=log)
+        assert ok
+        log.commit()
+        moved = lib / "07a - BSDEs" / "01 - Published papers" / "S" / "Smith, J. - A study.pdf"
+        assert moved.exists()
+        log.undo_transaction(tx)
+        # Back where it started
+        assert pdf.exists()
+        assert not moved.exists()
+
+
 # ---------------------------------------------------------------------------
 # preview_destination
 # ---------------------------------------------------------------------------

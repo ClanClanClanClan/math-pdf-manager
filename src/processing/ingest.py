@@ -198,10 +198,24 @@ def extract_metadata_from_pdf(pdf_path: Path) -> dict:
         if author_str:
             metadata["authors_raw"] = _unlatex(author_str)
 
+        # Embedded PDF keywords (publishers often set these) -- a strong
+        # topic-classification signal alongside the title.
+        kw = (pdf_meta.get("keywords") or "").strip()
+        if kw:
+            metadata["keywords"] = _unlatex(kw)
+
         # Check for DOI in first few pages
         text = ""
         for page_num in range(min(3, len(doc))):
             text += doc[page_num].get_text()
+
+        # Stash a bounded sample of the front-matter text so topic
+        # classification can look at the abstract/intro, not just the
+        # title (the user's C1 point: topic should consider title +
+        # keywords + abstract + body).  Bounded to keep the metadata
+        # dict and any logging small.
+        if text:
+            metadata["fulltext_sample"] = text[:4000]
 
         # DOI detection
         doi_match = re.search(r"\b(10\.\d{4,}/\S+)", text)
@@ -785,17 +799,39 @@ def ingest_paper(
     if topic is None:
         try:
             from processing.publication_topic_router import resolve_topic
-            classify_text = metadata.get("title") or ""
-            decision = resolve_topic(classify_text)
-            if decision.topic_code:
+            # Feed the classifier everything we have, not just the
+            # title: keywords + abstract/first-page text materially
+            # improve topic accuracy (user's C1 point).
+            extra = " ".join(
+                s for s in (
+                    metadata.get("keywords") or "",
+                    metadata.get("abstract") or "",
+                    metadata.get("fulltext_sample") or "",
+                ) if s
+            )
+            decision = resolve_topic(metadata.get("title") or "", extra)
+            result["topic_confidence"] = decision.confidence
+            if decision.auto:
+                # Confident -> file into the topic folder.
                 topic = decision.topic_code
                 result["auto_topic"] = decision.topic_code
                 result["auto_topic_name"] = decision.topic_name
-                result["auto_topic_score"] = decision.score
                 if verbose:
                     print(
                         f"  Auto-topic: {decision.topic_code} "
-                        f"({decision.topic_name}, score {decision.score:.1f})"
+                        f"({decision.topic_name}, {decision.confidence:.0%})"
+                    )
+            elif decision.needs_review:
+                # Plausible but uncertain -> file standard, but record
+                # the suggestion so the cockpit Attention Queue can ask
+                # the user to confirm a move into the topic folder.
+                result["topic_suggestion"] = decision.suggested_code
+                result["topic_suggestion_name"] = decision.suggested_name
+                if verbose:
+                    print(
+                        f"  Topic suggestion (needs review): "
+                        f"{decision.suggested_code} "
+                        f"({decision.suggested_name}, {decision.confidence:.0%})"
                     )
         except Exception as exc:  # pragma: no cover -- never block ingest
             logger.warning("auto topic resolution failed: %s", exc)
@@ -844,6 +880,12 @@ def ingest_paper(
                 primary = str(dest_path)
                 if primary not in identity.copy_locations:
                     identity.copy_locations.append(primary)
+                # Persist a pending topic suggestion (medium
+                # confidence) so the cockpit Attention Queue can ask
+                # the user to confirm a move into the topic folder.
+                if result.get("topic_suggestion"):
+                    identity.topic_suggestion = result["topic_suggestion"]
+                    identity.topic_confidence = result.get("topic_confidence", 0.0)
                 identity.save(dest_path)
         except Exception as exc:  # pragma: no cover -- best effort
             logger.warning("sidecar write failed for %s: %s", org_result.destination, exc)

@@ -1133,6 +1133,7 @@ def render_attention() -> None:
         "aging": "Aging working papers",
         "conflict_copy": "Dropbox conflict copies",
         "borderline_match": "Borderline Crossref matches",
+        "topic_suggestion": "Topic suggestions to confirm",
         "permanently_unpublished": "Marked permanently unpublished",
     }
 
@@ -1306,6 +1307,36 @@ def render_attention() -> None:
                                     else:
                                         st.toast(f"Recheck state reset for {p.name}")
                                         _attention_count_cached.clear()
+                            elif action_id == "accept_topic":
+                                # Move the paper into its suggested
+                                # topic folder via the undo log
+                                # (reversible from the Activity tab).
+                                from processing.publication_topic_router import (
+                                    accept_topic_suggestion,
+                                )
+                                from processing.undo_log import UndoLog
+                                p = Path(it.payload.get("path", ""))
+                                ulog = UndoLog()
+                                tx = ulog.begin_transaction(
+                                    f"Accept topic {it.payload.get('topic')}: {p.name}"
+                                )
+                                ok, msg = accept_topic_suggestion(p, lib, undo_log=ulog)
+                                if ok:
+                                    ulog.commit()
+                                    _log_activity("topic.accept",
+                                                  str(p), msg, tx)
+                                    st.toast(msg)
+                                    _attention_count_cached.clear()
+                                else:
+                                    st.warning(msg)
+                            elif action_id == "reject_topic":
+                                from processing.publication_topic_router import (
+                                    reject_topic_suggestion,
+                                )
+                                p = Path(it.payload.get("path", ""))
+                                if reject_topic_suggestion(p):
+                                    st.toast(f"Cleared topic suggestion for {p.name}")
+                                    _attention_count_cached.clear()
                             else:
                                 st.warning(f"Unknown action: {action_id}")
                         except Exception as exc:
