@@ -33,6 +33,53 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 
+def _resolve_eth_credentials(
+    username: Optional[str] = None,
+    password: Optional[str] = None,
+) -> tuple[str, str]:
+    """Resolve ETH institutional credentials from all supported sources.
+
+    Resolution order (first non-empty wins), per field:
+      1. Explicit argument passed by the caller.
+      2. ``ETH_USERNAME`` / ``ETH_PASSWORD`` environment variables.
+      3. ``INSTITUTIONAL_USERNAME`` / ``INSTITUTIONAL_PASSWORD`` env
+         vars (the names ``acquisition.engine`` already uses -- unify
+         so the two subsystems share one config).
+      4. The encrypted credential store
+         (``core.config.secure_config.get_secure_credential``), keyed
+         ``eth_username`` / ``eth_password`` -- what the cockpit
+         Settings tab and ``setup_credentials`` write to.
+
+    Live-trial fix: previously only source #2 was consulted, so a user
+    who'd stored credentials securely (or used the INSTITUTIONAL_*
+    names) still got "ETH credentials not configured" and every
+    institutional download silently fell back to Sci-Hub.
+    """
+    user = (
+        username
+        or os.environ.get("ETH_USERNAME")
+        or os.environ.get("INSTITUTIONAL_USERNAME")
+        or ""
+    ).strip()
+    pwd = (
+        password
+        or os.environ.get("ETH_PASSWORD")
+        or os.environ.get("INSTITUTIONAL_PASSWORD")
+        or ""
+    ).strip()
+
+    if not user or not pwd:
+        # Last resort: the encrypted store.
+        try:
+            from core.config.secure_config import get_secure_credential
+            user = user or (get_secure_credential("eth_username") or "").strip()
+            pwd = pwd or (get_secure_credential("eth_password") or "").strip()
+        except Exception as exc:  # pragma: no cover -- optional dependency
+            logger.debug("secure credential store unavailable: %s", exc)
+
+    return user, pwd
+
+
 async def _kill_overlays(page) -> None:
     """Force-remove ALL cookie banners, modals, overlays via JS."""
     await page.evaluate('''() => {
@@ -359,11 +406,15 @@ async def download_with_eth_auth(
     Path or None
         Path to downloaded PDF, or None if download failed.
     """
-    username = username or os.environ.get("ETH_USERNAME", "")
-    password = password or os.environ.get("ETH_PASSWORD", "")
+    username, password = _resolve_eth_credentials(username, password)
 
     if not username or not password:
-        logger.warning("ETH credentials not configured")
+        logger.warning(
+            "ETH credentials not configured. Set ETH_USERNAME + ETH_PASSWORD "
+            "(or INSTITUTIONAL_USERNAME + INSTITUTIONAL_PASSWORD) in the "
+            "environment, or store them via the cockpit Settings tab / "
+            "`python -m core.config.setup_credentials`."
+        )
         return None
 
     output_dir.mkdir(parents=True, exist_ok=True)

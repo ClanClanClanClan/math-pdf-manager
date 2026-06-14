@@ -985,24 +985,79 @@ def render_stats() -> None:
 def render_activity() -> None:
     st.header("🕐 Recent activity")
     st.caption(
-        "Every approval in this session is logged here. Each entry has an "
-        "undo button that reverses the corresponding transaction."
+        "Every reversible operation on the library is listed here -- not "
+        "only cockpit approvals, but ALSO anything done from the CLI, the "
+        "watcher, or the weekly task (they all share one undo log in the "
+        "library). Each transaction has an Undo button."
     )
 
-    if not st.session_state.activity_log:
-        st.info("No activity yet this session.")
+    # Primary source of truth: the shared undo log on disk.  This makes
+    # operations performed OUTSIDE this cockpit session (CLI upgrades,
+    # the Monday plist, the watcher) visible and reversible here -- the
+    # user asked for traceability + cancellability that isn't
+    # CLI-only.  The session activity_log still feeds the human-readable
+    # action labels.
+    from processing.undo_log import UndoLog, LOG_DIR
+    log = UndoLog()
+    try:
+        transactions = log.list_transactions()
+    except Exception as exc:
+        transactions = []
+        st.warning(f"Could not read the undo log at {LOG_DIR}: {exc}")
+
+    # Map tx_id -> the richest session label we have, for nicer display.
+    session_by_tx = {
+        e["tx_id"]: e for e in st.session_state.get("activity_log", [])
+        if e.get("tx_id")
+    }
+
+    st.caption(f"Undo log: `{LOG_DIR}`  ·  {len(transactions)} transaction(s)")
+
+    if not transactions:
+        st.info("No reversible transactions recorded yet.")
         return
 
-    for i, entry in enumerate(st.session_state.activity_log):
-        with st.expander(f"{entry['time']}  {entry['action']}  {Path(entry['source']).name}"):
-            st.markdown(f"**Source**: `{entry['source']}`")
-            if entry.get("destination"):
-                st.markdown(f"**Destination**: `{entry['destination']}`")
-            if entry.get("tx_id"):
-                st.markdown(f"**Transaction**: `{entry['tx_id']}`")
-                if st.button("↶ Undo", key=f"undo_{i}_{entry['tx_id']}"):
-                    _undo_transaction(entry["tx_id"])
+    # Newest first.
+    for i, tx in enumerate(reversed(transactions)):
+        tx_id = tx.get("id", "")
+        desc = tx.get("description", "(no description)")
+        when = tx.get("timestamp", "")[:19].replace("T", " ")
+        n_ops = tx.get("operations_count", "?")
+        undone = tx.get("undone", False)
+        label = f"{when}  ·  {desc}  ·  {n_ops} ops" + ("  ·  UNDONE" if undone else "")
+        with st.expander(label, expanded=False):
+            st.markdown(f"**Transaction**: `{tx_id}`")
+            sess = session_by_tx.get(tx_id)
+            if sess:
+                st.markdown(f"**Action**: {sess.get('action', '')}")
+                if sess.get("source"):
+                    st.markdown(f"**Source**: `{sess['source']}`")
+                if sess.get("destination"):
+                    st.markdown(f"**Destination**: `{sess['destination']}`")
+            if undone:
+                st.caption("Already undone.")
+            else:
+                col1, col2 = st.columns([1, 1])
+                if col1.button("Preview undo", key=f"prev_{i}_{tx_id}"):
+                    _preview_undo(tx_id)
+                if col2.button("↶ Undo", key=f"undo_{i}_{tx_id}", type="primary"):
+                    _undo_transaction(tx_id)
                     st.rerun()
+
+
+def _preview_undo(tx_id: str) -> None:
+    """Dry-run the undo so the user sees exactly what would be reversed
+    before committing to it."""
+    from processing.undo_log import UndoLog
+    log = UndoLog()
+    try:
+        results = log.undo_transaction(tx_id, dry_run=True)
+        st.info(
+            f"Undo would perform {len(results)} action(s):\n"
+            + "\n".join(f"- {r.get('action', '?')}" for r in results[:30])
+        )
+    except Exception as exc:
+        st.error(f"Undo preview failed: {exc}")
 
 
 def _undo_transaction(tx_id: str) -> None:
@@ -1011,6 +1066,8 @@ def _undo_transaction(tx_id: str) -> None:
     try:
         results = log.undo_transaction(tx_id, dry_run=False)
         st.toast(f"Undid {len(results)} ops in {tx_id}", icon="↶")
+        _log_activity("undo", tx_id, "", tx_id)
+        _attention_count_cached.clear()
     except Exception as exc:
         st.error(f"Undo failed: {exc}")
 

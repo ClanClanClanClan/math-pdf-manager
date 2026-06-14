@@ -415,9 +415,36 @@ class OrganizationSystem:
         status = self.router.determine_publication_status(metadata)
         destination = self.router.route(metadata, filename, year=year)
 
-        # Check for existing file at destination
-        if destination.exists() and destination != file_path:
-            actions.append(f"WARNING: destination already exists: {destination}")
+        # Collision guard (live-trial fix): a destination that already
+        # exists used to be logged as a WARNING and then COPIED OVER,
+        # silently clobbering a previously-filed paper.  That's data
+        # loss.  Now we distinguish two cases by CONTENT:
+        #   * Same bytes already at the destination -> idempotent
+        #     re-ingest (e.g. re-running the pipeline on a paper that's
+        #     already filed).  Skip the copy, let downstream sidecar
+        #     bookkeeping proceed.
+        #   * Different bytes -> a genuinely different paper colliding
+        #     on the canonical name.  Refuse: leave the existing file
+        #     untouched and surface an ERROR.
+        if destination.exists() and destination.resolve() != file_path.resolve():
+            if _same_content(file_path, destination):
+                actions.append(f"already filed (identical content) at {destination}")
+                return OrganizationResult(
+                    file_path=file_path,
+                    destination=destination,
+                    actions=actions,
+                    publication_status=status,
+                )
+            actions.append(
+                f"ERROR: destination already exists with different content, "
+                f"refusing to overwrite: {destination}"
+            )
+            return OrganizationResult(
+                file_path=file_path,
+                destination=destination,
+                actions=actions,
+                publication_status=status,
+            )
 
         # Perform the move
         if not self.dry_run:
@@ -480,6 +507,27 @@ _REPOSITORY_JOURNAL_NAMES = (
     "technical report",
     "preprint",
 )
+
+
+def _same_content(a: Path, b: Path) -> bool:
+    """True if two files are byte-identical (cheap size check first).
+
+    Used by the collision guard to tell an idempotent re-ingest of the
+    same paper from a genuine name collision between two different
+    papers.  Compares size, then full SHA-256 only when sizes match.
+    """
+    try:
+        if a.stat().st_size != b.stat().st_size:
+            return False
+        import hashlib
+        ha, hb = hashlib.sha256(), hashlib.sha256()
+        for path, h in ((a, ha), (b, hb)):
+            with open(path, "rb") as f:
+                for chunk in iter(lambda: f.read(1 << 20), b""):
+                    h.update(chunk)
+        return ha.hexdigest() == hb.hexdigest()
+    except OSError:
+        return False
 
 
 def _is_repository_doi(doi: str) -> bool:

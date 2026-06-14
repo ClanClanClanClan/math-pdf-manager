@@ -34,8 +34,30 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-# Default log location
-LOG_DIR = Path(__file__).resolve().parent.parent.parent / ".operation_log"
+# Default log location.
+#
+# Live-trial fix: this used to resolve to ``Scripts/.operation_log``
+# (inside the code repo), so the undo history did NOT travel with the
+# Dropbox library to another machine and a fresh clone of the repo
+# started with an empty log.  Now it lives at
+# ``<library>/.operation_log`` so it syncs alongside the papers and
+# the sidecar mirror, and every process (cockpit, CLI, watcher,
+# weekly plist) shares one log.  Tests pass an explicit ``log_dir``
+# so they are unaffected.
+def _default_log_dir() -> Path:
+    try:
+        from core.config_paths import get_library_root
+        root = get_library_root()
+        if root and root.exists():
+            return root / ".operation_log"
+    except Exception:
+        pass
+    # Fallback (library unavailable, e.g. partial install): keep the
+    # historical repo-local location so nothing crashes.
+    return Path(__file__).resolve().parent.parent.parent / ".operation_log"
+
+
+LOG_DIR = _default_log_dir()
 
 
 class UndoLog:

@@ -670,6 +670,20 @@ def ingest_paper(
         if not canonical_name.lower().endswith(".pdf"):
             canonical_name += ".pdf"
         result["canonical_overridden"] = True
+        # ROUTING FIX (live trial): the override is authoritative for
+        # the alpha-subdir too.  Otherwise a paper whose curated name
+        # says "el Karoui, N." but whose (published) metadata says
+        # "Karoui, N." would file under the wrong letter -- the name on
+        # disk and the folder it lives in must agree.  Re-derive the
+        # author list from the override's "Authors - Title" segment.
+        override_stem = canonical_name[:-4] if canonical_name.lower().endswith(".pdf") else canonical_name
+        if " - " in override_stem:
+            try:
+                parsed = parse_authors_string(override_stem.split(" - ", 1)[0])
+            except Exception:
+                parsed = []
+            if parsed:
+                cmo.authors = parsed
     else:
         canonical_name = cmo.get_canonical_filename()
     result["filename"] = canonical_name

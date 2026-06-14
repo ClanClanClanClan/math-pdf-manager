@@ -261,6 +261,28 @@ def upgrade_paper(
         # Downloaded successfully — ingest into library
         try:
             from processing.ingest import ingest_paper
+            from processing.identity import PaperIdentity, sidecar_path
+
+            # ROUTING FIX (live trial): preserve the user's curated
+            # preprint name and topic instead of re-deriving them from
+            # the published PDF's metadata.  The user hand-names every
+            # paper; silently renaming "Cao, C." -> "Cao, D." or
+            # "Erratum to X" -> "Correction to, X" because the
+            # publisher's metadata differs is data loss.  The published
+            # PDF replaces the *content*; the *name* stays the user's.
+            preserved_name = preprint_path.stem  # no extension
+            # Preserve the topic folder too: read it from the
+            # preprint's sidecar (set when the preprint was filed /
+            # classified).  Falls back to None (auto-classify) only if
+            # the preprint had no recorded topic.
+            preserved_topic = None
+            try:
+                if sidecar_path(preprint_path).exists():
+                    pre_ident = PaperIdentity.load(preprint_path)
+                    if pre_ident.topic_codes:
+                        preserved_topic = pre_ident.topic_codes[0]
+            except Exception:
+                pass
 
             ingest_result = ingest_paper(
                 published_pdf,
@@ -268,6 +290,8 @@ def upgrade_paper(
                 status="published",
                 dry_run=False,
                 undo_log=undo_log,
+                canonical_override=preserved_name,
+                topic=preserved_topic,
             )
 
             if ingest_result["success"]:
