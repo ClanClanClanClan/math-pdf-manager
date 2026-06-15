@@ -366,8 +366,21 @@ def render_sort_queue() -> None:
 
     if prev.error:
         st.error(f"Preview failed: {prev.error}")
-        cols = st.columns(2)
-        if cols[0].button("⏭ Skip", key=f"skip_{pdf}"):
+        st.caption(
+            "This PDF couldn't be parsed (corrupt, encrypted, or a "
+            "cloud-only placeholder). Open it to inspect/repair, or skip "
+            "it — it will resurface in the Attention Queue once it has sat "
+            "in *To be sorted* past the backlog window, so it won't be "
+            "silently forgotten."
+        )
+        cols = st.columns(3)
+        if cols[0].button("🔍 Open file", key=f"openfail_{pdf}"):
+            import subprocess
+            subprocess.run(["open", str(pdf)], capture_output=True)
+        if cols[1].button("📁 Reveal in Finder", key=f"revealfail_{pdf}"):
+            import subprocess
+            subprocess.run(["open", "-R", str(pdf)], capture_output=True)
+        if cols[2].button("⏭ Skip", key=f"skip_{pdf}"):
             st.session_state.sort_skipped.add(str(pdf))
             st.rerun()
         return
@@ -1291,11 +1304,22 @@ def render_attention() -> None:
                                 else:
                                     st.warning(msg)
                             elif action_id == "reject_topic":
+                                # Reject through the undo log so it's
+                                # reversible from the Activity tab (a
+                                # rejected suggestion is not lost forever).
                                 from processing.publication_topic_router import (
                                     reject_topic_suggestion,
                                 )
+                                from processing.undo_log import UndoLog
                                 p = Path(it.payload.get("path", ""))
-                                if reject_topic_suggestion(p):
+                                ulog = UndoLog()
+                                tx = ulog.begin_transaction(
+                                    f"Reject topic {it.payload.get('topic')}: {p.name}"
+                                )
+                                if reject_topic_suggestion(p, undo_log=ulog):
+                                    ulog.commit()
+                                    _log_activity("topic.reject",
+                                                  str(p), "suggestion cleared", tx)
                                     st.toast(f"Cleared topic suggestion for {p.name}")
                                     _attention_count_cached.clear()
                             else:

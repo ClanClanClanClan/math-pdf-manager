@@ -313,6 +313,47 @@ def auto_apply_safe_transitions(
         "errors": [],
     }
 
+    # Audit-11a: serialize destructive batches.  Take the same-host
+    # library write lock before moving any files.  If another process
+    # holds it (a still-running previous weekly run, or the watcher
+    # mid-ingest of a large batch), skip this auto-apply rather than
+    # interleave moves and corrupt state — the findings stay in the
+    # report and the Attention Queue, and next week's run retries.
+    # A dry run touches nothing, so it doesn't need the lock.
+    lock = None
+    if not dry_run:
+        from processing.locking import LibraryLock
+        lock = LibraryLock(library_root)
+        if not lock.acquire(blocking=False):
+            logger.warning(
+                "auto-apply skipped: another process holds the library "
+                "write lock (%s)", lock.path,
+            )
+            summary["skipped"] = "another process holds the library write lock"
+            return summary
+
+    try:
+        return _auto_apply_safe_transitions_locked(
+            results, library_root, summary,
+            upgrade_confidence_threshold=upgrade_confidence_threshold,
+            dry_run=dry_run, verbose=verbose,
+        )
+    finally:
+        if lock is not None:
+            lock.release()
+
+
+def _auto_apply_safe_transitions_locked(
+    results: dict,
+    library_root: Path,
+    summary: dict,
+    *,
+    upgrade_confidence_threshold: float = SAFE_UPGRADE_CONFIDENCE,
+    dry_run: bool = False,
+    verbose: bool = False,
+) -> dict:
+    """Body of ``auto_apply_safe_transitions``, run while holding the
+    library write lock (see audit-11a)."""
     # -----------------------------------------------------------------
     # 1. Safe upgrades
     # -----------------------------------------------------------------

@@ -258,3 +258,77 @@ def reset_recheck_state(pdf: Path) -> Optional[PaperIdentity]:
     identity.last_check_date = datetime.now(timezone.utc).isoformat(timespec="seconds")
     identity.save(pdf, recompute_hash=False)
     return identity
+
+
+# ---------------------------------------------------------------------------
+# CLI
+# ---------------------------------------------------------------------------
+def main(argv: Optional[list[str]] = None) -> None:
+    """Manage publication recheck state from the shell.
+
+    Audit-11c: ``permanently_unpublished`` could previously only be
+    cleared by clicking the cockpit Attention action.  A paper the user
+    dismissed (or that they never opened the cockpit for) was then stuck
+    out of the recheck loop with no other escape.  This exposes the same
+    reset, plus a listing, as a CLI so it can be scripted::
+
+        python -m processing.publication_state list
+        python -m processing.publication_state reset-recheck "/path/to/paper.pdf"
+        python -m processing.publication_state reset-recheck --all
+    """
+    import argparse
+    from core.config_paths import get_library_root
+
+    parser = argparse.ArgumentParser(description="Publication recheck state")
+    sub = parser.add_subparsers(dest="command")
+
+    sub.add_parser("list", help="List papers marked permanently unpublished")
+
+    reset_p = sub.add_parser(
+        "reset-recheck", help="Drop a paper (or all) back into the live recheck queue"
+    )
+    reset_p.add_argument("path", nargs="?", help="PDF path to reset")
+    reset_p.add_argument(
+        "--all", action="store_true",
+        help="Reset every permanently-unpublished paper in the library",
+    )
+
+    args = parser.parse_args(argv)
+
+    if args.command == "list":
+        paths = list_permanently_unpublished(get_library_root())
+        if not paths:
+            print("No papers marked permanently unpublished.")
+            return
+        for p in paths:
+            print(p)
+        print(f"\n{len(paths)} paper(s).")
+        return
+
+    if args.command == "reset-recheck":
+        if args.all:
+            paths = list_permanently_unpublished(get_library_root())
+            n = 0
+            for p in paths:
+                if reset_recheck_state(p) is not None:
+                    n += 1
+                    print(f"reset: {p.name}")
+            print(f"\nReset {n} paper(s).")
+            return
+        if not args.path:
+            reset_p.error("provide a PDF path or --all")
+        pdf = Path(args.path)
+        if not pdf.exists():
+            parser.error(f"file not found: {pdf}")
+        out = reset_recheck_state(pdf)
+        if out is None:
+            print(f"No sidecar — nothing to reset: {pdf}")
+        else:
+            print(f"Reset recheck state: {pdf}")
+        return
+
+    parser.print_help()
+
+
+if __name__ == "__main__":
+    main()

@@ -275,23 +275,51 @@ def accept_topic_suggestion(
     # Clear the suggestion + record the topic on the moved sidecar.
     moved = PaperIdentity.load(dest)
     if not moved.is_new():
+        old_suggestion = moved.topic_suggestion
+        old_confidence = moved.topic_confidence
+        old_codes = list(moved.topic_codes)
         moved.topic_suggestion = ""
         moved.topic_confidence = 0.0
         if code not in moved.topic_codes:
             moved.topic_codes.append(code)
         moved.save(dest, recompute_hash=False)
+        # Audit-11b: record the field edit so undoing this transaction
+        # restores the suggestion + topic_codes.  Recorded AFTER the
+        # logged_move above, so on undo (reverse order) the sidecar is
+        # restored while the file is still at ``dest``, then the move is
+        # reversed -- leaving the paper back in the standard tree with
+        # its suggestion intact (instead of an inconsistent sidecar).
+        if undo_log is not None:
+            undo_log.record_sidecar_edit(dest, {
+                "topic_suggestion": [old_suggestion, ""],
+                "topic_confidence": [old_confidence, 0.0],
+                "topic_codes": [old_codes, list(moved.topic_codes)],
+            })
     return True, f"moved to {dest.relative_to(library_root)}"
 
 
-def reject_topic_suggestion(pdf_path: Path) -> bool:
-    """Clear a pending topic suggestion without moving the paper."""
+def reject_topic_suggestion(pdf_path: Path, *, undo_log=None) -> bool:
+    """Clear a pending topic suggestion without moving the paper.
+
+    Audit-11b: when an ``undo_log`` (with an open transaction) is
+    passed, the cleared fields are recorded so the rejection is
+    reversible from the cockpit Activity tab — a rejected suggestion is
+    no longer gone forever.
+    """
     from processing.identity import PaperIdentity
     identity = PaperIdentity.load(pdf_path)
     if identity.is_new() or not identity.topic_suggestion:
         return False
+    old_suggestion = identity.topic_suggestion
+    old_confidence = identity.topic_confidence
     identity.topic_suggestion = ""
     identity.topic_confidence = 0.0
     identity.save(pdf_path, recompute_hash=False)
+    if undo_log is not None:
+        undo_log.record_sidecar_edit(pdf_path, {
+            "topic_suggestion": [old_suggestion, ""],
+            "topic_confidence": [old_confidence, 0.0],
+        })
     return True
 
 

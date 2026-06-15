@@ -113,11 +113,10 @@ def _load_dismissals(path: Path = DISMISSALS_PATH) -> dict[str, str]:
 
 
 def _save_dismissals(data: dict[str, str], path: Path = DISMISSALS_PATH) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(path.suffix + ".tmp")
-    tmp.write_text(json.dumps(data, indent=2, sort_keys=True), encoding="utf-8")
-    import os
-    os.replace(tmp, path)
+    # Atomic + concurrency-safe (audit-10/11): the cockpit may write
+    # dismissals while another process reads them.
+    from core.io import atomic_write_text
+    atomic_write_text(path, json.dumps(data, indent=2, sort_keys=True))
 
 
 def dismiss(key: str, *, days: int = 7, path: Path = DISMISSALS_PATH) -> None:
@@ -534,6 +533,58 @@ def collect_topic_suggestions(library_root: Path) -> list[AttentionItem]:
     return items
 
 
+def collect_unsorted_backlog(
+    library_root: Path, *, max_age_days: int = 14,
+) -> list[AttentionItem]:
+    """Papers parked in "12 - To be sorted" longer than ``max_age_days``.
+
+    Audit-11c: a PDF can land in the staging area and sit there
+    forever — the classifier couldn't place it, the user skipped it in
+    the Sort Queue, or a corrupt file failed preview (the Sort Queue's
+    only option there was Skip).  Nothing surfaced it, so it was a
+    silent dead end.  This collector nags about anything that's been
+    waiting too long so it can't be forgotten.
+    """
+    from organization.system import TO_BE_SORTED
+    from processing.identity import iter_pdfs
+    items: list[AttentionItem] = []
+    base = library_root / TO_BE_SORTED
+    if not base.exists():
+        return items
+    now = datetime.now(timezone.utc)
+    for pdf in iter_pdfs(base):
+        try:
+            mtime = datetime.fromtimestamp(pdf.stat().st_mtime, tz=timezone.utc)
+        except OSError:
+            continue
+        age_days = (now - mtime).days
+        if age_days < max_age_days:
+            continue
+        key = f"unsorted::{pdf.relative_to(library_root)}"
+        items.append(
+            AttentionItem(
+                key=key,
+                source="unsorted_backlog",
+                severity=SEVERITY_WARNING,
+                title=f"Unsorted {age_days}d: {pdf.stem}",
+                detail=(
+                    f"Path: `{pdf}`\n\n"
+                    f"This paper has sat in **{TO_BE_SORTED}** for "
+                    f"{age_days} days without being filed.  Open the Sort "
+                    f"Queue to file it, or reveal it in Finder to inspect "
+                    f"(it may have failed text extraction)."
+                ),
+                created_at=mtime.isoformat(timespec="seconds"),
+                payload={"path": str(pdf), "age_days": age_days},
+                actions=[
+                    ("Reveal in Finder", "reveal_in_finder"),
+                    ("Dismiss 30d", "dismiss_30d"),
+                ],
+            )
+        )
+    return items
+
+
 COLLECTORS: list[tuple[str, Callable[[Path], list[AttentionItem]]]] = [
     ("watcher_failure", lambda root: collect_watcher_failures()),
     ("upgrade_flag", collect_upgrade_flags),
@@ -542,6 +593,7 @@ COLLECTORS: list[tuple[str, Callable[[Path], list[AttentionItem]]]] = [
     ("borderline_match", collect_borderline_matches),
     ("topic_suggestion", collect_topic_suggestions),
     ("permanently_unpublished", collect_permanently_unpublished),
+    ("unsorted_backlog", collect_unsorted_backlog),
 ]
 
 

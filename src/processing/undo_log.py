@@ -124,6 +124,29 @@ class UndoLog:
             "destination": str(new_path),
         })
 
+    def record_sidecar_edit(self, pdf_path: Path, changes: dict) -> None:
+        """Record a reversible edit to a paper's sidecar fields.
+
+        Audit-11b: some actions change sidecar *fields* rather than
+        moving files — accepting a topic suggestion (clears the
+        suggestion, appends a topic code) and rejecting one (clears the
+        suggestion).  Without recording these, undoing the action left
+        the sidecar inconsistent with the file's location, so the paper
+        neither reappeared as a suggestion nor matched its folder.
+
+        ``changes`` maps ``field -> [old_value, new_value]``.  Undo
+        restores each ``old_value``.  Record this AFTER any file move in
+        the same transaction so that, on undo (reverse order), the field
+        is restored while the file is still at the post-move location.
+        """
+        if self._current_tx is None:
+            raise RuntimeError("No active transaction — call begin_transaction() first")
+        self._current_tx["operations"].append({
+            "type": "sidecar_edit",
+            "path": str(pdf_path),
+            "changes": changes,
+        })
+
     def commit(self) -> Path:
         """Commit the current transaction to disk. Returns the log file path."""
         if self._current_tx is None:
@@ -171,6 +194,32 @@ class UndoLog:
         results = []
         # Undo in reverse order
         for op in reversed(tx["operations"]):
+            # Sidecar-field edits (audit-11b) carry their own shape
+            # (path + changes), not source/destination.  Handle first.
+            if op["type"] == "sidecar_edit":
+                pdf = Path(op["path"])
+                changes = op.get("changes", {})
+                if dry_run:
+                    results.append({
+                        "action": f"WOULD RESTORE sidecar fields {list(changes)} on {pdf.name}"
+                    })
+                    continue
+                try:
+                    from processing.identity import PaperIdentity
+                    ident = PaperIdentity.load(pdf)
+                    if ident.is_new():
+                        results.append({"action": f"SKIP: no sidecar to restore: {pdf}"})
+                        continue
+                    for field, (old_val, _new_val) in changes.items():
+                        setattr(ident, field, old_val)
+                    ident.save(pdf, recompute_hash=False)
+                    results.append({
+                        "action": f"RESTORED sidecar fields {list(changes)} on {pdf.name}"
+                    })
+                except Exception as exc:  # pragma: no cover -- defensive
+                    results.append({"action": f"FAILED to restore sidecar on {pdf}: {exc}"})
+                continue
+
             src = Path(op["source"])
             dst = Path(op["destination"])
 

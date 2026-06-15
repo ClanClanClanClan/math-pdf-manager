@@ -181,9 +181,37 @@ class PDFHandler(FileSystemEventHandler):
             if now - last_change >= self.config.settle_seconds:
                 ready.append(path_str)
 
-        for path_str in ready:
-            del self._pending[path_str]
-            self._ingest(Path(path_str))
+        if not ready:
+            return
+
+        # Audit-11a: serialize against the weekly maintenance batch.
+        # Take the same-host library write lock for the whole settled
+        # batch.  If the weekly job (or another writer) holds it, leave
+        # these files in ``_pending`` and retry next tick rather than
+        # interleave file moves.  A dry run touches nothing, so it skips
+        # the lock.
+        lock = None
+        if not self.dry_run:
+            try:
+                from processing.locking import LibraryLock
+                from core.config_paths import get_library_root
+                lock = LibraryLock(get_library_root())
+                if not lock.acquire(blocking=False):
+                    logger.info(
+                        "Deferring %d ingest(s): library write lock held "
+                        "by another process", len(ready),
+                    )
+                    return
+            except Exception as exc:  # pragma: no cover -- defensive
+                logger.warning("library lock unavailable, proceeding: %s", exc)
+                lock = None
+        try:
+            for path_str in ready:
+                self._pending.pop(path_str, None)
+                self._ingest(Path(path_str))
+        finally:
+            if lock is not None:
+                lock.release()
 
     def _ingest(self, path: Path) -> None:
         """Ingest a single PDF file."""
