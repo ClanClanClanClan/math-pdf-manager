@@ -62,12 +62,18 @@ TOPICS = {
         "full_name": "Contract Theory (Principal-Agent Problems)",
         "primary": [
             r"\bprincipal.agent\b",
+            r"\bprincipal\b.*\bagent\b",
             r"\bmoral hazard\b",
             r"\badverse selection\b",
             r"\bcontract (?:design|theory)\b",
             r"\bincentive (?:compatible|compatibility|constraint)\b",
             r"\bmechanism design\b",
             r"\bdelegation\b.*\bagent\b",
+            # Mined discriminators (rate-in/rate-elsewhere): agency
+            # problem/cost (0.25/0.00), executive compensation.
+            r"\bagency (?:cost|problem|model|relationship)\b",
+            r"\bexecutive compensation\b",
+            r"\boptimal contract\w*\b",
         ],
         "secondary": [
             r"\basymmetric information\b",
@@ -75,6 +81,12 @@ TOPICS = {
             r"\bscreening\b",
             r"\bsignaling\b.*\bequilibrium\b",
             r"\boptimal compensation\b",
+            # "incentives"/"incentive" (0.34-0.39/0.03-0.11) and
+            # "agency" (0.25/0.00) -- weaker alone, so secondary.
+            r"\bincentive(?:s)?\b",
+            r"\bagency\b",
+            r"\bremuneration\b",
+            r"\bcompensation\b.*\b(?:contract|agent|effort)\b",
         ],
         "primary_weight": 3.0,
         "secondary_weight": 1.0,
@@ -89,6 +101,9 @@ TOPICS = {
             r"\bhyperbolic discount\b",
             r"\bnaive\b.*\bsophisticated\b",
             r"\bpre.commitment\b",
+            # Mined: (time-)inconsistency / non-exponential discounting.
+            r"\binconsistenc\w*\b.*\b(?:control|equilibri|discount|preference)\b",
+            r"\bnon.exponential discount\w*\b",
         ],
         "secondary": [
             r"\bequilibrium (?:control|strateg)\b",
@@ -96,6 +111,10 @@ TOPICS = {
             r"\bpresent bias\b",
             r"\bquasi.hyperbolic\b",
             r"\bStrotz\b",
+            # Mined: "discounting" (0.34/0.01) -- secondary so it needs
+            # a second signal to fire (avoids generic finance papers).
+            r"\bdiscounting\b",
+            r"\bsophisticated\b.*\bagent\b",
         ],
         "primary_weight": 3.0,
         "secondary_weight": 1.0,
@@ -127,13 +146,38 @@ TOPICS = {
             r"\b(?:Hamilton|HJ|optimal control|junction)\b.*\bnetwork\b",
             r"\bjunction\b.*\b(?:condition|Hamilton|control)\b",
             r"\bmean.field\b.*\bnetwork\b",
-            r"\bHamilton.Jacobi\b.*\b(?:network|junction|graph)\b",
-            r"\b(?:network|junction|graph)\b.*\bHamilton.Jacobi\b",
+            r"\bHamilton.Jacobi\b.*\b(?:network|junction|graph|vertex|vertices|ramified)\b",
+            r"\b(?:network|junction|graph|vertices|ramified)\b.*\bHamilton.Jacobi\b",
+            # Mined: "junction" (0.49/0.00), "ramified" spaces, eikonal
+            # on networks are individually decisive -- the old patterns
+            # required network+Hamilton CO-occurrence, missing ~60%.
+            r"\bjunction condition\w*\b",
+            r"\bramified (?:space|domain|set)\w*\b",
+            r"\beikonal\b.*\b(?:network|graph|junction|ramified|vertex|vertices)\b",
+            # Miss-analysis additions (the 07e holdouts): "graphon"
+            # (graphon/graphexon limits of networks) is hyper-specific
+            # and clean; French "réseaux"; and network+control/game/PDE
+            # contexts the narrow co-occurrence patterns missed.
+            r"\bgraphon\w*\b",
+            r"\bgraphexon\w*\b",
+            r"\bréseau\w*\b",  # French "networks"
+            r"\b(?:control|game|diffusion|wave|equation|regulation)s?\b.*\bon (?:networks?|graphs?)\b",
+            r"\bon (?:networks?|graphs?)\b.*\b(?:Hamilton|control|equation|game|diffusion)\b",
+            r"\bnetwork games?\b",
         ],
         "secondary": [
             r"\btraffic flow\b.*\bnetwork\b",
             r"\bgraph\b.*\bPDE\b",
-            r"\bviscosity solution\b.*\bnetwork\b",
+            r"\bviscosity solution\b.*\b(?:network|junction|graph|ramified)\b",
+            # Mined discriminators (0.00 elsewhere), combination-gated
+            # to avoid generic graph-theory / neural-network papers.
+            r"\bvertices\b.*\b(?:Hamilton|Jacobi|control|eikonal)\b",
+            r"\bnetwork(?:s)?\b.*\b(?:eikonal|ramified|vertex|vertices)\b",
+            r"\beikonal equation\b",
+            r"\bWalsh\b.*\bspider\b",
+            r"\bspider\b.*\b(?:diffusion|HJB|Hamilton|Brownian)\b",
+            r"\btransmission (?:problem|condition)\w*\b.*\b(?:network|graph|junction|order)\b",
+            r"\blarge.scale networks?\b",
         ],
         "primary_weight": 3.0,
         "secondary_weight": 1.0,
@@ -145,15 +189,25 @@ TOPICS = {
         "primary": [
             r"\bnon.commutativ\w*\b.*\bstochastic\b",
             r"\bquantum stochastic\b",
+            r"\bquantum probability\b",
             r"\bIt[ôo].Clifford\b",
             r"\bHeisenberg commutation\b",
             r"\bfree Brownian\b",
+            # Mined: Fock space (0.38/0.00), Hudson-Parthasarathy
+            # (the founding non-commutative calculus framework).
+            r"\bFock space\b",
+            r"\bHudson\b.*\bParthasarathy\b",
+            r"\bnon.commutativ\w*\b.*\b(?:calculus|integral|probability|algebra)\b",
         ],
         "secondary": [
             r"\bClifford (?:algebra|integral)\b",
             r"\bfree probability\b",
-            r"\bquantum (?:process|noise|filtering)\b",
+            r"\bquantum (?:process|noise|filtering|field)\b",
             r"\bWigner\b.*\bsemigroup\b",
+            # Mined (0.00 elsewhere): canonical names + quantum.
+            r"\bParthasarathy\b",
+            r"\bquantum\b",
+            r"\bsecond quantization\b",
         ],
         "primary_weight": 3.0,
         "secondary_weight": 1.0,
