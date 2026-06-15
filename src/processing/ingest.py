@@ -618,6 +618,7 @@ def ingest_paper(
     dry_run: bool = False,
     verbose: bool = False,
     canonical_override: Optional[str] = None,
+    auto_topic: bool = True,
     **kwargs,
 ) -> dict:
     """Ingest a single PDF into the library.
@@ -796,7 +797,7 @@ def ingest_paper(
     # classifier has no patterns for them -- so a BSDE paper lands in
     # ``07a - BSDEs/01 - Published papers/`` and the user can refile
     # into a finer bucket by hand.
-    if topic is None:
+    if topic is None and auto_topic:
         try:
             from processing.publication_topic_router import resolve_topic
             # Feed the classifier everything we have, not just the
@@ -883,9 +884,17 @@ def ingest_paper(
                 # Persist a pending topic suggestion (medium
                 # confidence) so the cockpit Attention Queue can ask
                 # the user to confirm a move into the topic folder.
+                # Audit-9 D: a re-ingest that now classifies
+                # confidently (auto_topic set) or finds no topic must
+                # CLEAR any stale suggestion from a prior pass --
+                # otherwise the paper shows up both as auto-filed and
+                # as a pending suggestion.
                 if result.get("topic_suggestion"):
                     identity.topic_suggestion = result["topic_suggestion"]
                     identity.topic_confidence = result.get("topic_confidence", 0.0)
+                else:
+                    identity.topic_suggestion = ""
+                    identity.topic_confidence = 0.0
                 identity.save(dest_path)
         except Exception as exc:  # pragma: no cover -- best effort
             logger.warning("sidecar write failed for %s: %s", org_result.destination, exc)

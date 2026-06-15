@@ -388,24 +388,37 @@ def render_sort_queue() -> None:
         if prev.year:
             st.markdown(f"**Year** &nbsp; `{prev.year}`")
 
-        # Topic-classifier suggestions (heuristic, no LLM needed).
-        # Cached per-(title, first 1500 chars) so we don't re-classify on
-        # every Streamlit rerun while the user is staring at the same paper.
-        topics = _classify_cached(prev.title, prev.first_page_text[:1500])
-        topic_selections: dict[str, bool] = {}
-        if topics:
-            st.markdown("**Topic copies**")
-            st.caption(
-                "Checked boxes will get hardlinked into the matching `07x` "
-                "folder when you approve.  Pre-checked above score 2.0."
-            )
-            for t in topics[:5]:  # cap at 5 to keep the card compact
-                default = t["score"] >= 2.0
-                topic_selections[t["topic_code"]] = st.checkbox(
-                    f"`{t['topic_code']}` {t['topic_name']} _(score {t['score']:.1f})_",
-                    value=default,
-                    key=f"topic_{pdf}_{t['topic_code']}",
-                )
+        # Topic decision (MOVE model): the paper LIVES in one topic
+        # folder if the classifier is confident, else the standard
+        # tree.  We show the decision and let the user override it.
+        # (Phase-4 hardlink "topic copies" were retired -- the library
+        # uses one-home-per-paper, confirmed by 1% main/topic overlap.)
+        from processing.publication_topic_router import resolve_topic
+        _decision = resolve_topic(
+            prev.title, prev.first_page_text[:4000]
+        )
+        _topic_codes = ["07a", "07b", "07c", "07d", "07e", "07f"]
+        _opts = ["(standard — no topic)"] + _topic_codes
+        if _decision.auto:
+            _default = _decision.topic_code
+            _hint = f"auto → **{_decision.topic_code}** ({_decision.confidence:.0%})"
+        elif _decision.needs_review:
+            _default = _decision.suggested_code
+            _hint = (f"suggested **{_decision.suggested_code}** "
+                     f"({_decision.confidence:.0%}) — confirm or change")
+        else:
+            _default = None
+            _hint = "no topic match → standard tree"
+        st.markdown("**Topic destination**")
+        st.caption(_hint)
+        _sel = st.selectbox(
+            "Topic destination",
+            _opts,
+            index=(_opts.index(_default) if _default in _opts else 0),
+            label_visibility="collapsed",
+            key=f"topicsel_{pdf}",
+        )
+        chosen_topic = None if _sel.startswith("(standard") else _sel
 
         st.markdown("---")
         st.markdown("**Proposed canonical filename**")
@@ -416,8 +429,10 @@ def render_sort_queue() -> None:
             label_visibility="collapsed",
             key=f"name_{pdf}",
         )
-        # Destination preview
-        destination = _proposed_destination(lib, edited_name, status)
+        # Destination preview -- reflects the chosen topic so what the
+        # user sees is exactly where the file lands.
+        destination = _proposed_destination(lib, edited_name, status,
+                                            topic=chosen_topic)
         st.markdown("**Proposed destination**")
         st.code(str(destination.relative_to(lib)), language=None)
 
@@ -433,40 +448,11 @@ def render_sort_queue() -> None:
     cols = st.columns([1, 1, 1, 1, 4])
 
     if cols[0].button("✅ Approve", key=f"approve_{pdf}", type="primary"):
-        # Hand the user's topic checkbox selections through to the
-        # approve flow so they get hardlinked into 07x folders.
-        selected_topics = [
-            code for code, checked in topic_selections.items() if checked
-        ]
-        # Audit-7 #1: Streamlit caches widget state by key.  The
-        # topic checkboxes are keyed by ``pdf``, which is stable
-        # across reruns.  When the user later comes back to a
-        # different paper (cursor moves on), the OLD topic
-        # checkbox state would leak into the new paper if the
-        # new paper happened to share a topic_code key.  Purge
-        # the topic_* keys for THIS pdf so the next render is
-        # clean.
-        stale_keys = [
-            k for k in st.session_state.keys()
-            if isinstance(k, str) and k.startswith(f"topic_{pdf}_")
-        ]
-        for k in stale_keys:
-            st.session_state.pop(k, None)
+        # MOVE model: file into the chosen topic folder (or standard).
         ok, msg = _approve_sort(pdf, edited_name, status, lib,
-                                topic_codes=selected_topics,
-                                preview=prev)
+                                topic=chosen_topic, preview=prev)
         if ok:
             st.toast(f"Filed → {destination.relative_to(lib)}")
-            if selected_topics:
-                st.toast(f"Topic links: {', '.join(selected_topics)}")
-            # Surface topic-router warnings (e.g. sidecar save failed,
-            # folder missing, collision) so they don't get swallowed
-            # silently.  The Sort Queue card rendered the topic
-            # suggestions so the user is already invested in seeing
-            # the outcome.
-            topic_errors = st.session_state.pop("last_topic_errors", None)
-            if topic_errors:
-                st.warning("Topic routing notes:\n  - " + "\n  - ".join(topic_errors))
         else:
             st.toast(f"Failed: {msg}", icon="⚠️")
         st.rerun()
@@ -486,9 +472,16 @@ def render_sort_queue() -> None:
         subprocess.run(["open", str(pdf)], capture_output=True)
 
 
-def _proposed_destination(lib: Path, canonical_name: str, status: str) -> Path:
-    """Replicate FolderRouter.route() preview without touching disk."""
-    from organization.system import FolderRouter
+def _proposed_destination(
+    lib: Path, canonical_name: str, status: str, *, topic: Optional[str] = None,
+) -> Path:
+    """Replicate the routing preview without touching disk.
+
+    ``topic`` (07a-07f or None) selects the topic subtree so the
+    preview matches where the MOVE-model ingest will actually file the
+    paper.
+    """
+    from organization.system import OrganizationSystem
 
     # Build minimal metadata the router needs
     if status == "book":
@@ -508,8 +501,8 @@ def _proposed_destination(lib: Path, canonical_name: str, status: str) -> Path:
         first = authors_part.split(",")[0].strip()
         meta["authors"] = [{"family": first, "given": ""}]
 
-    router = FolderRouter(lib)
-    return router.route(meta, canonical_name)
+    org = OrganizationSystem(lib, topic=topic)
+    return org.router.route(meta, canonical_name)
 
 
 def _approve_sort(
@@ -518,7 +511,7 @@ def _approve_sort(
     status: str,
     lib: Path,
     *,
-    topic_codes: Optional[list[str]] = None,
+    topic: Optional[str] = None,
     preview=None,
 ) -> tuple[bool, str]:
     """Actually file the paper. Returns (ok, message).
@@ -528,15 +521,15 @@ def _approve_sort(
     edits are honoured (the pipeline no longer re-derives the name from
     metadata and silently overwrites the user's choice).
 
-    ``topic_codes`` (Phase 4) is the list of 07x codes the user
-    ticked in the topic-copies section.  After the paper lands at its
-    canonical destination, we hardlink it into each requested topic
-    folder as part of the same undo transaction.  ``preview`` carries
-    the title + first-page text for the classifier; pass the same
-    ``PaperPreview`` object the card was rendered from.
+    ``topic`` (07a-07f or None) is the user's chosen topic destination
+    from the Sort Queue dropdown.  MOVE model: the paper LIVES in that
+    topic's subtree (or the standard tree when None).  Passing it
+    explicitly to ``sort_one``/``ingest_paper`` also short-circuits the
+    auto-classifier (Step 4.5), so the user's choice always wins.
+    The old Phase-4 hardlink cross-filing was retired -- the library
+    is one-home-per-paper.
     """
     from processing.bulk_sort import sort_one
-    from processing.identity import iter_pdfs  # noqa: F401
     from processing.undo_log import UndoLog
 
     # Guard against the file vanishing between listing and approval
@@ -553,46 +546,14 @@ def _approve_sort(
             dry_run=False,
             undo_log=undo_log,
             canonical_override=canonical_name,
+            topic=topic,
+            # The user already decided the topic via the dropdown
+            # (default = the auto decision); don't let Step 4.5
+            # re-classify and override an explicit "standard" choice.
+            auto_topic=False,
         )
         if not result.get("ok"):
             return False, result.get("error", "unknown")
-
-        # Phase 4: topic-folder hardlinks.  Run BEFORE commit so any
-        # failures land in the same undo transaction and can be
-        # reversed together with the main file move.
-        if topic_codes and result.get("destination"):
-            try:
-                from processing.topic_router import classify_and_link
-                canonical = Path(result["destination"])
-                title = preview.title if preview else ""
-                text = (
-                    preview.first_page_text[:1500]
-                    if preview and preview.first_page_text else ""
-                )
-                routing = classify_and_link(
-                    canonical, lib,
-                    title=title, text=text,
-                    only_codes=topic_codes,
-                    undo_log=undo_log,
-                )
-                if routing.errors:
-                    logger.warning(
-                        "topic routing errors for %s: %s",
-                        canonical, routing.errors,
-                    )
-                    # Stash for the cockpit render path to surface
-                    # to the user -- silent log lines aren't enough
-                    # when a user just asked us to file a paper.
-                    st.session_state["last_topic_errors"] = routing.errors
-                if routing.skipped:
-                    st.session_state.setdefault(
-                        "last_topic_errors", []
-                    ).extend(routing.skipped)
-            except Exception as exc:
-                # A topic-link failure doesn't roll back the file
-                # move; the paper is filed correctly even if the
-                # topic copy didn't go through.
-                logger.warning("topic routing failed: %s", exc)
 
         undo_log.commit()
         _log_activity(

@@ -132,6 +132,8 @@ def sort_one(
     dry_run: bool,
     undo_log=None,
     canonical_override: Optional[str] = None,
+    topic: Optional[str] = None,
+    auto_topic: bool = True,
 ) -> dict:
     """Ingest a single PDF, then move source to trash. Returns a result dict.
 
@@ -140,6 +142,11 @@ def sort_one(
     re-computing the canonical filename from metadata. The override still
     goes through the same routing logic for choosing the destination
     folder, so the status hint and alpha-subdir behaviour are preserved.
+
+    ``topic`` / ``auto_topic``: forwarded to ``ingest_paper``.  The
+    cockpit passes the user's explicit topic choice with
+    ``auto_topic=False`` so a deliberate "standard, no topic" choice
+    isn't overridden by the auto-classifier.
     """
     from processing.ingest import ingest_paper
     from processing.identity import iter_pdfs  # noqa: F401
@@ -159,6 +166,8 @@ def sort_one(
             dry_run=dry_run,
             undo_log=undo_log,
             canonical_override=canonical_override,
+            topic=topic,
+            auto_topic=auto_topic,
         )
     except Exception as exc:
         logger.exception("Ingest crashed for %s", pdf.name)

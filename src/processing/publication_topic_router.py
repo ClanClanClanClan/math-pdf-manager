@@ -170,6 +170,15 @@ def resolve_topic(
         )
 
     # Plausible but uncertain -> suggest, don't auto-file.
+    #
+    # Audit-9 F: the paper has ALREADY cleared the classifier's strong
+    # per-topic threshold (so it genuinely matches >=1 topic); the only
+    # reason confidence is low is CONTENTION (it matches two topics
+    # nearly equally -> dominance penalty drops confidence to ~0.38).
+    # Those are exactly the papers the user must adjudicate, so we
+    # ALWAYS surface a suggestion here rather than gating on
+    # REVIEW_CONFIDENCE -- otherwise a strong two-topic tie would
+    # silently fall through to the standard folder with no flag.
     return TopicDecision(
         topic_code=None, topic_name="", score=score, confidence=conf,
         runner_up=runner_up, all_scores=scored,
@@ -229,24 +238,31 @@ def accept_topic_suggestion(
     from organization.system import (
         PUBLISHED, UNPUBLISHED, WORKING, BOOKS, THESES,
     )
-    status_dirs = [PUBLISHED, UNPUBLISHED, WORKING, BOOKS, THESES]
-    current_status_dir = None
-    for part in pdf_path.parts:
-        if part in status_dirs:
-            current_status_dir = part
+    status_dirs = {PUBLISHED, UNPUBLISHED, WORKING, BOOKS, THESES}
+    # Audit-9 C: walk from the DEEPEST path component upward and record
+    # the index in one pass.  The old forward loop + ``parts.index``
+    # picked the FIRST occurrence of a status-dir name, which is wrong
+    # when a status name appears higher in the path (e.g. a library
+    # nested under ".../03 - .../03 - Working papers/...") -- it would
+    # compute the wrong tail and mis-route.  The status folder closest
+    # to the PDF is the authoritative one.
+    parts = list(pdf_path.parts)
+    status_idx = None
+    for i in range(len(parts) - 1, -1, -1):
+        if parts[i] in status_dirs:
+            status_idx = i
             break
-    if current_status_dir is None:
+    if status_idx is None:
         return False, "could not determine current status folder"
+    current_status_dir = parts[status_idx]
 
     topic_dir = OrganizationSystem(library_root, topic=code).router._topic_dir
     if topic_dir is None:
         return False, f"topic folder for {code} not found"
 
     # Preserve the alpha-subdir (and year for working papers) by taking
-    # everything after the status dir in the current path.
-    parts = list(pdf_path.parts)
-    idx = parts.index(current_status_dir)
-    tail = Path(*parts[idx + 1:])  # e.g. "S/Smith - X.pdf" or "S/2020/..."
+    # everything after the (closest) status dir in the current path.
+    tail = Path(*parts[status_idx + 1:])  # "S/Smith - X.pdf" or "S/2020/..."
     dest = topic_dir / current_status_dir / tail
 
     if dest.exists():

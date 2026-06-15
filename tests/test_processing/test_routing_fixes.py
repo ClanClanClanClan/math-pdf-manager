@@ -173,6 +173,85 @@ class TestEthCredentialResolution:
 # Undo-log location
 # ---------------------------------------------------------------------------
 
+class TestAudit9Fixes:
+    """Round-9 audit fixes: contested->review, deepest status dir,
+    stale-suggestion clearing, explicit-standard not overridden."""
+
+    def test_contested_match_is_suggested_not_dropped(self):
+        # A title hitting two topics' strong keywords ties -> low
+        # confidence, but it must still surface as a review suggestion
+        # (audit-9 F), not silently go to standard.
+        from processing.publication_topic_router import resolve_topic
+        d = resolve_topic("Stackelberg games and BSDEs",
+                          "Stackelberg leader follower BSDE backward stochastic")
+        assert not d.auto
+        assert d.needs_review
+        assert d.suggested_code in ("07a", "07d")
+
+    def test_explicit_standard_not_auto_overridden(self, lib):
+        # User explicitly chose standard (topic=None, auto_topic=False)
+        # for a paper whose text screams BSDE -> must stay standard.
+        from processing.ingest import ingest_paper
+        src = lib / "_in" / "drop.pdf"
+        src.parent.mkdir()
+        _write_minimal_pdf(src, title="Reflected BSDEs and backward stochastic",
+                           author="Smith, J.")
+        result = ingest_paper(
+            src, library_root=lib, status="published", dry_run=False,
+            canonical_override="Smith, J. - Reflected BSDEs",
+            topic=None, auto_topic=False,
+        )
+        assert result["success"]
+        # Lands in the standard tree, NOT 07a.
+        assert "07a" not in Path(result["destination"]).relative_to(lib).parts[0]
+        assert "auto_topic" not in result
+
+    def test_reingest_clears_stale_suggestion(self, tmp_path):
+        # A paper that first got a medium-confidence suggestion, then
+        # re-ingests with a confident classification, must not keep the
+        # stale suggestion (audit-9 D).
+        from processing.identity import PaperIdentity, enable_sidecar_mirror, sidecar_path
+        for d in ["07a - BSDEs", "01 - Published papers"]:
+            (tmp_path / d).mkdir(parents=True, exist_ok=True)
+        enable_sidecar_mirror(tmp_path)
+        # Place a paper in 07a with a stale suggestion still set.
+        sub = tmp_path / "07a - BSDEs" / "01 - Published papers" / "S"
+        sub.mkdir(parents=True)
+        pdf = sub / "Smith, J. - Reflected BSDEs.pdf"
+        from synth_library import _write_minimal_pdf as _w
+        _w(pdf, title="Reflected BSDEs", author="Smith, J.")
+        ident = PaperIdentity()
+        ident.topic_suggestion = "07b"   # stale
+        ident.topic_confidence = 0.5
+        ident.save(pdf)
+        # Re-ingest in place (idempotent) with a confident topic.
+        from processing.ingest import ingest_paper
+        ingest_paper(pdf, library_root=tmp_path, status="published",
+                     dry_run=False, topic="07a",
+                     canonical_override="Smith, J. - Reflected BSDEs")
+        reloaded = PaperIdentity.load(pdf)
+        assert reloaded.topic_suggestion == ""
+
+    def test_accept_preserves_working_year_subdir(self, tmp_path):
+        # accept_topic_suggestion must keep the alpha AND year subdirs
+        # (audit-9 C: deepest status dir + correct tail).
+        from processing.identity import PaperIdentity, enable_sidecar_mirror
+        from processing.publication_topic_router import accept_topic_suggestion
+        for d in ["07a - BSDEs", "03 - Working papers"]:
+            (tmp_path / d).mkdir(parents=True, exist_ok=True)
+        enable_sidecar_mirror(tmp_path)
+        sub = tmp_path / "03 - Working papers" / "S" / "2020"
+        sub.mkdir(parents=True)
+        pdf = sub / "Smith, J. - X.pdf"
+        pdf.write_bytes(b"%PDF")
+        ident = PaperIdentity(); ident.topic_suggestion = "07a"; ident.save(pdf)
+        ok, msg = accept_topic_suggestion(pdf, tmp_path)
+        assert ok, msg
+        moved = (tmp_path / "07a - BSDEs" / "03 - Working papers" / "S" / "2020"
+                 / "Smith, J. - X.pdf")
+        assert moved.exists(), msg
+
+
 class TestUndoLogLocation:
 
     def test_default_log_dir_under_library(self, monkeypatch, tmp_path):
