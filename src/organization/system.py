@@ -451,10 +451,16 @@ class OrganizationSystem:
             destination.parent.mkdir(parents=True, exist_ok=True)
             if file_path.resolve() != destination.resolve():
                 try:
-                    shutil.copy2(file_path, destination)
-                    actions.append(f"copied to {destination}")
+                    # Audit-10: record the copy BEFORE performing it.  If
+                    # the process dies between copy2 and record_copy, the
+                    # destination exists but the undo log has no trace, so
+                    # the orphaned PDF can never be undone.  Recording
+                    # first is safe: if the copy then fails, undo simply
+                    # finds the copy "already gone" and skips it.
                     if undo_log is not None:
                         undo_log.record_copy(file_path, destination)
+                    shutil.copy2(file_path, destination)
+                    actions.append(f"copied to {destination}")
                 except Exception as exc:
                     logger.error("Failed to copy %s → %s: %s", file_path, destination, exc)
                     actions.append(f"ERROR: copy failed: {exc}")

@@ -25,9 +25,11 @@ import argparse
 import hashlib
 import json
 import logging
+import os
 import shutil
 import sys
 import time
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
@@ -70,9 +72,18 @@ class UndoLog:
         self._tx_id: Optional[str] = None
 
     def begin_transaction(self, description: str) -> str:
-        """Start a new transaction. Returns the transaction ID."""
+        """Start a new transaction. Returns the transaction ID.
+
+        Audit-10: the id must be unique even when two processes (the
+        watcher, the weekly job, the cockpit) begin a transaction in
+        the same millisecond with the same description.  The old id was
+        ``md5(time-description)`` which collides under exactly that
+        case, and the second committer would clobber the first's
+        ``<id>.json`` — silently destroying an undo record.  Mixing in
+        the pid and a uuid4 makes a collision astronomically unlikely.
+        """
         self._tx_id = hashlib.md5(
-            f"{time.time()}-{description}".encode()
+            f"{time.time()}-{os.getpid()}-{uuid.uuid4().hex}-{description}".encode()
         ).hexdigest()[:12]
         self._current_tx = {
             "id": self._tx_id,
@@ -242,22 +253,76 @@ class UndoLog:
         return results
 
     def list_transactions(self) -> list[dict]:
-        """List all transactions from the index."""
-        index_file = self.log_dir / "index.jsonl"
-        if not index_file.exists():
-            return []
+        """List all transactions.
 
-        transactions = []
-        for line in index_file.read_text().splitlines():
-            if line.strip():
-                tx = json.loads(line)
-                # Check if undone
-                log_file = self.log_dir / f"{tx['id']}.json"
+        The ``index.jsonl`` is a fast-path summary cache.  Audit-10
+        hardens this two ways:
+
+        * **Tolerant parse** — a single malformed line (e.g. a torn
+          append from a crash, or a Dropbox-synced partial line from
+          another machine) no longer raises and hides *every*
+          transaction; the bad line is skipped with a warning.
+        * **Self-heal** — ``commit()`` writes ``<id>.json`` *then*
+          appends to the index.  A crash in that window leaves an
+          orphaned ``<id>.json`` that the index never references, so it
+          would be invisible (and un-undoable).  We glob the per-tx
+          files and fold in any not present in the index, so every
+          recorded transaction is always listable and reversible.
+        """
+        seen_ids: set[str] = set()
+        transactions: list[dict] = []
+
+        index_file = self.log_dir / "index.jsonl"
+        if index_file.exists():
+            for line in index_file.read_text().splitlines():
+                if not line.strip():
+                    continue
+                try:
+                    tx = json.loads(line)
+                except (json.JSONDecodeError, ValueError):
+                    logger.warning("skipping malformed index line: %r", line[:80])
+                    continue
+                tx_id = tx.get("id")
+                if not tx_id or tx_id in seen_ids:
+                    continue
+                seen_ids.add(tx_id)
+                log_file = self.log_dir / f"{tx_id}.json"
                 if log_file.exists():
-                    full_tx = json.loads(log_file.read_text())
-                    tx["undone"] = full_tx.get("undone", False)
+                    try:
+                        full_tx = json.loads(log_file.read_text())
+                        tx["undone"] = full_tx.get("undone", False)
+                    except (json.JSONDecodeError, ValueError, OSError):
+                        pass
                 transactions.append(tx)
 
+        # Self-heal: surface orphaned transaction files missing from the
+        # index (crash between writing <id>.json and appending the
+        # summary).  Reconstruct a summary from the full record.
+        try:
+            orphans = sorted(self.log_dir.glob("*.json"))
+        except OSError:
+            orphans = []
+        for log_file in orphans:
+            tx_id = log_file.stem
+            if tx_id in seen_ids:
+                continue
+            try:
+                full_tx = json.loads(log_file.read_text())
+            except (json.JSONDecodeError, ValueError, OSError):
+                continue
+            if full_tx.get("id") != tx_id:
+                continue  # not one of our transaction records
+            seen_ids.add(tx_id)
+            transactions.append({
+                "id": tx_id,
+                "timestamp": full_tx.get("timestamp", ""),
+                "description": full_tx.get("description", "(recovered)"),
+                "operations_count": len(full_tx.get("operations", [])),
+                "undone": full_tx.get("undone", False),
+            })
+
+        # Stable chronological order regardless of index vs orphan source.
+        transactions.sort(key=lambda t: t.get("timestamp", ""))
         return transactions
 
     def get_latest_transaction_id(self) -> Optional[str]:

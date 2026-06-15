@@ -374,13 +374,17 @@ class CrossrefChecker:
     def _save_cache(self) -> None:
         if self._cache_path:
             try:
-                self._cache_path.parent.mkdir(parents=True, exist_ok=True)
                 payload = {
                     "_version": self.CACHE_VERSION,
                     "entries": self._cache,
                 }
-                self._cache_path.write_text(
-                    json.dumps(payload, indent=2, ensure_ascii=False)
+                # Audit-10: atomic write so a concurrent reader (or
+                # another process sharing the Dropbox cache) never sees
+                # a half-written file, and a crash leaves no turd.
+                from core.io import atomic_write_text
+                atomic_write_text(
+                    self._cache_path,
+                    json.dumps(payload, indent=2, ensure_ascii=False),
                 )
             except Exception:
                 pass

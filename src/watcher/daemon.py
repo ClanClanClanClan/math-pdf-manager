@@ -38,6 +38,29 @@ from watcher.notifier import notify
 logger = logging.getLogger(__name__)
 
 
+def _is_ingestable_pdf(path: Path) -> bool:
+    """True for a real PDF the watcher should ingest.
+
+    Audit-10: on a Dropbox-synced inbox, editing the same paper from
+    two machines produces a sibling like
+    ``Paper (machine's conflicted copy 2026-06-15).pdf``.  The watcher
+    used to treat that as a brand-new paper and ingest a duplicate.
+    Conflict copies are NOT auto-ingested — they're left for the
+    cockpit Conflicts tab to adjudicate against the canonical.
+    """
+    if path.suffix.lower() != ".pdf":
+        return False
+    try:
+        from processing.conflict_resolver import find_canonical_for_conflict
+        if find_canonical_for_conflict(path) is not None:
+            logger.info("Skipping Dropbox conflict copy (left for review): %s", path.name)
+            return False
+    except Exception:
+        # Detection is best-effort; never let it block a real ingest.
+        pass
+    return True
+
+
 class PDFHandler(FileSystemEventHandler):
     """Handles new PDF files appearing in the inbox."""
 
@@ -70,7 +93,7 @@ class PDFHandler(FileSystemEventHandler):
             for entry in self.config.inbox_dir.iterdir():
                 if entry.is_dir():
                     continue
-                if entry.suffix.lower() != ".pdf":
+                if not _is_ingestable_pdf(entry):
                     continue
                 key = str(entry)
                 if key in self._pending:
@@ -86,7 +109,7 @@ class PDFHandler(FileSystemEventHandler):
         if event.is_directory:
             return
         path = Path(event.src_path)
-        if path.suffix.lower() != ".pdf":
+        if not _is_ingestable_pdf(path):
             return
         # Record (size, last_change_time). The settle check requires both
         # an unchanged size AND elapsed settle_seconds before ingesting.
@@ -97,7 +120,7 @@ class PDFHandler(FileSystemEventHandler):
         if event.is_directory:
             return
         path = Path(event.src_path)
-        if path.suffix.lower() != ".pdf":
+        if not _is_ingestable_pdf(path):
             return
         # Reset to current size/time. process_settled will compare on next tick.
         self._pending[str(path)] = self._initial_pending_state(path)
@@ -114,7 +137,7 @@ class PDFHandler(FileSystemEventHandler):
             return
         dest = getattr(event, "dest_path", None) or event.src_path
         path = Path(dest)
-        if path.suffix.lower() != ".pdf":
+        if not _is_ingestable_pdf(path):
             return
         # Drop the old name (if any) from pending; track the new one.
         old = getattr(event, "src_path", None)

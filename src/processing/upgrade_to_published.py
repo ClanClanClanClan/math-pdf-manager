@@ -48,6 +48,44 @@ RATE_LIMIT_SECS = 1.0
 # Download strategies
 # ---------------------------------------------------------------------------
 
+# Smallest plausible real PDF.  Anything below this is a stub, an error
+# page that happened to start with "%PDF", or a 0-byte Dropbox
+# placeholder — never a genuine published paper.
+_MIN_PDF_BYTES = 1024
+
+
+def _validate_pdf_download(output_path: Path, resp) -> bool:
+    """Return True iff ``output_path`` is a complete-looking PDF.
+
+    Audit-10: the magic-byte check alone passes a download that stalled
+    mid-transfer (the first chunk has ``%PDF`` but the body is
+    truncated).  Filing a truncated PDF as the published version — and
+    then trashing the preprint — is silent corruption.  Reject the file
+    (and delete it) if it is implausibly small or shorter than the
+    server-declared ``Content-Length``.
+    """
+    try:
+        size = output_path.stat().st_size
+    except OSError:
+        return False
+    if size < _MIN_PDF_BYTES:
+        output_path.unlink(missing_ok=True)
+        logger.warning("rejected download (%d bytes, too small): %s", size, output_path)
+        return False
+    try:
+        declared = int(resp.headers.get("Content-Length", 0))
+    except (TypeError, ValueError):
+        declared = 0
+    if declared > 0 and size < declared:
+        output_path.unlink(missing_ok=True)
+        logger.warning(
+            "rejected truncated download (%d of %d bytes): %s",
+            size, declared, output_path,
+        )
+        return False
+    return True
+
+
 def _try_unpaywall(doi: str, output_path: Path) -> bool:
     """Try to download via Unpaywall (open access)."""
     try:
@@ -96,6 +134,8 @@ def _try_unpaywall(doi: str, output_path: Path) -> bool:
         if first_bytes != b"%PDF":
             output_path.unlink(missing_ok=True)
             return False
+        if not _validate_pdf_download(output_path, pdf_resp):
+            return False
 
         logger.info("Downloaded via Unpaywall: %s", doi)
         return True
@@ -130,6 +170,8 @@ def _try_direct_doi(doi: str, output_path: Path) -> bool:
 
         if first_bytes != b"%PDF":
             output_path.unlink(missing_ok=True)
+            return False
+        if not _validate_pdf_download(output_path, resp):
             return False
 
         logger.info("Downloaded via DOI redirect: %s", doi)
@@ -360,11 +402,18 @@ def upgrade_paper(
                             trash_dir.mkdir(parents=True, exist_ok=True)
                             trash_path = trash_dir / preprint_path.name
 
-                            shutil.move(str(preprint_path), str(trash_path))
-
-                            # Record in undo log AFTER successful move
+                            # Audit-10: record BEFORE moving.  Otherwise a
+                            # crash between the move and record_move sends
+                            # the preprint to .trash with no undo entry, so
+                            # the cockpit Activity tab can't reverse it
+                            # (violating "traceable and cancellable, not
+                            # only through CLI").  Recording first is safe:
+                            # if the move fails, undo finds nothing at the
+                            # destination and skips.
                             if undo_log:
                                 undo_log.record_move(preprint_path, trash_path)
+
+                            shutil.move(str(preprint_path), str(trash_path))
 
                             result["action"] = "DOWNLOADED + FILED + DELETED preprint"
                         except Exception as exc:

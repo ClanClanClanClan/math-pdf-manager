@@ -345,16 +345,21 @@ class PaperIdentity:
         # for the natural path it's a no-op since the PDF's parent
         # already exists.
         path.parent.mkdir(parents=True, exist_ok=True)
-        tmp = path.with_suffix(path.suffix + ".tmp")
         # ``asdict`` includes the underscore-prefixed sentinel; strip
         # it so the on-disk schema is clean.
         payload = {k: v for k, v in asdict(self).items() if not k.startswith("_")}
         payload["schema_version"] = SCHEMA_VERSION  # enforce current
-        tmp.write_text(
+        # Audit-10: atomic + concurrency-safe write.  The cockpit,
+        # watcher and weekly job can all save the SAME sidecar on a
+        # Dropbox tree; a fixed ``.tmp`` name let two writers clobber
+        # each other's temp.  ``atomic_write_text`` uses a unique temp
+        # and cleans up on failure (no turds).
+        from core.io import atomic_write_text
+        atomic_write_text(
+            path,
             json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True),
             encoding="utf-8",
         )
-        os.replace(tmp, path)
         self._is_new = False
         return path
 
