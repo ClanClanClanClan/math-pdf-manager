@@ -134,6 +134,24 @@ def current_topic_of(pdf_path: Path, library_root: Path) -> Optional[str]:
     return None
 
 
+def _under_status_folder(pdf_path: Path, library_root: Path) -> bool:
+    """True if the paper sits under a standard status folder (01/02/03/
+    05/06).  A "move"/"suggest" into a topic copies the *same* status
+    sub-bucket, so a paper with no status folder (e.g. in the
+    "12 - To be sorted" inbox) cannot be topic-filed by the bulk apply —
+    it must go through the Sort Queue, which assigns status + topic
+    together."""
+    from organization.system import (
+        PUBLISHED, UNPUBLISHED, WORKING, BOOKS, THESES,
+    )
+    status = {PUBLISHED, UNPUBLISHED, WORKING, BOOKS, THESES}
+    try:
+        rel = pdf_path.relative_to(library_root)
+    except ValueError:
+        rel = pdf_path
+    return any(part in status for part in rel.parts)
+
+
 def title_from_filename(pdf_path: Path) -> str:
     """Best-effort title from the curated canonical filename.
 
@@ -224,9 +242,21 @@ def preview_paper(
         else:
             status = "recall_miss"
     else:
-        if proposed is not None:
+        # A move/suggest replicates the paper's status sub-bucket into the
+        # topic, so it only applies to already-FILED papers (under a
+        # status folder).  The whole "12 - To be sorted" inbox is the
+        # Sort Queue's job (status + topic assigned together) and is
+        # never a bulk "move", even though it has status-named
+        # subfolders.
+        try:
+            top = pdf_path.relative_to(library_root).parts[0]
+            in_inbox = top.startswith("12 ")
+        except (ValueError, IndexError):
+            in_inbox = False
+        movable = _under_status_folder(pdf_path, library_root) and not in_inbox
+        if proposed is not None and movable:
             status = "move"
-        elif suggested is not None:
+        elif suggested is not None and movable:
             status = "suggest"
         else:
             status = "none"

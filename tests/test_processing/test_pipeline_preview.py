@@ -90,6 +90,18 @@ class TestStatusMatrix:
         p = tmp_path / "01 - Published papers" / "X - t.pdf"
         assert preview_paper(p, tmp_path).status == "none"
 
+    def test_inbox_paper_is_not_a_move(self, tmp_path, monkeypatch):
+        # A confident classification for a paper in "12 - To be sorted"
+        # must NOT be a bulk 'move' (the Sort Queue's job).  Regression
+        # for the canary failure — including the inbox's status-named
+        # subfolders.
+        from processing.pipeline_preview import preview_paper
+        self._patch_decision(monkeypatch, topic_code="07a", conf=0.9)
+        bare = tmp_path / "12 - To be sorted" / "X - t.pdf"
+        assert preview_paper(bare, tmp_path).status == "none"
+        nested = tmp_path / "12 - To be sorted" / "01 - Published papers" / "X - t.pdf"
+        assert preview_paper(nested, tmp_path).status == "none"
+
 
 # ---------------------------------------------------------------------------
 # Aggregation + trust metrics
