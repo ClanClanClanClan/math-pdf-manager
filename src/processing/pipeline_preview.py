@@ -166,19 +166,16 @@ def title_from_filename(pdf_path: Path) -> str:
 
 
 def _enrichment_text(pdf_path: Path) -> str:
-    """Optional extra classifier signal from the sidecar (keywords +
-    stored title), best-effort.  Never parses the PDF (too slow at
-    library scale) and never raises."""
+    """Extra classifier signal from the sidecar's cached abstract /
+    first-pages text (``classifier_text``), best-effort.  Reads the
+    sidecar only — never parses the PDF (too slow at library scale) and
+    never raises.  Empty until ``backfill_classifier_text`` has run."""
     try:
         from processing.identity import PaperIdentity
         ident = PaperIdentity.load(pdf_path)
         if ident.is_new():
             return ""
-        bits = []
-        kw = getattr(ident, "keywords", None)
-        if kw:
-            bits.append(kw if isinstance(kw, str) else " ".join(kw))
-        return " ".join(bits)
+        return ident.classifier_text or ""
     except Exception:
         return ""
 
@@ -370,6 +367,7 @@ def apply_topic_proposals(
     scope: Optional[Path] = None,
     limit: Optional[int] = None,
     dry_run: bool = False,
+    enrich: bool = False,
 ) -> dict:
     """Apply the classifier's proposals to the library (the gated bulk
     file).  DESTRUCTIVE unless ``dry_run``.
@@ -389,7 +387,8 @@ def apply_topic_proposals(
     """
     from processing.publication_topic_router import file_into_topic
 
-    _, proposals = preview_topic_filing(library_root, scope=scope, with_extras=False)
+    _, proposals = preview_topic_filing(library_root, scope=scope,
+                                        with_extras=False, enrich=enrich)
     targets = [p for p in proposals
                if p.status in statuses and p.proposed_topic]
     if limit is not None:
