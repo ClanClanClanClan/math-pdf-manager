@@ -1018,6 +1018,11 @@ def render_pipeline_preview() -> None:
     m2[1].metric("Would suggest", s["proposed_suggestions"])
     m2[2].metric("Recall misses", s["recall_miss"])
     m2[3].metric("In a topic now", s["in_topic"])
+    m3 = st.columns(4)
+    m3[0].metric("Book/thesis misfiled", s.get("doctype_mismatches", 0),
+                 help="Books or theses detected in an article folder (01/02/03).")
+    m3[1].metric("Sub-subtopic fits", s.get("subtopic_suggestions", 0),
+                 help="Papers a finer sub-subtopic (e.g. 07a Numerical methods) fits.")
 
     st.caption(
         f"Agreement {s['agreement_rate']:.0%} on {s['agree'] + s['disagree']} "
@@ -1064,6 +1069,83 @@ def render_pipeline_preview() -> None:
                     st.caption(f"Showing first 500 of {len(rows)}.")
             else:
                 st.write("_none_")
+
+    # Document-type mismatches (books/theses in article folders).
+    doc_rows = [{
+        "paper": Path(p["path"]).name,
+        "detected": p.get("doc_kind", "?"),
+        "path": str(Path(p["path"]).relative_to(lib)),
+    } for p in (proposals or []) if p.get("doc_mismatch")]
+    with st.expander(f"📕 Book/thesis in an article folder — {len(doc_rows)}"):
+        st.caption("Detected as a book or thesis (by title) but sitting in "
+                   "01/02/03. Candidates for 05 - Books / 06 - Theses.")
+        st.dataframe(doc_rows[:500], use_container_width=True, hide_index=True) \
+            if doc_rows else st.write("_none_")
+
+    # Sub-subtopic suggestions (finer routing within a topic).
+    sub_rows = [{
+        "paper": Path(p["path"]).name,
+        "topic": p.get("current_topic") or p.get("proposed_topic") or "—",
+        "subtopic": p.get("subtopic"),
+        "currently_in": p.get("current_subtopic") or "(topic root)",
+        "path": str(Path(p["path"]).relative_to(lib)),
+    } for p in (proposals or [])
+        if p.get("subtopic") and p.get("subtopic") != p.get("current_subtopic")]
+    with st.expander(f"🗂 Sub-subtopic fits — {len(sub_rows)}"):
+        st.caption("A finer sub-subtopic (e.g. 07a Numerical methods, 07a "
+                   "G-BSDEs, 07b ESG) matches; the paper is at the topic root.")
+        st.dataframe(sub_rows[:500], use_container_width=True, hide_index=True) \
+            if sub_rows else st.write("_none_")
+
+    # ----- Gated bulk apply (the only place this screen can change files) ---
+    st.divider()
+    st.subheader("⚙ Apply confident moves")
+    n_moves = s.get("proposed_moves", 0)
+    st.caption(
+        f"Files the **{n_moves}** confident *“would newly file”* papers into "
+        f"their topic folders — one undoable transaction, reversible from the "
+        f"Activity tab. Only confident moves are applied; disagreements, "
+        f"suggestions and recall-misses are left for you. Re-scans fresh "
+        f"before moving."
+    )
+    if n_moves == 0:
+        st.info("No confident moves to apply.")
+    else:
+        confirm = st.checkbox(
+            f"I understand this will MOVE {n_moves} file(s).",
+            key="preview_apply_confirm",
+        )
+        ca, cb = st.columns(2)
+        if ca.button("Dry-run (list only)", key="preview_apply_dryrun"):
+            from processing.pipeline_preview import apply_topic_proposals
+            res = apply_topic_proposals(lib, dry_run=True)
+            st.write(f"Would apply **{res['selected']}** move(s).")
+            st.dataframe(
+                [{"paper": Path(w["path"]).name, "topic": w["topic"]}
+                 for w in res["would_apply"][:500]],
+                use_container_width=True, hide_index=True,
+            )
+        if cb.button("✅ Apply now", type="primary", disabled=not confirm,
+                     key="preview_apply_now"):
+            from processing.pipeline_preview import apply_topic_proposals
+            with st.spinner("Filing…"):
+                res = apply_topic_proposals(lib, statuses=("move",))
+            ok_n, fail_n = len(res["applied"]), len(res["failed"])
+            if res.get("tx_id"):
+                _log_activity("topic.bulk_apply", f"{ok_n} moved",
+                              f"{fail_n} failed", res["tx_id"])
+            st.success(f"Filed {ok_n} paper(s); {fail_n} failed. "
+                       f"Undo from the Activity tab (one transaction).")
+            if res["failed"]:
+                st.dataframe(
+                    [{"paper": Path(f["path"]).name, "why": f["msg"]}
+                     for f in res["failed"][:200]],
+                    use_container_width=True, hide_index=True,
+                )
+            # Fresh numbers next render.
+            for k in ("preview_summary", "preview_proposals"):
+                st.session_state.pop(k, None)
+            _count_pdfs_cached.clear()
 
 
 # ---------------------------------------------------------------------------

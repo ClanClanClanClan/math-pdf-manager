@@ -150,6 +150,28 @@ class TestPreviewAggregation:
         assert summary.scanned == 3
         assert len(proposals) == 3
 
+    def test_extras_doctype_and_subtopic_surface(self, tmp_path):
+        # Combined scan surfaces a misfiled thesis and a sub-subtopic fit.
+        from processing.pipeline_preview import preview_topic_filing
+        # A thesis sitting in an article folder -> doctype_mismatch.
+        art = tmp_path / "01 - Published papers" / "S"
+        art.mkdir(parents=True)
+        _write_minimal_pdf(art / "S - A PhD thesis on rough paths.pdf",
+                           title="t", author="S")
+        # A BSDE topic with sub-subtopics; a numerical-methods paper at
+        # the topic root -> subtopic suggestion.
+        topic = tmp_path / "07a - BSDEs"
+        for d in ["01 - Published papers", "07a - Numerical methods"]:
+            (topic / d).mkdir(parents=True)
+        nm = topic / "01 - Published papers" / "X - Deep learning scheme for numerical simulation of BSDEs.pdf"
+        _write_minimal_pdf(nm, title="t", author="X")
+
+        summary, proposals = preview_topic_filing(tmp_path)
+        assert summary.doctype_mismatches >= 1
+        assert summary.subtopic_suggestions >= 1
+        assert any(p.doc_kind == "thesis" and p.doc_mismatch for p in proposals)
+        assert any(p.subtopic == "Numerical methods" for p in proposals)
+
     def test_real_classifier_bsde_agreement(self, tmp_path):
         # End-to-end with the REAL classifier: a BSDE paper hand-filed in
         # 07a should be 'agree'; the same title in a standard folder

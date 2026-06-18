@@ -211,41 +211,36 @@ def list_topic_suggestions(library_root: Path) -> list[dict]:
     return out
 
 
-def accept_topic_suggestion(
+def file_into_topic(
     pdf_path: Path,
+    code: str,
     library_root: Path,
     *,
     undo_log=None,  # type: ignore[no-untyped-def]
 ) -> tuple[bool, str]:
-    """Move a paper from its standard folder into its suggested topic
-    folder (same status sub-bucket), clearing the suggestion.
+    """Move a paper from its standard status folder into topic ``code``'s
+    matching status sub-bucket, recording the topic on the sidecar.
 
-    Uses ``logged_move`` so the move carries the sidecar and is
-    reversible via the shared undo log (cockpit Activity tab).
-    Returns ``(ok, message)``.
+    The shared core behind both the Attention-Queue accept action and
+    the bulk-apply (Pipeline Preview).  Uses ``logged_move`` so the move
+    carries the sidecar and is reversible via the undo log, and records
+    a ``sidecar_edit`` so undo also restores the prior topic fields.
+    Returns ``(ok, message)``.  Does NOT require a stored suggestion.
     """
-    from processing.identity import PaperIdentity, sidecar_path
+    from processing.identity import PaperIdentity
     from processing.undo_log import logged_move
-    from organization.system import OrganizationSystem
+    from organization.system import (
+        OrganizationSystem, PUBLISHED, UNPUBLISHED, WORKING, BOOKS, THESES,
+    )
 
-    identity = PaperIdentity.load(pdf_path)
-    if identity.is_new() or not identity.topic_suggestion:
-        return False, "no pending topic suggestion"
-    code = identity.topic_suggestion
+    if code not in _TOPIC_CODES:
+        return False, f"unknown topic code: {code}"
 
     # Figure out which status sub-bucket the paper currently sits in by
     # matching its parent chain against the standard status dir names.
-    from organization.system import (
-        PUBLISHED, UNPUBLISHED, WORKING, BOOKS, THESES,
-    )
+    # Audit-9 C: walk from the DEEPEST component upward so a status name
+    # appearing higher in the path doesn't mis-route the tail.
     status_dirs = {PUBLISHED, UNPUBLISHED, WORKING, BOOKS, THESES}
-    # Audit-9 C: walk from the DEEPEST path component upward and record
-    # the index in one pass.  The old forward loop + ``parts.index``
-    # picked the FIRST occurrence of a status-dir name, which is wrong
-    # when a status name appears higher in the path (e.g. a library
-    # nested under ".../03 - .../03 - Working papers/...") -- it would
-    # compute the wrong tail and mis-route.  The status folder closest
-    # to the PDF is the authoritative one.
     parts = list(pdf_path.parts)
     status_idx = None
     for i in range(len(parts) - 1, -1, -1):
@@ -267,35 +262,56 @@ def accept_topic_suggestion(
 
     if dest.exists():
         return False, f"destination already exists: {dest}"
+
+    # Record the topic on the sidecar at the SOURCE *before* moving, so
+    # the sidecar (a) exists even for a freshly-dropped un-topiced paper
+    # that never had one, and (b) travels with ``logged_move`` as part of
+    # the same reversible transaction.  Capture the prior field values so
+    # the recorded ``sidecar_edit`` can restore them on undo.
+    identity = PaperIdentity.load(pdf_path)
+    old_suggestion = identity.topic_suggestion
+    old_confidence = identity.topic_confidence
+    old_codes = list(identity.topic_codes)
+    identity.topic_suggestion = ""
+    identity.topic_confidence = 0.0
+    if code not in identity.topic_codes:
+        identity.topic_codes.append(code)
+    new_codes = list(identity.topic_codes)
+    identity.save(pdf_path, recompute_hash=False)
+
     try:
         logged_move(pdf_path, dest, undo_log=undo_log)
     except Exception as exc:
         return False, f"move failed: {exc}"
 
-    # Clear the suggestion + record the topic on the moved sidecar.
-    moved = PaperIdentity.load(dest)
-    if not moved.is_new():
-        old_suggestion = moved.topic_suggestion
-        old_confidence = moved.topic_confidence
-        old_codes = list(moved.topic_codes)
-        moved.topic_suggestion = ""
-        moved.topic_confidence = 0.0
-        if code not in moved.topic_codes:
-            moved.topic_codes.append(code)
-        moved.save(dest, recompute_hash=False)
-        # Audit-11b: record the field edit so undoing this transaction
-        # restores the suggestion + topic_codes.  Recorded AFTER the
-        # logged_move above, so on undo (reverse order) the sidecar is
-        # restored while the file is still at ``dest``, then the move is
-        # reversed -- leaving the paper back in the standard tree with
-        # its suggestion intact (instead of an inconsistent sidecar).
-        if undo_log is not None:
-            undo_log.record_sidecar_edit(dest, {
-                "topic_suggestion": [old_suggestion, ""],
-                "topic_confidence": [old_confidence, 0.0],
-                "topic_codes": [old_codes, list(moved.topic_codes)],
-            })
+    # Audit-11b: record the field edit AFTER the move so undo (reverse
+    # order) restores the sidecar fields while the file is still at
+    # ``dest``, then reverses the move.
+    if undo_log is not None:
+        undo_log.record_sidecar_edit(dest, {
+            "topic_suggestion": [old_suggestion, ""],
+            "topic_confidence": [old_confidence, 0.0],
+            "topic_codes": [old_codes, new_codes],
+        })
     return True, f"moved to {dest.relative_to(library_root)}"
+
+
+def accept_topic_suggestion(
+    pdf_path: Path,
+    library_root: Path,
+    *,
+    undo_log=None,  # type: ignore[no-untyped-def]
+) -> tuple[bool, str]:
+    """Move a paper into its *stored* suggested topic, clearing the
+    suggestion.  Thin wrapper over :func:`file_into_topic` that reads the
+    target code from the sidecar's pending suggestion."""
+    from processing.identity import PaperIdentity
+
+    identity = PaperIdentity.load(pdf_path)
+    if identity.is_new() or not identity.topic_suggestion:
+        return False, "no pending topic suggestion"
+    return file_into_topic(pdf_path, identity.topic_suggestion, library_root,
+                           undo_log=undo_log)
 
 
 def reject_topic_suggestion(pdf_path: Path, *, undo_log=None) -> bool:
