@@ -49,7 +49,15 @@ DEFAULT_TOPIC_THRESHOLD = 2.0
 #                                      user to confirm (filed standard,
 #                                      flagged in the Attention Queue)
 #   confidence < REVIEW_CONFIDENCE  -> standard folder, no suggestion
-AUTO_CONFIDENCE = 0.70
+#
+# AUTO_CONFIDENCE was raised 0.70 -> 0.75 after the abstract-signal
+# upgrade: measured on the full real library (3,277 hand-filed topic
+# papers classified on cached abstracts), 0.75 holds 99.0% precision at
+# 87% recall — the empirical knee.  0.70 buys only +1% recall for ~0.4%
+# precision; 0.80 costs 13% recall for +0.3% precision.  So 0.75 keeps
+# auto-filing at the user's ~99% precision bar while routing the genuinely
+# ambiguous 07b/07c/07d boundary to the review queue.
+AUTO_CONFIDENCE = 0.75
 REVIEW_CONFIDENCE = 0.40
 
 # A top score at/above this is treated as "fully strong" before the
