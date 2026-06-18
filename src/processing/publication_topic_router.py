@@ -225,6 +225,8 @@ def file_into_topic(
     library_root: Path,
     *,
     undo_log=None,  # type: ignore[no-untyped-def]
+    subtopic_folder: Optional[str] = None,
+    doc_bucket: Optional[str] = None,
 ) -> tuple[bool, str]:
     """Move a paper from its standard status folder into topic ``code``'s
     matching status sub-bucket, recording the topic on the sidecar.
@@ -234,6 +236,14 @@ def file_into_topic(
     carries the sidecar and is reversible via the undo log, and records
     a ``sidecar_edit`` so undo also restores the prior topic fields.
     Returns ``(ok, message)``.  Does NOT require a stored suggestion.
+
+    Optional finer routing:
+      * ``subtopic_folder`` — a sub-subtopic folder name under the topic
+        (e.g. ``"07a - Numerical methods"``); the paper is filed under
+        ``<topic>/<subtopic>/<bucket>/...`` instead of ``<topic>/<bucket>/...``.
+      * ``doc_bucket`` — overrides the status sub-bucket with a
+        document-type folder (``"05 - Books and lecture notes"`` /
+        ``"06 - Theses"``) when the paper is a book/thesis.
     """
     from processing.identity import PaperIdentity
     from processing.undo_log import logged_move
@@ -263,10 +273,15 @@ def file_into_topic(
     if topic_dir is None:
         return False, f"topic folder for {code} not found"
 
+    # Base = topic, optionally descended into a sub-subtopic folder.
+    base = topic_dir / subtopic_folder if subtopic_folder else topic_dir
+    # Bucket = the same status as now, unless a document-type override
+    # (book/thesis) redirects it.
+    bucket = doc_bucket or current_status_dir
     # Preserve the alpha-subdir (and year for working papers) by taking
     # everything after the (closest) status dir in the current path.
     tail = Path(*parts[status_idx + 1:])  # "S/Smith - X.pdf" or "S/2020/..."
-    dest = topic_dir / current_status_dir / tail
+    dest = base / bucket / tail
 
     if dest.exists():
         return False, f"destination already exists: {dest}"

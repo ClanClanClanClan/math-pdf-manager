@@ -52,6 +52,30 @@ class TestFileIntoTopic:
         ok, msg = file_into_topic(p, "07z", lib)
         assert not ok and "unknown topic" in msg
 
+    def test_subtopic_folder_routing(self, lib):
+        # file_into_topic routes into <topic>/<subtopic>/<status>/...
+        from processing.publication_topic_router import file_into_topic
+        (lib / "07a - BSDEs" / "07a - Numerical methods").mkdir(parents=True)
+        p = _seed_movable_bsde(lib)
+        ok, msg = file_into_topic(p, "07a", lib,
+                                  subtopic_folder="07a - Numerical methods")
+        assert ok, msg
+        dest = (lib / "07a - BSDEs" / "07a - Numerical methods"
+                / "01 - Published papers" / "S" / p.name)
+        assert dest.exists()
+
+    def test_doc_bucket_routing(self, lib):
+        # file_into_topic redirects a book/thesis into the topic's 05/06.
+        from processing.publication_topic_router import file_into_topic
+        p = _seed_movable_bsde(lib)
+        ok, msg = file_into_topic(p, "07a", lib,
+                                  doc_bucket="06 - Theses")
+        assert ok, msg
+        dest = (lib / "07a - BSDEs" / "06 - Theses" / "S" / p.name)
+        assert dest.exists()
+        # NOT in the original status bucket.
+        assert not (lib / "07a - BSDEs" / "01 - Published papers" / "S" / p.name).exists()
+
 
 class TestBulkApply:
 
@@ -107,3 +131,30 @@ class TestBulkApply:
             _write_minimal_pdf(p, title="t", author="Smith, J.")
         res = apply_topic_proposals(lib, limit=2)
         assert len(res["applied"]) == 2
+
+    def test_apply_routes_into_subtopic(self, lib):
+        # End-to-end: a confident numerical-methods BSDE paper is filed
+        # into the 07a Numerical methods sub-subtopic, not the topic root.
+        from processing.pipeline_preview import apply_topic_proposals
+        (lib / "07a - BSDEs" / "07a - Numerical methods").mkdir(parents=True)
+        p = (lib / "01 - Published papers" / "D"
+             / "Deep, L. - Deep learning numerical scheme for reflected BSDEs and backward equations.pdf")
+        p.parent.mkdir(parents=True, exist_ok=True)
+        _write_minimal_pdf(p, title="t", author="Deep, L.")
+        res = apply_topic_proposals(lib)
+        assert len(res["applied"]) == 1
+        dest = (lib / "07a - BSDEs" / "07a - Numerical methods"
+                / "01 - Published papers" / "D" / p.name)
+        assert dest.exists(), res
+
+    def test_apply_routes_thesis_into_06(self, lib):
+        # A thesis-titled confident BSDE paper is filed into 07a/06 - Theses.
+        from processing.pipeline_preview import apply_topic_proposals
+        p = (lib / "01 - Published papers" / "P"
+             / "PhD, A. - A PhD thesis on reflected BSDEs and backward stochastic equations.pdf")
+        p.parent.mkdir(parents=True, exist_ok=True)
+        _write_minimal_pdf(p, title="t", author="PhD, A.")
+        res = apply_topic_proposals(lib)
+        assert len(res["applied"]) == 1
+        dest = (lib / "07a - BSDEs" / "06 - Theses" / "P" / p.name)
+        assert dest.exists(), res

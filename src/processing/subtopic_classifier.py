@@ -40,7 +40,7 @@ _SUBTOPIC_KEYWORDS = {
     ],
     "2bsdes": [
         r"\b2bsde(?:s)?\b", r"\bsecond[- ]order (?:bsde|backward)",
-        r"\bfully nonlinear\b", r"\bg-?expectation\b",
+        r"\bsecond[- ]order backward stochastic\b", r"\bfully nonlinear\b",
     ],
     "g-bsdes": [
         r"\bg-?bsde(?:s)?\b", r"\bg-?expectation(?:s)?\b", r"\bg-?brownian\b",

@@ -402,9 +402,14 @@ def apply_topic_proposals(
         "failed": [],
     }
     if dry_run:
-        result["would_apply"] = [
-            {"path": p.path, "topic": p.proposed_topic} for p in targets
-        ]
+        result["would_apply"] = []
+        for p in targets:
+            sub, doc = _finer_routing(Path(p.path), p.proposed_topic,
+                                      library_root, enrich)
+            result["would_apply"].append({
+                "path": p.path, "topic": p.proposed_topic,
+                "subtopic": sub, "doc_bucket": doc,
+            })
         return result
 
     if not targets:
@@ -417,11 +422,52 @@ def apply_topic_proposals(
     log = UndoLog(log_dir=library_root / ".operation_log")
     tx_id = log.begin_transaction(f"Bulk topic apply: {len(targets)} paper(s)")
     for p in targets:
+        pdf = Path(p.path)
+        sub, doc = _finer_routing(pdf, p.proposed_topic, library_root, enrich)
         ok, msg = file_into_topic(
-            Path(p.path), p.proposed_topic, library_root, undo_log=log,
+            pdf, p.proposed_topic, library_root, undo_log=log,
+            subtopic_folder=sub, doc_bucket=doc,
         )
-        entry = {"path": p.path, "topic": p.proposed_topic, "msg": msg}
+        entry = {"path": p.path, "topic": p.proposed_topic,
+                 "subtopic": sub, "doc_bucket": doc, "msg": msg}
         (result["applied"] if ok else result["failed"]).append(entry)
     log.commit()
     result["tx_id"] = tx_id
     return result
+
+
+# Document-type confidence required before the apply redirects a paper to
+# a books/theses folder (filename-heuristic, so keep the bar high).
+_DOC_APPLY_CONFIDENCE = 0.85
+
+
+def _finer_routing(pdf_path: Path, code: str, library_root: Path, enrich: bool):
+    """Compute (subtopic_folder, doc_bucket) for a topic move.
+
+    * sub-subtopic: file deeper into the topic (e.g. 07a Numerical
+      methods) when the abstract/title confidently matches one.
+    * doc_bucket: redirect a confidently-detected book/thesis into the
+      topic's 05/06 folder instead of the status folder.  Conservative
+      (high confidence) since detection is filename-based.
+    Returns ``(None, None)`` when neither applies.
+    """
+    sub_folder = None
+    try:
+        from processing.subtopic_classifier import resolve_subtopic
+        text = _enrichment_text(pdf_path) if enrich else ""
+        sd = resolve_subtopic(pdf_path, code, library_root, text=text)
+        if sd:
+            sub_folder = sd.folder_name
+    except Exception:
+        pass
+
+    doc_bucket = None
+    try:
+        from processing.doctype_classifier import classify_document_type
+        doc = classify_document_type(pdf_path.name)
+        if doc.kind in ("book", "thesis") and doc.confidence >= _DOC_APPLY_CONFIDENCE:
+            doc_bucket = doc.folder
+    except Exception:
+        pass
+
+    return sub_folder, doc_bucket
