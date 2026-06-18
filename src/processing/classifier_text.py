@@ -67,6 +67,7 @@ def backfill_classifier_text(
     overwrite: bool = False,
     max_pages: int = DEFAULT_MAX_PAGES,
     max_chars: int = DEFAULT_MAX_CHARS,
+    max_seconds: Optional[float] = None,
 ) -> dict:
     """Populate ``classifier_text`` on sidecars across the library.
 
@@ -75,8 +76,15 @@ def backfill_classifier_text(
     backfills can't run at once.  It deliberately does NOT take the
     global library write lock: that would stall the watcher for the whole
     (long) run, and this only writes one sidecar field via the atomic
-    sidecar writer.  Returns a stats dict.
+    sidecar writer.
+
+    ``max_seconds`` makes the run self-bounded: it stops gracefully after
+    the current paper once the budget is exceeded and sets
+    ``stats["stopped_early"]``.  This keeps each invocation comfortably
+    under any harness/cron timeout — drive it to completion by calling
+    repeatedly (it resumes where it left off).  Returns a stats dict.
     """
+    import time as _time
     from processing.identity import iter_pdfs, PaperIdentity
     from processing.pipeline_preview import is_routable
     from processing.locking import LibraryLock
@@ -89,6 +97,7 @@ def backfill_classifier_text(
         stats["skipped_locked"] = True
         return stats
 
+    start = _time.time()
     try:
         root = scope or library_root
         filter_routable = scope is None
@@ -97,28 +106,32 @@ def backfill_classifier_text(
                 continue
             if limit is not None and stats["scanned"] >= limit:
                 break
+            if max_seconds is not None and (_time.time() - start) >= max_seconds:
+                stats["stopped_early"] = True
+                break
             stats["scanned"] += 1
 
             ident = PaperIdentity.load(pdf)
-            if ident.classifier_text and not overwrite:
+            if (ident.classifier_text or ident.classifier_text_tried) and not overwrite:
                 stats["skipped"] += 1
                 continue
 
             # Extract OUTSIDE any sidecar hold (the slow part).
             text = extract_classifier_text(pdf, max_pages=max_pages,
                                            max_chars=max_chars)
-            if not text:
-                stats["empty"] += 1
-                continue  # leave unset so a future run retries
 
             # Re-load fresh right before saving to minimise the window in
             # which a concurrent topic edit could be lost, then persist
-            # only the new field via the atomic writer.
+            # only the new field(s) via the atomic writer.  Mark
+            # ``classifier_text_tried`` either way so an un-extractable
+            # (image-only) PDF isn't retried on every future run.
             ident = PaperIdentity.load(pdf)
-            ident.classifier_text = text
+            ident.classifier_text_tried = True
+            if text:
+                ident.classifier_text = text
             try:
                 ident.save(pdf, recompute_hash=False)
-                stats["extracted"] += 1
+                stats["extracted" if text else "empty"] += 1
             except Exception as exc:  # pragma: no cover -- defensive
                 logger.warning("save failed for %s: %s", pdf, exc)
                 stats["failed"] += 1
@@ -144,6 +157,9 @@ def main(argv: Optional[list[str]] = None) -> None:
     parser.add_argument("--max-chars", type=int, default=DEFAULT_MAX_CHARS)
     parser.add_argument("--scope", default=None,
                         help="Restrict to a subfolder (relative to library root)")
+    parser.add_argument("--max-seconds", type=float, default=None,
+                        help="Stop gracefully after this many seconds (resume "
+                             "by re-running)")
     args = parser.parse_args(argv)
 
     root = get_library_root()
@@ -151,6 +167,7 @@ def main(argv: Optional[list[str]] = None) -> None:
     stats = backfill_classifier_text(
         root, scope=scope, limit=args.limit, overwrite=args.overwrite,
         max_pages=args.max_pages, max_chars=args.max_chars,
+        max_seconds=args.max_seconds,
     )
     print(stats)
 

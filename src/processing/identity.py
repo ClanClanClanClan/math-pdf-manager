@@ -282,6 +282,10 @@ class PaperIdentity:
     # because ~98% of recall-misses have no topic keyword in the title.
     # Capped at a few KB; populated by ``backfill_classifier_text``.
     classifier_text: str = ""
+    # True once text extraction has been ATTEMPTED, even if it yielded
+    # nothing (scanned/image-only PDF, no text layer).  Lets the backfill
+    # converge instead of re-extracting the un-extractable every run.
+    classifier_text_tried: bool = False
 
     # Marker for "this object was constructed because no sidecar
     # existed yet".  Not persisted.

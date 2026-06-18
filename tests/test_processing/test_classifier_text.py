@@ -106,6 +106,19 @@ class TestBackfill:
         s = backfill_classifier_text(tmp_path)
         assert s["scanned"] == 0
 
+    def test_max_seconds_stops_early(self, tmp_path):
+        # A zero-second budget stops before processing anything and flags
+        # it, so the run never blows past a harness/cron timeout.
+        from processing.identity import enable_sidecar_mirror
+        from processing.classifier_text import backfill_classifier_text
+        enable_sidecar_mirror(tmp_path)
+        for i in range(3):
+            _write_text_pdf(tmp_path / "01 - Published papers" / f"X - p{i}.pdf",
+                            "some text about equations")
+        s = backfill_classifier_text(tmp_path, max_seconds=0)
+        assert s.get("stopped_early") is True
+        assert s["extracted"] == 0
+
     def test_limit(self, tmp_path):
         from processing.identity import enable_sidecar_mirror
         from processing.classifier_text import backfill_classifier_text
