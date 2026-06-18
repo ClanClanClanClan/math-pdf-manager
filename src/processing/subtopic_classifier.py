@@ -28,29 +28,60 @@ _SUBTOPIC_DIR_RE = re.compile(r"^07[a-f] - (.+)$", re.IGNORECASE)
 _STATUS_DIR_RE = re.compile(r"^0[1-6] - ")
 
 # Curated keyword signals for the known sub-subtopics, keyed by the
-# lower-cased label.  Unknown labels fall back to matching the label's
-# own significant words against the title (see ``_label_fallback``).
+# lower-cased label.  Each entry is ``(regex, case_sensitive)``: a
+# case-sensitive pattern is matched against the ORIGINAL text (case
+# preserved); a case-insensitive one with IGNORECASE.  Unknown labels
+# fall back to matching the label's own significant words
+# (see ``_label_fallback``).
+#
+# The G-BSDEs entry is deliberately subtle.  In the BSDE literature
+# *small-g* "g-expectation" is Peng's nonlinear expectation defined by an
+# ORDINARY BSDE with generator g — core BSDE theory that belongs in the
+# BSDE root, NOT here.  *Capital-G* "G-expectation" / "G-Brownian motion"
+# is the separate sublinear-expectation framework, and G-BSDEs (driven by
+# G-Brownian motion) get this folder.  A single letter's case in
+# extracted PDF text is fragile, so we lean on DISTINCTIVE companion
+# terms that disambiguate regardless of case ("G-Brownian", "sublinear
+# expectation" — there is no "g-Brownian"), and match the genuinely
+# case-dependent terms ("G-BSDE", "G-expectation") CASE-SENSITIVELY.
+# Bare "g-expectation" is intentionally NOT a signal, so small-g papers
+# fall through to the BSDE root.
 _SUBTOPIC_KEYWORDS = {
     "numerical methods": [
-        r"\bnumerical\b", r"\bscheme(?:s)?\b", r"\bdiscreti[sz]ation\b",
-        r"\bmonte[- ]carlo\b", r"\bsimulation(?:s)?\b",
-        r"\bdeep (?:learning|bsde|solver|splitting)\b", r"\bneural network",
-        r"\bmachine learning\b", r"\bfinite[- ]difference\b",
-        r"\balgorithm(?:s)?\b", r"\beuler scheme\b", r"\bregression\b",
+        (r"\bnumerical\b", False), (r"\bscheme(?:s)?\b", False),
+        (r"\bdiscreti[sz]ation\b", False), (r"\bmonte[- ]carlo\b", False),
+        (r"\bsimulation(?:s)?\b", False),
+        (r"\bdeep (?:learning|bsde|solver|splitting)\b", False),
+        (r"\bneural network", False), (r"\bmachine learning\b", False),
+        (r"\bfinite[- ]difference\b", False), (r"\balgorithm(?:s)?\b", False),
+        (r"\beuler scheme\b", False), (r"\bregression\b", False),
     ],
     "2bsdes": [
-        r"\b2bsde(?:s)?\b", r"\bsecond[- ]order (?:bsde|backward)",
-        r"\bsecond[- ]order backward stochastic\b", r"\bfully nonlinear\b",
+        (r"\b2bsde(?:s)?\b", False),
+        (r"\bsecond[- ]order (?:bsde|backward)", False),
+        (r"\bsecond[- ]order backward stochastic\b", False),
     ],
     "g-bsdes": [
-        r"\bg-?bsde(?:s)?\b", r"\bg-?expectation(?:s)?\b", r"\bg-?brownian\b",
-        r"\bsublinear expectation", r"\bg-?martingale", r"\bg-?stochastic",
+        # Distinctive capital-G framework phrases (case-insensitive is
+        # safe — no small-g "g-Brownian"/"g-heat equation" notions exist).
+        (r"\bg-brownian\b", False),
+        (r"\bsublinear expectation", False),
+        (r"\bg-heat equation\b", False),
+        (r"\bg-martingale", False),
+        (r"\bg-(?:ito|itô)\b", False),
+        (r"\bg-stochastic\b", False),
+        (r"\bg-normal\b", False),
+        # Case-SENSITIVE: capital "G-BSDE"/"G-expectation" only, so the
+        # small-g "g-expectation"/"g-bsde" never lands in this folder.
+        (r"G-BSDE", True),
+        (r"G-expectation", True),
     ],
     "esg": [
-        r"\besg\b", r"environment\w*[\s,]+social[\s,]+(?:and )?governance",
-        r"\bsustainab", r"\bclimate\b", r"\bcarbon\b",
-        r"\bgreen (?:finance|bond|investing)", r"\bimpact investing\b",
-        r"\bresponsible investing\b",
+        (r"\besg\b", False),
+        (r"environment\w*[\s,]+social[\s,]+(?:and )?governance", False),
+        (r"\bsustainab", False), (r"\bclimate\b", False), (r"\bcarbon\b", False),
+        (r"\bgreen (?:finance|bond|investing)", False),
+        (r"\bimpact investing\b", False), (r"\bresponsible investing\b", False),
     ],
 }
 
@@ -87,13 +118,13 @@ def discover_subtopics(topic_dir: Path) -> list[tuple[str, str]]:
     return out
 
 
-def _label_fallback(label: str) -> list[str]:
+def _label_fallback(label: str) -> list[tuple[str, bool]]:
     """Significant words from an unknown sub-subtopic label, as loose
-    patterns, so newly-added folders still get *some* matching without a
-    code change."""
+    (case-insensitive) patterns, so newly-added folders still get *some*
+    matching without a code change."""
     words = [w for w in re.findall(r"[A-Za-z][A-Za-z-]{3,}", label)]
     stop = {"with", "from", "into", "and", "the", "for", "methods", "theory"}
-    return [rf"\b{re.escape(w)}" for w in words if w.lower() not in stop]
+    return [(rf"\b{re.escape(w)}", False) for w in words if w.lower() not in stop]
 
 
 def classify_subtopic(
@@ -105,17 +136,23 @@ def classify_subtopic(
 
     ``subtopics`` is the output of :func:`discover_subtopics`.  Scoring
     counts distinct keyword hits across title+text; the strongest
-    sub-subtopic above the confidence floor wins."""
+    sub-subtopic above the confidence floor wins.  Patterns carry a
+    case-sensitivity flag (see ``_SUBTOPIC_KEYWORDS``) so the small-g vs
+    capital-G distinction is preserved — the original-cased text is
+    matched for case-sensitive patterns."""
     if not subtopics:
         return None
-    hay = f"{title}\n{text}".lower()
+    hay = f"{title}\n{text}"   # original case preserved
 
     best: Optional[SubtopicDecision] = None
     for folder_name, label in subtopics:
         patterns = _SUBTOPIC_KEYWORDS.get(label.lower()) or _label_fallback(label)
         if not patterns:
             continue
-        hits = sum(1 for p in patterns if re.search(p, hay, re.IGNORECASE))
+        hits = sum(
+            1 for pat, cs in patterns
+            if re.search(pat, hay, 0 if cs else re.IGNORECASE)
+        )
         if hits == 0:
             continue
         conf = min(0.85, 0.5 + 0.15 * hits)

@@ -115,6 +115,47 @@ class TestSubtopic:
         from processing.subtopic_classifier import classify_subtopic
         assert classify_subtopic("anything numerical", "", []) is None
 
+    def test_small_g_expectation_is_not_gbsde(self, tmp_path):
+        # small-g 'g-expectation' (Peng's nonlinear expectation via an
+        # ordinary BSDE) must NOT be routed to the capital-G G-BSDEs
+        # subfolder — it belongs in the BSDE root.
+        from processing.subtopic_classifier import discover_subtopics, classify_subtopic
+        subs = discover_subtopics(self._make_topic(tmp_path))
+        d = classify_subtopic(
+            "On g-expectations and comparison theorems",
+            "We study the g-expectation defined by a BSDE with generator g "
+            "and prove a comparison theorem.", subs)
+        assert d is None or d.label != "G-BSDEs"
+
+    def test_capital_G_expectation_is_gbsde(self, tmp_path):
+        from processing.subtopic_classifier import discover_subtopics, classify_subtopic
+        subs = discover_subtopics(self._make_topic(tmp_path))
+        d = classify_subtopic(
+            "Reflected G-BSDEs under G-expectation",
+            "We work in the G-expectation framework driven by G-Brownian "
+            "motion (sublinear expectation).", subs)
+        assert d is not None and d.label == "G-BSDEs"
+
+    def test_gbrownian_disambiguates_regardless_of_case(self, tmp_path):
+        # Even without a capital 'G-expectation', the distinctive
+        # companion term 'G-Brownian motion' / 'sublinear expectation'
+        # routes to G-BSDEs.
+        from processing.subtopic_classifier import discover_subtopics, classify_subtopic
+        subs = discover_subtopics(self._make_topic(tmp_path))
+        d = classify_subtopic(
+            "Path regularity under sublinear expectation",
+            "driven by G-Brownian motion", subs)
+        assert d is not None and d.label == "G-BSDEs"
+
+    def test_lowercase_g_bsde_string_not_gbsde(self, tmp_path):
+        # A stray lowercase 'g-bsde' with no capital-G framework signal
+        # should not be forced into G-BSDEs.
+        from processing.subtopic_classifier import discover_subtopics, classify_subtopic
+        subs = discover_subtopics(self._make_topic(tmp_path))
+        d = classify_subtopic(
+            "A note on g-bsde with generator g", "ordinary bsde theory", subs)
+        assert d is None or d.label != "G-BSDEs"
+
     def test_resolve_subtopic_end_to_end(self, tmp_path):
         from processing.subtopic_classifier import resolve_subtopic
         self._make_topic(tmp_path)
