@@ -177,12 +177,45 @@ def test_all_render_functions_exist(st_stub):
         "render_to_download",
         "render_conflicts",
         "render_maintenance",
+        "render_pipeline_preview",
         "render_stats",
         "render_activity",
         "render_settings",
     ]
     for name in required:
         assert callable(getattr(cockpit, name, None)), f"{name} not defined"
+
+
+def test_render_pipeline_preview_empty_does_not_raise(st_stub, tmp_path, monkeypatch):
+    """Pipeline Preview with no prior run shows the info prompt path."""
+    monkeypatch.setenv("MATH_LIBRARY", str(tmp_path))
+    import ui.cockpit as cockpit
+    cockpit.render_pipeline_preview()
+
+
+def test_render_pipeline_preview_with_results_does_not_raise(st_stub, tmp_path, monkeypatch):
+    """With seeded results, the metrics + band expanders + dataframe all
+    render (exercises the _rows / relative_to / dataframe path)."""
+    monkeypatch.setenv("MATH_LIBRARY", str(tmp_path))
+    import ui.cockpit as cockpit
+    cockpit.st.session_state["preview_summary"] = {
+        "scanned": 3, "agreement_rate": 0.5, "topic_recall": 0.67,
+        "disagree": 1, "agree": 1, "recall_miss": 1,
+        "proposed_moves": 1, "proposed_suggestions": 0, "in_topic": 2,
+    }
+    base = tmp_path / "07a - BSDEs" / "01 - Published papers"
+    cockpit.st.session_state["preview_proposals"] = [
+        {"path": str(base / "X - a.pdf"), "status": "agree",
+         "current_topic": "07a", "proposed_topic": "07a",
+         "suggested_topic": None, "confidence": 0.9},
+        {"path": str(base / "X - b.pdf"), "status": "disagree",
+         "current_topic": "07a", "proposed_topic": "07b",
+         "suggested_topic": None, "confidence": 0.9},
+        {"path": str(tmp_path / "01 - Published papers" / "X - c.pdf"),
+         "status": "move", "current_topic": None, "proposed_topic": "07a",
+         "suggested_topic": None, "confidence": 0.9},
+    ]
+    cockpit.render_pipeline_preview()
 
 
 def test_render_to_download_does_not_raise(st_stub, tmp_path, monkeypatch):

@@ -257,6 +257,7 @@ def render_sidebar() -> None:
                 "To Download",
                 "Conflicts",
                 "Maintenance",
+                "Pipeline Preview",
                 "Stats",
                 "Activity",
                 "Settings",
@@ -950,6 +951,119 @@ def render_stats() -> None:
     cols = st.columns(2)
     cols[0].metric("Sorted originals", _count_trash(lib, "sorted_originals"))
     cols[1].metric("Upgraded preprints", _count_trash(lib, "upgraded_preprints"))
+
+
+# ---------------------------------------------------------------------------
+# Page: Pipeline Preview
+# ---------------------------------------------------------------------------
+
+def render_pipeline_preview() -> None:
+    st.header("🔭 Pipeline Preview")
+    st.caption(
+        "Read-only. Runs the topic classifier across the library and shows "
+        "what it *would* do — compared against where each paper currently "
+        "lives (your hand-filing = ground truth). **Nothing is moved.** "
+        "This is the evidence for deciding whether to trust a bulk classify."
+    )
+
+    lib = _library()
+    if not lib.exists():
+        st.error("Library not found.")
+        return
+
+    # Scope + sample controls.  A full 29k scan runs the (fast, keyword-
+    # based) classifier per paper; still, offer a sample for a quick look.
+    topic_dirs = [d.name for d in sorted(lib.iterdir())
+                  if d.is_dir() and d.name[:3] in (
+                      "01 ", "02 ", "03 ", "05 ", "06 ", "07")] if lib.exists() else []
+    scope_opts = ["Whole library"] + topic_dirs
+    c1, c2, c3 = st.columns([2, 1, 1])
+    scope_sel = c1.selectbox("Scope", scope_opts, index=0)
+    sample = c2.selectbox("Sample", ["All", "200", "1000", "5000"], index=0)
+    enrich = c3.checkbox("Use sidecar keywords", value=False,
+                         help="Slower: adds stored keywords to the signal.")
+
+    if st.button("▶ Run preview", type="primary"):
+        from processing.pipeline_preview import preview_topic_filing
+        scope = None if scope_sel == "Whole library" else lib / scope_sel
+        limit = None if sample == "All" else int(sample)
+        with st.spinner("Classifying… (read-only)"):
+            summary, proposals = preview_topic_filing(
+                lib, scope=scope, limit=limit, enrich=enrich,
+            )
+        st.session_state["preview_summary"] = summary.to_dict()
+        st.session_state["preview_proposals"] = [p.to_dict() for p in proposals]
+
+    s = st.session_state.get("preview_summary")
+    proposals = st.session_state.get("preview_proposals")
+    if not s:
+        st.info("Choose a scope and click **Run preview**.")
+        return
+
+    # Trust metrics.
+    st.subheader("Trust metrics")
+    m = st.columns(4)
+    m[0].metric("Scanned", s["scanned"])
+    m[1].metric("Agreement", f"{s['agreement_rate']:.0%}",
+                help="Of hand-filed papers the classifier is confident "
+                     "about, how often it picks the SAME topic you did.")
+    m[2].metric("Topic recall", f"{s['topic_recall']:.0%}",
+                help="Of hand-filed topic papers, how many the classifier "
+                     "is confident enough to auto-file at all.")
+    m[3].metric("Disagreements", s["disagree"],
+                help="Hand-filed papers the classifier would send elsewhere "
+                     "— the spot-check list (misfilings OR classifier errors).")
+    m2 = st.columns(4)
+    m2[0].metric("Would newly file", s["proposed_moves"])
+    m2[1].metric("Would suggest", s["proposed_suggestions"])
+    m2[2].metric("Recall misses", s["recall_miss"])
+    m2[3].metric("In a topic now", s["in_topic"])
+
+    st.caption(
+        f"Agreement {s['agreement_rate']:.0%} on {s['agree'] + s['disagree']} "
+        f"confident hand-filed papers. The higher this is, the safer a "
+        f"gated bulk-apply becomes. (Apply is a separate, explicitly-"
+        f"approved step — this screen never changes the library.)"
+    )
+
+    # Reviewable band lists.
+    def _rows(status):
+        rel = []
+        for p in proposals or []:
+            if p["status"] != status:
+                continue
+            rel.append({
+                "paper": Path(p["path"]).name,
+                "current": p["current_topic"] or "—",
+                "proposed": p["proposed_topic"] or p["suggested_topic"] or "—",
+                "confidence": f"{p['confidence']:.0%}",
+                "path": str(Path(p["path"]).relative_to(lib)),
+            })
+        return rel
+
+    st.divider()
+    for label, status, hint in [
+        ("🚩 Disagreements (spot-check first)", "disagree",
+         "Classifier would auto-file these to a DIFFERENT topic than where "
+         "you put them. Either a misfiling worth fixing or a classifier miss."),
+        ("➕ Would newly file (confident)", "move",
+         "Not in any topic folder; classifier is confident enough to auto-file."),
+        ("❓ Would suggest (needs your call)", "suggest",
+         "Medium-confidence guesses for un-topiced papers."),
+        ("🕳 Recall misses", "recall_miss",
+         "Hand-filed in a topic, but the classifier wouldn't auto-file them "
+         "— shows where its recall still lags your judgement."),
+    ]:
+        rows = _rows(status)
+        with st.expander(f"{label} — {len(rows)}"):
+            st.caption(hint)
+            if rows:
+                st.dataframe(rows[:500], use_container_width=True,
+                             hide_index=True)
+                if len(rows) > 500:
+                    st.caption(f"Showing first 500 of {len(rows)}.")
+            else:
+                st.write("_none_")
 
 
 # ---------------------------------------------------------------------------
@@ -1853,6 +1967,8 @@ def main() -> None:
         render_conflicts()
     elif page == "Maintenance":
         render_maintenance()
+    elif page == "Pipeline Preview":
+        render_pipeline_preview()
     elif page == "Stats":
         render_stats()
     elif page == "Activity":
