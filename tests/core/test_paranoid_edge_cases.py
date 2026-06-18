@@ -690,31 +690,13 @@ class TestSecurityModuleEdgeCases:
                 # Many attack URLs should be rejected with either exception type
                 pass
     
-    @pytest.mark.xfail(reason="No real password validation service — inline logic contradicts expected values")
-    def test_password_entropy_edge_cases(self):
-        """Test password validation entropy edge cases.
-
-        NOTE: This test previously swallowed all assertion failures with
-        a bare ``except: pass``.  It is marked xfail until a real password
-        validation service is implemented.
-        """
-        test_cases = [
-            ("a" * 100, False),  # Long but low entropy
-            ("abcdefgh", False),  # Dictionary word
-            ("12345678", False),  # Sequential
-            ("qwertyui", False),  # Keyboard pattern
-            ("P@ssw0rd", False),  # Common pattern
-            ("Tr0ub4dor&3", True),  # Good entropy
-            ("correct horse battery staple", True),  # XKCD style
-        ]
-
-        for password, should_be_strong in test_cases:
-            # Placeholder — real implementation would use a proper service
-            is_strong = len(set(password)) > 5 and len(password) >= 8
-            if should_be_strong:
-                assert is_strong, f"Expected strong: {password!r}"
-            else:
-                assert not is_strong, f"Expected weak: {password!r}"
+    # NOTE: a password-entropy test used to live here.  It tested a
+    # password-validation *service* that does not exist in this
+    # PDF-management codebase — it only ever exercised a contradictory
+    # inline placeholder heuristic against hard-coded expectations, so it
+    # was a permanent xfail asserting nothing real.  Removed (audit
+    # green-up).  If a real credential-strength check is ever added, test
+    # it against that implementation, not a placeholder.
 
 
 class TestMemoryAndResourceEdgeCases:

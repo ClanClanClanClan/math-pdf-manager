@@ -36,61 +36,6 @@ def test_main_help():
         assert False, f"Failed to run main.py: {e}"
 
 
-import pytest
-
-
-@pytest.mark.skip(
-    reason="CLI drift: this probe-script test passes a ``--check`` flag that "
-    "``src/main.py`` no longer accepts (the audit/check subcommands were "
-    "split into separate tools).  Kept for archaeology; not asserted against "
-    "the current CLI surface."
-)
-def test_main_dry_run():
-    """Test main.py with --dry-run on a test directory."""
-    print("\n\n🧪 Testing main.py --dry-run")
-    print("=" * 50)
-    
-    # Create a test directory with a sample PDF name
-    test_dir = Path("test_pdfs")
-    test_dir.mkdir(exist_ok=True)
-    
-    # Create a test file
-    test_file = test_dir / "Smith, John - Test Paper.pdf"
-    test_file.touch()
-    
-    try:
-        # Run main.py with --dry-run
-        result = subprocess.run(
-            [sys.executable, "src/main.py", str(test_dir), "--dry-run", "--check"],
-            capture_output=True,
-            text=True,
-            cwd=Path(__file__).resolve().parents[2],
-            timeout=60
-        )
-        
-        if result.returncode == 0:
-            print("✓ main.py --dry-run executed successfully")
-            if "Processed 1 files" in result.stdout or "1 file" in result.stdout:
-                print("✓ Found and processed test file")
-            assert True, "main.py --dry-run executed successfully"
-        else:
-            print(f"✗ main.py --dry-run failed with code {result.returncode}")
-            print("STDOUT:", result.stdout[:500])
-            print("STDERR:", result.stderr[:500])
-            assert False, f"main.py --dry-run failed with code {result.returncode}"
-            
-    except subprocess.TimeoutExpired:
-        print("✗ main.py timed out (stuck in initialization?)")
-        assert False, "main.py timed out"
-    except Exception as e:
-        print(f"✗ Failed to run main.py: {e}")
-        assert False, f"Failed to run main.py: {e}"
-    finally:
-        # Cleanup
-        test_file.unlink(missing_ok=True)
-        test_dir.rmdir()
-
-
 def measure_startup_time():
     """Measure actual startup time."""
     print("\n\n📊 Measuring Startup Time")

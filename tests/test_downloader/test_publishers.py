@@ -132,20 +132,21 @@ class TestDirectDownloadIntegration:
     """
 
     # (module, class_name, test_doi, min_size_kb)
+    #
+    # NOTE: Project Euclid was dropped from this list — it added
+    # Imperva/Incapsula bot detection in 2025 that the EuclidDownloader
+    # can't bypass without a cookie-based flow that doesn't exist yet, so
+    # the test could never pass and was only ever a standing xfail.
+    # Re-add ("downloader.publishers.euclid", "EuclidDownloader",
+    # "10.1214/24-ejp1229", 100) here if/when a cookie-based fix lands.
     DIRECT_PUBLISHERS = [
         ("downloader.publishers.springer", "SpringerDownloader", "10.1007/s10690-025-09545-3", 100),
-        ("downloader.publishers.euclid", "EuclidDownloader", "10.1214/24-ejp1229", 100),
         ("downloader.publishers.centre_mersenne", "CentreMersenneDownloader", "10.5802/igt.7", 100),
         ("downloader.publishers.edp_sciences", "EDPSciencesDownloader", "10.1051/cocv/2023065", 100),
         ("downloader.publishers.ems_press", "EMSPressDownloader", "10.4171/jems/1554", 100),
         ("downloader.publishers.cambridge", "CambridgeDownloader", "10.1017/fms.2024.26", 100),
         ("downloader.publishers.vtex", "VTeXDownloader", "10.15559/22-VMSTA212", 100),
     ]
-
-    # Publishers we expect to flake transiently (bot protection, regional CDN
-    # quirks). These tests are marked xfail rather than removed so we still
-    # see when they start passing again — but a green run doesn't require them.
-    XFAIL_PUBLISHERS = {"euclid"}  # Imperva/Incapsula bot-detect added 2025
 
     @pytest.mark.parametrize(
         "mod_name,cls_name,doi,min_kb",
@@ -155,12 +156,6 @@ class TestDirectDownloadIntegration:
     @pytestmark_integration
     def test_download_oa_paper(self, mod_name, cls_name, doi, min_kb, tmp_download_dir, request):
         """Download an OA paper and verify it's a valid PDF of reasonable size."""
-        publisher_id = mod_name.split(".")[-1]
-        if publisher_id in self.XFAIL_PUBLISHERS:
-            request.node.add_marker(pytest.mark.xfail(
-                reason=f"{publisher_id}: publisher added bot protection; needs cookie-based fix",
-                strict=False,  # don't fail if it unexpectedly passes
-            ))
         import importlib
         mod = importlib.import_module(mod_name)
         cls = getattr(mod, cls_name)

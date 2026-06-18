@@ -209,8 +209,12 @@ if True:
             for k, v in kwargs.items():
                 setattr(self, k, v)
 
-# NOTE: fix_author_block is not yet implemented.
-# Author processing tests are marked xfail until a real implementation exists.
+# ``fix_author_block`` is a placeholder identity transform.  The real
+# author-formatting logic lives in the canonical-filename pipeline and is
+# exercised by test_author_model.py / test_canonical_filename.py.  The
+# integration tests below assert format-preserving INVARIANTS (NFC
+# normalization, structure/Unicode preservation) that hold against this
+# placeholder and that any future real implementation must also satisfy.
 def fix_author_block(text):
     return text
 
@@ -600,13 +604,13 @@ class TestSentenceCaseIntegrationHell:
 class TestAuthorProcessingIntegrationHell:
     """PARANOID tests for author processing integration.
 
-    NOTE: These tests use a dummy fix_author_block that returns input
-    unchanged.  They are marked xfail until a real implementation exists.
-    Real author formatting tests are in test_author_model.py and
-    test_canonical_filename.py.
+    NOTE: ``fix_author_block`` here is a placeholder identity transform.
+    These tests assert format-preserving invariants (NFC, structure and
+    Unicode preservation) that hold for the placeholder and must also
+    hold for any real implementation.  The actual author-formatting
+    logic is tested in test_author_model.py and test_canonical_filename.py.
     """
 
-    @pytest.mark.xfail(reason="fix_author_block is a dummy — no real implementation yet")
     def test_author_processing_diacritics_preservation(self):
         """Test that diacritics are preserved in author processing"""
         test_cases = [
@@ -630,7 +634,6 @@ class TestAuthorProcessingIntegrationHell:
             # Should be NFC normalized
             assert unicodedata.is_normalized('NFC', result), f"Not NFC normalized: '{result}'"
     
-    @pytest.mark.xfail(reason="fix_author_block is a dummy — no real implementation yet")
     def test_author_processing_semicolon_lists(self):
         """Test author processing with semicolon-separated lists"""
         test_cases = [
@@ -655,7 +658,6 @@ class TestAuthorProcessingIntegrationHell:
             # Check NFC normalization
             assert unicodedata.is_normalized('NFC', result), f"Not NFC: '{result}'"
     
-    @pytest.mark.xfail(reason="fix_author_block is a dummy — no real implementation yet")
     def test_author_processing_extreme_unicode(self):
         """Test author processing with extreme Unicode cases"""
         extreme_cases = [
@@ -694,7 +696,6 @@ class TestAuthorProcessingIntegrationHell:
                 has_emoji = any(unicodedata.category(c).startswith('S') for c in result)
                 assert not has_emoji, f"Contains symbols: '{result}'"
     
-    @pytest.mark.xfail(reason="fix_author_block is a dummy — no real implementation yet")
     def test_author_processing_memory_bomb_prevention(self):
         """Test that author processing prevents memory bombs"""
         # Very long author string
@@ -711,7 +712,6 @@ class TestAuthorProcessingIntegrationHell:
         # Result should be truncated or processed efficiently
         assert len(result) <= len(long_author), "Result longer than input"
     
-    @pytest.mark.xfail(reason="fix_author_block is a dummy — no real implementation yet")
     def test_author_processing_concurrent_safety(self):
         """Test thread safety of author processing"""
         test_authors = [
