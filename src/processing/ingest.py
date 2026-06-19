@@ -242,6 +242,17 @@ def extract_metadata_from_pdf(pdf_path: Path) -> dict:
     except Exception as exc:
         logger.warning("Failed to extract PDF metadata from %s: %s", pdf_path, exc)
 
+    # Filename-based identifier resolution: many PDFs are named after an
+    # arXiv/DOI/SSRN/HAL id with no such id in the page text (e.g.
+    # "2103.04185.pdf", "hal-01234567.pdf", "SSRN-id1234567.pdf").  Fill
+    # any gaps from the filename so the API lookups below can resolve
+    # them.  SSRN maps to its Crossref DOI; HAL is resolved separately.
+    try:
+        from processing.id_resolution import augment_metadata_with_filename_ids
+        augment_metadata_with_filename_ids(pdf_path.name, metadata)
+    except Exception as exc:
+        logger.debug("filename-id augmentation failed for %s: %s", pdf_path, exc)
+
     # Try ArXiv API lookup if we have an arXiv ID
     if metadata.get("arxiv_id") and not metadata["title"]:
         try:
@@ -319,6 +330,20 @@ def extract_metadata_from_pdf(pdf_path: Path) -> dict:
             logger.warning("Crossref API request failed for DOI %s: %s", metadata["doi"], exc)
         except Exception as exc:
             logger.warning("Crossref lookup failed for DOI %s: %s", metadata["doi"], exc)
+
+    # Try HAL API if we have a HAL id and still no title (HAL is the
+    # French open archive; SSRN has no open API so it routes via the
+    # Crossref DOI mapping above).
+    if metadata.get("hal_id") and not metadata["title"]:
+        try:
+            from processing.id_resolution import resolve_hal
+            hal_meta = resolve_hal(metadata["hal_id"])
+            if hal_meta and hal_meta.get("title"):
+                metadata["title"] = hal_meta["title"]
+                if hal_meta.get("authors"):
+                    metadata["authors"] = hal_meta["authors"]
+        except Exception as exc:
+            logger.warning("HAL lookup failed for %s: %s", metadata.get("hal_id"), exc)
 
     # Try LLM extraction if title is still missing
     if not metadata["title"]:
