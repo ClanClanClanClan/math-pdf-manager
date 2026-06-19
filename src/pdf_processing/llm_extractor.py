@@ -297,3 +297,23 @@ class LLMMetadataExtractor:
             return True
         except ImportError:
             return False
+
+    @staticmethod
+    def local_model_path() -> Optional[Path]:
+        """Return a locally-cached GGUF model path, or ``None`` — WITHOUT
+        downloading anything.
+
+        Used by the live ingest path so a routine ingest never silently
+        triggers a multi-GB model download; the LLM fallback only runs
+        when a model is already present.  Prefers the fine-tuned model.
+        """
+        cache = Path.home() / ".mathpdf_models" / "gguf"
+        for name in (
+            "qwen2.5-7b-pdfmeta-q4_k_m.gguf",   # fine-tuned, preferred
+            "qwen2.5-7b-instruct-q4_k_m.gguf",
+            "qwen2.5-3b-instruct-q4_k_m.gguf",
+        ):
+            p = cache / name
+            if p.exists():
+                return p
+        return None

@@ -345,19 +345,33 @@ def extract_metadata_from_pdf(pdf_path: Path) -> dict:
         except Exception as exc:
             logger.warning("HAL lookup failed for %s: %s", metadata.get("hal_id"), exc)
 
-    # Try LLM extraction if title is still missing
+    # Try LLM extraction if title is still missing.  This was previously
+    # broken (it passed the PDF *path* where the API wants the extracted
+    # TEXT, so it always raised and was silently swallowed) — and it
+    # would have triggered a multi-GB model download in the hot path.
+    # Now: pass the cached front-matter text, and ONLY run when a model
+    # is already present locally (never auto-download during ingest).
+    # The result is marked ``title_source="llm"`` so the cockpit can flag
+    # an AI-derived name for the user to verify before filing.
     if not metadata["title"]:
         try:
             from pdf_processing.llm_extractor import LLMMetadataExtractor
 
-            extractor = LLMMetadataExtractor()
-            llm_result = extractor.extract(pdf_path)
-            if llm_result and llm_result.get("title"):
-                metadata["title"] = llm_result["title"]
-                if llm_result.get("authors"):
-                    metadata["authors"] = llm_result["authors"]
-        except Exception:
-            pass  # LLM not available
+            text_for_llm = metadata.get("fulltext_sample", "")
+            model_path = LLMMetadataExtractor.local_model_path()
+            if text_for_llm and model_path and LLMMetadataExtractor.is_available():
+                extractor = LLMMetadataExtractor(model_path=model_path)
+                try:
+                    llm_result = extractor.extract(text_for_llm)
+                finally:
+                    extractor.close()
+                if llm_result and llm_result.get("title"):
+                    metadata["title"] = llm_result["title"]
+                    metadata["title_source"] = "llm"
+                    if llm_result.get("authors"):
+                        metadata["authors"] = llm_result["authors"]
+        except Exception as exc:
+            logger.debug("LLM extraction skipped/failed for %s: %s", pdf_path, exc)
 
     return metadata
 
