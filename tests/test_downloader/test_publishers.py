@@ -117,11 +117,14 @@ class TestCanHandleUnit:
 # Integration tests — network, downloads to /tmp
 # ---------------------------------------------------------------------------
 
-# These test real PDF downloads. They hit real servers with rate limiting.
-# Mark them so they can be skipped with -k "not integration"
+# These test real PDF downloads against live publisher servers (rate
+# limiting, bot protection, paywalls, CDN quirks) — inherently
+# non-deterministic, so they are OPT-IN and never gate the default suite.
+# Run them deliberately for download-robustness work:
+#     RUN_NETWORK_TESTS=1 pytest tests/test_downloader/test_publishers.py
 pytestmark_integration = pytest.mark.skipif(
-    os.environ.get("SKIP_NETWORK_TESTS", "0") == "1",
-    reason="Network tests skipped (SKIP_NETWORK_TESTS=1)",
+    os.environ.get("RUN_NETWORK_TESTS", "0") != "1",
+    reason="Real-publisher network test (opt-in: set RUN_NETWORK_TESTS=1)",
 )
 
 
