@@ -1,22 +1,8 @@
-"""Lightweight ArXiv bot framework used by the discovery pipeline tests."""
-from __future__ import annotations
+"""Canonical metadata model.
 
-from .config import ArxivBotConfig, load_or_create_config
-from .harvester import Harvester, HarvesterConfig, PersonalizedResearchProfile
-from .integration import ArxivBotIntegration, SimpleVectorStore
-from .main import ArxivBot
-from .scorer import Scorer, ScorerConfig, SemanticFilter
-
-__all__ = [
-    "ArxivBot",
-    "ArxivBotConfig",
-    "ArxivBotIntegration",
-    "Harvester",
-    "HarvesterConfig",
-    "PersonalizedResearchProfile",
-    "Scorer",
-    "ScorerConfig",
-    "SemanticFilter",
-    "SimpleVectorStore",
-    "load_or_create_config",
-]
+The old arxivbot harvester/scorer/integration framework was retired in
+the Phase-2 cleanup.  What remains live is the data model in
+``arxivbot.models`` (``CMO``/``Author``) — the canonical-filename core
+used by ``processing.ingest``.  Import it directly:
+``from arxivbot.models.cmo import CMO, Author``.
+"""

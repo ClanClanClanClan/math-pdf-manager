@@ -73,9 +73,9 @@ llm = [
 ]
 all = ["math-pdf-manager[dev,ocr,api,ml,llm]"]
 
-[project.scripts]
-mathpdf = "main:main"
-mathpdf-secure = "main_secure:main"
+# Console entrypoints (mathpdf / mathpdf-secure) retired in the Phase-2
+# cleanup — the Streamlit cockpit (`streamlit run src/ui/cockpit.py`) is
+# the sole interface.
 
 [project.urls]
 Homepage = "https://github.com/dylanpossamai/math-pdf-manager"
