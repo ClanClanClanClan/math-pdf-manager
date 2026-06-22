@@ -28,6 +28,7 @@ from __future__ import annotations
 import argparse
 import logging
 import os
+import random
 import re
 import sys
 import time
@@ -66,25 +67,52 @@ HEADERS = {"User-Agent": USER_AGENT}
 # PDF verification
 # ---------------------------------------------------------------------------
 
+# Smallest plausible real PDF; below this it's an error page / stub that
+# happened to start with "%PDF" or a near-empty file.
+_MIN_PDF_BYTES = 1024
+
+
 def _is_valid_pdf(path: Path) -> bool:
-    """Check if a file is a valid PDF (starts with %PDF)."""
-    if not path.exists() or path.stat().st_size < 100:
+    """Check if a file is a plausibly-complete PDF (magic bytes + size)."""
+    try:
+        if not path.exists() or path.stat().st_size < _MIN_PDF_BYTES:
+            return False
+        with open(path, "rb") as f:
+            return f.read(4) == b"%PDF"
+    except OSError:
         return False
-    with open(path, "rb") as f:
-        return f.read(4) == b"%PDF"
 
 
 def _download_to_file(url: str, path: Path, *, timeout: int = 30) -> bool:
-    """Download a URL to a file. Returns True if result is a valid PDF."""
+    """Download a URL to a file. Returns True iff the result is a valid,
+    complete-looking PDF.
+
+    Robustness (Phase 1b): rejects a download that stalled mid-transfer —
+    a valid ``%PDF`` header with a truncated body would otherwise be
+    filed as the paper.  We compare the bytes written against the
+    server-declared ``Content-Length`` and drop anything short.
+    """
     try:
         resp = requests.get(url, headers=HEADERS, timeout=timeout, stream=True)
         if resp.status_code != 200:
             return False
 
+        try:
+            declared = int(resp.headers.get("Content-Length") or 0)
+        except (TypeError, ValueError):
+            declared = 0
+
+        written = 0
         with open(path, "wb") as f:
             for chunk in resp.iter_content(chunk_size=8192):
-                f.write(chunk)
+                if chunk:
+                    f.write(chunk)
+                    written += len(chunk)
 
+        if declared and written < declared:
+            logger.debug("Truncated download %s (%d/%d bytes)", url, written, declared)
+            path.unlink(missing_ok=True)
+            return False
         if _is_valid_pdf(path):
             return True
 
@@ -377,15 +405,27 @@ class DOIDownloader:
             ("ETH Institutional", self._try_eth_institutional),
         ]
 
+        attempts: list[str] = []
         for name, strategy_fn in strategies:
-            time.sleep(self.rate_limit)
+            # Jittered politeness delay: a fixed interval makes a batch hit
+            # each host in lockstep; +/-30% jitter spreads the load and is
+            # gentler on rate-limited mirrors (Sci-Hub etc.).
+            time.sleep(self.rate_limit * random.uniform(0.7, 1.3))
             logger.debug("Trying %s for %s...", name, doi)
             try:
                 if strategy_fn(doi, output_path):
+                    logger.info("Downloaded %s via %s", doi, name)
                     return output_path
+                attempts.append(f"{name}: no result")
             except Exception as exc:
+                attempts.append(f"{name}: {type(exc).__name__}")
                 logger.debug("%s error for %s: %s", name, doi, exc)
 
+        # Structured failure summary instead of a bare "all failed", so a
+        # user/log can see which strategy did what (paywall vs error vs
+        # missing creds).
+        logger.warning("All download strategies failed for %s — %s",
+                       doi, "; ".join(attempts))
         return None
 
     def download_batch(
