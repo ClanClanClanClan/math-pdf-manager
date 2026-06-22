@@ -1,6 +1,54 @@
 """Gold training-pair capture + model-free scoring helpers (Phase 3b)."""
 from __future__ import annotations
 
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "harness"))
+from synth_library import _write_minimal_pdf  # noqa: E402
+
+
+class TestIngestCaptureHook:
+
+    def test_authoritative_resolution_is_captured(self, tmp_path, monkeypatch):
+        # An API-resolved ingest records a gold pair; LLM-sourced does not.
+        import processing.ingest as ing
+        from processing.metadata_training import load_pairs
+        (tmp_path / "01 - Published papers").mkdir(parents=True)
+        src = tmp_path / "_in" / "drop.pdf"
+        src.parent.mkdir()
+        _write_minimal_pdf(src, title="x", author="x")
+
+        def fake_extract(pdf_path):
+            return {"title": "Reflected BSDEs", "authors": ["Jane Doe"],
+                    "doi": None, "arxiv_id": None, "year": 2021,
+                    "title_source": "crossref",
+                    "fulltext_sample": "We study reflected BSDEs. " * 12}
+        monkeypatch.setattr(ing, "extract_metadata_from_pdf", fake_extract)
+
+        ing.ingest_paper(src, library_root=tmp_path, status="published",
+                         dry_run=False,
+                         canonical_override="Doe, J. - Reflected BSDEs")
+        pairs = load_pairs(tmp_path)
+        assert len(pairs) == 1
+        assert pairs[0]["title"] == "Reflected BSDEs"
+        assert pairs[0]["source"] == "crossref"
+
+    def test_llm_source_not_captured(self, tmp_path, monkeypatch):
+        import processing.ingest as ing
+        from processing.metadata_training import load_pairs
+        (tmp_path / "01 - Published papers").mkdir(parents=True)
+        src = tmp_path / "_in" / "drop.pdf"
+        src.parent.mkdir()
+        _write_minimal_pdf(src, title="x", author="x")
+        monkeypatch.setattr(ing, "extract_metadata_from_pdf", lambda p: {
+            "title": "Guessed", "authors": [], "doi": None, "arxiv_id": None,
+            "year": None, "title_source": "llm",
+            "fulltext_sample": "body " * 40})
+        ing.ingest_paper(src, library_root=tmp_path, status="published",
+                         dry_run=False, canonical_override="X - Guessed")
+        assert load_pairs(tmp_path) == []  # model output is not gold
+
 
 class TestRecordAndLoad:
 

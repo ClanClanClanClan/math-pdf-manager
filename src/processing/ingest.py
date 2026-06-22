@@ -275,6 +275,7 @@ def extract_metadata_from_pdf(pdf_path: Path) -> dict:
                         metadata["title"] = unicodedata.normalize(
                             "NFC", re.sub(r"\s+", " ", title_el.text.strip())
                         )
+                        metadata["title_source"] = "arxiv"
                     # Authors
                     arxiv_authors = []
                     for author_el in entry.findall("atom:author", ns):
@@ -312,6 +313,7 @@ def extract_metadata_from_pdf(pdf_path: Path) -> dict:
                 titles = cr.get("title", [])
                 if titles:
                     metadata["title"] = unicodedata.normalize("NFC", titles[0])
+                    metadata["title_source"] = "crossref"
                 cr_authors = cr.get("author", [])
                 if cr_authors:
                     metadata["authors"] = [
@@ -340,6 +342,7 @@ def extract_metadata_from_pdf(pdf_path: Path) -> dict:
             hal_meta = resolve_hal(metadata["hal_id"])
             if hal_meta and hal_meta.get("title"):
                 metadata["title"] = hal_meta["title"]
+                metadata["title_source"] = "hal"
                 if hal_meta.get("authors"):
                     metadata["authors"] = hal_meta["authors"]
         except Exception as exc:
@@ -715,6 +718,24 @@ def ingest_paper(
     # a fake "author" was extracted (e.g. PDF metadata with author=
     # "SoWise" but no title).
     result["title_from_metadata"] = bool(metadata.get("title"))
+
+    # Capture an authoritative (text -> title/authors) GOLD pair for the
+    # LLM training dataset whenever an API resolved the metadata.  These
+    # are free, perfectly-labelled examples; the LLM's own output
+    # (title_source="llm") is deliberately NOT captured.  Best-effort and
+    # never blocks ingest.
+    if not dry_run and metadata.get("title_source") in ("arxiv", "crossref", "hal"):
+        try:
+            from processing.metadata_training import record_pair
+            record_pair(
+                library_root,
+                text=metadata.get("fulltext_sample", ""),
+                title=metadata.get("title", ""),
+                authors=metadata.get("authors", []),
+                source=metadata["title_source"],
+            )
+        except Exception:  # pragma: no cover -- capture must never break ingest
+            pass
 
     # Step 2: Build CMO and generate canonical filename
     cmo = metadata_to_cmo(metadata, pdf_path)
