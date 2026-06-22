@@ -229,9 +229,14 @@ def test_render_to_download_does_not_raise(st_stub, tmp_path, monkeypatch):
 
 
 def test_render_settings_does_not_raise(st_stub, tmp_path, monkeypatch):
-    """Phase 5 page: config form."""
+    """Phase 5 page: config form (incl. the ETH-credential section)."""
     monkeypatch.setenv("MATH_LIBRARY", str(tmp_path))
     import ui.cockpit as cockpit
+    # Don't touch the real OS keychain / credentials.enc when rendering the
+    # ETH-credential section — stub the secure-store read (the function
+    # re-reads the module attribute at call time).
+    import core.config.secure_config as sc
+    monkeypatch.setattr(sc, "get_secure_credential", lambda *a, **k: None)
     cockpit.render_settings()
 
 

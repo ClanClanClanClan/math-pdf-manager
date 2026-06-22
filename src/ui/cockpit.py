@@ -1716,6 +1716,55 @@ def render_settings() -> None:
 
     st.divider()
 
+    # ETH institutional credentials — stored in the local encrypted
+    # credential store (Fernet, key in the OS keychain).  This is the
+    # no-terminal way to provide ETH login for paywalled downloads; the
+    # download chain reads eth_username/eth_password from this store.
+    st.subheader("🔑 ETH institutional login")
+    try:
+        from core.config.secure_config import get_secure_credential, get_config_manager
+        _store_ok = True
+    except Exception as exc:  # pragma: no cover
+        _store_ok = False
+        st.error(f"Credential store unavailable: {exc}")
+    if _store_ok:
+        _has_user = bool(get_secure_credential("eth_username"))
+        _has_pwd = bool(get_secure_credential("eth_password"))
+        st.caption(
+            ("✅ Credentials stored." if (_has_user and _has_pwd)
+             else "⚠️ Not set — paywalled downloads will skip the ETH "
+                  "strategy.") +
+            "  Stored encrypted locally; used only for institutional PDF access."
+        )
+        with st.form(key="eth_creds_form"):
+            eth_user = st.text_input("ETH username (nethz)", value="",
+                                     placeholder="(unchanged)" if _has_user else "")
+            eth_pwd = st.text_input("ETH password", value="", type="password",
+                                    placeholder="(unchanged)" if _has_pwd else "")
+            csave = st.form_submit_button("Save credentials", type="primary")
+        if csave:
+            mgr = get_config_manager()
+            saved = []
+            if eth_user.strip():
+                mgr.set_credential("eth_username", eth_user.strip()); saved.append("username")
+            if eth_pwd:
+                mgr.set_credential("eth_password", eth_pwd); saved.append("password")
+            if saved:
+                st.success(f"Saved ETH {', '.join(saved)} (encrypted).")
+                _log_activity("settings.eth_creds", "", "stored")
+                st.rerun()
+            else:
+                st.info("Nothing entered — existing credentials unchanged.")
+        if (_has_user or _has_pwd) and st.button("Clear ETH credentials",
+                                                 key="eth_clear"):
+            mgr = get_config_manager()
+            mgr.credential_manager.delete_credential("eth_username")
+            mgr.credential_manager.delete_credential("eth_password")
+            _log_activity("settings.eth_creds", "", "cleared")
+            st.rerun()
+
+    st.divider()
+
     # Library-wide identity-sidecar tools.  Backfill is the
     # one-shot bootstrap for the existing 28k papers (Phase 2's state
     # machine has nothing to chew on until sidecars exist for the
