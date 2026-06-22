@@ -14,6 +14,30 @@ from synth_library import _write_minimal_pdf  # noqa: E402
 # Pure helpers
 # ---------------------------------------------------------------------------
 
+class TestIsRoutable:
+    """The gate that keeps the apply OUT of non-routable areas
+    (08/09/10 special collections, archive, the code repo, .trash)."""
+
+    def test_routable_standard_and_topic_and_inbox(self, tmp_path):
+        from processing.pipeline_preview import is_routable
+        for d in ["01 - Published papers", "02 - Unpublished papers",
+                  "03 - Working papers", "05 - Books and lecture notes",
+                  "06 - Theses", "07a - BSDEs", "07f - x", "12 - To be sorted"]:
+            p = tmp_path / d / "x.pdf"
+            assert is_routable(p, tmp_path) is True, d
+
+    def test_non_routable_areas_excluded(self, tmp_path):
+        from processing.pipeline_preview import is_routable
+        for d in ["08 - Séminaires", "09 - Journal", "10 - Math slides",
+                  "archive", "Scripts", "gmnap"]:
+            p = tmp_path / d / "x.pdf"
+            assert is_routable(p, tmp_path) is False, d
+
+    def test_outside_library_not_routable(self, tmp_path):
+        from processing.pipeline_preview import is_routable
+        assert is_routable(Path("/somewhere/else/x.pdf"), tmp_path) is False
+
+
 class TestHelpers:
 
     def test_current_topic_of_detects_code(self, tmp_path):
