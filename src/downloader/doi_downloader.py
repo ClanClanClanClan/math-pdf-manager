@@ -362,6 +362,27 @@ class DOIDownloader:
             logger.debug("Anna's Archive (cookies) failed for %s: %s", doi, exc)
         return False
 
+    def _try_browser_session(self, doi: str, output_path: Path) -> bool:
+        """Reuse the user's authenticated browser cookies (publisher-agnostic).
+
+        A fresh institutional SAML login can't entitle several publishers
+        (proven against Springer); the entitlement lives in a persistent
+        cookie the everyday browser already holds.  We borrow those cookies
+        (imported via the cockpit) and download with them.  No-op when the
+        user hasn't connected a browser session yet.
+        """
+        try:
+            from downloader import browser_session as bs
+            cookies = bs.cookies_for_download(allow_import=False)
+            if not cookies:
+                return False
+            result = bs.download_with_session_cookies(doi, output_path.parent, cookies)
+            if result:
+                return self._safe_rename(result, output_path)
+        except Exception as exc:
+            logger.debug("Browser-session download failed for %s: %s", doi, exc)
+        return False
+
     def _try_eth_institutional(self, doi: str, output_path: Path) -> bool:
         """Try ETH institutional download via Playwright.
 
@@ -401,6 +422,7 @@ class DOIDownloader:
             ("Direct DOI", try_direct_doi),
             ("Sci-Hub", try_scihub),
             ("Cloudflare Session", self._try_cloudflare_session),
+            ("Browser Session", self._try_browser_session),
             ("Anna's Archive", self._try_annas_archive_cookies),
             ("ETH Institutional", self._try_eth_institutional),
         ]

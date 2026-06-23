@@ -44,6 +44,8 @@ logs/
 *.jpg
 *.pdf
 credentials.enc
+credentials.enc.bak
+credentials.enc*
 .DS_Store
 
 # Operational state and generated reports (created during pipeline runs)

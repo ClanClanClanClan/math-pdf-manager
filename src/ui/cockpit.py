@@ -1716,11 +1716,93 @@ def render_settings() -> None:
 
     st.divider()
 
+    # Browser-session import — the primary institutional-download method.
+    # A fresh SAML login can't entitle several publishers (verified against
+    # Springer); access lives in the persistent session cookies the user's
+    # everyday browser already holds.  We borrow those cookies (one import
+    # unlocks every publisher they have access to).  Names/domains are read
+    # in the clear to locate the profile; decryption (one Keychain prompt)
+    # only runs on Refresh.  Values are never displayed.
+    st.subheader("🔗 Institutional access via your browser")
+    st.caption(
+        "Reuses the session your normal browser already established, so "
+        "paywalled downloads work for **every publisher you have access to** "
+        "— no per-publisher login. Cookies are read only for academic "
+        "publishers, stored encrypted locally, and never shown."
+    )
+    st.warning(
+        "⚠️ **Turn your VPN OFF** before downloading from Cloudflare-protected "
+        "publishers (Wiley, SIAM, Elsevier, T&F, …). A VPN exit IP triggers a "
+        "Cloudflare challenge that never clears. Springer / Sci-Hub are unaffected.",
+        icon="🔌",
+    )
+    try:
+        from downloader import browser_session as _bs
+        _bs_ok = True
+    except Exception as exc:  # pragma: no cover
+        _bs_ok = False
+        st.info(f"Browser import unavailable here: {exc}")
+    if _bs_ok:
+        if not _bs.is_supported():
+            st.warning(
+                "Not supported on this machine (needs macOS + Google Chrome "
+                "+ the crypto library). The ETH login below is the fallback."
+            )
+        else:
+            status = _bs.session_status()
+            detected = status.get("detected_profiles", [])
+            if detected:
+                top = max(detected, key=lambda d: d["count"])
+                st.caption(
+                    f"Detected **{top['count']}** publisher cookies in Chrome "
+                    f"profile `{top['profile']}` "
+                    f"({len(top['domains'])} publisher domains)."
+                )
+            else:
+                st.caption("No publisher cookies detected in any Chrome profile yet "
+                           "— log into a journal in Chrome first.")
+            if status.get("has_cache"):
+                import datetime as _dt
+                cap = status.get("cached_at")
+                when = (_dt.datetime.fromtimestamp(cap).strftime("%Y-%m-%d %H:%M")
+                        if cap else "?")
+                msg = (f"✅ Session connected ({len(status.get('cached_domains', []))} "
+                       f"publishers, captured {when}).")
+                exp = status.get("earliest_expiry")
+                if exp:
+                    days = int((exp - time.time()) / 86400)
+                    if days < 7:
+                        msg += f" ⚠️ Some cookies expire in ~{max(days,0)} day(s) — refresh soon."
+                st.success(msg)
+            else:
+                st.caption("⚠️ Not connected yet — click Refresh to import your "
+                           "current browser access.")
+            _c1, _c2 = st.columns(2)
+            with _c1:
+                if st.button("🔄 Refresh from Chrome", key="bs_refresh", type="primary"):
+                    with st.spinner("Importing (approve the Keychain prompt)…"):
+                        try:
+                            r = _bs.refresh_from_browser()
+                            st.success(f"Imported {r['count']} cookies from "
+                                       f"`{r['profile']}` across {len(r['domains'])} "
+                                       f"publishers.")
+                            _log_activity("settings.browser_session", "", "refreshed")
+                            st.rerun()
+                        except Exception as exc:
+                            st.error(f"Import failed: {exc}")
+            with _c2:
+                if status.get("has_cache") and st.button("Clear session", key="bs_clear"):
+                    _bs.clear_cached()
+                    _log_activity("settings.browser_session", "", "cleared")
+                    st.rerun()
+
+    st.divider()
+
     # ETH institutional credentials — stored in the local encrypted
     # credential store (Fernet, key in the OS keychain).  This is the
     # no-terminal way to provide ETH login for paywalled downloads; the
     # download chain reads eth_username/eth_password from this store.
-    st.subheader("🔑 ETH institutional login")
+    st.subheader("🔑 ETH institutional login (fallback)")
     try:
         from core.config.secure_config import get_secure_credential, get_config_manager
         _store_ok = True
