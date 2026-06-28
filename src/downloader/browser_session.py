@@ -42,13 +42,11 @@ import json
 import logging
 import os
 import shutil
-import socket
 import sqlite3
 import subprocess
 import sys
 import tempfile
 import time
-import urllib.request
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
@@ -620,8 +618,14 @@ async def _run_flow(ctx, doi, out, cookies, timeout):
             dl = await dl_info.value
             tmp = out.with_suffix(".part")
             await dl.save_as(str(tmp))
-            if (tmp.exists() and tmp.stat().st_size >= 1024
-                    and tmp.read_bytes()[:4] == b"%PDF"):
+            ok = False
+            try:
+                if tmp.exists() and tmp.stat().st_size >= 1024:
+                    with open(tmp, "rb") as fh:
+                        ok = fh.read(4) == b"%PDF"
+            except OSError:
+                ok = False
+            if ok:
                 tmp.replace(out)
                 return out
             tmp.unlink(missing_ok=True)
@@ -638,14 +642,6 @@ def _chrome_app() -> Optional[str]:
     return None
 
 
-def _free_port() -> int:
-    s = socket.socket()
-    s.bind(("127.0.0.1", 0))
-    port = s.getsockname()[1]
-    s.close()
-    return port
-
-
 async def _ctx_hidden_cdp(p):
     """macOS preferred launcher: a NEW real-Chrome instance started BACKGROUND
     (`open -g`, never steals focus) and HIDDEN (`open -j`), driven over CDP.
@@ -656,35 +652,57 @@ async def _ctx_hidden_cdp(p):
     import asyncio
     if sys.platform != "darwin" or not _chrome_app():
         return None
-    port = _free_port()
     prof = tempfile.mkdtemp(prefix="mathpdf_cdp_")
 
     def _kill():
+        # Match the unique per-launch profile path (the mkdtemp random suffix
+        # makes it specific to OUR Chrome instance).
         subprocess.run(["pkill", "-f", prof],
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         shutil.rmtree(prof, ignore_errors=True)
 
-    subprocess.Popen(
-        ["open", "-na", "Google Chrome", "-g", "-j", "--args",
-         f"--remote-debugging-port={port}", f"--user-data-dir={prof}",
-         "--no-first-run", "--no-default-browser-check",
-         "--disable-blink-features=AutomationControlled"],
-        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-    )
-    endpoint = f"http://127.0.0.1:{port}/json/version"
-    ready = False
-    for _ in range(30):
-        try:
-            urllib.request.urlopen(endpoint, timeout=1)
-            ready = True
-            break
-        except Exception:
-            await asyncio.sleep(1)
-    if not ready:
+    try:
+        # Port 0 = let Chrome pick a free port and report it in the profile's
+        # DevToolsActivePort file.  This avoids the TOCTOU of pre-binding a port
+        # ourselves and racing another process for it.
+        subprocess.Popen(
+            ["open", "-na", "Google Chrome", "-g", "-j", "--args",
+             "--remote-debugging-port=0", f"--user-data-dir={prof}",
+             "--remote-debugging-address=127.0.0.1",
+             "--no-first-run", "--no-default-browser-check",
+             "--disable-blink-features=AutomationControlled"],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        )
+        portfile = Path(prof) / "DevToolsActivePort"
+        port = None
+        for _ in range(40):
+            if portfile.exists():
+                try:
+                    port = int(portfile.read_text().splitlines()[0].strip())
+                    break
+                except (ValueError, IndexError, OSError):
+                    pass
+            await asyncio.sleep(0.5)
+        if not port:
+            _kill()
+            return None
+        browser = await p.chromium.connect_over_cdp(f"http://127.0.0.1:{port}")
+    except Exception as exc:
+        logger.debug("hidden-cdp launch failed: %s", exc)
         _kill()
         return None
-    browser = await p.chromium.connect_over_cdp(f"http://127.0.0.1:{port}")
-    ctx = browser.contexts[0] if browser.contexts else await browser.new_context()
+
+    try:
+        # A dedicated context with downloads enabled (the default CDP context
+        # has accept_downloads off, which would break the click-capture path).
+        ctx = await browser.new_context(accept_downloads=True)
+    except Exception:
+        try:
+            await browser.close()
+        except Exception:
+            pass
+        _kill()
+        return None
 
     async def cleanup():
         try:
