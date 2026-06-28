@@ -89,7 +89,7 @@ _KEYCHAIN_ACCOUNT = "Chrome"
 # Cookie blob in the secure store.
 _CACHE_KEY = "browser_cookies_json"
 
-# Microseconds between 1601-01-01 (Chrome epoch) and 1970-01-01 (Unix epoch).
+# Seconds between 1601-01-01 (Chrome epoch) and 1970-01-01 (Unix epoch).
 _CHROME_EPOCH_OFFSET = 11644473600
 
 
@@ -127,8 +127,12 @@ def iter_profile_dirs() -> list[Path]:
 
 
 def _host_allowed(host: str) -> bool:
+    # Exact match or a true subdomain ONLY.  A bare ``endswith(d)`` would also
+    # match attacker-registrable look-alikes (``evilwiley.com`` ends with
+    # ``wiley.com``, ``notspringer.com`` ends with ``springer.com``), which
+    # must never have their cookies read/decrypted.
     h = host.lstrip(".").lower()
-    return any(h == d or h.endswith("." + d) or h.endswith(d) for d in PUBLISHER_DOMAINS)
+    return any(h == d or h.endswith("." + d) for d in PUBLISHER_DOMAINS)
 
 
 def _snapshot_db(cookies_path: Path) -> Path:
@@ -285,7 +289,9 @@ def load_cookies(profile: Optional[str] = None, *, key: Optional[bytes] = None) 
                 "httpOnly": bool(is_httponly),
             }
             ss = _SAMESITE.get(samesite)
-            if ss:
+            # Chromium rejects sameSite=None on a non-Secure cookie; setting it
+            # would make ctx.add_cookies reject the WHOLE batch.  Omit it there.
+            if ss and not (ss == "None" and not c["secure"]):
                 c["sameSite"] = ss
             if expires_utc and expires_utc > 0:
                 c["expires"] = expires_utc / 1_000_000 - _CHROME_EPOCH_OFFSET
@@ -381,9 +387,18 @@ def download_with_session_cookies(
     """
     if not cookies:
         return None
+    import asyncio
+    coro = _download_async(doi, Path(output_dir), cookies, timeout)
     try:
-        import asyncio
-        return asyncio.run(_download_async(doi, Path(output_dir), cookies, timeout))
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            return asyncio.run(coro)          # normal: no loop running
+        # Called from inside a running event loop (e.g. some host contexts) —
+        # asyncio.run() would raise; run it on a dedicated thread instead.
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as ex:
+            return ex.submit(lambda: asyncio.run(coro)).result()
     except Exception as exc:
         logger.debug("browser-session download failed for %s: %s", doi, exc)
         return None
@@ -428,10 +443,100 @@ async (u) => {
 """
 
 
+# Verified per-publisher PDF URL templates (workflow-mapped + live-checked
+# 2026-06-28).  {doi} is the raw DOI (it lives in the URL PATH, so the embedded
+# '/' is fine).  The ?download=true variants are what actually return the binary
+# PDF rather than an HTML viewer (SIAM / Wiley / World Scientific).
+_PDF_PATTERNS = {
+    "epubs.siam.org": "https://epubs.siam.org/doi/pdf/{doi}?download=true",
+    "onlinelibrary.wiley.com": "https://onlinelibrary.wiley.com/doi/pdfdirect/{doi}?download=true",
+    "www.worldscientific.com": "https://www.worldscientific.com/doi/pdf/{doi}?download=true",
+    "www.tandfonline.com": "https://www.tandfonline.com/doi/pdf/{doi}",
+    "link.springer.com": "https://link.springer.com/content/pdf/{doi}.pdf",
+    "iopscience.iop.org": "https://iopscience.iop.org/article/{doi}/pdf",
+    "www.jstor.org": "https://www.jstor.org/stable/pdf/{doi}.pdf?acceptTC=true",
+    "projecteuclid.org": "https://projecteuclid.org/journalArticle/Download?urlId={doi}",
+    "www.degruyterbrill.com": "https://www.degruyterbrill.com/document/doi/{doi}/pdf",
+}
+
+# PDF-link selectors across publishers (workflow-mapped 2026-06-28).
+_PDF_SELECTORS = (
+    "a#pdfLink",                            # Elsevier ScienceDirect
+    'a[data-qa="download-pdf"]',            # JSTOR
+    "a.downloadPdf",                        # De Gruyter
+    "a.c-pdf-download__link",               # Springer
+    'a[href*="/article-pdf/"]',            # OUP
+    'a[href*="/doi/pdfdirect/"]',          # Wiley
+    'a[href*="/doi/epdf/"]',               # T&F
+    'a[href*="/doi/pdf/"]',                # SIAM / T&F / World Scientific
+    'a[href*="journalArticle/Download"]',  # Project Euclid
+    'a[href*="/content/pdf/"]',            # Springer
+    'a[href*="pdfft"]',                    # Elsevier
+    'a[href$="/pdf"]',                     # IOP
+    'a[data-article-pdf="true"]',
+)
+
+
+async def _collect_candidates(page, doi, article_url):
+    """Ordered, de-duplicated candidate PDF URLs for the loaded article page.
+
+    Publishers differ wildly, so we gather several and the caller accepts the
+    first that actually returns a %PDF (a URL may 302 to an HTML paywall page
+    when un-entitled — the bytes are the source of truth, not the URL).
+    """
+    from urllib.parse import urljoin
+    host = article_url.split("/")[2].lower() if "://" in article_url else ""
+    out: list[str] = []
+
+    def add(u):
+        if u:
+            out.append(urljoin(article_url, u))
+
+    # 1. canonical citation_pdf_url meta (present on most publishers)
+    meta = await page.query_selector('meta[name="citation_pdf_url"]')
+    if meta:
+        add(await meta.get_attribute("content"))
+    # 2. verified host pattern
+    for h, tmpl in _PDF_PATTERNS.items():
+        if h in host:
+            add(tmpl.format(doi=doi))
+            break
+    # 3. eth_institutional legacy patterns (extra coverage)
+    try:
+        from downloader.eth_institutional import _get_pdf_url
+        add(_get_pdf_url(doi, article_url))
+    except Exception:
+        pass
+    # 4. SPA publishers (ScienceDirect) render the PDF link late
+    if "sciencedirect.com" in host:
+        try:
+            await page.wait_for_selector("a#pdfLink", timeout=6000)
+        except Exception:
+            pass
+    # 5. publisher-specific + generic on-page link selectors
+    for sel in _PDF_SELECTORS:
+        try:
+            els = await page.query_selector_all(sel)
+        except Exception:
+            continue
+        for el in els[:3]:
+            href = (await el.get_attribute("href")
+                    or await el.get_attribute("data-href")
+                    or await el.get_attribute("data-pdf-url"))
+            if href:
+                add(href)
+
+    seen: set = set()
+    uniq: list[str] = []
+    for u in out:
+        if u and u not in seen:
+            seen.add(u)
+            uniq.append(u)
+    return uniq
+
+
 async def _run_flow(browser, doi, out, cookies, timeout):
     import base64
-    from urllib.parse import urljoin
-    from downloader.eth_institutional import _get_pdf_url
 
     # Inject auth cookies only — never stale Cloudflare clearance.
     auth_cookies = [c for c in cookies
@@ -446,7 +551,20 @@ async def _run_flow(browser, doi, out, cookies, timeout):
         await ctx.add_init_script(
             "Object.defineProperty(navigator,'webdriver',{get:()=>undefined});"
         )
-        await ctx.add_cookies(auth_cookies)
+        try:
+            await ctx.add_cookies(auth_cookies)
+        except Exception:
+            # Never echo the exception — it can contain a cookie value.  Add
+            # one at a time so a single malformed cookie can't drop the batch.
+            ok = 0
+            for c in auth_cookies:
+                try:
+                    await ctx.add_cookies([c])
+                    ok += 1
+                except Exception:
+                    pass
+            logger.debug("add_cookies: %d/%d injected individually",
+                         ok, len(auth_cookies))
         page = await ctx.new_page()
         await page.goto(f"https://doi.org/{doi}",
                         wait_until="domcontentloaded", timeout=timeout)
@@ -461,34 +579,24 @@ async def _run_flow(browser, doi, out, cookies, timeout):
                 return None
         article_url = page.url
 
-        pdf_url = _get_pdf_url(doi, article_url)
-        if not pdf_url:
-            link = await page.query_selector(
-                'a.c-pdf-download__link, a[data-article-pdf="true"], '
-                'a:has-text("Download PDF"), a[href*="pdfdirect"], '
-                'a[href*="/epdf/"], a[href$=".pdf"], '
-                'meta[name="citation_pdf_url"]'
-            )
-            if link:
-                tag = await link.evaluate("e => e.tagName")
-                href = await (link.get_attribute("content") if tag == "META"
-                              else link.get_attribute("href"))
-                if href:
-                    pdf_url = urljoin(article_url, href)
-        if not pdf_url:
-            return None
-
-        b64 = await page.evaluate(_INPAGE_FETCH_JS, pdf_url)
-        if not isinstance(b64, str) or b64.startswith("ERR:") or len(b64) < 1400:
-            return None
-        try:
-            body = base64.b64decode(b64)
-        except Exception:
-            return None
-        if len(body) < 1024 or body[:4] != b"%PDF":
-            return None
-        out.write_bytes(body)
-        return out
+        # Gather candidate PDF URLs (citation meta → verified host pattern →
+        # on-page links) and accept the first that returns a real %PDF.
+        candidates = await _collect_candidates(page, doi, article_url)
+        for url in candidates:
+            try:
+                b64 = await page.evaluate(_INPAGE_FETCH_JS, url)
+            except Exception:
+                continue
+            if not isinstance(b64, str) or b64.startswith("ERR:") or len(b64) < 1400:
+                continue
+            try:
+                body = base64.b64decode(b64)
+            except Exception:
+                continue
+            if len(body) >= 1024 and body[:4] == b"%PDF":
+                out.write_bytes(body)
+                return out
+        return None
     finally:
         await ctx.close()
 
@@ -515,14 +623,18 @@ async def _download_async(doi, output_dir, cookies, timeout):
             try:
                 browser = await p.chromium.launch(**launch_kw)
             except Exception as exc:
+                # Only fall through to the next launcher when this one couldn't
+                # even START (e.g. real Chrome not installed).  Bundled headless
+                # Chromium is never better than real Chrome at clearing
+                # Cloudflare, so once a browser launches we use its result and
+                # do NOT pay a second full attempt (which doubles the wait).
                 logger.debug("launch %s failed: %s", launch_kw.get("channel", "chromium"), exc)
                 continue
             try:
-                res = await _run_flow(browser, doi, out, cookies, timeout)
-                if res:
-                    return res
+                return await _run_flow(browser, doi, out, cookies, timeout)
             except Exception as exc:
                 logger.debug("flow attempt %d failed: %s", i, exc)
+                return None
             finally:
                 await browser.close()
     return None

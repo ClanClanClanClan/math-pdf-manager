@@ -7,8 +7,10 @@ Tries multiple sources in order to download a published paper:
 3. Direct DOI resolution (follow redirects)
 4. Sci-Hub (pre-2021 papers, ~80% hit rate)
 5. Cloudflare session (SIAM, Elsevier, etc.)
-6. Anna's Archive (needs DDoS-Guard cookies)
-7. ETH Institutional auth (slowest — opens browser)
+6. Browser session (reuse the user's authenticated Chrome cookies — recent
+   paywalled papers across publishers; see downloader.browser_session)
+7. Anna's Archive (needs DDoS-Guard cookies)
+8. ETH Institutional auth (slowest — opens browser)
 
 Usage::
 
@@ -289,8 +291,9 @@ class DOIDownloader:
     3. Direct DOI resolution (follow redirects)
     4. Sci-Hub (pre-2021 papers, ~80% hit rate)
     5. Cloudflare session (SIAM, Elsevier, etc. — needs CAPTCHA)
-    6. Anna's Archive (needs DDoS-Guard cookies)
-    7. ETH Institutional auth (slowest — opens browser)
+    6. Browser session (reuse the user's authenticated Chrome cookies)
+    7. Anna's Archive (needs DDoS-Guard cookies)
+    8. ETH Institutional auth (slowest — opens browser)
     """
 
     def __init__(

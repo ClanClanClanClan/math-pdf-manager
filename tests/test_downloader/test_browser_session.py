@@ -74,6 +74,17 @@ class TestAllowlist:
         ("mail.google.com", False),
         ("chase.com", False),
         ("notspringer.evil.com", False),
+        # Bare-suffix bypass: attacker-registrable look-alikes must NOT pass.
+        ("notspringer.com", False),
+        ("evil-wiley.com", False),
+        ("evilspringer.com", False),
+        ("xjstor.org", False),
+        ("myaps.org", False),
+        ("badacm.org", False),
+        # …but genuine subdomains and exact matches still must.
+        (".springer.com", True),
+        ("epubs.siam.org", True),
+        ("journals.aps.org", True),
     ])
     def test_host_allowed(self, host, ok):
         from downloader.browser_session import _host_allowed
