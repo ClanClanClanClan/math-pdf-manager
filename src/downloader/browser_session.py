@@ -42,11 +42,13 @@ import json
 import logging
 import os
 import shutil
+import socket
 import sqlite3
 import subprocess
 import sys
 import tempfile
 import time
+import urllib.request
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
@@ -535,70 +537,202 @@ async def _collect_candidates(page, doi, article_url):
     return uniq
 
 
-async def _run_flow(browser, doi, out, cookies, timeout):
+async def _run_flow(ctx, doi, out, cookies, timeout):
+    """Drive an already-prepared browser CONTEXT to fetch the PDF.
+
+    The context's lifecycle (and the browser/process behind it) is owned by the
+    launcher's cleanup — we don't close it here.
+    """
     import base64
 
     # Inject auth cookies only — never stale Cloudflare clearance.
     auth_cookies = [c for c in cookies
                     if not any(m in c["name"] for m in _CF_COOKIE_MARKERS)]
 
-    ctx = await browser.new_context(
-        viewport={"width": 1440, "height": 1000}, accept_downloads=True,
-    )
+    # Hide the residual automation flag (cheap; real headed Chrome + no VPN does
+    # the heavy lifting of passing Cloudflare).
     try:
-        # Hide the residual automation flag (cheap; real Chrome + no VPN does
-        # the heavy lifting of passing Cloudflare).
         await ctx.add_init_script(
             "Object.defineProperty(navigator,'webdriver',{get:()=>undefined});"
         )
-        try:
-            await ctx.add_cookies(auth_cookies)
-        except Exception:
-            # Never echo the exception — it can contain a cookie value.  Add
-            # one at a time so a single malformed cookie can't drop the batch.
-            ok = 0
-            for c in auth_cookies:
-                try:
-                    await ctx.add_cookies([c])
-                    ok += 1
-                except Exception:
-                    pass
-            logger.debug("add_cookies: %d/%d injected individually",
-                         ok, len(auth_cookies))
-        page = await ctx.new_page()
-        await page.goto(f"https://doi.org/{doi}",
-                        wait_until="domcontentloaded", timeout=timeout)
-        await page.wait_for_timeout(1500)
-        if await _is_cloudflare(page):
-            await _await_cloudflare(page)
-            if await _is_cloudflare(page):
-                # Almost always a VPN/datacenter exit IP — Cloudflare won't
-                # clear it.  Surface a distinct, actionable signal.
-                logger.warning("Cloudflare challenge unresolved for %s "
-                               "(turn the VPN OFF — a VPN IP can't pass)", doi)
-                return None
-        article_url = page.url
+    except Exception:
+        pass
+    try:
+        await ctx.add_cookies(auth_cookies)
+    except Exception:
+        # Never echo the exception — it can contain a cookie value.  Add one at
+        # a time so a single malformed cookie can't drop the whole batch.
+        ok = 0
+        for c in auth_cookies:
+            try:
+                await ctx.add_cookies([c])
+                ok += 1
+            except Exception:
+                pass
+        logger.debug("add_cookies: %d/%d injected individually",
+                     ok, len(auth_cookies))
 
-        # Gather candidate PDF URLs (citation meta → verified host pattern →
-        # on-page links) and accept the first that returns a real %PDF.
-        candidates = await _collect_candidates(page, doi, article_url)
-        for url in candidates:
-            try:
-                b64 = await page.evaluate(_INPAGE_FETCH_JS, url)
-            except Exception:
-                continue
-            if not isinstance(b64, str) or b64.startswith("ERR:") or len(b64) < 1400:
-                continue
-            try:
-                body = base64.b64decode(b64)
-            except Exception:
-                continue
-            if len(body) >= 1024 and body[:4] == b"%PDF":
-                out.write_bytes(body)
+    page = await ctx.new_page()
+    await page.goto(f"https://doi.org/{doi}",
+                    wait_until="domcontentloaded", timeout=timeout)
+    await page.wait_for_timeout(1500)
+    if await _is_cloudflare(page):
+        await _await_cloudflare(page)
+        if await _is_cloudflare(page):
+            # Almost always a VPN/datacenter exit IP — Cloudflare won't clear
+            # it.  Surface a distinct, actionable signal.
+            logger.warning("Cloudflare challenge unresolved for %s "
+                           "(turn the VPN OFF — a VPN IP can't pass)", doi)
+            return None
+    article_url = page.url
+
+    # Gather candidate PDF URLs (citation meta → verified host pattern →
+    # on-page links) and accept the first that returns a real %PDF.
+    candidates = await _collect_candidates(page, doi, article_url)
+    for url in candidates:
+        try:
+            b64 = await page.evaluate(_INPAGE_FETCH_JS, url)
+        except Exception:
+            continue
+        if not isinstance(b64, str) or b64.startswith("ERR:") or len(b64) < 1400:
+            continue
+        try:
+            body = base64.b64decode(b64)
+        except Exception:
+            continue
+        if len(body) >= 1024 and body[:4] == b"%PDF":
+            out.write_bytes(body)
+            return out
+
+    # Fallback: some publishers (AMS, embedded viewers) deliver the PDF via a
+    # click that triggers a browser DOWNLOAD / blob rather than a fetchable URL.
+    # Click the real download control and capture the download event.
+    try:
+        btn = await page.query_selector(
+            "button.productDetailDownloadPdfButton, a#pdfLink, "
+            "a.c-pdf-download__link, a.downloadPdf, "
+            'a[data-qa="download-pdf"], a:has-text("Download PDF"), '
+            'button:has-text("Download PDF")'
+        )
+        if btn:
+            async with page.expect_download(timeout=12000) as dl_info:
+                await btn.click()
+            dl = await dl_info.value
+            tmp = out.with_suffix(".part")
+            await dl.save_as(str(tmp))
+            if (tmp.exists() and tmp.stat().st_size >= 1024
+                    and tmp.read_bytes()[:4] == b"%PDF"):
+                tmp.replace(out)
                 return out
+            tmp.unlink(missing_ok=True)
+    except Exception:
+        pass
+    return None
+
+
+def _chrome_app() -> Optional[str]:
+    for p in ("/Applications/Google Chrome.app",
+              os.path.expanduser("~/Applications/Google Chrome.app")):
+        if os.path.exists(p):
+            return p
+    return None
+
+
+def _free_port() -> int:
+    s = socket.socket()
+    s.bind(("127.0.0.1", 0))
+    port = s.getsockname()[1]
+    s.close()
+    return port
+
+
+async def _ctx_hidden_cdp(p):
+    """macOS preferred launcher: a NEW real-Chrome instance started BACKGROUND
+    (`open -g`, never steals focus) and HIDDEN (`open -j`), driven over CDP.
+
+    The window never appears or interrupts the user, yet it is a real rendering
+    Chrome — which is the only thing that clears Cloudflare's managed challenge.
+    """
+    import asyncio
+    if sys.platform != "darwin" or not _chrome_app():
         return None
-    finally:
-        await ctx.close()
+    port = _free_port()
+    prof = tempfile.mkdtemp(prefix="mathpdf_cdp_")
+
+    def _kill():
+        subprocess.run(["pkill", "-f", prof],
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        shutil.rmtree(prof, ignore_errors=True)
+
+    subprocess.Popen(
+        ["open", "-na", "Google Chrome", "-g", "-j", "--args",
+         f"--remote-debugging-port={port}", f"--user-data-dir={prof}",
+         "--no-first-run", "--no-default-browser-check",
+         "--disable-blink-features=AutomationControlled"],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+    )
+    endpoint = f"http://127.0.0.1:{port}/json/version"
+    ready = False
+    for _ in range(30):
+        try:
+            urllib.request.urlopen(endpoint, timeout=1)
+            ready = True
+            break
+        except Exception:
+            await asyncio.sleep(1)
+    if not ready:
+        _kill()
+        return None
+    browser = await p.chromium.connect_over_cdp(f"http://127.0.0.1:{port}")
+    ctx = browser.contexts[0] if browser.contexts else await browser.new_context()
+
+    async def cleanup():
+        try:
+            await browser.close()
+        except Exception:
+            pass
+        _kill()
+
+    return ctx, cleanup
+
+
+async def _ctx_headed_offscreen(p):
+    """Fallback: real Chrome, headed but parked far off-screen via quiet_args
+    (a window may flicker; only used if the hidden-CDP path is unavailable)."""
+    if not _chrome_app():
+        return None
+    from utils.browser_window import quiet_args
+    browser = await p.chromium.launch(
+        channel="chrome", headless=False,
+        args=quiet_args(["--disable-blink-features=AutomationControlled"]),
+    )
+    ctx = await browser.new_context(
+        viewport={"width": 1440, "height": 1000}, accept_downloads=True)
+
+    async def cleanup():
+        try:
+            await browser.close()
+        except Exception:
+            pass
+
+    return ctx, cleanup
+
+
+async def _ctx_bundled_headless(p):
+    """Last resort if Google Chrome isn't installed — bundled headless Chromium
+    (won't clear Cloudflare, but works for non-Cloudflare publishers)."""
+    browser = await p.chromium.launch(
+        headless=True, args=["--disable-blink-features=AutomationControlled"])
+    ctx = await browser.new_context(
+        viewport={"width": 1440, "height": 1000}, accept_downloads=True)
+
+    async def cleanup():
+        try:
+            await browser.close()
+        except Exception:
+            pass
+
+    return ctx, cleanup
 
 
 async def _download_async(doi, output_dir, cookies, timeout):
@@ -609,34 +743,28 @@ async def _download_async(doi, output_dir, cookies, timeout):
     safe = _re.sub(r"[^A-Za-z0-9._-]+", "_", doi).strip("_") or "doi"
     out = output_dir / f"{safe}.pdf"
 
-    # Real Google Chrome (headed but parked far off-screen) passes Cloudflare's
-    # managed challenge that headless bundled Chromium trips (Wiley, Elsevier,
-    # T&F …).  Fall back to bundled headless Chromium if Chrome isn't present.
-    offscreen = ["--window-position=-32000,-32000", "--window-size=1440,1000",
-                 "--disable-blink-features=AutomationControlled"]
-    attempts = [
-        dict(channel="chrome", headless=False, args=offscreen),
-        dict(headless=True, args=["--disable-blink-features=AutomationControlled"]),
-    ]
+    # Hidden background Chrome first (no window, no focus theft); off-screen
+    # headed next; bundled headless only if Chrome is missing.  Once a launcher
+    # produces a context we use its result — bundled headless is never better at
+    # Cloudflare, so we don't pay a second full attempt.
+    strategies = (_ctx_hidden_cdp, _ctx_headed_offscreen, _ctx_bundled_headless)
     async with async_playwright() as p:
-        for i, launch_kw in enumerate(attempts):
+        for strat in strategies:
             try:
-                browser = await p.chromium.launch(**launch_kw)
+                acquired = await strat(p)
             except Exception as exc:
-                # Only fall through to the next launcher when this one couldn't
-                # even START (e.g. real Chrome not installed).  Bundled headless
-                # Chromium is never better than real Chrome at clearing
-                # Cloudflare, so once a browser launches we use its result and
-                # do NOT pay a second full attempt (which doubles the wait).
-                logger.debug("launch %s failed: %s", launch_kw.get("channel", "chromium"), exc)
+                logger.debug("launcher %s failed: %s", strat.__name__, exc)
                 continue
+            if not acquired:
+                continue
+            ctx, cleanup = acquired
             try:
-                return await _run_flow(browser, doi, out, cookies, timeout)
+                return await _run_flow(ctx, doi, out, cookies, timeout)
             except Exception as exc:
-                logger.debug("flow attempt %d failed: %s", i, exc)
+                logger.debug("flow via %s failed: %s", strat.__name__, exc)
                 return None
             finally:
-                await browser.close()
+                await cleanup()
     return None
 
 
