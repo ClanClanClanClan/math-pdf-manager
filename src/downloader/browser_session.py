@@ -581,6 +581,7 @@ async def _run_flow(ctx, doi, out, cookies, timeout):
             # it.  Surface a distinct, actionable signal.
             logger.warning("Cloudflare challenge unresolved for %s "
                            "(turn the VPN OFF — a VPN IP can't pass)", doi)
+            _record_diag(doi, "cloudflare", page.url.split("/")[2] if "://" in page.url else "")
             return None
     article_url = page.url
 
@@ -629,6 +630,13 @@ async def _run_flow(ctx, doi, out, cookies, timeout):
                 tmp.replace(out)
                 return out
             tmp.unlink(missing_ok=True)
+    except Exception:
+        pass
+
+    # No PDF obtained — record WHY so the cockpit can guide the user.
+    try:
+        reason = await _classify_failure(page)
+        _record_diag(doi, reason, page.url.split("/")[2] if "://" in page.url else "")
     except Exception:
         pass
     return None
@@ -784,6 +792,108 @@ async def _download_async(doi, output_dir, cookies, timeout):
             finally:
                 await cleanup()
     return None
+
+
+# Institutional-login entry points per publisher (host substring -> name, url).
+# Open the URL, sign in via "Access through your institution" -> ETH Zürich.
+PUBLISHER_LOGIN = {
+    "sciencedirect.com": ("Elsevier / ScienceDirect", "https://www.sciencedirect.com/"),
+    "elsevier.com": ("Elsevier / ScienceDirect", "https://www.sciencedirect.com/"),
+    "epubs.siam.org": ("SIAM", "https://epubs.siam.org/"),
+    "siam.org": ("SIAM", "https://epubs.siam.org/"),
+    "ams.org": ("AMS", "https://www.ams.org/journals/"),
+    "onlinelibrary.wiley.com": ("Wiley", "https://onlinelibrary.wiley.com/"),
+    "wiley.com": ("Wiley", "https://onlinelibrary.wiley.com/"),
+    "link.springer.com": ("Springer", "https://link.springer.com/"),
+    "springer.com": ("Springer", "https://link.springer.com/"),
+    "academic.oup.com": ("Oxford Academic (OUP)", "https://academic.oup.com/"),
+    "oup.com": ("Oxford Academic (OUP)", "https://academic.oup.com/"),
+    "cambridge.org": ("Cambridge Core", "https://www.cambridge.org/core"),
+    "jstor.org": ("JSTOR", "https://www.jstor.org/"),
+    "tandfonline.com": ("Taylor & Francis", "https://www.tandfonline.com/"),
+    "degruyter": ("De Gruyter", "https://www.degruyterbrill.com/"),
+    "worldscientific.com": ("World Scientific", "https://www.worldscientific.com/"),
+    "iopscience.iop.org": ("IOP", "https://iopscience.iop.org/"),
+    "projecteuclid.org": ("Project Euclid", "https://projecteuclid.org/"),
+}
+
+# Last per-DOI failure reason, captured during a download attempt so the cockpit
+# can explain WHY (no extra navigation needed).  Single-process; not persisted.
+_LAST_DIAG: dict = {}
+
+_REASON_MSG = {
+    "cloudflare": "Blocked by Cloudflare — turn your VPN OFF and retry.",
+    "needs_login": "Not signed in at this publisher. Open it, sign in via your "
+                   "institution (ETH Zürich), then Settings → Refresh from Chrome.",
+    "paywalled": "Looks un-subscribed for this article — even your own browser "
+                 "may not have it (then only Sci-Hub/manual will get it).",
+    "no_pdf": "Reached the article but found no downloadable PDF link.",
+    "no_session": "No browser session imported yet — Settings → Refresh from Chrome.",
+}
+
+
+def _publisher_for_host(host: str):
+    h = (host or "").lower()
+    for sub, (name, url) in PUBLISHER_LOGIN.items():
+        if sub in h:
+            return name, url
+    return None, None
+
+
+async def _classify_failure(page) -> str:
+    try:
+        host = page.url.split("/")[2].lower() if "://" in page.url else ""
+    except Exception:
+        host = ""
+    if await _is_cloudflare(page):
+        return "cloudflare"
+    if any(h in host for h in ("id.elsevier.com", "login.", "signin", "aai-logon",
+                               "wayf", "/sso", "idp.")):
+        return "needs_login"
+    try:
+        body = (await page.content()).lower()
+    except Exception:
+        body = ""
+    if any(s in body for s in ("access through your institution",
+                               "log in via an institution",
+                               "sign in via your institution",
+                               "access through your organization",
+                               "institutional sign in", "institutional login")):
+        return "needs_login"
+    if any(s in body for s in ("get access", "purchase", "buy article", "buy pdf",
+                               "rent ", "add to cart", "purchase pdf")):
+        return "paywalled"
+    return "no_pdf"
+
+
+def _record_diag(doi: str, reason: str, host: str) -> None:
+    name, url = _publisher_for_host(host)
+    _LAST_DIAG[doi] = {
+        "reason": reason, "publisher": name, "login_url": url, "host": host,
+        "message": _REASON_MSG.get(reason, reason), "at": int(time.time()),
+    }
+
+
+def last_diagnosis(doi: str):
+    """Why the most recent browser-session download for ``doi`` failed (or None)."""
+    return _LAST_DIAG.get(doi)
+
+
+def connect_pages() -> list:
+    """Login pages to (re)establish an entitled session, for the publishers the
+    user actually has cookies for.  Returns [{publisher, url}]."""
+    domains: set = set()
+    if is_supported():
+        for s in scan_profiles():
+            domains.update(s.domains)
+    cached = load_cached()
+    if cached:
+        domains.update(c["domain"].lstrip(".") for c in cached["cookies"])
+    out: dict = {}
+    for sub, (name, url) in PUBLISHER_LOGIN.items():
+        if any(sub in d for d in domains):
+            out[name] = url
+    return [{"publisher": n, "url": u} for n, u in sorted(out.items())]
 
 
 def session_status() -> dict:

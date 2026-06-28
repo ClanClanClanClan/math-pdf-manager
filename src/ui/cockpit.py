@@ -1561,6 +1561,24 @@ def render_attention() -> None:
 # Page: To Download (04/ browser + DOI form) -- Phase 5
 # ---------------------------------------------------------------------------
 
+def _show_download_hint(doi: str) -> None:
+    """After a failed download, explain WHY (Cloudflare / not-signed-in /
+    paywalled) and, when it's a sign-in gap, offer the publisher login link."""
+    try:
+        from downloader import browser_session as _bs
+        diag = _bs.last_diagnosis(doi)
+    except Exception:
+        diag = None
+    if not diag:
+        return
+    st.info(f"ℹ️ Why: {diag['message']}")
+    if diag.get("login_url") and diag.get("publisher"):
+        st.link_button(
+            f"Open {diag['publisher']} to sign in (then Settings → 🔄 Refresh from Chrome)",
+            diag["login_url"],
+        )
+
+
 def render_to_download() -> None:
     """Browse the manual-download queue and download papers by DOI."""
     from ui.cockpit_actions import (
@@ -1605,6 +1623,7 @@ def render_to_download() -> None:
                     _attention_count_cached.clear()
                 else:
                     st.error(result.message)
+                    _show_download_hint(doi.strip())
 
     # --- Flag browser ---------------------------------------------
     flags = list_download_flags(lib)
@@ -1649,6 +1668,7 @@ def render_to_download() -> None:
                         st.rerun()
                     else:
                         st.error(result.message)
+                        _show_download_hint(flag["doi"])
                 if st.button(
                     "Mark done", key=f"flag_done_{flag['flag']}",
                     use_container_width=True,
