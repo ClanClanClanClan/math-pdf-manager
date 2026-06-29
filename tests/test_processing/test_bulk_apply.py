@@ -132,6 +132,34 @@ class TestBulkApply:
         res = apply_topic_proposals(lib, limit=2)
         assert len(res["applied"]) == 2
 
+    def test_exclude_skips_specified_paths(self, lib):
+        from processing.pipeline_preview import apply_topic_proposals
+        p = _seed_movable_bsde(lib)
+        res = apply_topic_proposals(lib, exclude={str(p)})
+        assert all(a["path"] != str(p) for a in res["applied"])
+        assert p.exists()                     # not moved
+
+    def test_exclude_matches_across_unicode_normalization(self, lib):
+        # macOS stores filenames NFD; an exclude path given as NFC (or vice
+        # versa) must still match so accented names aren't silently kept.
+        import unicodedata
+        from processing.pipeline_preview import apply_topic_proposals
+        sub = lib / "01 - Published papers" / "R"
+        sub.mkdir(parents=True, exist_ok=True)
+        # Write the file with an NFD-encoded accented name on disk.
+        nfd_name = unicodedata.normalize(
+            "NFD", "Réseaux, A. - Reflected BSDEs over réseaux.pdf")
+        p = sub / nfd_name
+        _write_minimal_pdf(p, title="t", author="Réseaux, A.")
+        # Exclude using the NFC form of the path — must still skip it.
+        nfc_path = unicodedata.normalize("NFC", str(p))
+        res = apply_topic_proposals(lib, exclude={nfc_path})
+        assert all(
+            unicodedata.normalize("NFC", a["path"]) != nfc_path
+            for a in res["applied"]
+        )
+        assert p.exists()
+
     def test_apply_routes_into_subtopic(self, lib):
         # End-to-end: a confident numerical-methods BSDE paper is filed
         # into the 07a Numerical methods sub-subtopic, not the topic root.

@@ -368,6 +368,7 @@ def apply_topic_proposals(
     limit: Optional[int] = None,
     dry_run: bool = False,
     enrich: bool = False,
+    exclude: Optional[set] = None,
 ) -> dict:
     """Apply the classifier's proposals to the library (the gated bulk
     file).  DESTRUCTIVE unless ``dry_run``.
@@ -391,6 +392,14 @@ def apply_topic_proposals(
                                         with_extras=False, enrich=enrich)
     targets = [p for p in proposals
                if p.status in statuses and p.proposed_topic]
+    if exclude:
+        # Exclude specific papers by exact path.  Normalise to NFC so a
+        # caller's path matches macOS's NFD-encoded filenames (accents) —
+        # substring/raw matching silently misses "réseaux", "systèmes", etc.
+        import unicodedata
+        ex = {unicodedata.normalize("NFC", str(e)) for e in exclude}
+        targets = [p for p in targets
+                   if unicodedata.normalize("NFC", p.path) not in ex]
     if limit is not None:
         targets = targets[:limit]
 
