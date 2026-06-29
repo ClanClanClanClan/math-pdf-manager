@@ -430,18 +430,28 @@ def apply_topic_proposals(
     # Activity log / .operation_log.
     log = UndoLog(log_dir=library_root / ".operation_log")
     tx_id = log.begin_transaction(f"Bulk topic apply: {len(targets)} paper(s)")
-    for p in targets:
-        pdf = Path(p.path)
-        sub, doc = _finer_routing(pdf, p.proposed_topic, library_root, enrich)
-        ok, msg = file_into_topic(
-            pdf, p.proposed_topic, library_root, undo_log=log,
-            subtopic_folder=sub, doc_bucket=doc,
-        )
-        entry = {"path": p.path, "topic": p.proposed_topic,
-                 "subtopic": sub, "doc_bucket": doc, "msg": msg}
-        (result["applied"] if ok else result["failed"]).append(entry)
-    log.commit()
-    result["tx_id"] = tx_id
+    # Resilience: a single paper raising (e.g. a filesystem error) must NEVER
+    # abort the batch and lose the in-memory transaction — the moves already
+    # done would then be unrecorded/unreversible.  Catch per paper, record the
+    # failure, keep going, and ALWAYS commit in `finally` so whatever succeeded
+    # is persisted and reversible.
+    try:
+        for p in targets:
+            pdf = Path(p.path)
+            try:
+                sub, doc = _finer_routing(pdf, p.proposed_topic, library_root, enrich)
+                ok, msg = file_into_topic(
+                    pdf, p.proposed_topic, library_root, undo_log=log,
+                    subtopic_folder=sub, doc_bucket=doc,
+                )
+            except Exception as exc:  # filesystem / unexpected error
+                ok, msg, sub, doc = False, f"error: {exc}", None, None
+            entry = {"path": p.path, "topic": p.proposed_topic,
+                     "subtopic": sub, "doc_bucket": doc, "msg": msg}
+            (result["applied"] if ok else result["failed"]).append(entry)
+    finally:
+        log.commit()
+        result["tx_id"] = tx_id
     return result
 
 

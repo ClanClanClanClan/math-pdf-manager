@@ -47,7 +47,19 @@ def atomic_write_text(
     p.parent.mkdir(parents=True, exist_ok=True)
     # Unique per-process, per-call temp sibling.  Keep it in the same
     # directory so ``os.replace`` stays on one filesystem (atomic).
-    tmp = p.parent / f".{p.name}.{os.getpid()}.{uuid.uuid4().hex[:8]}.tmp"
+    #
+    # Bound the component to the filesystem limit (255 bytes on macOS/APFS &
+    # most others): a very long sidecar name (``.<long-filename>.meta.json``)
+    # plus the unique suffix can overflow -> OSError ENAMETOOLONG.  The unique
+    # pid+uuid suffix is what guarantees no collision, so truncating the
+    # (purely cosmetic) embedded name on a byte boundary is safe.
+    suffix = f".{os.getpid()}.{uuid.uuid4().hex[:8]}.tmp"
+    name = f".{p.name}"
+    max_name_bytes = 255 - len(suffix.encode("utf-8")) - 2  # small margin
+    nb = name.encode("utf-8")
+    if len(nb) > max_name_bytes:
+        name = nb[:max_name_bytes].decode("utf-8", "ignore")
+    tmp = p.parent / (name + suffix)
     try:
         tmp.write_text(text, encoding=encoding)
         os.replace(tmp, p)

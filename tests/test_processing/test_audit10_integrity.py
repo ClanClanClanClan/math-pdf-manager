@@ -42,6 +42,18 @@ class TestAtomicWrite:
         leftovers = [p.name for p in tmp_path.iterdir() if p.name != "f.json"]
         assert leftovers == []
 
+    def test_very_long_name_does_not_overflow_filename_limit(self, tmp_path):
+        # A near-limit sidecar name plus the unique .<pid>.<rand>.tmp suffix
+        # must not exceed the 255-byte component limit (was an ENAMETOOLONG
+        # crash that aborted a live bulk-apply mid-transaction).
+        from core.io import atomic_write_text
+        # 240-char name; with the old suffix the temp would be > 255 bytes.
+        target = tmp_path / (("L" * 230) + ".meta.json")
+        atomic_write_text(target, '{"ok": 1}')
+        assert target.exists() and target.read_text() == '{"ok": 1}'
+        leftovers = [p.name for p in tmp_path.iterdir() if p != target]
+        assert leftovers == []                     # no stranded temp
+
     def test_failure_cleans_temp(self, tmp_path, monkeypatch):
         import core.io as io_mod
         target = tmp_path / "f.json"

@@ -132,6 +132,31 @@ class TestBulkApply:
         res = apply_topic_proposals(lib, limit=2)
         assert len(res["applied"]) == 2
 
+    def test_one_paper_raising_does_not_abort_batch(self, lib, monkeypatch):
+        # A single paper raising (e.g. a filesystem error) must NOT abort the
+        # loop and lose the in-memory transaction — the batch continues and
+        # commits, so done work stays recorded/reversible.  (Regression: a
+        # long-filename ENAMETOOLONG once crashed a live apply mid-batch.)
+        from processing import publication_topic_router as ptr
+        import processing.pipeline_preview as pp
+        p1 = _seed_movable_bsde(lib)
+        p2 = (lib / "01 - Published papers" / "T"
+              / "Tang, X. - Reflected BSDEs and backward stochastic control.pdf")
+        p2.parent.mkdir(parents=True, exist_ok=True)
+        _write_minimal_pdf(p2, title="t", author="Tang, X.")
+        real = ptr.file_into_topic
+
+        def flaky(pdf, *a, **k):
+            if Path(pdf) == p1:
+                raise OSError("simulated filesystem error")
+            return real(pdf, *a, **k)
+
+        monkeypatch.setattr(ptr, "file_into_topic", flaky)
+        res = pp.apply_topic_proposals(lib)
+        assert res.get("tx_id")                              # committed despite raise
+        assert any(a["path"] == str(p2) for a in res["applied"])
+        assert any("error" in f["msg"] for f in res["failed"])
+
     def test_exclude_skips_specified_paths(self, lib):
         from processing.pipeline_preview import apply_topic_proposals
         p = _seed_movable_bsde(lib)
