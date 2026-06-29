@@ -827,6 +827,9 @@ _REASON_MSG = {
                    "institution (ETH Zürich), then Settings → Refresh from Chrome.",
     "paywalled": "Looks un-subscribed for this article — even your own browser "
                  "may not have it (then only Sci-Hub/manual will get it).",
+    "needs_browser": "This publisher's access (ScienceDirect/Elsevier) is "
+                     "OAuth-gated and doesn't carry over to automation — open "
+                     "it in your browser to download.",
     "no_pdf": "Reached the article but found no downloadable PDF link.",
     "no_session": "No browser session imported yet — Settings → Refresh from Chrome.",
 }
@@ -850,6 +853,10 @@ async def _classify_failure(page) -> str:
     if any(h in host for h in ("id.elsevier.com", "login.", "signin", "aai-logon",
                                "wayf", "/sso", "idp.")):
         return "needs_login"
+    # ScienceDirect loads the article but withholds the PDF affordance under
+    # cookie-injection (entitlement is OAuth/API-gated) — needs the real browser.
+    if "sciencedirect.com" in host:
+        return "needs_browser"
     try:
         body = (await page.content()).lower()
     except Exception:
