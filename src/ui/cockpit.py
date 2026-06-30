@@ -256,6 +256,7 @@ def render_sidebar() -> None:
                 "Upgrade Queue",
                 "To Download",
                 "Conflicts",
+                "Duplicates",
                 "Maintenance",
                 "Pipeline Preview",
                 "Stats",
@@ -1154,11 +1155,23 @@ def render_pipeline_preview() -> None:
             with st.spinner("Filing…"):
                 res = apply_topic_proposals(lib, statuses=("move",), enrich=enrich)
             ok_n, fail_n = len(res["applied"]), len(res["failed"])
+            dup_n = len(res.get("duplicates", []))
             if res.get("tx_id"):
                 _log_activity("topic.bulk_apply", f"{ok_n} moved",
                               f"{fail_n} failed", res["tx_id"])
             st.success(f"Filed {ok_n} paper(s); {fail_n} failed. "
                        f"Undo from the Activity tab (one transaction).")
+            if dup_n:
+                st.info(
+                    f"{dup_n} paper(s) are already filed in their topic "
+                    f"(the source is a redundant duplicate). Clean them up "
+                    f"reversibly in the **Duplicates** tab."
+                )
+                st.dataframe(
+                    [{"paper": Path(d["path"]).name, "why": d["msg"]}
+                     for d in res["duplicates"][:200]],
+                    use_container_width=True, hide_index=True,
+                )
             if res["failed"]:
                 st.dataframe(
                     [{"paper": Path(f["path"]).name, "why": f["msg"]}
@@ -2206,6 +2219,181 @@ def render_conflicts() -> None:
                     _sp.run(["open", str(canonical_p)], capture_output=True)
 
 
+def _dup_rel(path: str, lib: Path) -> str:
+    """Library-relative display path; falls back to the raw string."""
+    try:
+        return str(Path(path).relative_to(lib))
+    except (ValueError, RuntimeError):
+        return path
+
+
+def render_duplicates() -> None:
+    """Whole-library exact-duplicate detection + reversible resolution.
+
+    Detection is byte-identical (size prefilter -> full-file SHA-256), so
+    there are no false positives.  Auto-safe groups (a paper filed twice
+    under near-identical names, a staging leftover, or a status+topic
+    pair) can be cleaned in one reversible batch; everything needing a
+    judgment call (curated collections, different homes, or a
+    byte-identical copy under a *different* title — a possible mis-file)
+    is shown for manual review.
+    """
+    from processing.duplicate_scan import (
+        apply_duplicate_resolutions,
+        find_exact_duplicates,
+        resolve_group,
+        DuplicateGroup,
+    )
+    from processing.undo_log import UndoLog
+
+    st.header("👯 Duplicates")
+    st.caption(
+        "Byte-identical copies across the whole library.  Redundant copies "
+        "move to `.trash/duplicates/` through the undo log, so every "
+        "removal is reversible from the Activity tab."
+    )
+
+    lib = _library()
+
+    # Scanning hashes every size-collision candidate, so it's gated behind
+    # a button and cached in session state rather than run on each rerun.
+    if st.button("🔍 Scan for duplicates", key="dup_scan"):
+        with st.spinner("Hashing duplicate candidates…"):
+            groups = find_exact_duplicates(lib)
+        st.session_state["dup_groups"] = [g.to_dict() for g in groups]
+        st.session_state.pop("dup_excluded", None)
+
+    raw = st.session_state.get("dup_groups")
+    if raw is None:
+        st.info("Click **Scan for duplicates** to analyse the library.")
+        return
+
+    groups = [DuplicateGroup(**d) for d in raw]
+    if not groups:
+        st.success("No byte-identical duplicates found. ✓")
+        return
+
+    auto = [g for g in groups if g.auto_safe]
+    review = [g for g in groups if not g.auto_safe]
+    auto_copies = sum(len(g.remove) for g in auto)
+
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Duplicate groups", len(groups))
+    c2.metric("Auto-safe copies", auto_copies)
+    c3.metric("Need review", len(review))
+
+    # ----- Auto-safe batch -------------------------------------------------
+    if auto:
+        st.subheader(f"Auto-safe · {len(auto)} groups, {auto_copies} redundant copies")
+        st.caption(
+            "These are byte-identical with near-identical names (typo / "
+            "punctuation / extra initial) or staging leftovers.  Keeping one "
+            "copy is loss-free."
+        )
+        excl_key = "dup_excluded"
+        excluded: set = st.session_state.setdefault(excl_key, set())
+        excluded &= {g.keep for g in auto}        # prune stale
+
+        with st.expander("Review the auto-safe list (untick to skip a group)",
+                         expanded=len(auto) <= 30):
+            for g in auto:
+                keep_box = st.checkbox(
+                    f"KEEP  {_dup_rel(g.keep, lib)}",
+                    value=g.keep not in excluded,
+                    key=f"dup_auto_{g.sha256[:12]}",
+                )
+                if keep_box:
+                    excluded.discard(g.keep)
+                else:
+                    excluded.add(g.keep)
+                for r in g.remove:
+                    st.caption(f"   ✗ trash  {_dup_rel(r, lib)}   ·  _{g.reason}_")
+
+        act = len([g for g in auto if g.keep not in excluded])
+        if st.button(
+            f"🗑 Trash redundant copies for {act} group(s) (reversible)",
+            key="dup_apply_auto",
+            type="primary",
+            disabled=act == 0,
+        ):
+            res = apply_duplicate_resolutions(
+                lib, groups=auto, dry_run=False, auto_only=False,
+                exclude=set(excluded),
+            )
+            _log_activity(
+                "duplicates.bulk_trash", "",
+                f"removed={res['removed']} failed={len(res['failed'])}",
+                res.get("tx_id") or "",
+            )
+            st.toast(f"Trashed {res['removed']} copies "
+                     f"(failed {len(res['failed'])})")
+            if res["failed"]:
+                st.warning("Some failed:\n  - " + "\n  - ".join(
+                    f"{_dup_rel(f['keep'], lib)}: {f['msg']}"
+                    for f in res["failed"][:8]))
+            # Re-scan so the list reflects reality.
+            st.session_state["dup_groups"] = [
+                gg.to_dict() for gg in find_exact_duplicates(lib)
+            ]
+            st.session_state.pop(excl_key, None)
+            _attention_count_cached.clear()
+            st.rerun()
+
+    # ----- Review (manual) -------------------------------------------------
+    if review:
+        st.divider()
+        st.subheader(f"Needs review · {len(review)} groups")
+        st.caption(
+            "Each of these needs a human call.  Pick the copy to keep and "
+            "trash the rest — or leave it.  Curated-collection copies "
+            "(08/09/10/archive) are never removed automatically."
+        )
+        for g in review:
+            with st.container(border=True):
+                st.markdown(f"**{g.kind}** · {' · '.join(g.notes)}")
+                # Let the user choose the keeper among all paths.
+                options = list(g.paths)
+                labels = {p: _dup_rel(p, lib) for p in options}
+                choice = st.radio(
+                    "Keep which copy?",
+                    options,
+                    format_func=lambda p: labels[p],
+                    key=f"dup_rev_keep_{g.sha256[:12]}",
+                )
+                cols = st.columns(len(options) + 1)
+                for i, p in enumerate(options):
+                    if cols[i].button("Open", key=f"dup_rev_open_{g.sha256[:12]}_{i}"):
+                        import subprocess as _sp
+                        if Path(p).exists():
+                            _sp.run(["open", str(Path(p))], capture_output=True)
+                if cols[-1].button(
+                    "Trash the others",
+                    key=f"dup_rev_apply_{g.sha256[:12]}",
+                    type="primary",
+                ):
+                    manual = DuplicateGroup(
+                        sha256=g.sha256, size=g.size, paths=g.paths,
+                        keep=choice,
+                        remove=[p for p in g.paths if p != choice],
+                        kind=g.kind, reason="manual review choice",
+                        auto_safe=False, notes=g.notes,
+                    )
+                    log = UndoLog(log_dir=lib / ".operation_log")
+                    tx = log.begin_transaction(
+                        f"dedup (manual): keep {Path(choice).name}")
+                    results = resolve_group(manual, lib, undo_log=log)
+                    log.commit()
+                    ok = sum(1 for r, _ in results if r)
+                    _log_activity("duplicates.manual_trash", "",
+                                  f"removed={ok}", tx)
+                    st.toast(f"Trashed {ok} copy/copies (reversible)")
+                    st.session_state["dup_groups"] = [
+                        gg.to_dict() for gg in find_exact_duplicates(lib)
+                    ]
+                    _attention_count_cached.clear()
+                    st.rerun()
+
+
 def main() -> None:
     _init_state()
     render_sidebar()
@@ -2221,6 +2409,8 @@ def main() -> None:
         render_to_download()
     elif page == "Conflicts":
         render_conflicts()
+    elif page == "Duplicates":
+        render_duplicates()
     elif page == "Maintenance":
         render_maintenance()
     elif page == "Pipeline Preview":

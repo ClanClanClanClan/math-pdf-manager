@@ -409,6 +409,13 @@ def apply_topic_proposals(
         "dry_run": dry_run,
         "applied": [],
         "failed": [],
+        # Papers the classifier would file into a topic where a
+        # byte-identical copy already lives — i.e. the source is a
+        # redundant duplicate.  Surfaced separately (not as failures) so
+        # they can be cleaned up in the Duplicates tab rather than read
+        # as errors.  This is the class that previously hid as a bare
+        # "destination already exists" failure.
+        "duplicates": [],
     }
     if dry_run:
         result["would_apply"] = []
@@ -448,7 +455,12 @@ def apply_topic_proposals(
                 ok, msg, sub, doc = False, f"error: {exc}", None, None
             entry = {"path": p.path, "topic": p.proposed_topic,
                      "subtopic": sub, "doc_bucket": doc, "msg": msg}
-            (result["applied"] if ok else result["failed"]).append(entry)
+            if ok:
+                result["applied"].append(entry)
+            elif msg.startswith("duplicate:"):
+                result["duplicates"].append(entry)
+            else:
+                result["failed"].append(entry)
     finally:
         log.commit()
         result["tx_id"] = tx_id

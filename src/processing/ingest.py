@@ -897,6 +897,32 @@ def ingest_paper(
         except Exception as exc:  # pragma: no cover -- never block ingest
             logger.warning("auto topic resolution failed: %s", exc)
 
+    # Step 4.5: duplicate-arrival guard.  Before filing, check whether the
+    # library already holds a BYTE-IDENTICAL copy (e.g. a re-download of an
+    # already-filed paper).  If so, don't create a second copy — report it
+    # and leave the arrival in place for the user to resolve.  Best-effort
+    # and opt-IN via ``dedup_check=True``.  Default OFF so re-ingest stays
+    # idempotent (``organize`` already skips an identical destination) and
+    # bulk/upgrade callers keep raw filing; the watcher — the genuine
+    # "new arrival" path — turns it on.
+    if not dry_run and kwargs.get("dedup_check", False):
+        try:
+            from processing.duplicate_scan import find_library_duplicate
+            existing = find_library_duplicate(
+                pdf_path, library_root, ignore=[pdf_path.parent],
+            )
+            if existing:
+                result["duplicate_of"] = existing
+                result["actions"].append(
+                    f"SKIP: a byte-identical copy is already filed at {existing}"
+                )
+                result["success"] = False
+                if verbose:
+                    print(f"  Duplicate of {existing}; not filing a second copy.")
+                return result
+        except Exception as exc:  # never block ingest on the guard
+            logger.warning("dedup arrival check failed: %s", exc)
+
     # Step 5: Organize (route to correct directory, with undo logging)
     org = OrganizationSystem(library_root, topic=topic, dry_run=dry_run)
     org_result = org.organize(pdf_path, metadata, canonical_name, year=paper_year, undo_log=kwargs.get("undo_log"))

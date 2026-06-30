@@ -117,6 +117,17 @@ class TestUndoTxIds:
         id_b = b.begin_transaction("ingest batch")
         assert id_a != id_b
 
+    def test_discard_writes_no_transaction(self, tmp_path):
+        # A begun-but-empty transaction must be DISCARDABLE without writing
+        # a 0-op record (the watcher does this on a duplicate arrival).
+        from processing.undo_log import UndoLog
+        log = UndoLog(log_dir=tmp_path)
+        log.begin_transaction("empty ingest")
+        log.discard()
+        assert log.list_transactions() == []
+        assert list(tmp_path.glob("*.json")) == []
+        assert not (tmp_path / "index.jsonl").exists()
+
     def test_list_tolerates_malformed_index_line(self, tmp_path):
         from processing.undo_log import UndoLog
         log = UndoLog(log_dir=tmp_path)

@@ -157,6 +157,37 @@ class TestBulkApply:
         assert any(a["path"] == str(p2) for a in res["applied"])
         assert any("error" in f["msg"] for f in res["failed"])
 
+    def test_existing_topic_copy_is_classified_duplicate_not_failure(self, lib):
+        # Regression: a paper whose topic destination already holds a
+        # BYTE-IDENTICAL copy must be surfaced as a 'duplicate' (the
+        # source is redundant), NOT buried in 'failed'.  This is the
+        # exact class that previously hid as "destination already exists".
+        from processing.pipeline_preview import apply_topic_proposals
+        src = _seed_movable_bsde(lib)
+        dest = (lib / "07a - BSDEs" / "01 - Published papers" / "S" / src.name)
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_bytes(src.read_bytes())          # byte-identical copy
+        res = apply_topic_proposals(lib)
+        assert res["applied"] == []
+        assert res["failed"] == []
+        assert len(res["duplicates"]) == 1
+        assert res["duplicates"][0]["msg"].startswith("duplicate:")
+        assert src.exists()                          # nothing moved/removed
+
+    def test_existing_topic_copy_different_bytes_is_name_collision(self, lib):
+        # If the destination holds a DIFFERENT file, it's a real name
+        # collision (human eyes), still not a silent generic failure.
+        from processing.pipeline_preview import apply_topic_proposals
+        src = _seed_movable_bsde(lib)
+        dest = (lib / "07a - BSDEs" / "01 - Published papers" / "S" / src.name)
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        _write_minimal_pdf(dest, title="totally different content here",
+                           author="Other, A.")
+        res = apply_topic_proposals(lib)
+        assert res["duplicates"] == []
+        assert len(res["failed"]) == 1
+        assert "name collision" in res["failed"][0]["msg"]
+
     def test_exclude_skips_specified_paths(self, lib):
         from processing.pipeline_preview import apply_topic_proposals
         p = _seed_movable_bsde(lib)

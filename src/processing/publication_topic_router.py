@@ -227,9 +227,16 @@ def file_into_topic(
     undo_log=None,  # type: ignore[no-untyped-def]
     subtopic_folder: Optional[str] = None,
     doc_bucket: Optional[str] = None,
+    normalize: bool = True,
 ) -> tuple[bool, str]:
     """Move a paper from its standard status folder into topic ``code``'s
     matching status sub-bucket, recording the topic on the sidecar.
+
+    ``normalize`` (default True): the filed name has its AUTHOR block
+    canonicalised on the way in (initial spacing "R.C."→"R. C.", cosmetic
+    spacing/NFC), per the owner's rule that a move must also fix
+    formatting.  The title is left untouched (title re-casing is unsafe to
+    auto-apply).  Set False to file byte-for-byte.
 
     The shared core behind both the Attention-Queue accept action and
     the bulk-apply (Pipeline Preview).  Uses ``logged_move`` so the move
@@ -281,10 +288,34 @@ def file_into_topic(
     # Preserve the alpha-subdir (and year for working papers) by taking
     # everything after the (closest) status dir in the current path.
     tail = Path(*parts[status_idx + 1:])  # "S/Smith - X.pdf" or "S/2020/..."
+    # A move also canonicalises the author block (initial spacing etc.);
+    # the surname — hence the alpha-subdir — is never changed by this, so
+    # routing stays correct.  Title is left untouched.
+    if normalize:
+        from processing.move_normalizer import normalize_authors_in_name
+        new_name, _ = normalize_authors_in_name(pdf_path.name)
+        tail = tail.with_name(new_name)
     dest = base / bucket / tail
 
     if dest.exists():
-        return False, f"destination already exists: {dest}"
+        # The paper is already present at the topic destination.  Don't
+        # bury this as a generic failure (that's how the status+topic
+        # duplicates went unnoticed): decide WHICH case it is.
+        #   * byte-identical  -> the SOURCE is a redundant duplicate copy
+        #     (the paper is already correctly filed); flag it for the
+        #     Duplicates tab to resolve reversibly, never silently here.
+        #   * different bytes  -> a real name collision with a DIFFERENT
+        #     file; that needs human eyes.
+        from processing.duplicate_scan import compute_full_hash
+        if compute_full_hash(pdf_path) == compute_full_hash(dest):
+            return False, (
+                f"duplicate: already filed at {dest.relative_to(library_root)}; "
+                f"source is a redundant copy — resolve in the Duplicates tab"
+            )
+        return False, (
+            f"name collision: a DIFFERENT file already exists at "
+            f"{dest.relative_to(library_root)}"
+        )
 
     # Record the topic on the sidecar at the SOURCE *before* moving, so
     # the sidecar (a) exists even for a freshly-dropped un-topiced paper

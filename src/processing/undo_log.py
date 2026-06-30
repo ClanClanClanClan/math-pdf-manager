@@ -147,6 +147,19 @@ class UndoLog:
             "changes": changes,
         })
 
+    def discard(self) -> None:
+        """Drop the current (in-memory) transaction without writing anything.
+
+        Use instead of ``commit()`` when a transaction turned out to do no
+        work (e.g. the watcher began an ingest tx but the arrival was a
+        duplicate and nothing moved).  Committing such a tx would litter
+        the log and the cockpit Activity tab with a 0-op entry that has
+        live Undo buttons.  Nothing is on disk until ``commit()``, so
+        discarding is just clearing the in-memory state.
+        """
+        self._current_tx = None
+        self._tx_id = None
+
     def commit(self) -> Path:
         """Commit the current transaction to disk. Returns the log file path."""
         if self._current_tx is None:

@@ -234,6 +234,11 @@ class PDFHandler(FileSystemEventHandler):
                 year=self.config.default_year,
                 dry_run=self.dry_run,
                 undo_log=undo_log,
+                # The watcher is the genuine "new arrival" path, so turn on
+                # the duplicate-arrival guard: a freshly-dropped PDF that is
+                # byte-identical to one already in the library is NOT filed
+                # as a second copy.
+                dedup_check=True,
             )
 
             if result["success"]:
@@ -264,6 +269,25 @@ class PDFHandler(FileSystemEventHandler):
                     if self.config.delete_source and path.exists():
                         path.unlink()
                         logger.info("Deleted source: %s", path.name)
+            elif result.get("duplicate_of"):
+                # Not an error: the drop is byte-identical to a paper
+                # already filed.  Leave the source in place (don't file a
+                # second copy) and tell the user where the original lives.
+                dup = result["duplicate_of"]
+                try:
+                    dup_short = str(Path(dup).relative_to(self.config.library_root))
+                except ValueError:
+                    dup_short = dup
+                logger.info("Duplicate drop %s — already filed at %s",
+                            str(path), dup_short)
+                if self.config.notifications:
+                    notify("Duplicate (already in library)",
+                           f"{path.name}\nalready filed at {dup_short}", sound="")
+                # The ingest recorded no operations (we bailed before
+                # organize), so DISCARD the empty transaction rather than
+                # committing a 0-op no-op into the log / Activity tab.
+                if undo_log:
+                    undo_log.discard()
             else:
                 error = result.get("error", "Unknown error")
                 # Log the *full* path so the cockpit Attention Queue
