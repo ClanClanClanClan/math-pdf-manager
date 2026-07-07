@@ -908,6 +908,13 @@ def _count_pdfs_cached(folder_str: str) -> int:
     return sum(1 for _ in iter_pdfs(p))
 
 
+@st.cache_data(ttl=600, show_spinner=False)
+def _library_health_cached(lib_str: str) -> dict:
+    """Cached health snapshot (10-min TTL; walks metadata surfaces only)."""
+    from maintenance.health import collect_library_health
+    return collect_library_health(Path(lib_str))
+
+
 @st.cache_data(ttl=300, show_spinner=False)
 def _to_be_sorted_backlog_cached(lib_str: str) -> dict:
     """Cached ``count_to_be_sorted`` — same 5-min TTL as the folder counts.
@@ -957,6 +964,35 @@ def render_stats() -> None:
     st.metric("Total pending", backlog["total"])
     for sub, n in backlog["by_subfolder"].items():
         st.markdown(f"- {sub}: **{n}**")
+
+    st.divider()
+    st.subheader("Library health")
+    st.caption("Metadata surfaces only (10-min cache): sidecar coverage, "
+               "review backlogs, undo history, learning-loop freshness.")
+    h = _library_health_cached(str(lib))
+    hc = st.columns(4)
+    hc[0].metric("Sidecar coverage",
+                 f"{h['sidecar_coverage']:.1%}",
+                 help=f"{h['sidecars']} sidecars / {h['pdfs']} PDFs")
+    hc[1].metric("Vocab pending", h["vocab_pending"],
+                 help=f"{h['vocab_ruled']} words already ruled — review in "
+                      f"Settings → Title vocabulary")
+    hc[2].metric("Undo transactions", h["undo_transactions"],
+                 help="Reversible history in .operation_log "
+                      f"(last activity {h['last_tx_age_days']}d ago)")
+    hc[3].metric("Trash (recoverable)", h["trash_pdfs"],
+                 help="PDFs in .trash/ — restorable from Activity or Finder")
+    notes = []
+    if h["model_trained_on"]:
+        notes.append(
+            f"assist model: {h['model_trained_on']} examples, "
+            f"{h['model_accuracy']:.0%} held-out accuracy, "
+            f"{h['model_age_days']}d old")
+    else:
+        notes.append("assist model: not trained (Settings → Title vocabulary)")
+    if h["corpus_stats_age_days"] >= 0:
+        notes.append(f"corpus casing stats: {h['corpus_stats_age_days']}d old")
+    st.caption(" · ".join(notes))
 
     st.divider()
     st.subheader("Trash (recoverable)")

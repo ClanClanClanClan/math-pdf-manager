@@ -114,7 +114,7 @@ Twelve pages in the sidebar:
 | **Duplicates** | Whole-library byte-identical duplicate detection (size prefilter → full-file SHA-256, no false positives). Auto-safe groups (same paper filed twice) clean up in one reversible batch to `.trash/duplicates/`; judgment cases (curated collections, cross-home, name-divergent possible misfiles) get a per-group keeper picker. |
 | **Pipeline Preview** | Read-only dry-run of the topic classifier over the whole library (agree/disagree/move bands, confidence histograms), an abstract-cache backfill helper, and the **gated bulk-apply** that files confident proposals in one undoable transaction. |
 | **Maintenance** | One-click "Run weekly now" (subprocess to `maintenance.weekly_report` with optional `--auto-apply-safe`) plus the same in-process check toggles the previous version had. |
-| **Stats** | Live counts per top-level folder + trash sizes. |
+| **Stats** | Live counts per top-level folder + trash sizes, plus a **Library health** strip: sidecar coverage, vocabulary-review backlog, undo-history depth, recoverable-trash count, assist-model freshness. |
 | **Activity** | Every approval in this session, with a per-transaction undo button. Persistent across cockpit restarts (`~/.mathpdf/cockpit_activity.jsonl`). |
 | **Settings** | Form-driven editor for the watcher YAML config (library root, inbox folder, default status, settle seconds, notifications). |
 
