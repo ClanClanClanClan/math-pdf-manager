@@ -334,9 +334,11 @@ def download_annas_archive(
         if not md5_links:
             return None
 
-        # Step 2: Get md5 from first result
+        # Step 2: Get md5 from first result.  Require EXACTLY 32 hex chars
+        # (an md5) so a malformed href can't smuggle a shorter/odd token
+        # into the URL we fetch next.
         md5_path = md5_links[0]["href"]
-        md5_match = re.search(r"/md5/([a-f0-9]+)", md5_path)
+        md5_match = re.search(r"/md5/([a-f0-9]{32})(?![a-f0-9])", md5_path)
         if not md5_match:
             return None
         md5 = md5_match.group(1)

@@ -102,14 +102,10 @@ class TestNoHardcodedPasswords:
 class TestCredentialExamplesUseEnvVars:
     """Verify example/setup code in credential modules uses os.environ."""
 
-    def test_credentials_py_example_uses_environ(self):
-        creds_py = SRC / "downloader" / "credentials.py"
-        text = _read_text(creds_py)
-        assert "os.environ" in text, (
-            "credentials.py example should use os.environ for credentials"
-        )
-        assert "your_university_username" not in text
-        assert "your_university_password" not in text
+    # test_credentials_py_example_uses_environ deleted: the legacy
+    # downloader/credentials.py module (zero importers; the live credential
+    # flow is get_secure_credential()) was removed during the full-audit
+    # dead-code cleanup.
 
     # test_orchestrator_py_example_uses_environ deleted: the legacy
     # downloader/orchestrator.py module was removed during dead-code cleanup

@@ -354,11 +354,20 @@ async def _try_direct_pdf(page, doi: str, article_url: str) -> Optional[str]:
 # Publisher PDF URL patterns
 # ---------------------------------------------------------------------------
 
+# A DOI is "10.<registrant>/<suffix>" with no whitespace.  Anything else
+# (garbage from a flag file, an accidental full URL, embedded spaces) must
+# not be interpolated into publisher URL templates.
+_DOI_RE = re.compile(r"^10\.\d{4,9}/\S+$")
+
+
 def _get_pdf_url(doi: str, publisher_domain: str) -> Optional[str]:
     """Return the direct PDF URL pattern for a given publisher.
 
     These URLs work after institutional auth cookies are set.
     """
+    if not _DOI_RE.match(doi or ""):
+        logger.warning("Refusing malformed DOI for URL construction: %r", doi)
+        return None
     patterns = {
         "link.springer.com": f"https://link.springer.com/content/pdf/{doi}.pdf",
         "epubs.siam.org": f"https://epubs.siam.org/doi/pdf/{doi}",

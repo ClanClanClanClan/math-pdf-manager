@@ -177,3 +177,89 @@ class TestScanExistingInbox:
         (inbox / "subdir" / "deep.pdf").write_bytes(b"%PDF")
         # Non-recursive by design -- we only scan the top of the inbox.
         assert handler.scan_existing_inbox() == 0
+
+
+class TestIngestTxHygiene:
+    """A failed/crashed ingest must never strand recorded undo operations
+    in a never-committed in-memory transaction — and must not litter the
+    log with 0-op entries either."""
+
+    @pytest.fixture
+    def live_handler(self, tmp_path):
+        pytest.importorskip("watchdog")
+        from watcher.config import WatcherConfig
+        from watcher.daemon import PDFHandler
+        cfg = WatcherConfig(
+            inbox_dir=tmp_path / "inbox",
+            library_root=tmp_path / "lib",
+            log_dir=tmp_path / "logs",
+            settle_seconds=0.1,
+            notifications=False,
+        )
+        cfg.inbox_dir.mkdir(parents=True, exist_ok=True)
+        cfg.library_root.mkdir(parents=True, exist_ok=True)
+        cfg.log_dir.mkdir(parents=True, exist_ok=True)
+        return PDFHandler(cfg, dry_run=False)
+
+    def _tmp_undolog(self, monkeypatch, tmp_path):
+        import processing.undo_log as ul
+        real = ul.UndoLog
+        tmp_log_dir = tmp_path / ".operation_log"
+
+        class _TmpLog(real):
+            def __init__(self, log_dir=None):
+                super().__init__(log_dir=log_dir or tmp_log_dir)
+
+        monkeypatch.setattr(ul, "UndoLog", _TmpLog)
+        return tmp_log_dir
+
+    def test_failed_ingest_with_recorded_ops_commits(
+        self, live_handler, tmp_path, monkeypatch
+    ):
+        log_dir = self._tmp_undolog(monkeypatch, tmp_path)
+        pdf = live_handler.config.inbox_dir / "x.pdf"
+        pdf.write_bytes(b"%PDF junk")
+
+        def failing_ingest(path, **k):
+            # Simulate: one op recorded, then the ingest reports failure.
+            k["undo_log"].record_move(Path("/a"), Path("/b"))
+            return {"success": False, "error": "simulated late failure",
+                    "actions": [], "filename": "", "destination": ""}
+
+        with patch("processing.ingest.ingest_paper", side_effect=failing_ingest):
+            live_handler._ingest(pdf)
+
+        from processing.undo_log import UndoLog
+        txs = UndoLog(log_dir=log_dir).list_transactions()
+        assert len(txs) == 1 and txs[0]["operations_count"] == 1
+
+    def test_failed_ingest_with_no_ops_discards(
+        self, live_handler, tmp_path, monkeypatch
+    ):
+        log_dir = self._tmp_undolog(monkeypatch, tmp_path)
+        pdf = live_handler.config.inbox_dir / "x.pdf"
+        pdf.write_bytes(b"%PDF junk")
+        with patch("processing.ingest.ingest_paper",
+                   return_value={"success": False, "error": "no metadata",
+                                 "actions": [], "filename": "", "destination": ""}):
+            live_handler._ingest(pdf)
+        from processing.undo_log import UndoLog
+        assert UndoLog(log_dir=log_dir).list_transactions() == []
+
+    def test_crashing_ingest_with_recorded_ops_commits(
+        self, live_handler, tmp_path, monkeypatch
+    ):
+        log_dir = self._tmp_undolog(monkeypatch, tmp_path)
+        pdf = live_handler.config.inbox_dir / "x.pdf"
+        pdf.write_bytes(b"%PDF junk")
+
+        def crashing_ingest(path, **k):
+            k["undo_log"].record_move(Path("/a"), Path("/b"))
+            raise OSError("simulated crash mid-ingest")
+
+        with patch("processing.ingest.ingest_paper", side_effect=crashing_ingest):
+            live_handler._ingest(pdf)          # must not raise
+
+        from processing.undo_log import UndoLog
+        txs = UndoLog(log_dir=log_dir).list_transactions()
+        assert len(txs) == 1 and txs[0]["operations_count"] == 1

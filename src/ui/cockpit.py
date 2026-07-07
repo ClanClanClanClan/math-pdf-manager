@@ -907,6 +907,17 @@ def _count_pdfs_cached(folder_str: str) -> int:
     return sum(1 for _ in iter_pdfs(p))
 
 
+@st.cache_data(ttl=300, show_spinner=False)
+def _to_be_sorted_backlog_cached(lib_str: str) -> dict:
+    """Cached ``count_to_be_sorted`` — same 5-min TTL as the folder counts.
+
+    The backlog scan rglobs the whole ``12 - To be sorted`` tree; uncached
+    it re-ran on every Stats rerun (audit perf finding).
+    """
+    from maintenance.weekly_report import count_to_be_sorted
+    return count_to_be_sorted(Path(lib_str))
+
+
 def render_stats() -> None:
     st.header("📊 Library Stats")
     st.caption(
@@ -916,14 +927,13 @@ def render_stats() -> None:
 
     if st.button("↻ Recompute now"):
         _count_pdfs_cached.clear()
+        _to_be_sorted_backlog_cached.clear()
         st.rerun()
 
     lib = _library()
     if not lib.exists():
         st.error("Library not found.")
         return
-
-    from maintenance.weekly_report import count_to_be_sorted
 
     # Folder counts (cached)
     folders = [
@@ -942,7 +952,7 @@ def render_stats() -> None:
 
     st.divider()
     st.subheader("12 - To be sorted/ backlog")
-    backlog = count_to_be_sorted(lib)
+    backlog = _to_be_sorted_backlog_cached(str(lib))
     st.metric("Total pending", backlog["total"])
     for sub, n in backlog["by_subfolder"].items():
         st.markdown(f"- {sub}: **{n}**")
@@ -1046,9 +1056,12 @@ def render_pipeline_preview() -> None:
             "`python -m processing.classifier_text` (≈30–60 min). Use a "
             "small batch here to try it.")
         cbf = st.columns([1, 1])
+        # NB: keys must be unique across ALL pages — "bf_limit"/"bf_run" are
+        # taken by the Settings sidecar-backfill widgets; sharing them would
+        # bleed state between the two pages via st.session_state.
         bf_n = cbf[0].selectbox("Batch", ["100", "500", "2000", "All"], index=0,
-                                key="bf_limit")
-        if cbf[1].button("Cache abstracts now", key="bf_run"):
+                                key="abstracts_bf_limit")
+        if cbf[1].button("Cache abstracts now", key="abstracts_bf_run"):
             from processing.classifier_text import backfill_classifier_text
             lim = None if bf_n == "All" else int(bf_n)
             with st.spinner("Extracting abstracts…"):

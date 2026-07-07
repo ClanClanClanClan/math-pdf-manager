@@ -297,11 +297,31 @@ class PDFHandler(FileSystemEventHandler):
                 logger.warning("Failed to ingest %s: %s", str(path), error)
                 if self.config.notifications:
                     notify("Ingestion Failed", f"{path.name}\n{error}", sound="Basso")
+                # Transaction hygiene: a failed ingest may still have
+                # RECORDED operations before the failure point (e.g. the
+                # copy was recorded, then a later step refused).  Those
+                # must be persisted to stay reversible; an op-less tx is
+                # discarded rather than committed as a 0-op entry.
+                if undo_log:
+                    if undo_log.has_operations():
+                        undo_log.commit()
+                    else:
+                        undo_log.discard()
 
         except Exception as exc:
             logger.error("Error ingesting %s: %s", str(path), exc, exc_info=True)
             if self.config.notifications:
                 notify("Ingestion Error", f"{path.name}\n{exc}", sound="Basso")
+            # Same hygiene on the crash path: never strand recorded ops in
+            # a never-committed in-memory transaction.
+            if undo_log:
+                try:
+                    if undo_log.has_operations():
+                        undo_log.commit()
+                    else:
+                        undo_log.discard()
+                except Exception:  # pragma: no cover — never mask the error
+                    pass
 
 
 def run_daemon(config: WatcherConfig, *, dry_run: bool = False) -> None:

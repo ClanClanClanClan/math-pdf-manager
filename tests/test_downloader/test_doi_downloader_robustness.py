@@ -125,3 +125,18 @@ class TestIsValidPdf:
     def test_missing_file(self, tmp_path):
         from downloader.doi_downloader import _is_valid_pdf
         assert _is_valid_pdf(tmp_path / "nope.pdf") is False
+
+
+class TestEthDoiGuard:
+    """_get_pdf_url must refuse malformed DOIs (no URL-template smuggling)."""
+
+    def test_valid_doi_builds_url(self):
+        from downloader.eth_institutional import _get_pdf_url
+        url = _get_pdf_url("10.1007/s00780-008-0085-5", "link.springer.com")
+        assert url == "https://link.springer.com/content/pdf/10.1007/s00780-008-0085-5.pdf"
+
+    def test_malformed_dois_refused(self):
+        from downloader.eth_institutional import _get_pdf_url
+        for bad in ["not a doi", "10.1007/x y", "", None,
+                    "https://doi.org/10.1/x", "10.1/"]:
+            assert _get_pdf_url(bad, "link.springer.com") is None
