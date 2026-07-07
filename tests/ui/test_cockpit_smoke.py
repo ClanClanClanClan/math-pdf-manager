@@ -108,10 +108,17 @@ class _StreamlitModule(types.ModuleType):
 
 
 @pytest.fixture
-def st_stub(monkeypatch):
+def st_stub(monkeypatch, tmp_path):
     """Install the stub as the ``streamlit`` module before importing cockpit."""
     fake_module = _StreamlitModule()
     monkeypatch.setitem(sys.modules, "streamlit", fake_module)
+    # Tests must NEVER touch the real library.  cockpit runs main() at
+    # module import, and the sidebar's attention count walks the whole
+    # library — against the real 29k-PDF Dropbox tree that walk can
+    # exceed the per-test timeout (observed flake) and violates test
+    # isolation.  Point MATH_LIBRARY at a fresh tmp dir BEFORE any
+    # import; individual tests may re-point it before importing cockpit.
+    monkeypatch.setenv("MATH_LIBRARY", str(tmp_path))
     # Ensure a fresh cockpit import each test (cockpit runs main() at
     # module load, which we want to observe under the stub).
     monkeypatch.delitem(sys.modules, "ui.cockpit", raising=False)

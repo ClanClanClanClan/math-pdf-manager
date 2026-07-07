@@ -1761,15 +1761,67 @@ def _render_title_vocabulary(lib: Path) -> None:
             f"{len(vocab['common'])} common.  A ruling applies to every "
             "future move/filing; it never renames files retroactively."
         )
+
+        # Self-trained assist model (Stage 2): suggests a ruling per pending
+        # word.  Trained ONLY on the owner's own data (corpus casing stats,
+        # author surnames, GOLD titles, prior rulings) — no third parties.
+        from processing.title_model import load_model, suggest, train_model
+        model = load_model(lib)
+        mcols = st.columns([3, 2])
+        if model:
+            met = model.get("metrics", {})
+            mcols[0].caption(
+                f"Assist model: {model.get('trained_on', '?')} examples · "
+                f"held-out accuracy {met.get('accuracy', 0):.0%} · proper-"
+                f"precision {met.get('proper_precision', 0):.0%}"
+            )
+        else:
+            mcols[0].caption("Assist model not trained yet.")
+        if mcols[1].button("↻ (Re)train assist model", key="vocab_train"):
+            with st.spinner("Training on your corpus…"):
+                try:
+                    model = train_model(lib)
+                    st.toast("Model trained.")
+                except Exception as exc:
+                    st.warning(f"Training failed: {exc}")
+            st.rerun()
+
         if not pending:
             st.success("No uncertain title words. ✓")
             return
+
         # Most-seen first; cap the render so a huge backlog stays snappy.
         items = sorted(pending.items(),
                        key=lambda kv: -kv[1].get("count", 1))[:50]
+        suggestions = {}
+        if model:
+            for word, _ in items:
+                suggestions[word] = suggest(word, model)
+
+        # One-click bulk accept for the model's highest-confidence PROPER
+        # calls (the pending queue is dominated by eponyms).  Common-side
+        # suggestions are shown as hints but applied only individually —
+        # a wrong "common" ruling would downcase a name on the next move.
+        strong_proper = [w for w, (r, c) in suggestions.items()
+                         if r == "proper" and c >= 0.99]
+        if strong_proper and st.button(
+            f"✓ Accept {len(strong_proper)} strong 'Proper' suggestion(s)",
+            key="vocab_bulk_proper",
+            help=", ".join(strong_proper[:12]) + ("…" if len(strong_proper) > 12 else ""),
+        ):
+            for w in strong_proper:
+                decide(lib, w, "proper")
+            st.toast(f"Ruled {len(strong_proper)} words Proper.")
+            st.rerun()
+
         for word, info in items:
-            cols = st.columns([3, 4, 1, 1])
-            cols[0].markdown(f"**{word}**  ·  seen {info.get('count', 1)}×")
+            cols = st.columns([3, 3, 1, 1])
+            sug = suggestions.get(word)
+            badge = ""
+            if sug:
+                badge = f"  ·  model: **{sug[0]}** {sug[1]:.0%}"
+            cols[0].markdown(
+                f"**{word}**  ·  seen {info.get('count', 1)}×{badge}")
             cols[1].caption(info.get("example", "")[:70])
             if cols[2].button("Proper", key=f"vocab_p_{word}",
                               help="Keep capitalized (name/place/term)"):
