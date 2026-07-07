@@ -206,3 +206,68 @@ class TestBulkSortDryRun:
             verbose=False,
         )
         assert summary["processed"] == 1
+
+
+class TestBatchCrashSafety:
+    """A raise mid-batch must never lose the in-memory undo transaction."""
+
+    def _tmp_undolog(self, monkeypatch, tmp_path):
+        # bulk_sort constructs UndoLog() with the DEFAULT log dir (the real
+        # library's .operation_log) — point it at a tmp dir instead.  The
+        # import is function-local (``from processing.undo_log import UndoLog``
+        # inside bulk_sort), so patch the SOURCE module's class.
+        import processing.undo_log as ul
+        real = ul.UndoLog
+        tmp_log_dir = tmp_path / ".operation_log"
+
+        class _TmpLog(real):
+            def __init__(self, log_dir=None):
+                super().__init__(log_dir=log_dir or tmp_log_dir)
+
+        monkeypatch.setattr(ul, "UndoLog", _TmpLog)
+        return tmp_log_dir
+
+    def test_sort_one_raising_does_not_abort_batch(
+        self, synthetic_library, make_pdf, tmp_path, monkeypatch
+    ):
+        import processing.bulk_sort as bs
+        log_dir = self._tmp_undolog(monkeypatch, tmp_path)
+        sub = synthetic_library / "12 - To be sorted" / "01 - Published papers"
+        sub.mkdir(parents=True, exist_ok=True)
+        a = sub / "a_raises.pdf"
+        b = sub / "b_works.pdf"
+        make_pdf(a)
+        make_pdf(b)
+
+        def flaky(pdf, status, **k):
+            if pdf == a:
+                raise OSError("simulated filesystem error")
+            undo_log = k.get("undo_log")
+            if undo_log is not None:
+                undo_log.record_move(pdf, pdf.with_name("x.pdf"))
+            return {"ok": True, "file": str(pdf), "destination": "x"}
+
+        monkeypatch.setattr(bs, "sort_one", flaky)
+        summary = bs.bulk_sort(synthetic_library, verbose=False)
+        assert summary["processed"] == 2
+        assert summary["filed"] == 1 and summary["failed"] == 1
+        # The op recorded before/around the raise is committed, reversible.
+        from processing.undo_log import UndoLog
+        txs = UndoLog(log_dir=log_dir).list_transactions()
+        assert len(txs) == 1 and txs[0]["operations_count"] == 1
+
+    def test_all_failed_batch_discards_empty_tx(
+        self, synthetic_library, make_pdf, tmp_path, monkeypatch
+    ):
+        import processing.bulk_sort as bs
+        log_dir = self._tmp_undolog(monkeypatch, tmp_path)
+        sub = synthetic_library / "12 - To be sorted" / "01 - Published papers"
+        sub.mkdir(parents=True, exist_ok=True)
+        make_pdf(sub / "fails.pdf")
+        monkeypatch.setattr(
+            bs, "sort_one",
+            lambda pdf, status, **k: {"ok": False, "file": str(pdf), "error": "nope"},
+        )
+        bs.bulk_sort(synthetic_library, verbose=False)
+        from processing.undo_log import UndoLog
+        assert UndoLog(log_dir=log_dir).list_transactions() == []

@@ -8,6 +8,10 @@ regex>=2023.12
 defusedxml>=0.7
 jinja2>=3.1
 
+# UI — the Streamlit cockpit is the sole interface
+# (`streamlit run src/ui/cockpit.py`); required for a working install.
+streamlit>=1.30
+
 # Async
 aiohttp>=3.9
 aiofiles>=23.0

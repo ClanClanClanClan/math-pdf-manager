@@ -147,6 +147,15 @@ class UndoLog:
             "changes": changes,
         })
 
+    def has_operations(self) -> bool:
+        """True if the current transaction has recorded at least one operation.
+
+        Lets batch callers decide between ``commit()`` (something to persist and
+        reverse) and ``discard()`` (a begun-but-empty tx) without reaching into
+        ``_current_tx``.  Returns False when there is no open transaction.
+        """
+        return bool(self._current_tx and self._current_tx.get("operations"))
+
     def discard(self) -> None:
         """Drop the current (in-memory) transaction without writing anything.
 

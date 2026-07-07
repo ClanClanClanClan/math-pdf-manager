@@ -1446,6 +1446,7 @@ def render_attention() -> None:
                                 fp = Path(it.payload.get("flag_file", ""))
                                 if fp.exists():
                                     fp.unlink()
+                                    _log_activity("attention.mark_flag_done", fp.name)
                                     st.toast(f"Removed flag {fp.name}")
                                     # Invalidate cached count so the
                                     # sidebar badge updates immediately
@@ -1458,13 +1459,36 @@ def render_attention() -> None:
                             elif action_id == "delete_conflict":
                                 p = Path(it.payload.get("path", ""))
                                 if p.exists():
-                                    # Move to .trash/ rather than hard-delete so
-                                    # the user can undo via Finder.
+                                    # Move to .trash/ through the undo log so the
+                                    # removal is reversible from the Activity tab
+                                    # (not just recoverable by hand in Finder).
+                                    from processing.undo_log import (
+                                        UndoLog, logged_move,
+                                    )
                                     trash = lib / ".trash" / "conflict_copies"
                                     trash.mkdir(parents=True, exist_ok=True)
-                                    p.rename(trash / p.name)
-                                    st.toast("Moved conflict copy to .trash/")
-                                    _attention_count_cached.clear()
+                                    dest = trash / p.name
+                                    n = 1
+                                    while dest.exists():
+                                        dest = trash / f"{p.stem} ({n}){p.suffix}"
+                                        n += 1
+                                    _log = UndoLog()
+                                    _tx = _log.begin_transaction(
+                                        f"attention: trash conflict {p.name}")
+                                    try:
+                                        logged_move(p, dest, undo_log=_log)
+                                        _log.commit()
+                                        _log_activity(
+                                            "attention.delete_conflict",
+                                            str(p.relative_to(lib)),
+                                            str(dest.relative_to(lib)), _tx)
+                                        st.toast("Moved conflict copy to .trash/ "
+                                                 "— undo from the Activity tab")
+                                        _attention_count_cached.clear()
+                                    except Exception as exc:
+                                        _log.discard()
+                                        st.warning(
+                                            f"Could not move conflict copy: {exc}")
                             elif action_id == "watcher_retry":
                                 st.info(
                                     "Drop the failing file back into the inbox to "
@@ -1494,8 +1518,13 @@ def render_attention() -> None:
                                         "Paper no longer in aging set; refresh and retry."
                                     )
                                 else:
+                                    # transition_aged_papers records its own
+                                    # reversible undo tx (visible in Activity);
+                                    # log the action to the activity feed too.
                                     results = transition_aged_papers([match], dry_run=False)
                                     status = results[0]["status"] if results else "no-op"
+                                    _log_activity("attention.transition_aged",
+                                                  Path(target_path).name, status)
                                     st.toast(f"Aging: {status}")
                                     _attention_count_cached.clear()
                             elif action_id == "reset_recheck":
@@ -1511,6 +1540,8 @@ def render_attention() -> None:
                                     if out is None:
                                         st.warning("No sidecar — nothing to reset.")
                                     else:
+                                        _log_activity("attention.reset_recheck",
+                                                      str(p.relative_to(lib)))
                                         st.toast(f"Recheck state reset for {p.name}")
                                         _attention_count_cached.clear()
                             elif action_id == "accept_topic":

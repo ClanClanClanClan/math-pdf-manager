@@ -148,3 +148,81 @@ class TestProcessReport:
         assert summary["total_candidates"] == 1
         # Preprint must still exist after dry-run
         assert Path(report_entry["file"]).exists()
+
+    def _report(self, tmp_path, entries):
+        report_path = tmp_path / "report.json"
+        report_path.write_text(json.dumps({
+            "total_checked": len(entries),
+            "published_count": len(entries),
+            "not_published_count": 0,
+            "published": entries,
+        }))
+        return report_path
+
+    def _tmp_undolog(self, monkeypatch, tmp_path):
+        # process_report constructs UndoLog() with the DEFAULT log dir (the
+        # real library's .operation_log) — point it at a tmp dir instead.
+        import processing.upgrade_to_published as up
+        from processing.undo_log import UndoLog
+        log_dir = tmp_path / ".operation_log"
+        monkeypatch.setattr(up, "UndoLog", lambda: UndoLog(log_dir=log_dir))
+        return log_dir
+
+    def test_one_paper_raising_does_not_abort_batch(
+        self, synthetic_library, report_entry, tmp_path, monkeypatch
+    ):
+        # Regression (audit): a raise mid-batch used to skip commit(),
+        # losing the undo record for papers already processed.
+        import processing.upgrade_to_published as up
+        log_dir = self._tmp_undolog(monkeypatch, tmp_path)
+
+        bad = dict(report_entry, filename="bad.pdf")
+        good = report_entry
+
+        real = up.upgrade_paper
+        calls = {"n": 0}
+
+        def flaky(entry, *a, **k):
+            calls["n"] += 1
+            # NB: entries round-trip through the report JSON, so compare by
+            # value (filename), never by object identity.
+            if entry.get("filename") == "bad.pdf":
+                raise OSError("simulated network error")
+            # Simulate real work that records an operation.
+            undo_log = k.get("undo_log")
+            if undo_log is not None:
+                undo_log.record_move(Path("/a"), Path("/b"))
+            return {"action": "FLAGGED for manual", "filename": entry["filename"]}
+
+        monkeypatch.setattr(up, "upgrade_paper", flaky)
+        summary = process_report(
+            self._report(tmp_path, [bad, good]),
+            library_root=synthetic_library, verbose=False,
+        )
+        assert calls["n"] == 2                       # batch continued past the raise
+        actions = [r["action"] for r in summary["results"]]
+        assert any(a.startswith("ERROR") for a in actions)
+        assert any("FLAGGED" in a for a in actions)
+        # The transaction with the recorded op was committed despite the raise.
+        from processing.undo_log import UndoLog
+        txs = UndoLog(log_dir=log_dir).list_transactions()
+        assert len(txs) == 1 and txs[0]["operations_count"] == 1
+        monkeypatch.setattr(up, "upgrade_paper", real)
+
+    def test_all_skipped_batch_discards_empty_tx(
+        self, synthetic_library, report_entry, tmp_path, monkeypatch
+    ):
+        import processing.upgrade_to_published as up
+        log_dir = self._tmp_undolog(monkeypatch, tmp_path)
+        monkeypatch.setattr(
+            up, "upgrade_paper",
+            lambda entry, *a, **k: {"action": "SKIP: no DOI",
+                                    "filename": entry.get("filename", "?")},
+        )
+        process_report(
+            self._report(tmp_path, [report_entry]),
+            library_root=synthetic_library, verbose=False,
+        )
+        # Nothing recorded -> no 0-op transaction litters the log.
+        from processing.undo_log import UndoLog
+        assert UndoLog(log_dir=log_dir).list_transactions() == []

@@ -495,39 +495,52 @@ def process_report(
     flagged = 0
     skipped = 0
 
-    for i, entry in enumerate(candidates, 1):
-        match = entry.get("match", {})
-        if verbose:
-            journal = match.get("journal", "?")[:30]
-            conf = match.get("confidence", 0)
-            print(f"  [{i}/{len(candidates)}] ({conf:.0%}) {journal}: {entry.get('filename', '?')[:45]}", end=" ")
+    # Crash-safety: a single paper raising (network/filesystem error, or a new
+    # code path) must NOT abort the batch and lose the in-memory transaction —
+    # the moves already done would then be unrecorded and unreversible.  Catch
+    # per paper, and ALWAYS commit-or-discard the undo log + clean up the temp
+    # dir in ``finally`` so whatever succeeded is persisted and reversible.
+    try:
+        for i, entry in enumerate(candidates, 1):
+            match = entry.get("match", {})
+            if verbose:
+                journal = match.get("journal", "?")[:30]
+                conf = match.get("confidence", 0)
+                print(f"  [{i}/{len(candidates)}] ({conf:.0%}) {journal}: {entry.get('filename', '?')[:45]}", end=" ")
 
-        r = upgrade_paper(
-            entry, library_root, download_dir,
-            dry_run=dry_run,
-            manual_only=manual_only,
-            undo_log=undo_log,
-        )
-        results.append(r)
+            try:
+                r = upgrade_paper(
+                    entry, library_root, download_dir,
+                    dry_run=dry_run,
+                    manual_only=manual_only,
+                    undo_log=undo_log,
+                )
+            except Exception as exc:  # never abort the whole batch
+                r = {"action": f"ERROR: {exc}",
+                     "filename": entry.get("filename", "?")}
+            results.append(r)
 
-        if "DOWNLOADED" in r.get("action", ""):
-            downloaded += 1
-        elif "FLAGGED" in r.get("action", ""):
-            flagged += 1
-        else:
-            skipped += 1
+            if "DOWNLOADED" in r.get("action", ""):
+                downloaded += 1
+            elif "FLAGGED" in r.get("action", ""):
+                flagged += 1
+            else:
+                skipped += 1
 
-        if verbose:
-            print(f"→ {r['action'][:60]}")
-
-    # Commit undo log
-    if undo_log and (downloaded > 0 or flagged > 0):
-        log_file = undo_log.commit()
-        if verbose:
-            print(f"\nUndo log: {log_file}")
-
-    # Clean up temp dir
-    shutil.rmtree(download_dir, ignore_errors=True)
+            if verbose:
+                print(f"→ {r['action'][:60]}")
+    finally:
+        if undo_log is not None:
+            if downloaded > 0 or flagged > 0:
+                log_file = undo_log.commit()
+                if verbose:
+                    print(f"\nUndo log: {log_file}")
+            else:
+                # Nothing recorded — drop the empty transaction rather than
+                # committing a 0-op entry into the log / Activity tab.
+                undo_log.discard()
+        # Always remove the temp download dir, even if a paper raised.
+        shutil.rmtree(download_dir, ignore_errors=True)
 
     summary = {
         "total_candidates": len(candidates),

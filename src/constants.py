@@ -34,7 +34,7 @@ ENV_CONFIG = {
 # Libraries to suppress logging for
 SUPPRESSED_LOGGERS = ("fitz", "pdfminer", "pdfplumber")
 
-# Dropbox migration paths (also in file_operations.py for consistency)
+# Dropbox migration paths
 DROPBOX_OLD_PATH = Path.home() / "Dropbox"
 DROPBOX_NEW_PATH = Path.home() / "Library/CloudStorage/Dropbox"
 

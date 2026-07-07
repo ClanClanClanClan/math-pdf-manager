@@ -190,13 +190,33 @@ def try_direct_doi(doi: str, output_path: Path) -> bool:
             stream=True,
         )
 
+        if resp.status_code != 200:
+            return False
         content_type = resp.headers.get("Content-Type", "")
         if "pdf" not in content_type.lower():
             return False
 
+        # Same truncation guard as _download_to_file: a stalled transfer
+        # leaves a valid %PDF header with a short body, which would pass the
+        # magic-byte check and get filed as the paper.  Compare bytes written
+        # against the server-declared Content-Length and drop anything short.
+        try:
+            declared = int(resp.headers.get("Content-Length") or 0)
+        except (TypeError, ValueError):
+            declared = 0
+
+        written = 0
         with open(output_path, "wb") as f:
             for chunk in resp.iter_content(chunk_size=8192):
-                f.write(chunk)
+                if chunk:
+                    f.write(chunk)
+                    written += len(chunk)
+
+        if declared and written < declared:
+            logger.debug("Truncated direct-DOI download %s (%d/%d bytes)",
+                         doi, written, declared)
+            output_path.unlink(missing_ok=True)
+            return False
 
         if _is_valid_pdf(output_path):
             logger.info("Direct DOI: downloaded %s", doi)

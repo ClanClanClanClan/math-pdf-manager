@@ -25,11 +25,10 @@ import logging
 import re
 import shutil
 import unicodedata
-from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional
+from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -114,23 +113,10 @@ class ContentValidator:
         return header == b"%PDF"
 
 
-# ---------------------------------------------------------------------------
-# Duplicate detection
-# ---------------------------------------------------------------------------
-class DuplicateDetector:
-    def find_exact_duplicates(self, files: Iterable[Path]) -> Dict[str, List[Path]]:
-        import hashlib
-
-        hash_map: Dict[str, List[Path]] = defaultdict(list)
-        for file_path in files:
-            if not file_path.exists():
-                continue
-            hasher = hashlib.sha256()
-            with open(file_path, "rb") as fh:
-                for chunk in iter(lambda: fh.read(8192), b""):
-                    hasher.update(chunk)
-            hash_map[hasher.hexdigest()].append(file_path)
-        return {d: paths for d, paths in hash_map.items() if len(paths) > 1}
+# Duplicate detection lives in processing.duplicate_scan (the authoritative
+# whole-library detector: size prefilter -> full-file SHA-256, keep-policy,
+# reversible resolution).  The vestigial per-call DuplicateDetector that used
+# to sit here had no live callers and was removed in the audit cleanup.
 
 
 # ---------------------------------------------------------------------------
@@ -381,7 +367,6 @@ class OrganizationSystem:
         self.dry_run = dry_run
         self.validator = ContentValidator()
         self.router = FolderRouter(library_root, topic=topic)
-        self.duplicate_detector = DuplicateDetector()
 
     def organize(
         self,
@@ -473,10 +458,6 @@ class OrganizationSystem:
             actions=actions,
             publication_status=status,
         )
-
-    def find_duplicates(self, files: Iterable[Path]) -> Dict[str, List[Path]]:
-        return self.duplicate_detector.find_exact_duplicates(files)
-
 
 # ---------------------------------------------------------------------------
 # Repository detection — these are NOT journal publications

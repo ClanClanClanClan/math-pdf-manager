@@ -10,10 +10,12 @@ import types
 
 
 class _FakeResp:
-    def __init__(self, status, body, declared=None):
+    def __init__(self, status, body, declared=None, content_type=None):
         self.status_code = status
         self._body = body
         self.headers = {} if declared is None else {"Content-Length": str(declared)}
+        if content_type is not None:
+            self.headers["Content-Type"] = content_type
 
     def iter_content(self, chunk_size=8192):
         for i in range(0, len(self._body), chunk_size):
@@ -69,6 +71,44 @@ class TestDownloadToFile:
         dl = _patch_requests(monkeypatch, _FakeResp(200, body, declared=None))
         out = tmp_path / "x.pdf"
         assert dl._download_to_file("http://x", out) is True
+
+
+class TestTryDirectDoi:
+    """try_direct_doi must apply the SAME guards as _download_to_file
+    (it streams the response itself): status check + truncation guard."""
+
+    def test_valid_complete_pdf(self, tmp_path, monkeypatch):
+        body = b"%PDF-1.5" + b"0" * 4000
+        dl = _patch_requests(monkeypatch, _FakeResp(
+            200, body, declared=len(body), content_type="application/pdf"))
+        out = tmp_path / "x.pdf"
+        assert dl.try_direct_doi("10.1/x", out) is True
+        assert out.exists()
+
+    def test_truncated_rejected(self, tmp_path, monkeypatch):
+        # Server declares more bytes than delivered -> stalled transfer;
+        # the %PDF header alone must NOT let it pass.
+        body = b"%PDF-1.5" + b"0" * 4000
+        dl = _patch_requests(monkeypatch, _FakeResp(
+            200, body, declared=999999, content_type="application/pdf"))
+        out = tmp_path / "x.pdf"
+        assert dl.try_direct_doi("10.1/x", out) is False
+        assert not out.exists()
+
+    def test_non_200_rejected(self, tmp_path, monkeypatch):
+        body = b"%PDF-1.5" + b"0" * 4000
+        dl = _patch_requests(monkeypatch, _FakeResp(
+            403, body, declared=len(body), content_type="application/pdf"))
+        out = tmp_path / "x.pdf"
+        assert dl.try_direct_doi("10.1/x", out) is False
+        assert not out.exists()
+
+    def test_non_pdf_content_type_rejected(self, tmp_path, monkeypatch):
+        dl = _patch_requests(monkeypatch, _FakeResp(
+            200, b"<html>paywall</html>", declared=20, content_type="text/html"))
+        out = tmp_path / "x.pdf"
+        assert dl.try_direct_doi("10.1/x", out) is False
+        assert not out.exists()
 
 
 class TestIsValidPdf:

@@ -117,6 +117,38 @@ class TestUndoTxIds:
         id_b = b.begin_transaction("ingest batch")
         assert id_a != id_b
 
+    def test_has_operations_reflects_recorded_ops(self, tmp_path):
+        from processing.undo_log import UndoLog
+        log = UndoLog(log_dir=tmp_path)
+        assert log.has_operations() is False        # no tx yet
+        log.begin_transaction("t")
+        assert log.has_operations() is False        # begun but empty
+        log.record_move(tmp_path / "a", tmp_path / "b")
+        assert log.has_operations() is True
+        log.commit()
+        assert log.has_operations() is False        # committed -> no open tx
+
+    def test_upgrade_process_report_commits_in_finally(self):
+        # Crash-safety regression: a paper raising mid-batch must not lose the
+        # transaction or leak the temp dir — commit/discard + rmtree live in a
+        # finally after the loop (asserted structurally, like the trash-order
+        # test below, since the real path needs network downloads).
+        import inspect
+        import processing.upgrade_to_published as up
+        src = inspect.getsource(up.process_report)
+        assert "finally:" in src
+        fin = src.index("finally:")
+        assert src.index("undo_log.commit()") > fin
+        assert src.index("shutil.rmtree(download_dir") > fin
+        assert "undo_log.discard()" in src          # empty-tx path
+
+    def test_bulk_sort_guards_empty_transaction(self):
+        import inspect
+        import processing.bulk_sort as bs
+        src = inspect.getsource(bs)
+        assert "has_operations()" in src
+        assert "undo_log.discard()" in src
+
     def test_discard_writes_no_transaction(self, tmp_path):
         # A begun-but-empty transaction must be DISCARDABLE without writing
         # a 0-op record (the watcher does this on a duplicate arrival).

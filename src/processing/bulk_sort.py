@@ -286,32 +286,45 @@ def bulk_sort(
     filed = failed = 0
     t0 = time.time()
 
-    for i, (pdf, status) in enumerate(candidates, 1):
-        if verbose:
-            print(f"  [{i}/{len(candidates)}] ({status}) {pdf.name[:60]}", end=" ", flush=True)
-        r = sort_one(
-            pdf, status,
-            library_root=library_root, dry_run=dry_run, undo_log=undo_log,
-        )
-        results.append(r)
-        if r["ok"]:
-            filed += 1
+    # Crash-safety: one paper raising must never abort the batch and lose the
+    # in-memory transaction — commit-or-discard ALWAYS runs in ``finally`` so
+    # whatever was recorded stays reversible.
+    try:
+        for i, (pdf, status) in enumerate(candidates, 1):
             if verbose:
-                dest = r.get("destination", "?")
-                try:
-                    dest_short = str(Path(dest).relative_to(library_root))
-                except Exception:
-                    dest_short = dest
-                print(f"→ {dest_short}")
-        else:
-            failed += 1
-            if verbose:
-                print(f"FAILED: {r.get('error', '?')}")
-
-    if undo_log and (filed > 0):
-        log_path = undo_log.commit()
-        if verbose:
-            print(f"\nUndo log: {log_path}")
+                print(f"  [{i}/{len(candidates)}] ({status}) {pdf.name[:60]}", end=" ", flush=True)
+            try:
+                r = sort_one(
+                    pdf, status,
+                    library_root=library_root, dry_run=dry_run, undo_log=undo_log,
+                )
+            except Exception as exc:  # never abort the whole batch
+                r = {"ok": False, "file": str(pdf), "error": f"error: {exc}"}
+            results.append(r)
+            if r["ok"]:
+                filed += 1
+                if verbose:
+                    dest = r.get("destination", "?")
+                    try:
+                        dest_short = str(Path(dest).relative_to(library_root))
+                    except Exception:
+                        dest_short = dest
+                    print(f"→ {dest_short}")
+            else:
+                failed += 1
+                if verbose:
+                    print(f"FAILED: {r.get('error', '?')}")
+    finally:
+        if undo_log is not None:
+            # Commit if ANY operation was recorded (so a paper that moved then
+            # failed with filed==0 still leaves a reversible record); otherwise
+            # drop the begun-but-empty transaction.
+            if undo_log.has_operations():
+                log_path = undo_log.commit()
+                if verbose:
+                    print(f"\nUndo log: {log_path}")
+            else:
+                undo_log.discard()
 
     summary = {
         "processed": len(candidates),

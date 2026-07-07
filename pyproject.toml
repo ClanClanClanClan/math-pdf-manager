@@ -24,6 +24,7 @@ classifiers = [
 ]
 requires-python = ">=3.9"
 dependencies = [
+    # Core
     "PyYAML>=6.0.1",
     "requests>=2.31.0",
     "tqdm>=4.66.0",
@@ -33,6 +34,24 @@ dependencies = [
     "rapidfuzz>=3.5.0",
     "regex>=2023.12.0",
     "defusedxml>=0.7.1",
+    "certifi",
+    # Sole UI — the Streamlit cockpit (`streamlit run src/ui/cockpit.py`).
+    # A base-install requirement: without it the cockpit fails to import.
+    "streamlit>=1.30.0",
+    # Text processing
+    "langdetect>=1.0.9",
+    "lz4>=4.3.0",
+    # Filesystem watcher (src/watcher/daemon.py)
+    "watchdog>=3.0.0",
+    # Downloaders: HTML parsing + browser automation + credential crypto
+    "beautifulsoup4>=4.12.0",
+    "playwright>=1.40.0",
+    "cryptography>=41.0.0",
+    # Async I/O (database, downloaders)
+    "aiohttp>=3.9.0",
+    "aiofiles>=23.0.0",
+    "aiosqlite>=0.19.0",
+    "httpx>=0.25.0",
 ]
 
 [project.optional-dependencies]
