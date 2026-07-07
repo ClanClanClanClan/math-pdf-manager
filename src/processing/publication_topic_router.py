@@ -288,13 +288,21 @@ def file_into_topic(
     # Preserve the alpha-subdir (and year for working papers) by taking
     # everything after the (closest) status dir in the current path.
     tail = Path(*parts[status_idx + 1:])  # "S/Smith - X.pdf" or "S/2020/..."
-    # A move also canonicalises the author block (initial spacing etc.);
-    # the surname — hence the alpha-subdir — is never changed by this, so
-    # routing stays correct.  Title is left untouched.
+    # A move also canonicalises formatting: the author block (initial
+    # spacing etc. — surname unchanged, so alpha-subdir routing stays
+    # correct) AND, when the safe-default caser is CONFIDENT, the title.
+    # Uncertain title words are queued in the owner's vocabulary for a
+    # one-click ruling instead of being touched.
     if normalize:
-        from processing.move_normalizer import normalize_authors_in_name
-        new_name, _ = normalize_authors_in_name(pdf_path.name)
+        from processing.move_normalizer import normalize_full_name
+        new_name, _, pending = normalize_full_name(pdf_path.name, library_root)
         tail = tail.with_name(new_name)
+        if pending:
+            try:
+                from processing.title_vocab import record_pending
+                record_pending(library_root, pending, example=pdf_path.name)
+            except Exception:  # best-effort — never block the move
+                pass
     dest = base / bucket / tail
 
     if dest.exists():

@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +68,42 @@ def normalize_authors_in_name(name: str) -> tuple[str, bool]:
     orig_title = cosmetic.split(" - ", 1)[1]
     new = f"{fixed_authors} - {orig_title}"
     return new, new != name
+
+
+def normalize_full_name(
+    name: str,
+    library_root: Optional[Path] = None,
+) -> tuple[str, bool, list]:
+    """Author block + (confident) safe-default title casing.
+
+    Returns ``(new_name, changed, pending_words)``.
+
+    The title is re-cased ONLY when the proposal is confident (no word the
+    caser couldn't prove common — see ``processing.title_normalize``); an
+    uncertain title is preserved verbatim and its unknown words returned in
+    ``pending_words`` so the caller can queue them for the owner's
+    vocabulary review.  Auto-apply of confident titles is the owner's
+    explicit policy choice.
+    """
+    new, changed = normalize_authors_in_name(name)
+    pending: list = []
+    if " - " not in new:
+        return new, changed, pending
+    try:
+        from processing.title_normalize import propose_title_case
+        authors, title_ext = new.split(" - ", 1)
+        if "." in title_ext:
+            stem, ext = title_ext.rsplit(".", 1)
+        else:
+            stem, ext = title_ext, ""
+        prop = propose_title_case(stem, library_root)
+        pending = list(prop.uncertain)
+        if prop.confident and prop.changed:
+            new = f"{authors} - {prop.proposed}" + (f".{ext}" if ext else "")
+            changed = True
+    except Exception as exc:  # never let title casing break a move
+        logger.debug("title normalize failed for %r: %s", name, exc)
+    return new, changed, pending
 
 
 def normalize_file_in_place(pdf: Path, *, undo_log=None) -> tuple[bool, str]:

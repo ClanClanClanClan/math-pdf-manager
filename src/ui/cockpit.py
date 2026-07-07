@@ -1740,6 +1740,49 @@ def render_to_download() -> None:
 # Page: Settings (config editor) -- Phase 5
 # ---------------------------------------------------------------------------
 
+def _render_title_vocabulary(lib: Path) -> None:
+    """Owner review of uncertain title words (the learning loop).
+
+    The safe-default title caser preserves any capitalized word it cannot
+    prove common and queues it here.  One click settles the word
+    library-wide: Proper (keep capitalized) or Common (lowercase on the
+    next move).  Decisions persist in the Dropbox-synced vocabulary.
+    """
+    from processing.title_vocab import decide, load_vocab
+
+    vocab = load_vocab(lib)
+    pending = vocab["pending"]
+    with st.expander(
+        f"📖 Title vocabulary — {len(pending)} word(s) awaiting review",
+        expanded=bool(pending) and len(pending) <= 12,
+    ):
+        st.caption(
+            f"Ruled so far: {len(vocab['proper'])} proper · "
+            f"{len(vocab['common'])} common.  A ruling applies to every "
+            "future move/filing; it never renames files retroactively."
+        )
+        if not pending:
+            st.success("No uncertain title words. ✓")
+            return
+        # Most-seen first; cap the render so a huge backlog stays snappy.
+        items = sorted(pending.items(),
+                       key=lambda kv: -kv[1].get("count", 1))[:50]
+        for word, info in items:
+            cols = st.columns([3, 4, 1, 1])
+            cols[0].markdown(f"**{word}**  ·  seen {info.get('count', 1)}×")
+            cols[1].caption(info.get("example", "")[:70])
+            if cols[2].button("Proper", key=f"vocab_p_{word}",
+                              help="Keep capitalized (name/place/term)"):
+                decide(lib, word, "proper")
+                st.rerun()
+            if cols[3].button("common", key=f"vocab_c_{word}",
+                              help="Ordinary word — lowercase mid-title"):
+                decide(lib, word, "common")
+                st.rerun()
+        if len(pending) > 50:
+            st.caption(f"…and {len(pending) - 50} more (highest-count 50 shown).")
+
+
 def render_settings() -> None:
     """Form-driven editor for the watcher config + Unpaywall email."""
     from ui.cockpit_actions import (
@@ -1749,6 +1792,7 @@ def render_settings() -> None:
     )
 
     st.header("⚙ Settings")
+    _render_title_vocabulary(_library())
     st.caption(
         "Persists watcher config to YAML.  ``UNPAYWALL_EMAIL`` is an "
         "environment variable -- the cockpit prints the export line so you "
