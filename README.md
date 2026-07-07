@@ -6,15 +6,16 @@ right section, tracks per-paper identity in a sidecar JSON, finds papers
 that have been published since you saved a preprint, downloads the
 published version from one of 21 publishers, surfaces every actionable
 event in one **Attention Queue**, and now ships a Streamlit cockpit with
-eleven task-focused pages so you never have to drop to a terminal.
+twelve task-focused pages so you never have to drop to a terminal.
 
 ## What's here
 
 ```
 src/
   ui/
-    cockpit.py             ← Streamlit review UI (eleven pages; see below)
+    cockpit.py             ← Streamlit review UI (twelve pages; see below)
     cockpit_actions.py     ← DOI download, watcher launchctl, config editor
+    search_page.py         ← filename search index + CSV/BibTeX export
     attention_queue.py     ← unified "needs your attention" collector layer
   processing/
     ingest.py              ← extract metadata → canonical name → file
@@ -100,11 +101,12 @@ pip install -r requirements.txt
 PYTHONPATH=src streamlit run src/ui/cockpit.py
 ```
 
-Eleven pages in the sidebar:
+Twelve pages in the sidebar:
 
 | Tab | What it does |
 |---|---|
 | **Attention** | Unified inbox of things that want your eyes: watcher ingest failures, manual-download requests from the upgrade pipeline, aging working papers, borderline (0.75-0.95 confidence) Crossref matches, papers the state machine has given up on, and Dropbox conflict copies. The label shows a count badge (cached 60s). Each item exposes per-source actions (Reset recheck, Open DOI, Dismiss N days, …). |
+| **Search** | Instant case/accent-insensitive search over the ~29k canonical filenames (all terms AND-match; 5-min cached index, ~5ms a query). Reveal-in-Finder per hit, and the result set exports as **CSV** or **BibTeX** (entry types from the folder convention; DOIs read from sidecars). |
 | **Sort Queue** | Walks `12 - To be sorted/{01,03,05}/`. Each paper shows: extracted title/authors/DOI, proposed canonical filename (editable), proposed destination, first-page snippet, and topic suggestions with **checkboxes** so a single approve click files the paper into the selected `07a-07f/` folder. |
 | **Upgrade Queue** | Reads a publication-checker JSON report. For each candidate: shows the matched DOI/journal/confidence, the preprint, and the proposed download. Approve triggers the 7-strategy downloader chain. |
 | **To Download** | Manual-download queue + DOI form. Type a DOI (or paste a `https://doi.org/…` URL) and the full strategy chain runs; the resulting PDF lands in the watcher inbox. The 04/ flag browser below lets you download or mark-done each pending flag inline. |

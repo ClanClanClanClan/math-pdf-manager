@@ -252,6 +252,7 @@ def render_sidebar() -> None:
             "Page",
             [
                 attention_label,
+                "Search",
                 "Sort Queue",
                 "Upgrade Queue",
                 "To Download",
@@ -2359,6 +2360,65 @@ def render_conflicts() -> None:
                     _sp.run(["open", str(canonical_p)], capture_output=True)
 
 
+@st.cache_data(ttl=300, show_spinner=False)
+def _search_index_cached(lib_str: str) -> list:
+    """One cached library walk backing the Search page (5-min TTL)."""
+    from ui.search_page import build_index
+    return build_index(Path(lib_str))
+
+
+def render_search() -> None:
+    """Instant search over the 29k canonical filenames + CSV/BibTeX export."""
+    from ui.search_page import row_details, search_index, to_bibtex, to_csv
+
+    st.header("🔎 Search")
+    st.caption(
+        "Case- and accent-insensitive search over the canonical filenames "
+        "(authors + title).  All terms must match (AND).  Export the "
+        "results as CSV or BibTeX — DOIs are read from sidecars for the "
+        "result set."
+    )
+    lib = _library()
+    query = st.text_input(
+        "Search", key="search_query",
+        placeholder="e.g.  possamai bsde   ·   mckean vlasov   ·   ekeland",
+    )
+    if not query or not query.strip():
+        st.info("Type author names and/or title words.")
+        return
+
+    index = _search_index_cached(str(lib))
+    hits = search_index(index, query, limit=200)
+    st.caption(f"{len(hits)} result(s)"
+               + (" (first 200 shown — refine the query)" if len(hits) == 200 else ""))
+    if not hits:
+        return
+
+    for i, (name, rel) in enumerate(hits[:60]):
+        cols = st.columns([8, 1])
+        folder = str(Path(rel).parent)
+        cols[0].markdown(f"**{name[:95]}**")
+        cols[0].caption(folder)
+        if cols[1].button("Open", key=f"search_open_{i}",
+                          help="Reveal in Finder"):
+            import subprocess
+            subprocess.run(["open", "-R", str(lib / rel)], check=False)
+    if len(hits) > 60:
+        st.caption(f"…and {len(hits) - 60} more (all included in exports).")
+
+    st.divider()
+    rows = [row_details(name, rel, lib) for name, rel in hits]
+    ecols = st.columns(2)
+    ecols[0].download_button(
+        "⬇ CSV", to_csv(rows), file_name="library_search.csv",
+        mime="text/csv", use_container_width=True,
+    )
+    ecols[1].download_button(
+        "⬇ BibTeX", to_bibtex(rows), file_name="library_search.bib",
+        mime="text/plain", use_container_width=True,
+    )
+
+
 def _dup_rel(path: str, lib: Path) -> str:
     """Library-relative display path; falls back to the raw string."""
     try:
@@ -2541,6 +2601,8 @@ def main() -> None:
     page = st.session_state.get("page", "Sort Queue")
     if page == "Attention":
         render_attention()
+    elif page == "Search":
+        render_search()
     elif page == "Sort Queue":
         render_sort_queue()
     elif page == "Upgrade Queue":
