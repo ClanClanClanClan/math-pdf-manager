@@ -6,30 +6,33 @@ right section, tracks per-paper identity in a sidecar JSON, finds papers
 that have been published since you saved a preprint, downloads the
 published version from one of 21 publishers, surfaces every actionable
 event in one **Attention Queue**, and now ships a Streamlit cockpit with
-nine task-focused tabs so you never have to drop to a terminal.
+eleven task-focused pages so you never have to drop to a terminal.
 
 ## What's here
 
 ```
 src/
   ui/
-    cockpit.py             ← Streamlit review UI (nine tabs; see below)
+    cockpit.py             ← Streamlit review UI (eleven pages; see below)
     cockpit_actions.py     ← DOI download, watcher launchctl, config editor
     attention_queue.py     ← unified "needs your attention" collector layer
   processing/
     ingest.py              ← extract metadata → canonical name → file
     identity.py            ← per-paper .meta.json sidecar (DOI, hash, history)
     publication_state.py   ← state machine: misses → permanently_unpublished
-    topic_router.py        ← classify + hardlink into 07a-07f folders
+    publication_topic_router.py ← file/move papers into 07a-07f (undo-logged)
+    pipeline_preview.py    ← read-only classification preview + gated bulk-apply
+    duplicate_scan.py      ← authoritative dedup: size→full-SHA-256, reversible
+    move_normalizer.py     ← author-format canonicalization on every move
     conflict_resolver.py   ← Dropbox conflict-copy diff/keep/promote
     bulk_sort.py           ← process raw PDFs dropped into 12 - To be sorted/
     upgrade_to_published.py ← preprint → published version round-trip
     publication_checker.py ← Crossref scan to find newly-published papers
     aging_checker.py       ← move 03/working → 02/unpublished when too old
-    duplicate_finder.py    ← exact + fuzzy duplicate detection
+    duplicate_finder.py    ← fuzzy-title duplicate clusters (Maintenance tab)
     paper_transition.py    ← simple file-mover when status changes
-    paper_index.py         ← classify file → (status, topic, alpha-subdir)
     topic_classifier.py    ← keyword + optional-LLM topic suggestion
+    classifier_text.py     ← abstract cache backfill (the recall lever)
     undo_log.py            ← transactional undo (sidecar-aware moves)
     filename_normalizer.py ← one-off cleanup utility
   organization/system.py   ← FolderRouter + OrganizationSystem (age-aware)
@@ -49,7 +52,7 @@ src/
     eth_institutional.py   ← Playwright + ETH Shibboleth auth
 
 deploy/launchd/            ← .plist files for the watcher + weekly cron
-tests/                     ← 1,692 passing tests
+tests/                     ← ~1,700 passing tests
 config/, data/             ← whitelists and config
 ```
 
@@ -65,6 +68,11 @@ config/, data/             ← whitelists and config
 ├── 06 - Theses/                   (A-Z)
 ├── 07a-07f/                       (topic folders: BSDEs, Contract theory, etc.)
 ├── 08, 09, 10/                    (special collections, untouched by tools)
+├── .trash/                        (recoverable removals: conflict_copies/,
+│                                   duplicates/, upgraded_preprints/ — nothing
+│                                   is ever hard-deleted)
+├── .mathpdf-sidecars/             (hidden mirror of per-paper .meta.json)
+├── .operation_log/                (undo transactions; cockpit Activity tab)
 └── 12 - To be sorted/             (intake; bulk_sort processes from here)
     ├── 01 - Published papers/      (sources you want filed as published)
     ├── 02 - Unpublished papers/
@@ -92,15 +100,17 @@ pip install -r requirements.txt
 PYTHONPATH=src streamlit run src/ui/cockpit.py
 ```
 
-Nine tabs in the sidebar:
+Eleven pages in the sidebar:
 
 | Tab | What it does |
 |---|---|
 | **Attention** | Unified inbox of things that want your eyes: watcher ingest failures, manual-download requests from the upgrade pipeline, aging working papers, borderline (0.75-0.95 confidence) Crossref matches, papers the state machine has given up on, and Dropbox conflict copies. The label shows a count badge (cached 60s). Each item exposes per-source actions (Reset recheck, Open DOI, Dismiss N days, …). |
-| **Sort Queue** | Walks `12 - To be sorted/{01,03,05}/`. Each paper shows: extracted title/authors/DOI, proposed canonical filename (editable), proposed destination, first-page snippet, and topic suggestions with **checkboxes** so a single approve click both files the paper AND hardlinks it into the selected `07a-07f/` folders. |
+| **Sort Queue** | Walks `12 - To be sorted/{01,03,05}/`. Each paper shows: extracted title/authors/DOI, proposed canonical filename (editable), proposed destination, first-page snippet, and topic suggestions with **checkboxes** so a single approve click files the paper into the selected `07a-07f/` folder. |
 | **Upgrade Queue** | Reads a publication-checker JSON report. For each candidate: shows the matched DOI/journal/confidence, the preprint, and the proposed download. Approve triggers the 7-strategy downloader chain. |
 | **To Download** | Manual-download queue + DOI form. Type a DOI (or paste a `https://doi.org/…` URL) and the full strategy chain runs; the resulting PDF lands in the watcher inbox. The 04/ flag browser below lets you download or mark-done each pending flag inline. |
 | **Conflicts** | Side-by-side resolver for Dropbox conflict copies. Shows bytes/pages/mtime for both files and offers Keep canonical / Keep conflict / Keep both (rename to `-v2`) / Open both. The suggested action is starred. |
+| **Duplicates** | Whole-library byte-identical duplicate detection (size prefilter → full-file SHA-256, no false positives). Auto-safe groups (same paper filed twice) clean up in one reversible batch to `.trash/duplicates/`; judgment cases (curated collections, cross-home, name-divergent possible misfiles) get a per-group keeper picker. |
+| **Pipeline Preview** | Read-only dry-run of the topic classifier over the whole library (agree/disagree/move bands, confidence histograms), an abstract-cache backfill helper, and the **gated bulk-apply** that files confident proposals in one undoable transaction. |
 | **Maintenance** | One-click "Run weekly now" (subprocess to `maintenance.weekly_report` with optional `--auto-apply-safe`) plus the same in-process check toggles the previous version had. |
 | **Stats** | Live counts per top-level folder + trash sizes. |
 | **Activity** | Every approval in this session, with a per-transaction undo button. Persistent across cockpit restarts (`~/.mathpdf/cockpit_activity.jsonl`). |

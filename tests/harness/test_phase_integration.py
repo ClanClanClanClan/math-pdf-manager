@@ -65,36 +65,43 @@ def _drop_paper(lib: Path, name: str, *, title: str, author: str) -> Path:
 # ---------------------------------------------------------------------------
 
 class TestPhase0ToPhase4Integration:
-    """Ingest -> sidecar -> topic links -> sidecar tracks links."""
+    """Ingest -> sidecar -> topic filing -> sidecar tracks the topic.
 
-    def test_ingest_then_topic_link_then_sidecar_tracks_both(self, lib):
+    Historical note: topic routing used to HARDLINK into 07x and track the
+    second location in ``copy_locations`` (processing.topic_router, removed
+    in the audit dead-code cleanup).  The live flow MOVES the paper into the
+    topic via ``publication_topic_router.file_into_topic``.
+    """
+
+    def test_ingest_then_topic_file_then_sidecar_tracks(self, lib):
         from processing.ingest import ingest_paper
         from processing.identity import PaperIdentity, sidecar_path
-        from processing.topic_router import classify_and_link
+        from processing.publication_topic_router import file_into_topic
 
         src = _drop_paper(lib, "drop.pdf",
                           title="Backward stochastic differential equations",
                           author="Smith, J.")
-        result = ingest_paper(src, library_root=lib, status="working", dry_run=False)
+        # auto_topic=False: the confidently-BSDE title would otherwise be
+        # auto-filed into 07a at ingest, and the explicit filing below would
+        # (correctly) refuse as a duplicate.  This scenario tests the
+        # ingest-to-status -> explicit-topic-filing path.
+        result = ingest_paper(src, library_root=lib, status="working",
+                              dry_run=False, auto_topic=False)
         assert result["success"]
         canonical = Path(result["destination"])
         assert canonical.exists()
         assert sidecar_path(canonical).exists()
 
-        # Topic-link explicitly to 07a
-        routing = classify_and_link(
-            canonical, lib,
-            title="Backward stochastic differential equations",
-            only_codes=["07a"],
-        )
-        assert len(routing.linked) == 1
-        link = Path(routing.linked[0])
-        assert link.exists()
+        # File explicitly into 07a (the live move-based flow).
+        ok, msg = file_into_topic(canonical, "07a", lib)
+        assert ok, msg
+        assert not canonical.exists()               # moved, not linked
+        dest = next((lib / "07a - BSDEs").rglob(canonical.name))
+        assert dest.exists()
 
-        # Sidecar tracks both locations + topic code
-        ident = PaperIdentity.load(canonical)
-        assert str(canonical) in ident.copy_locations
-        assert str(link) in ident.copy_locations
+        # Sidecar travelled with the move and records the topic code.
+        ident = PaperIdentity.load(dest)
+        assert not ident.is_new()
         assert "07a" in ident.topic_codes
 
 
@@ -202,32 +209,32 @@ class TestPhase6ConflictResolverIntegration:
 class TestUndoRoundTrip:
     """Every destructive action goes through undo_log; verify reversal."""
 
-    def test_topic_link_then_undo_restores(self, lib):
+    def test_topic_file_then_undo_restores(self, lib):
         from processing.ingest import ingest_paper
-        from processing.topic_router import classify_and_link
+        from processing.publication_topic_router import file_into_topic
         from processing.undo_log import UndoLog
-        from processing.identity import PaperIdentity
 
         src = _drop_paper(lib, "drop.pdf",
                           title="BSDE methods",
                           author="Doe, J.")
-        r = ingest_paper(src, library_root=lib, status="working", dry_run=False)
+        # auto_topic=False — see TestPhase0ToPhase4Integration: the BSDE
+        # title would be auto-filed into 07a at ingest otherwise.
+        r = ingest_paper(src, library_root=lib, status="working",
+                         dry_run=False, auto_topic=False)
         canonical = Path(r["destination"])
 
         log = UndoLog(log_dir=lib / ".ops")
-        tx = log.begin_transaction("topic link")
-        classify_and_link(
-            canonical, lib,
-            title="BSDE methods",
-            only_codes=["07a"],
-            undo_log=log,
-        )
+        tx = log.begin_transaction("topic file")
+        ok, msg = file_into_topic(canonical, "07a", lib, undo_log=log)
+        assert ok, msg
         log.commit()
 
-        link = lib / "07a - BSDEs" / canonical.name
-        assert link.exists()
+        dest = next((lib / "07a - BSDEs").rglob(canonical.name))
+        assert dest.exists()
+        assert not canonical.exists()               # moved into the topic
 
         log.undo_transaction(tx)
-        # The hardlink at 07a/ is gone; canonical untouched.
-        assert not link.exists()
+        # The move is reversed: paper (and its sidecar) back at the
+        # canonical location, topic copy gone.
         assert canonical.exists()
+        assert not dest.exists()
