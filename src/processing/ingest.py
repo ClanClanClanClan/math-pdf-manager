@@ -761,6 +761,24 @@ def ingest_paper(
                 cmo.authors = parsed
     else:
         canonical_name = cmo.get_canonical_filename()
+
+    # Naming must be PERFECT from the first filing (owner's rule): apply
+    # the same safe formatting pass a later move would — author-initial
+    # spacing ("R.C." -> "R. C.") plus the safe-default title caser
+    # (confident fixes applied, unprovable words preserved and queued in
+    # the title vocabulary).  The generator itself no longer sentence-
+    # cases (its whitelist default mangled unseen proper nouns), so this
+    # is where titles are cased, with the library's corpus + vocabulary
+    # as the oracle.
+    try:
+        from processing.move_normalizer import normalize_full_name
+        canonical_name, _, _pending = normalize_full_name(
+            canonical_name, library_root)
+        if _pending and not dry_run:
+            from processing.title_vocab import record_pending
+            record_pending(library_root, _pending, example=canonical_name)
+    except Exception as exc:  # formatting must never block an ingest
+        logger.warning("canonical-name normalization failed: %s", exc)
     result["filename"] = canonical_name
 
     # Fallback for already-canonical filenames with empty metadata: if the

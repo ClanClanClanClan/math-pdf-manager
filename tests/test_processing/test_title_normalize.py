@@ -193,3 +193,27 @@ class TestRealLibraryEdgeClasses:
         # NOT be upcased.
         p = propose_title_case("Stopper vs. singular-controller games")
         assert "vs. singular" in p.proposed
+
+
+class TestIngestPerfectNaming:
+    """The first filing applies the same safe formatting as a move."""
+
+    def test_ingest_cases_title_and_queues_unknowns(self, tmp_path):
+        from processing.identity import enable_sidecar_mirror
+        from processing.ingest import ingest_paper
+        for d in ["01 - Published papers", "12 - To be sorted"]:
+            (tmp_path / d).mkdir(parents=True)
+        enable_sidecar_mirror(tmp_path)
+        src = tmp_path / "12 - To be sorted" / "drop.pdf"
+        # Metadata title in Title Case with one unknown proper noun.
+        _write_minimal_pdf(
+            src, title="On The Existence Of Zorglub Solutions",
+            author="Dalang, Robert Charles")
+        r = ingest_paper(src, library_root=tmp_path, status="published",
+                         dry_run=False, auto_topic=False)
+        assert r["success"], r
+        name = r["filename"]
+        assert "R. C." in name                       # spaced initials at birth
+        assert "the existence of" in name            # confident words downcased
+        assert "Zorglub" in name                     # unknown preserved
+        assert "Zorglub" in load_vocab(tmp_path)["pending"]   # ...and queued

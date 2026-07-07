@@ -27,6 +27,14 @@ class Author:
         return self.family
 
     def initials(self) -> str:
+        """Initials in the library's canonical SPACED form.
+
+        Separate given names join with dot+space ("Paul André" → "P. A",
+        so the filename reads "Dupont, P. A."), matching the owner's rule
+        that initials are spaced ("R. C.", never "R.C.") and the
+        validator's ``fix_initial_spacing``.  Hyphenated names keep the
+        hyphen-dot shape with no inner space ("Jean-Pierre" → "J.-P").
+        """
         if not self.given:
             return ""
         tokens = re.split(r"\s+", self.given.strip())
@@ -41,7 +49,7 @@ class Author:
                 segments.append(subparts[0][0].upper())
             else:
                 segments.append(".-".join(part[0].upper() for part in subparts))
-        return ".".join(segments)
+        return ". ".join(segments)
 
 
 @dataclass
@@ -355,7 +363,13 @@ def _validate_filename(filename: str) -> str:
             capitalization_whitelist=config["capitalization_whitelist"],
             name_dash_whitelist=config["name_dash_whitelist"],
             multiword_surnames=config["multiword_surnames"],
-            sentence_case=True,
+            # Title casing is deliberately NOT done here: this engine's
+            # default lowercases any capitalized word missing from its
+            # whitelist, which mangles unseen proper nouns.  The SAFE
+            # caser (processing.title_normalize — preserve-and-queue
+            # default, corpus oracle) runs in ingest_paper where the
+            # library context lives, exactly as on moves.
+            sentence_case=False,
             auto_fix_nfc=True,
             auto_fix_authors=True,
         )

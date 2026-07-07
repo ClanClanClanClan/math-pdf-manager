@@ -25,10 +25,12 @@ class TestInitials:
         assert Author(family="Dupont", given="Jean-Pierre").initials() == "J.-P"
 
     def test_multiple_given_names(self):
-        assert Author(family="Krée", given="Paul André").initials() == "P.A"
+        # Separate initials are SPACED (owner's rule: "R. C.", never
+        # "R.C.") — matches the validator and the move-time normalizer.
+        assert Author(family="Krée", given="Paul André").initials() == "P. A"
 
     def test_three_given_names(self):
-        assert Author(family="Zheng", given="Karl Theodor Hans").initials() == "K.T.H"
+        assert Author(family="Zheng", given="Karl Theodor Hans").initials() == "K. T. H"
 
     def test_single_letter(self):
         assert Author(family="Touzi", given="N").initials() == "N"
@@ -38,8 +40,9 @@ class TestInitials:
         assert Author(family="Touzi", given="").initials() == ""
 
     def test_already_initials(self):
-        # "S. C. P." as given name — each token produces one initial
-        assert Author(family="Yam", given="S. C. P.").initials() == "S.C.P"
+        # "S. C. P." as given name — each token produces one initial,
+        # joined in the spaced canonical form.
+        assert Author(family="Yam", given="S. C. P.").initials() == "S. C. P"
 
     def test_double_hyphenated(self):
         assert Author(family="Test", given="Anne-Marie-Claire").initials() == "A.-M.-C"

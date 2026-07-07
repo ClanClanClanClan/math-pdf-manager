@@ -78,12 +78,13 @@ def normalize_full_name(
 
     Returns ``(new_name, changed, pending_words)``.
 
-    The title is re-cased ONLY when the proposal is confident (no word the
-    caser couldn't prove common — see ``processing.title_normalize``); an
-    uncertain title is preserved verbatim and its unknown words returned in
-    ``pending_words`` so the caller can queue them for the owner's
-    vocabulary review.  Auto-apply of confident titles is the owner's
-    explicit policy choice.
+    Title casing is applied PER WORD: the safe-default caser only ever
+    changes words it individually proved common (plus the first word), so
+    its proposal is safe to apply even when OTHER words in the title are
+    unknown — those are preserved verbatim and returned in
+    ``pending_words`` for the owner's vocabulary review.  One eponym in a
+    title must not block fixing a blatant "The/Of" (auto-apply is the
+    owner's explicit policy choice).
     """
     new, changed = normalize_authors_in_name(name)
     pending: list = []
@@ -98,7 +99,7 @@ def normalize_full_name(
             stem, ext = title_ext, ""
         prop = propose_title_case(stem, library_root)
         pending = list(prop.uncertain)
-        if prop.confident and prop.changed:
+        if prop.changed:
             new = f"{authors} - {prop.proposed}" + (f".{ext}" if ext else "")
             changed = True
     except Exception as exc:  # never let title casing break a move

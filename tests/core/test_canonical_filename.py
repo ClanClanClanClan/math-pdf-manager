@@ -297,3 +297,37 @@ class TestByteLimit:
     def test_pdf_extension_always_present(self):
         fn = _fn("X" * 300, _authors(("Test", "A")), max_bytes=251)
         assert fn.endswith(".pdf")
+
+
+class TestBirthPerfectNaming:
+    """Owner's rule: naming must be perfect from the FIRST filing.
+
+    * Author initials are SPACED at generation ("Dupont, P. A.", never
+      "P.A."), matching the move-time normalizer and the validator.
+    * The generator no longer sentence-cases titles (its whitelist
+      default mangled unseen proper nouns) — the safe caser runs in
+      ingest_paper instead, so unknown proper nouns survive generation.
+    """
+
+    def test_initials_are_spaced(self):
+        from arxivbot.models.cmo import Author
+        assert Author(family="Dupont", given="Paul André").initials() == "P. A"
+        # Hyphenated names keep the hyphen-dot shape, no inner space.
+        assert Author(family="Dupont", given="Jean-Pierre").initials() == "J.-P"
+        assert Author(family="Doe", given="John").initials() == "J"
+
+    def test_canonical_filename_spaced_initials(self):
+        from arxivbot.models.cmo import CMO, Author
+        cmo = CMO(external_id="x", source="test",
+                  title="A study of backward equations",
+                  authors=[Author(family="Dalang", given="Robert Charles")])
+        name = cmo.get_canonical_filename()
+        assert name.startswith("Dalang, R. C. - ")
+
+    def test_generator_preserves_unknown_proper_nouns(self):
+        from arxivbot.models.cmo import CMO, Author
+        cmo = CMO(external_id="x", source="test",
+                  title="Analysis on the Franscini graph",
+                  authors=[Author(family="Smith", given="John")])
+        name = cmo.get_canonical_filename()
+        assert "Franscini" in name                  # not "franscini"
