@@ -239,6 +239,10 @@ class PDFHandler(FileSystemEventHandler):
                 # byte-identical to one already in the library is NOT filed
                 # as a second copy.
                 dedup_check=True,
+                # ...and the preprint↔published variant check: an arrival
+                # whose DOI/arXiv id already lives in a different file is
+                # filed anyway but flagged for review.
+                variant_check=True,
             )
 
             if result["success"]:
@@ -260,6 +264,21 @@ class PDFHandler(FileSystemEventHandler):
                     logger.info("Filed: %s → %s", result['filename'], dest_short)
                     if self.config.notifications:
                         notify("Paper Filed", msg, sound=self.config.notification_sound)
+                    # Filed fine, but its DOI/arXiv id already lives in a
+                    # different file — almost certainly the other side of a
+                    # preprint↔published pair.  Tell the user where to look.
+                    if result.get("variant_of"):
+                        try:
+                            twin_short = str(Path(result["variant_of"])
+                                             .relative_to(self.config.library_root))
+                        except ValueError:
+                            twin_short = result["variant_of"]
+                        logger.info("Variant suspicion: %s <-> %s",
+                                    result['filename'], twin_short)
+                        if self.config.notifications:
+                            notify("Possible preprint/published variant",
+                                   f"{result['filename']}\nmatches {twin_short}\n"
+                                   f"— review in the Duplicates page", sound="")
 
                     # Commit undo log
                     if undo_log:

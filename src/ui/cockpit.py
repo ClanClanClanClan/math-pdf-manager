@@ -2463,6 +2463,119 @@ def _dup_rel(path: str, lib: Path) -> str:
         return path
 
 
+def _render_variant_section(lib: Path) -> None:
+    """Preprint ↔ published variants: same paper, different bytes.
+
+    Content-hash dedup is blind to these (the PDFs differ); identity
+    comes from DOI / arXiv-id matches (mined into sidecars from the
+    cached first-pages text) plus an author+title/abstract fuzzy tier.
+    Retiring a preprint is review-gated and reversible; the library
+    policy is "retire unless it's an extended version", so both sides'
+    page counts are shown.
+    """
+    from processing.preprint_variants import (
+        VariantPair,
+        backfill_identifiers,
+        compare_pair,
+        dismiss_pair,
+        find_variant_pairs,
+        load_dismissals,
+        retire_variant,
+    )
+    from processing.undo_log import UndoLog
+
+    st.divider()
+    st.subheader("🔁 Same-paper variants (different bytes)")
+    st.caption(
+        "The same paper filed twice with DIFFERENT bytes — a preprint vs "
+        "its published version, or near-duplicate re-filings the byte-hash "
+        "dedup can't catch (ü/ue, author order, dashes, corrigenda).  "
+        "Matched by DOI / arXiv id (author-confirmed), then a fuzzy "
+        "author+title/abstract tier.  Pick which copy to keep; the other "
+        "moves to `.trash/` (reversible).  Keep both if it's an extended "
+        "version or genuinely distinct."
+    )
+    bcols = st.columns([1, 1, 3])
+    if bcols[0].button("🔍 Scan for variants", key="var_scan"):
+        with st.spinner("Mining identifiers + matching…"):
+            bf = backfill_identifiers(lib)
+            pairs = find_variant_pairs(lib)
+        st.session_state["variant_pairs"] = [p.to_dict() for p in pairs]
+        st.toast(f"IDs mined: +{bf['doi_added']} DOI, "
+                 f"+{bf['arxiv_added']} arXiv · {len(pairs)} pair(s)")
+
+    raw = st.session_state.get("variant_pairs")
+    if raw is None:
+        st.info("Click **Scan for variants** to analyse the library.")
+        return
+    dismissed = load_dismissals(lib)
+    pairs = [VariantPair(**d) for d in raw]
+    pairs = [p for p in pairs if p.key() not in dismissed]
+    if not pairs:
+        st.success("No unreviewed preprint↔published variants. ✓")
+        return
+    st.caption(f"{len(pairs)} pair(s) awaiting review "
+               f"({len(dismissed)} previously kept-both).")
+
+    for idx, p in enumerate(pairs[:40]):
+        with st.container(border=True):
+            ev = ", ".join(f"{k}={v}" for k, v in p.evidence.items())
+            st.markdown(f"**{p.tier.upper()} match**  ·  {ev}")
+            cmp = compare_pair(p, lib)
+            pre_i, pub_i = cmp["preprint"], cmp["published"]
+            st.markdown(f"📄 preprint: `{p.preprint}`")
+            st.caption(f"    {pre_i['pages'] or '?'} pages · "
+                       f"{pre_i['bytes'] // 1024} KB")
+            st.markdown(f"📗 published: `{p.published}`")
+            st.caption(f"    {pub_i['pages'] or '?'} pages · "
+                       f"{pub_i['bytes'] // 1024} KB")
+            if (pre_i["pages"] and pub_i["pages"]
+                    and abs(pre_i["pages"] - pub_i["pages"]) >= 3):
+                st.warning("Notably different page counts — possibly an "
+                           "extended version; consider Keep both.")
+            # Default to keeping the published side when the pair is
+            # cross-status; otherwise the (deeper-pathed) first side.
+            options = [p.published, p.preprint]
+            keep = st.radio(
+                "Keep which copy?", options,
+                format_func=lambda r: _dup_rel(r, lib),
+                key=f"var_keep_which_{idx}",
+            )
+            acols = st.columns([2, 1, 1])
+            if acols[0].button("🗑 Retire the other (reversible)",
+                               key=f"var_retire_{idx}", type="primary"):
+                drop = p.preprint if keep == p.published else p.published
+                log = UndoLog(log_dir=lib / ".operation_log")
+                tx = log.begin_transaction(
+                    f"retire variant: {Path(drop).name}")
+                ok, msg = retire_variant(p, lib, drop=drop, undo_log=log)
+                if log.has_operations():
+                    log.commit()
+                else:
+                    log.discard()
+                if ok:
+                    _log_activity("variant.retire", drop, keep, tx)
+                    st.toast(msg)
+                else:
+                    st.warning(msg)
+                st.session_state["variant_pairs"] = [
+                    q.to_dict() for q in pairs if q.key() != p.key()]
+                st.rerun()
+            if acols[1].button("Keep both", key=f"var_keepboth_{idx}",
+                               help="Extended version / genuinely distinct — "
+                                    "won't be shown again"):
+                dismiss_pair(lib, p)
+                st.rerun()
+            if acols[2].button("Open both", key=f"var_open_{idx}"):
+                import subprocess
+                for rel in (p.preprint, p.published):
+                    if (lib / rel).exists():
+                        subprocess.run(["open", str(lib / rel)],
+                                       capture_output=True)
+    if len(pairs) > 40:
+        st.caption(f"…and {len(pairs) - 40} more (strongest evidence first).")
+
+
 def render_duplicates() -> None:
     """Whole-library exact-duplicate detection + reversible resolution.
 
@@ -2649,6 +2762,10 @@ def main() -> None:
         render_conflicts()
     elif page == "Duplicates":
         render_duplicates()
+        # Variants are the "same paper, different bytes" sibling of the
+        # byte-identical dedup above — rendered even when the dedup scan
+        # finds nothing (render_duplicates may early-return).
+        _render_variant_section(_library())
     elif page == "Maintenance":
         render_maintenance()
     elif page == "Pipeline Preview":

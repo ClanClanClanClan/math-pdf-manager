@@ -941,6 +941,27 @@ def ingest_paper(
         except Exception as exc:  # never block ingest on the guard
             logger.warning("dedup arrival check failed: %s", exc)
 
+    # Step 4.6: preprint↔published variant check (opt-in, notify-only).
+    # If the arrival's DOI or arXiv id already lives in a DIFFERENT file,
+    # this is almost certainly the other side of a preprint↔published
+    # pair (the bytes differ, so the dedup guard is blind to it).  We
+    # still FILE the arrival — it may well be the published version the
+    # owner wants — but flag it so the watcher can notify and the
+    # Duplicates page's variant scan will pair them for review.
+    if not dry_run and kwargs.get("variant_check", False):
+        try:
+            from processing.preprint_variants import find_identifier_twin
+            twin = find_identifier_twin(
+                library_root,
+                doi=metadata.get("doi", ""),
+                arxiv_id=metadata.get("arxiv_id", ""),
+                exclude=pdf_path,
+            )
+            if twin:
+                result["variant_of"] = twin
+        except Exception as exc:  # never block ingest on the check
+            logger.warning("variant check failed: %s", exc)
+
     # Step 5: Organize (route to correct directory, with undo logging)
     org = OrganizationSystem(library_root, topic=topic, dry_run=dry_run)
     org_result = org.organize(pdf_path, metadata, canonical_name, year=paper_year, undo_log=kwargs.get("undo_log"))
