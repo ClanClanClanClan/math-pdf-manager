@@ -734,14 +734,141 @@ def _approve_upgrade(entry: dict, lib: Path) -> tuple[bool, str]:
 # Page: Maintenance
 # ---------------------------------------------------------------------------
 
+def _render_normalize_section(lib: Path) -> None:
+    """Bring EXISTING filenames up to the canonical standard.
+
+    Naming is fixed automatically at ingest and on every move; this brings
+    the back-catalogue to the same standard as a dry-run-first, reversible,
+    gated batch.  The mechanical author-initial spacing ("R.C."→"R. C.")
+    is separated from safe-default title casing so the trusted bucket can
+    be applied without reading every row.
+    """
+    from processing.library_normalize import AUTHOR, TITLE, BOTH, apply_renames
+
+    _KIND_LABEL = {AUTHOR: "author spacing", TITLE: "title casing",
+                   BOTH: "author + title"}
+
+    with st.expander("✏️ Normalize existing filenames (reversible)",
+                     expanded=False):
+        st.caption(
+            "Applies the SAME canonical rules used at ingest/move to files "
+            "already in the library: author-initial spacing (`R.C.`→`R. C.`) "
+            "and safe-default title casing (only words the corpus proves are "
+            "ordinary get lowercased — proper nouns are preserved and "
+            "uncertain ones queued for review).  Scan first; every rename is "
+            "reversible via the operation log."
+        )
+        if st.button("🔍 Scan existing filenames", key="libnorm_scan"):
+            with st.spinner("Scanning the whole library (read-only)…"):
+                from processing.library_normalize import scan
+                st.session_state["libnorm_scan"] = scan(lib)
+            n = st.session_state["libnorm_scan"]["total"]
+            st.toast(f"{n} filename(s) differ from canonical.")
+
+        data = st.session_state.get("libnorm_scan")
+        if not data:
+            st.info("Click **Scan existing filenames** to see what would change.")
+            return
+        if data["total"] == 0:
+            st.success("Every existing filename is already canonical. ✓")
+            return
+
+        bk = data["by_kind"]
+        m = st.columns(4)
+        m[0].metric("Author spacing", bk[AUTHOR])
+        m[1].metric("Title casing", bk[TITLE])
+        m[2].metric("Both", bk[BOTH])
+        m[3].metric("Uncertain words", len(data["pending_words"]))
+
+        # Per-bucket preview.
+        for kind in (AUTHOR, TITLE, BOTH):
+            rows = [p for p in data["proposals"] if p["kind"] == kind]
+            if not rows:
+                continue
+            with st.expander(f"Preview — {_KIND_LABEL[kind]} ({len(rows)})",
+                             expanded=False):
+                for p in rows[:60]:
+                    st.markdown(
+                        f"`{p['old_name']}`  →  **{p['name']}**"
+                    )
+                if len(rows) > 60:
+                    st.caption(f"…and {len(rows) - 60} more.")
+
+        st.divider()
+        st.markdown("**Apply a batch** (reversible)")
+        c = st.columns(3)
+        inc_author = c[0].checkbox("Author spacing", value=True,
+                                   key="libnorm_inc_author",
+                                   help="Mechanical + safe; low-risk bucket.")
+        inc_title = c[1].checkbox("Title casing", value=False,
+                                  key="libnorm_inc_title",
+                                  help="Review the preview first.")
+        inc_both = c[2].checkbox("Both", value=False, key="libnorm_inc_both")
+        c2 = st.columns([2, 2])
+        batch_n = c2[0].number_input(
+            "Max files this batch", min_value=1, max_value=100_000,
+            value=500, step=100, key="libnorm_batch",
+            help="Apply incrementally — smaller batches are easier to undo.",
+        )
+        queue_words = c2[1].checkbox(
+            "Queue uncertain words for review", value=True,
+            key="libnorm_queue",
+            help="Adds surfaced words to the Settings vocabulary panel.",
+        )
+
+        sel_kinds = {k for k, on in
+                     ((AUTHOR, inc_author), (TITLE, inc_title), (BOTH, inc_both))
+                     if on}
+        chosen = [p for p in data["proposals"] if p["kind"] in sel_kinds]
+        st.caption(f"{len(chosen)} match the selected buckets; "
+                   f"this batch will apply up to {int(batch_n)}.")
+
+        if st.button("✅ Apply this batch (reversible)", type="primary",
+                     key="libnorm_apply", disabled=not chosen):
+            batch = chosen[:int(batch_n)]
+            with st.spinner(f"Renaming {len(batch)} file(s)…"):
+                res = apply_renames(
+                    lib, batch, dry_run=False,
+                    pending_words=(data["pending_words"] if queue_words else None),
+                )
+            st.success(
+                f"Renamed {res['renamed']} · skipped {len(res['skipped'])}."
+                + (f"  Undo tx `{res['tx_id']}`." if res.get("tx_id") else "")
+            )
+            if res["skipped"]:
+                with st.expander(f"Skipped {len(res['skipped'])} "
+                                 "(collision / vanished)"):
+                    for s in res["skipped"][:50]:
+                        st.caption(f"`{s['old']}` — {s['reason']}")
+            if res.get("tx_id"):
+                _log_activity("normalize.apply", str(lib),
+                              f"{res['renamed']} renamed", res["tx_id"])
+            # Drop everything we just attempted from the pending scan so the
+            # view shrinks; a fresh scan reflects the true remaining set.
+            done = {p["old"] for p in batch}
+            data["proposals"] = [p for p in data["proposals"]
+                                 if p["old"] not in done]
+            data["by_kind"] = {
+                k: sum(1 for p in data["proposals"] if p["kind"] == k)
+                for k in (AUTHOR, TITLE, BOTH)
+            }
+            data["total"] = len(data["proposals"])
+            st.session_state["libnorm_scan"] = data
+            st.rerun()
+
+
 def render_maintenance() -> None:
     st.header("🧹 Maintenance")
     st.caption(
-        "Run the same checks as `python -m maintenance.weekly_report`. "
-        "Read-only — these just produce reports, no files moved."
+        "The checks below run the same analysis as "
+        "`python -m maintenance.weekly_report` (read-only reports).  The "
+        "filename-normalizer at the top renames files — but only what you "
+        "select, and every batch is reversible."
     )
 
     lib = _library()
+
+    _render_normalize_section(lib)
 
     # Phase 5: one-click full weekly run (the Monday plist's equivalent)
     # via the cockpit so users don't need a terminal to trigger it.

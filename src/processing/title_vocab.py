@@ -24,6 +24,14 @@ logger = logging.getLogger(__name__)
 VOCAB_DIRNAME = ".mathpdf-config"
 VOCAB_FILENAME = "title_vocab.json"
 
+# Parsed-vocab cache keyed by (path, mtime).  A library-wide title sweep
+# resolves every filename through the caser, which loads the vocabulary
+# once per file; without this each call would re-parse the JSON and
+# NFC-normalise every word.  Callers receive a fresh COPY (below) so their
+# in-place mutations never poison the cache, and any atomic rewrite bumps
+# mtime and invalidates the stale entry.
+_VOCAB_CACHE: dict = {}
+
 
 def vocab_path(library_root: Path) -> Path:
     return library_root / VOCAB_DIRNAME / VOCAB_FILENAME
@@ -47,22 +55,39 @@ def load_vocab(library_root: Path) -> dict:
     empty = {"proper": set(), "common": set(), "pending": {}}
     p = vocab_path(library_root)
     try:
-        raw = json.loads(p.read_text())
-    except (OSError, json.JSONDecodeError, ValueError):
+        mtime = p.stat().st_mtime
+    except OSError:
         return empty
-    try:
-        return {
-            "proper": {_norm(w) for w in raw.get("proper", [])},
-            "common": {_norm(w).lower() for w in raw.get("common", [])},
-            "pending": {
-                _norm(w): {"count": int(i.get("count", 1)),
-                           "example": str(i.get("example", ""))}
-                for w, i in dict(raw.get("pending", {})).items()
-            },
-        }
-    except Exception:  # defensive: malformed structure
-        logger.warning("title_vocab.json malformed; starting empty")
-        return empty
+
+    key = (str(p), mtime)
+    cached = _VOCAB_CACHE.get(key)
+    if cached is None:
+        try:
+            raw = json.loads(p.read_text())
+        except (OSError, json.JSONDecodeError, ValueError):
+            return empty
+        try:
+            cached = {
+                "proper": {_norm(w) for w in raw.get("proper", [])},
+                "common": {_norm(w).lower() for w in raw.get("common", [])},
+                "pending": {
+                    _norm(w): {"count": int(i.get("count", 1)),
+                               "example": str(i.get("example", ""))}
+                    for w, i in dict(raw.get("pending", {})).items()
+                },
+            }
+        except Exception:  # defensive: malformed structure
+            logger.warning("title_vocab.json malformed; starting empty")
+            return empty
+        _VOCAB_CACHE[key] = cached
+
+    # Hand back a private copy — callers (decide/record_pending) mutate the
+    # returned dict in place before saving, which must not touch the cache.
+    return {
+        "proper": set(cached["proper"]),
+        "common": set(cached["common"]),
+        "pending": {w: dict(i) for w, i in cached["pending"].items()},
+    }
 
 
 def _save(library_root: Path, vocab: dict) -> None:

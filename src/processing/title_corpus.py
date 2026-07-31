@@ -33,6 +33,13 @@ REBUILD_DAYS = 7
 
 _WORD_RE = re.compile(r"[^\W\d_]+", re.UNICODE)
 
+# Parsed-stats cache keyed by (path, mtime).  A library-wide title sweep
+# calls load_word_stats once per file (~29k); without this it would
+# re-parse the ~11k-word JSON every time.  The mtime in the key makes it
+# self-invalidating — any atomic rewrite of the stats file changes mtime
+# and misses the stale entry.
+_STATS_CACHE: dict = {}
+
 
 def stats_path(library_root: Path) -> Path:
     return library_root / ".mathpdf-config" / STATS_FILENAME
@@ -74,8 +81,15 @@ def load_word_stats(library_root: Path, *, auto_build: bool = True) -> dict:
     """
     p = stats_path(library_root)
     try:
-        if p.exists() and (time.time() - p.stat().st_mtime) < REBUILD_DAYS * 86400:
-            return json.loads(p.read_text())
+        mtime = p.stat().st_mtime
+        if (time.time() - mtime) < REBUILD_DAYS * 86400:
+            key = (str(p), mtime)
+            cached = _STATS_CACHE.get(key)
+            if cached is not None:
+                return cached
+            data = json.loads(p.read_text())
+            _STATS_CACHE[key] = data
+            return data
     except (OSError, json.JSONDecodeError, ValueError):
         pass
     if not auto_build:

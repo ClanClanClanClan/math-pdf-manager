@@ -24,10 +24,42 @@ separate, review-gated path, never auto-applied on a move.
 from __future__ import annotations
 
 import logging
+import re
 from pathlib import Path
 from typing import Optional
 
 logger = logging.getLogger(__name__)
+
+# Unspaced consecutive initials ("R.C.", "M.L.") — a dot immediately
+# followed by an uppercase letter.  Spacing these is the ONLY thing the
+# (langdetect-heavy) author checker fixes in a well-formed author block,
+# so when the block has none we skip that call entirely.  Hyphenated
+# initials ("H.-J.") and trailing single initials ("Smith, J.") do not
+# match, and so are correctly left untouched.
+_UNSPACED_INITIALS_RE = re.compile(r"\.[A-Z]")
+
+# One shared spellchecker for the whole process.  check_filename() builds a
+# fresh SpellChecker() on every call otherwise (~70ms of JSON-dictionary +
+# langdetect-profile loading) — which dominated a whole-library normalization
+# sweep (profiling: ~4.45s of every 4.79s was spellchecker construction).
+# The instance is used read-only (dictionary lookups), so sharing it is safe;
+# this also speeds up every single ingest and move.
+_SHARED_SPELLCHECKER = None
+_SPELLCHECKER_UNAVAILABLE = False
+
+
+def _shared_spellchecker():
+    """Lazily construct one SpellChecker and reuse it; None if unavailable
+    (then check_filename falls back to building its own, as before)."""
+    global _SHARED_SPELLCHECKER, _SPELLCHECKER_UNAVAILABLE
+    if _SHARED_SPELLCHECKER is None and not _SPELLCHECKER_UNAVAILABLE:
+        try:
+            from core.text_processing.my_spellchecker import SpellChecker
+            _SHARED_SPELLCHECKER = SpellChecker()
+        except Exception as exc:  # pragma: no cover — defensive
+            logger.debug("shared spellchecker unavailable: %s", exc)
+            _SPELLCHECKER_UNAVAILABLE = True
+    return _SHARED_SPELLCHECKER
 
 
 def normalize_authors_in_name(name: str) -> tuple[str, bool]:
@@ -45,6 +77,13 @@ def normalize_authors_in_name(name: str) -> tuple[str, bool]:
         # No author/title separator — nothing to canonicalise; cosmetic only.
         return cosmetic, cosmetic != name
 
+    author_part = cosmetic.split(" - ", 1)[0]
+    if not _UNSPACED_INITIALS_RE.search(author_part):
+        # Author block already has no unspaced initials — the checker would
+        # leave it unchanged.  Skip the heavy call (langdetect on every
+        # filename) so bulk sweeps over the whole library stay fast.
+        return cosmetic, cosmetic != name
+
     try:
         from validators.filename_checker.core import check_filename
         res = check_filename(
@@ -52,6 +91,7 @@ def normalize_authors_in_name(name: str) -> tuple[str, bool]:
             auto_fix_authors=True,
             auto_fix_nfc=True,
             sentence_case=False,   # NEVER auto-recase the title
+            spellchecker=_shared_spellchecker(),
         )
         corrected = res.corrected_filename
     except Exception as exc:  # never let formatting break a move
