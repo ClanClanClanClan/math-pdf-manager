@@ -180,3 +180,50 @@ class TestApply:
     def test_apply_empty_selection_no_tx(self, lib):
         res = apply_renames(lib, [], dry_run=False)
         assert res["renamed"] == 0 and res["tx_id"] is None
+
+
+class TestApplyRenameRobustness:
+    """A real 6,186-file batch aborted partway on an over-long name.
+
+    ``Path.exists()`` RAISES ``ENAMETOOLONG`` rather than returning False,
+    so spacing the initials of a 13-author paper past the 255-byte limit
+    killed the loop.  The transaction's ``finally`` still committed what
+    had been done (nothing was left half-renamed), but the remaining
+    files were never attempted.
+    """
+
+    def test_over_long_target_is_skipped_not_fatal(self, tmp_path):
+        from processing.library_normalize import apply_renames
+        src = tmp_path / "Doe, J.A. - Short.pdf"
+        src.write_bytes(b"%PDF-1.4\n")
+        long_name = "Doe, J. A. - " + ("x" * 300) + ".pdf"
+        out = apply_renames(
+            tmp_path,
+            [{"old": src.name, "new": long_name, "name": long_name,
+              "old_name": src.name, "kind": "author"}],
+            dry_run=False,
+        )
+        assert out["renamed"] == 0
+        assert out["skipped"] and out["skipped"][0]["reason"] == "name too long"
+        assert src.exists()                      # untouched, not lost
+
+    def test_batch_continues_past_an_unusable_entry(self, tmp_path):
+        # The whole point: one bad row must not cost the other renames.
+        from processing.library_normalize import apply_renames
+        good = tmp_path / "Roe, R.B. - Fine.pdf"
+        good.write_bytes(b"%PDF-1.4\n")
+        bad = tmp_path / "Doe, J.A. - Bad.pdf"
+        bad.write_bytes(b"%PDF-1.4\n")
+        out = apply_renames(
+            tmp_path,
+            [
+                {"old": bad.name, "new": "Doe, J. A. - " + "x" * 300 + ".pdf",
+                 "name": "x", "old_name": bad.name, "kind": "author"},
+                {"old": good.name, "new": "Roe, R. B. - Fine.pdf",
+                 "name": "Roe, R. B. - Fine.pdf", "old_name": good.name,
+                 "kind": "author"},
+            ],
+            dry_run=False,
+        )
+        assert out["renamed"] == 1
+        assert (tmp_path / "Roe, R. B. - Fine.pdf").exists()

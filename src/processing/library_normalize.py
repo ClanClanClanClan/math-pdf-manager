@@ -40,6 +40,11 @@ from typing import Iterable, Optional
 logger = logging.getLogger(__name__)
 
 # Change categories.
+# macOS/APFS and ext4 both cap a single path COMPONENT at 255 bytes.
+# Canonical names are long (every author spelled out), so this is a real
+# boundary, not a theoretical one.
+_MAX_FILENAME_BYTES = 255
+
 AUTHOR = "author"   # only the author block changed (initial spacing, cosmetic)
 TITLE = "title"     # only the title changed (safe-default sentence casing)
 BOTH = "both"       # both sides changed
@@ -182,11 +187,23 @@ def apply_renames(
         for p in items:
             old = library_root / p["old"]
             new = library_root / p["new"]
-            if not old.exists():
-                skipped.append({"old": p["old"], "reason": "source gone"})
+            # A canonical name can exceed the filesystem's per-component
+            # limit: spacing out the initials of a 13-author paper pushed
+            # one past macOS's 255 BYTES.  Check before touching the disk,
+            # because Path.exists() RAISES ENAMETOOLONG rather than
+            # returning False — which aborted a 6,186-file batch partway.
+            if len(new.name.encode("utf-8")) > _MAX_FILENAME_BYTES:
+                skipped.append({"old": p["old"], "reason": "name too long"})
                 continue
-            if new.exists() and _nfc(str(new)) != _nfc(str(old)):
-                skipped.append({"old": p["old"], "reason": "target exists"})
+            try:
+                if not old.exists():
+                    skipped.append({"old": p["old"], "reason": "source gone"})
+                    continue
+                if new.exists() and _nfc(str(new)) != _nfc(str(old)):
+                    skipped.append({"old": p["old"], "reason": "target exists"})
+                    continue
+            except OSError as exc:      # unreadable path, ENAMETOOLONG, …
+                skipped.append({"old": p["old"], "reason": f"unusable path: {exc}"})
                 continue
             try:
                 logged_rename(old, new, undo_log=log)
