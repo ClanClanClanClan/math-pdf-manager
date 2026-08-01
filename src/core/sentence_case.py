@@ -320,7 +320,18 @@ def to_sentence_case_academic(
                 phrase = token.value
                 exact_match = None
                 matched_via_dash_norm = False
-                for term in filtered_cap | filtered_dash:
+                # The whitelist holds CASE VARIANTS of the same term (both
+                # "G-expectation" and "g-expectation"), so several entries can
+                # match one phrase case-insensitively while this loop keeps
+                # only the first.  Raw set order depends on PYTHONHASHSEED, so
+                # the winning spelling differed BETWEEN PROCESSES — a rename
+                # preview and the later apply could disagree.  Fix: prefer the
+                # entry matching the author's OWN spelling exactly, then fall
+                # back to a sorted (reproducible) case-insensitive search.
+                candidates = sorted(filtered_cap | filtered_dash)
+                if phrase in candidates:
+                    exact_match = phrase
+                for term in [] if exact_match else candidates:
                     if phrase.lower() == term.lower():
                         exact_match = term
                         break
@@ -396,7 +407,10 @@ def to_sentence_case_academic(
 
                 # Check exact whitelist matches (using base form for possessives)
                 exact_match = None
-                for term in filtered_cap | filtered_dash:
+                candidates = sorted(filtered_cap | filtered_dash)   # see above
+                if word_base in candidates:
+                    exact_match = word_base
+                for term in [] if exact_match else candidates:
                     if word_base.lower() == term.lower():
                         exact_match = term
                         break

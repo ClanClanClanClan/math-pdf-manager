@@ -18,7 +18,27 @@ from core.sentence_case import (
 
 class TestSentenceCaseConfig:
     """Test configuration loading"""
-    
+
+    @pytest.fixture(autouse=True)
+    def _restore_config_cache(self):
+        """Never leak this class's config cache into the rest of the session.
+
+        ``test_config_loading_fallback`` deliberately makes the YAML load
+        FAIL so the loader falls back to its minimal built-in defaults — and
+        that degraded config would otherwise stay in the module-level
+        ``_CONFIG_CACHE`` for every later test, silently emptying the
+        proper-noun whitelist (no "Hilbert", no "Wasserstein") far away from
+        here.  Clearing it afterwards forces the next caller to reload the
+        real config.
+        """
+        import core.sentence_case
+        yield
+        # Drop the mocked/degraded config AND immediately reload the real one,
+        # so the next test inherits a known-good cache rather than an empty
+        # one whose repopulation depends on whatever it happens to call first.
+        core.sentence_case._CONFIG_CACHE = {}
+        core.sentence_case._load_sentence_case_config()
+
     def test_config_loading_with_cache(self):
         """Test that config is cached after first load"""
         # Clear cache first

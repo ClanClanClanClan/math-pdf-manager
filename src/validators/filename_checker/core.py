@@ -26,6 +26,13 @@ from .author_processing import (
 try:
     from core.text_processing.my_spellchecker import SpellChecker
     from langdetect import detect, LangDetectException
+    # langdetect is RANDOMISED unless seeded: short/ambiguous filenames come
+    # back differently between runs ("Ito, K. - Sur les processus" detects as
+    # 'en' or 'fr').  The detected language steers this checker, so an unseeded
+    # detector makes filename normalization non-reproducible — the rename
+    # preview the owner approves could then differ from what apply produces.
+    from langdetect import DetectorFactory as _DetectorFactory
+    _DetectorFactory.seed = 0
     debug_print("Successfully imported SpellChecker and language detection")
 except ImportError:
     debug_print("Failed to import SpellChecker, using fallback")

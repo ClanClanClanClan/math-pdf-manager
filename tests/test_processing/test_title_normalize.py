@@ -217,3 +217,144 @@ class TestIngestPerfectNaming:
         assert "the existence of" in name            # confident words downcased
         assert "Zorglub" in name                     # unknown preserved
         assert "Zorglub" in load_vocab(tmp_path)["pending"]   # ...and queued
+
+
+class TestContextAwareCasing:
+    """Stage 2.5 — context guards the unigram oracle cannot express.
+
+    Every case below is a real shape mined from the owner's library (or the
+    exact regression it caused), so the thresholds stay pinned to evidence
+    rather than to taste.
+    """
+
+    # --- mixed-case identifiers: upcasing the first letter CORRUPTS a name
+    @pytest.mark.parametrize("title", [
+        "mlOSP, towards a unified implementation of regression Monte Carlo",
+        "iOS and Android numerical libraries",
+        "arXiv preprints and their citation half-life",
+    ])
+    def test_mixed_case_first_word_never_upcased(self, title):
+        assert propose_title_case(title).proposed == title
+
+    def test_lowercase_first_word_still_upcased(self):
+        # The guard must not disable ordinary sentence-start capitalisation.
+        p = propose_title_case("space–time stochastic calculus and white noise")
+        assert p.proposed == "Space–time stochastic calculus and white noise"
+
+    # --- embedded titles opened by a SPACE-SEPARATED quote ("« Notes …")
+    def test_spaced_opening_quote_preserves_embedded_title(self):
+        t = "Présentation du texte « Notes historiques sur le calcul » de Cauchy"
+        assert propose_title_case(t).proposed == t
+
+    def test_hugging_opening_quote_still_preserves(self):
+        # The word right after the quote opens an embedded title and keeps its
+        # capital; the REST of that title is sentence-cased as usual.
+        p = propose_title_case("On the “Existence Theorem” of Peano")
+        assert "“Existence" in p.proposed
+
+    # --- capital-run coherence: never half-lowercase a possible proper phrase
+    def test_run_with_unknown_neighbour_is_preserved_whole(self):
+        # "Calculus" is unknown, so lowercasing only "Stochastic" would emit
+        # the incoherent "and stochastic Calculus".
+        t = "Brownian Motion and Stochastic Calculus"
+        p = propose_title_case(t)
+        assert p.proposed == t
+        assert "Stochastic" in p.uncertain          # queued for one ruling
+
+    def test_french_institution_run_preserved(self):
+        t = "Mathematics and the École des Hautes Études en Sciences Sociales"
+        assert propose_title_case(t).proposed == t
+
+    def test_known_name_plus_common_noun_still_downcases(self):
+        # The dominant maths shape: a KNOWN proper noun followed by ordinary
+        # nouns must keep lowercasing — this is what the run rule must not eat.
+        assert propose_title_case(
+            "Lectures on Hilbert Space Methods"
+        ).proposed == "Lectures on Hilbert space methods"
+        assert propose_title_case(
+            "Optimal transport on Wasserstein Space"
+        ).proposed == "Optimal transport on Wasserstein space"
+
+    def test_long_title_cased_run_is_not_treated_as_a_phrase(self):
+        # One unknown word must not veto casing a Title-Cased sentence.
+        p = propose_title_case("On The Existence Of Zorglub Solutions")
+        assert p.proposed == "On the existence of Zorglub solutions"
+
+    def test_function_words_downcase_even_inside_a_run(self):
+        # Function words are lowercase inside genuine proper names too
+        # ("United States of America"), so the run rule never promotes them.
+        p = propose_title_case("A study of The Zorglub Of Mathematics")
+        assert " of " in p.proposed and " The " not in p.proposed
+
+    def test_united_states_not_broken(self):
+        t = "Optimal investment in the United States"
+        assert propose_title_case(t).proposed == t
+
+
+class TestContextGuardsWithVocabulary:
+    """Guards exercised through the PRODUCTION path (a real library_root).
+
+    The plain ``propose_title_case(title)`` calls above classify with only the
+    built-in lists; the sweep always passes a library so the owner's vocabulary
+    and the corpus oracle take part.  Several real regressions were invisible
+    until the vocabulary was in play, so these pin that path explicitly.
+    """
+
+    @staticmethod
+    def _lib(tmp_path, *, common=(), proper=()):
+        import json
+        cfg = tmp_path / ".mathpdf-config"
+        cfg.mkdir(parents=True, exist_ok=True)
+        (cfg / "title_vocab.json").write_text(json.dumps({
+            "proper": list(proper), "common": list(common), "pending": {},
+        }))
+        return tmp_path
+
+    def test_name_particle_is_never_promoted_by_a_capital_run(self, tmp_path):
+        # "von/de/van" are lowercase INSIDE a genuine proper name, exactly like
+        # "of" in "United States of America".  A run with an unknown surname
+        # ("Mises") must not promote the particle back to a capital.
+        lib = self._lib(tmp_path, common=["von"])
+        p = propose_title_case("Using Von Mises' axiom of randomness", lib)
+        assert "von Mises" in p.proposed
+
+    def test_known_proper_member_vetoes_run_preservation(self, tmp_path):
+        # Hilbert is a KNOWN name, so the phrase is the ordinary
+        # <Name> + <common nouns> shape and must still sentence-case, even
+        # though "Reproducing"/"Kernel" are unknown.
+        lib = self._lib(tmp_path, common=["space"], proper=["Hilbert"])
+        p = propose_title_case("Studies on Reproducing Kernel Hilbert Space", lib)
+        assert p.proposed.endswith("Hilbert space")
+
+    def test_acronym_first_word_does_not_block_subtitle_casing(self, tmp_path):
+        # "HANK," must not read as a proper phrase to the comma-adjacency rule,
+        # or the subtitle after the comma stops being sentence-cased.
+        lib = self._lib(tmp_path, common=["heterogeneous"])
+        p = propose_title_case("HANK, Heterogeneous agent new Keynesian models", lib)
+        assert p.proposed.startswith("HANK, heterogeneous")
+
+    def test_closing_straight_quote_does_not_preserve_next_word(self, tmp_path):
+        # A token-final straight quote is nearly always the CLOSING one.
+        lib = self._lib(tmp_path, common=["estimates"])
+        p = propose_title_case('A note on the "local time" Estimates for X', lib)
+        assert '"local time" estimates' in p.proposed
+
+
+class TestCasingIsReproducible:
+    """Filename casing must not depend on PYTHONHASHSEED.
+
+    The whitelist stores case variants of the same term ("G-expectation" and
+    "g-expectation"); picking the winner by set-iteration order made the result
+    differ between PROCESSES, so a rename preview and the later apply could
+    disagree.  The owner's own spelling wins, deterministically.
+    """
+
+    def test_author_spelling_wins_over_other_case_variant(self):
+        from core.sentence_case import to_sentence_case_academic
+        assert to_sentence_case_academic("g-expectation theory")[0] == "g-expectation theory"
+        assert to_sentence_case_academic("G-expectation theory")[0] == "G-expectation theory"
+
+    def test_repeated_calls_agree(self):
+        from core.sentence_case import to_sentence_case_academic
+        out = {to_sentence_case_academic("Peng g-expectations and BSDEs")[0] for _ in range(25)}
+        assert len(out) == 1

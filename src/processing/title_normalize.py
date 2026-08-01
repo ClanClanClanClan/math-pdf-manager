@@ -37,6 +37,18 @@ logger = logging.getLogger(__name__)
 # via the en-dash class below).
 _WORD_RE = re.compile(r"[^\W\d_]+(?:['’][^\W\d_]+)*", re.UNICODE)
 _HYPHENS = "-–—‐"
+# Quote characters that OPEN an embedded title/citation.  French usage
+# separates them with a space ("« Notes historiques »"), so the opener can
+# be a token of its own — the inline ``prev_char`` test alone misses it.
+#
+# Only UNAMBIGUOUS openers belong here: a straight ``"`` is far more often the
+# CLOSING quote at the end of a token ('… "local time" Estimates'), and
+# treating it as an opener wrongly preserved the word after the closing quote.
+_OPEN_QUOTES = "“‘«"
+# Longest run of consecutive Capitalized words still treated as a possible
+# proper phrase ("Reproducing Kernel Hilbert Space").  Beyond this a run is
+# Title-Cased prose, where a single unknown word must not block casing.
+_MAX_PROPER_RUN = 4
 _MONTHS = {
     "january", "february", "march", "april", "may", "june", "july",
     "august", "september", "october", "november", "december",
@@ -263,6 +275,7 @@ def propose_title_case(
     very_first = True              # only the TITLE's first word is upcased
     after_period = False           # words after internal ./!/? are preserved
     prev_word_lower = ""           # particle guard ("de Ray")
+    after_open_quote = False       # previous token was a bare opening quote
 
     for i, tok in enumerate(tokens):
         words: list = []
@@ -277,7 +290,9 @@ def propose_title_case(
                 seg = m.group(0)
                 base = seg.split("'")[0].split("’")[0]   # Girsanov's -> Girsanov
                 prev_char = tok[m.start() - 1] if m.start() > 0 else ""
-                if prev_char and prev_char in "\"'“‘«":
+                # An opening quote either hugs the word ("«Notes") or stands
+                # as its own token ("« Notes") — both open an embedded title.
+                if (prev_char and prev_char in "\"'“‘«") or (after_open_quote and not words):
                     # Opening quote: an embedded title/citation starts here
                     # ("On the integral…").  Preserve verbatim.
                     very_first = False
@@ -297,6 +312,19 @@ def propose_title_case(
                         # particle stays lowercase.
                         cls = KEEP
                         prev_word_lower = base.lower()
+                    elif not (base.islower() or _is_plain_capitalized(base)):
+                        # Mixed-case or acronym identifier ("mlOSP", "iOS",
+                        # "BSDE", "École").  Upcasing the first letter would
+                        # CORRUPT a real name ("mlOSP" -> "MlOSP", "iOS" ->
+                        # "IOS"); only all-lowercase or plainly-capitalized
+                        # first words are safe to upcase.
+                        #
+                        # Deliberately does NOT set token_properish: an
+                        # acronym title ("HANK, Heterogeneous agent…") would
+                        # otherwise look like a proper phrase to the
+                        # comma-adjacency rule and stop the subtitle being
+                        # sentence-cased.
+                        cls = KEEP
                     else:
                         cls = FIRST
                 elif seg != base and _is_plain_capitalized(base):
@@ -337,6 +365,66 @@ def propose_title_case(
         if tok.rstrip().endswith(_SENTENCE_END):
             after_period = True
             prev_word_lower = ""
+        # A token ending in an opening quote ("«") opens an embedded title
+        # whose first word lives in the NEXT token.
+        stripped = tok.rstrip()
+        after_open_quote = bool(stripped) and stripped[-1] in _OPEN_QUOTES
+
+    # Pass 1.5 — CAPITAL-RUN COHERENCE.
+    #
+    # Inside a run of >=2 consecutive Capitalized words, a provably-common
+    # word is promoted to "preserve + queue" when some OTHER member of the
+    # run is UNCERTAIN (a word we cannot classify at all).
+    #
+    # The distinction that makes this safe is KNOWN vs UNKNOWN neighbour:
+    #   * "Hilbert Space Methods" — Hilbert is a KNOWN proper noun, so the
+    #     run is the ordinary maths shape <Name> + <common nouns> and must
+    #     still downcase to "Hilbert space methods".
+    #   * "Sciences Sociales" / "Stochastic Calculus" — the neighbour is a
+    #     word we know nothing about, so the run may well be a proper
+    #     phrase.  Downcasing only the half we recognise yields incoherent
+    #     output ("sciences Sociales", "and stochastic Calculus"), which
+    #     reads as a typo.  Preserve the whole run and let the vocabulary
+    #     review settle the unknown word once, library-wide.
+    flat = [(ti, wi) for ti, ws in enumerate(classified) for wi in range(len(ws))]
+    promoted: set = set()
+    r = 0
+    while r < len(flat):
+        ti, wi = flat[r]
+        if classified[ti][wi][1][:1].isupper():
+            end = r
+            while end + 1 < len(flat):
+                tj, wj = flat[end + 1]
+                if not classified[tj][wj][1][:1].isupper():
+                    break
+                end += 1
+            members = flat[r:end + 1]
+            # A run of >=2 but <= _MAX_PROPER_RUN.  Longer runs are a
+            # Title-Cased SENTENCE ("On The Existence Of Zorglub Solutions"),
+            # not a proper phrase — one unknown word must not veto casing the
+            # whole title, so those are left to the ordinary rules.
+            if 2 <= len(members) <= _MAX_PROPER_RUN:
+                kinds = {classified[a][b][3] for a, b in members}
+                # A KNOWN proper noun in the run means we DO understand the
+                # phrase: it is the ordinary <Name> + <common nouns> shape
+                # ("Reproducing kernel Hilbert space"), so casing proceeds.
+                # Only a run we cannot read at all — an UNCERTAIN member and
+                # no known name to explain it — is preserved wholesale.
+                if UNCERTAIN in kinds and PROPER not in kinds:
+                    promoted.update(
+                        (a, b) for a, b in members
+                        # Function words and name particles are lowercase even
+                        # INSIDE a genuine proper name ("United States of
+                        # America", "von Mises", "de Moivre"), so they always
+                        # stay downcase candidates.
+                        if classified[a][b][3] == COMMON
+                        and classified[a][b][2].lower()
+                        not in _FUNCTION_WORDS and classified[a][b][2].lower()
+                        not in _PARTICLES
+                    )
+            r = end + 1
+        else:
+            r += 1
 
     def properish_neighbor(i: int) -> bool:
         """Comma-adjacent proper-phrase test for token i's candidates."""
@@ -355,12 +443,12 @@ def propose_title_case(
             continue
         rebuilt = []
         last = 0
-        for (start, end), seg, base, cls in words:
+        for wi, ((start, end), seg, base, cls) in enumerate(words):
             rebuilt.append(tok[last:start])
             if cls == FIRST:
                 rebuilt.append(seg[0].upper() + seg[1:])
             elif cls == COMMON:
-                if properish_neighbor(i):
+                if properish_neighbor(i) or (i, wi) in promoted:
                     uncertain.append(base)               # proper-phrase context
                     rebuilt.append(seg)
                 else:

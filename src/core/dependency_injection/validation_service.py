@@ -595,7 +595,8 @@ class UnifiedValidationService:
         
         # Try to use langdetect if available
         try:
-            from langdetect import detect
+            from langdetect import detect, DetectorFactory
+            DetectorFactory.seed = 0        # deterministic: see filename_checker.core
             detected = detect(text)
             self._logger.debug(f"Language detected as: {detected}")
             return detected
