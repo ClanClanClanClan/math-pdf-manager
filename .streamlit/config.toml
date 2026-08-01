@@ -1,0 +1,27 @@
+# Streamlit settings for the library cockpit.
+#
+# The owner is not a developer and drives this app from a narrow side
+# panel, so the default developer chrome is pure noise to him.
+
+[client]
+# Hide the "Deploy", "Rerun", "Always rerun" and source-changed toolbar.
+# He has no use for any of it and "Stop"/"Rerun" invite a mis-click in a
+# UI whose buttons move his files.
+toolbarMode = "minimal"
+# Show errors in the page rather than only in the terminal he cannot see.
+showErrorDetails = true
+
+[server]
+# Do NOT reload the app when a source file changes: a rerun mid-review
+# would drop in-page state (a scan result, a chosen batch) and the
+# "source file changed" banner is meaningless to him.
+runOnSave = false
+# The library lives in Dropbox; uploads are not part of this workflow.
+maxUploadSize = 50
+
+[browser]
+gatherUsageStats = false
+
+[theme]
+# Slightly denser default so a 343px-wide panel fits more real content.
+base = "dark"

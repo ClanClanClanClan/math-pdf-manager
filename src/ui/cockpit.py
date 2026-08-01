@@ -50,7 +50,11 @@ logger = logging.getLogger(__name__)
 st.set_page_config(
     page_title="Math-PDF Library Cockpit",
     layout="wide",
-    initial_sidebar_state="expanded",
+    # "auto", not "expanded": the owner often runs this in a ~343px side
+    # panel, where an expanded sidebar covers the ENTIRE width — he could
+    # see the navigation or the page, never both.  "auto" keeps it open
+    # on a wide window and collapsed (one tap away) on a narrow one.
+    initial_sidebar_state="auto",
 )
 
 from core.config_paths import get_library_root  # noqa: E402
@@ -215,24 +219,31 @@ def render_sidebar() -> None:
         st.caption("Math-PDF management — review & act")
 
         # Library root — validated each rerun so an obviously-bad path
-        # doesn't silently break every subsequent operation.
-        new_root = st.text_input(
-            "Library root", value=st.session_state.library_root,
-            help="Absolute path or ~ for home. Defaults to $MATH_LIBRARY env var.",
-        )
-        if new_root != st.session_state.library_root:
-            ok, msg = _validate_library_root(new_root)
-            if ok:
-                st.session_state.library_root = msg  # resolved path
-            else:
-                st.error(f"Library root rejected: {msg}")
-                # Don't update session_state — keep the previous valid one.
-
+        # doesn't silently break every subsequent operation.  It is set
+        # once and never touched again, so it lives in a collapsed
+        # expander: shown open it cost ~250px of a 343px-wide sidebar,
+        # pushing the navigation below the fold.
         lib = _library()
-        if not lib.exists():
-            st.error(f"Library not found: {lib}")
-        else:
-            st.success(f"📁 {lib}")
+        ok_root = lib.exists()
+        with st.expander(
+            "📁 Library" if ok_root else "⚠ Library not found", expanded=not ok_root
+        ):
+            new_root = st.text_input(
+                "Folder", value=st.session_state.library_root,
+                help="Absolute path or ~ for home. Defaults to $MATH_LIBRARY.",
+            )
+            if new_root != st.session_state.library_root:
+                ok, msg = _validate_library_root(new_root)
+                if ok:
+                    st.session_state.library_root = msg  # resolved path
+                else:
+                    st.error(f"That folder can't be used: {msg}")
+                    # Don't update session_state — keep the previous valid one.
+            lib = _library()
+            if lib.exists():
+                st.caption(f"Using {lib}")
+            else:
+                st.error(f"Not found: {lib}")
 
         st.divider()
         # The badge reads the LAST computed count from session state and
