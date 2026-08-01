@@ -144,13 +144,24 @@ class TestWatcherStatus:
 
 class TestStartStopWatcher:
 
-    def test_start_missing_plist(self, tmp_path, monkeypatch):
-        # Force the plist resolver to a path that doesn't exist by
-        # pointing HOME at tmp_path.
+    def test_start_missing_plist_installs_it_first(self, tmp_path, monkeypatch):
+        """A missing service is now SET UP, not reported back at him.
+
+        It used to answer "plist not installed" — true, but the remedy was
+        ``deploy/launchd/install.sh``, a shell script the cockpit user
+        cannot run.  So automatic filing could never be switched on from
+        the UI at all.  start_watcher now installs the agent into the
+        user's own ~/Library/LaunchAgents and proceeds.
+        """
         monkeypatch.setenv("HOME", str(tmp_path))
         ok, msg = start_watcher()
+        # launchctl cannot really bootstrap under a synthetic HOME, so the
+        # call still fails — but it must fail AFTER installing, and say
+        # something other than "go run a script".
         assert not ok
-        assert "not installed" in msg
+        assert "not installed" not in msg
+        plist = tmp_path / "Library" / "LaunchAgents" / f"{WATCHER_LABEL}.plist"
+        assert plist.exists(), "the service should have been installed"
 
     def test_start_success(self, tmp_path, monkeypatch):
         monkeypatch.setenv("HOME", str(tmp_path))

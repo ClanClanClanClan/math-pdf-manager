@@ -158,20 +158,51 @@ def watcher_status() -> dict:
     return {"running": running, "pid": pid, "raw": raw}
 
 
-def start_watcher() -> tuple[bool, str]:
-    """``launchctl bootstrap`` the watcher plist (if installed).
+def install_launch_agents() -> tuple[bool, str]:
+    """Write the launchd plists into ``~/Library/LaunchAgents``.
 
-    Plist install location is the standard launchd LaunchAgents
-    folder under the user's home; this helper does NOT install the
-    plist (that's a one-shot manual step described in
-    ``deploy/launchd/install.sh``).
+    This is what ``deploy/launchd/install.sh`` does -- a script the
+    cockpit user cannot run, which meant ``start_watcher`` could only
+    ever answer "plist not installed" and the watcher could never be
+    switched on from the UI at all.  The interpreter is pinned to the
+    one running the cockpit rather than whatever ``python3`` happens to
+    be first on PATH, so the daemon gets the same dependencies.
     """
+    project_root = Path(__file__).resolve().parents[2]
+    templates = project_root / "deploy" / "launchd"
+    if not templates.is_dir():
+        return False, f"service templates not found at {templates}"
+    dest_dir = Path.home() / "Library" / "LaunchAgents"
+    try:
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        (Path.home() / ".mathpdf").mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        return False, f"cannot create {dest_dir}: {exc}"
+    written = []
+    for tpl in sorted(templates.glob("ch.ethz.dpossamai.mathpdf.*.plist")):
+        try:
+            body = tpl.read_text(encoding="utf-8")
+            body = (body
+                    .replace("PROJECT_PATH", str(project_root))
+                    .replace("HOME/", str(Path.home()) + "/")
+                    .replace("<string>python3</string>",
+                             f"<string>{sys.executable}</string>"))
+            (dest_dir / tpl.name).write_text(body, encoding="utf-8")
+        except OSError as exc:
+            return False, f"cannot install {tpl.name}: {exc}"
+        written.append(tpl.name)
+    if not written:
+        return False, f"no service templates in {templates}"
+    return True, f"installed {len(written)} background service(s)"
+
+
+def start_watcher() -> tuple[bool, str]:
+    """``launchctl bootstrap`` the watcher plist, installing it if needed."""
     plist = Path.home() / "Library" / "LaunchAgents" / f"{WATCHER_LABEL}.plist"
     if not plist.exists():
-        return False, (
-            f"plist not installed at {plist}.  Run "
-            f"deploy/launchd/install.sh once to install it."
-        )
+        ok, msg = install_launch_agents()
+        if not ok or not plist.exists():
+            return False, f"could not set up the auto-filer: {msg}"
     uid = os.getuid()
     proc = _launchctl("bootstrap", f"gui/{uid}", str(plist))
     if proc.returncode != 0:

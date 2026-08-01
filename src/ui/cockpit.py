@@ -460,8 +460,22 @@ def render_sidebar() -> None:
                              key="sidebar_start_watcher"):
                     ok, msg = start_watcher()
                     st.toast(msg)
+                    if not ok:
+                        # A toast is gone in seconds.  When automatic
+                        # filing refuses to start, the REASON is the only
+                        # useful thing on screen — keep it until the next
+                        # attempt rather than making him retry to re-read it.
+                        st.session_state["watcher_start_error"] = msg
+                    else:
+                        st.session_state.pop("watcher_start_error", None)
                     _watcher_status_cached.clear()
                     st.rerun()
+                if st.session_state.get("watcher_start_error"):
+                    # start_watcher installs the background service itself
+                    # when it is missing (he cannot run install.sh), so an
+                    # error here is a real failure worth keeping on screen
+                    # rather than a missing-setup step he could fix.
+                    st.error(st.session_state["watcher_start_error"])
         except Exception as exc:  # pragma: no cover -- never break the sidebar
             st.caption(f"Watcher status unavailable: {exc}")
 
@@ -698,11 +712,17 @@ def render_sort_queue() -> None:
     lib = _library()
     candidates = _iter_sort_candidates(lib)
 
-    col_a, col_b, col_c, col_d = st.columns(4)  # noqa: F841 (kept below)
-    col_a.metric("Pending", len(candidates))
-    col_b.metric("Skipped (remembered)", len(st.session_state.sort_skipped))
-    col_c.metric("Filed this session", sum(1 for a in st.session_state.activity_log if a["action"] == "sort.approve"))
-    col_d.metric("Trash (recoverable)", _count_trash(lib, "sorted_originals"))
+    # One line, not four st.metric blocks: below a 640px viewport the columns
+    # stack and this header measured 4 x 76px = ~350px of giant zeros above
+    # the paper he actually came here to look at.
+    _filed_now = sum(1 for a in st.session_state.activity_log
+                     if a["action"] == "sort.approve")
+    st.caption(
+        f"**{len(candidates)}** waiting  ·  "
+        f"{len(st.session_state.sort_skipped)} skipped this session  ·  "
+        f"{_filed_now} filed this session  ·  "
+        f"{_count_trash(lib, 'sorted_originals')} recoverable in the trash"
+    )
 
     # Skips are remembered across sessions now, so the way back must be
     # reachable at any time -- the existing "re-include" button lives in
@@ -1732,6 +1752,10 @@ def render_stats() -> None:
         if st.button("↻ Recompute now", use_container_width=True):
             _count_pdfs_cached.clear()
             _to_be_sorted_backlog_cached.clear()
+            # The health strip has its own 10-minute cache; without this
+            # the button silently redrew the SAME health numbers, which
+            # is worse than having no button at all.
+            _library_health_cached.clear()
             st.rerun()
 
     lib = _library()
@@ -2415,9 +2439,14 @@ def render_attention() -> None:
                 # action that dismisses real work for 30 days.
                 ck = st.checkbox(
                     f"Select: {it.title}",
+                # In a narrow pane this box sits alone on its own line above
+                # the item (the [0.7, 0.3] row below it stacks), so a
+                # collapsed label leaves a tick box that means nothing.
+                ck = st.checkbox(
+                    "Select for bulk dismiss",
                     value=it.key in attn_selected,
                     key=f"attn_sel_{it.key}",
-                    label_visibility="collapsed",
+                )
                 )
                 if ck:
                     attn_selected.add(it.key)
@@ -2506,10 +2535,59 @@ def render_attention() -> None:
                                         st.warning(
                                             f"Could not move conflict copy: {exc}")
                             elif action_id == "watcher_retry":
-                                st.info(
-                                    "Drop the failing file back into the inbox to "
-                                    "retry — the watcher will re-ingest it."
-                                )
+                                # Was a pure no-op: it printed an instruction
+                                # that the st.rerun() below immediately wiped,
+                                # so the only action on the highest-severity
+                                # pile did nothing at all.  The failed file is
+                                # still sitting in the inbox (the daemon leaves
+                                # it there), so run the very same ingest the
+                                # watcher would have run -- one click, and
+                                # reversible from Activity like every other
+                                # filing.
+                                from processing.ingest import ingest_paper
+                                from processing.undo_log import UndoLog
+                                src = Path(it.payload.get("file", ""))
+                                if not src.exists():
+                                    _flash("warning",
+                                           f"{src.name} is no longer in the "
+                                           f"inbox — nothing to retry.")
+                                else:
+                                    _ulog = UndoLog()
+                                    _tx = _ulog.begin_transaction(
+                                        f"Retry ingest: {src.name}")
+                                    try:
+                                        r = ingest_paper(
+                                            src, library_root=lib,
+                                            dry_run=False, undo_log=_ulog,
+                                            dedup_check=True,
+                                            variant_check=True,
+                                        )
+                                    except Exception as exc:
+                                        r = {"success": False,
+                                             "error": str(exc)}
+                                    if _ulog.has_operations():
+                                        _ulog.commit()
+                                    else:
+                                        _ulog.discard()
+                                    if r.get("success"):
+                                        _log_activity(
+                                            "attention.watcher_retry",
+                                            src.name,
+                                            r.get("destination", ""), _tx)
+                                        st.toast(f"Filed {src.name}",
+                                                 icon="✅")
+                                        _attention_count_cached.clear()
+                                    elif r.get("duplicate_of"):
+                                        _flash(
+                                            "info",
+                                            f"{src.name} is already in your "
+                                            f"library — nothing to file.")
+                                    else:
+                                        _flash(
+                                            "error",
+                                            f"Still cannot file {src.name}: "
+                                            f"{r.get('error', 'unknown reason')}"
+                                        )
                             elif action_id == "transition_aged":
                                 # Actually do the move via aging_checker.
                                 # Single-paper transition: build a minimal
@@ -3397,17 +3475,18 @@ def render_conflicts() -> None:
             # Header row: checkbox + filename.  The checkbox key is
             # tied to the conflict path so toggles persist across
             # Streamlit reruns.
-            head = st.columns([0.05, 0.95])
-            checked = head[0].checkbox(
-                f"Select {conflict_p.name}", value=c.conflict in selected,
+            # A [0.05, 0.95] split stacks below a 640px viewport, which left
+            # an unlabelled checkbox floating on its own line above the name
+            # it selects (screenshot-verified at 343px).  Using the filename
+            # as the checkbox label keeps the two together at every width.
+            checked = st.checkbox(
+                f"**{conflict_p.name}**", value=c.conflict in selected,
                 key=f"conf_sel_{c.conflict}",
-                label_visibility="collapsed",
             )
             if checked:
                 selected.add(c.conflict)
             else:
                 selected.discard(c.conflict)
-            head[1].markdown(f"**{conflict_p.name}**")
             cols = st.columns(2)
             with cols[0]:
                 st.markdown("**Conflict copy**")
