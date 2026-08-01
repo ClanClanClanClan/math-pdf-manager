@@ -3071,7 +3071,10 @@ def main() -> None:
     _init_state()
     render_sidebar()
 
-    page = st.session_state.get("page", "Sort Queue")
+    # Must match the sidebar's own default: they disagreed ("Sort Queue"
+    # here vs "Attention" there) and only worked by accident, because
+    # render_sidebar runs first and seeds session_state.
+    page = st.session_state.get("page", "Attention")
     if page == "Attention":
         render_attention()
     elif page == "Search":

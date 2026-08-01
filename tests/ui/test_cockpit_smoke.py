@@ -344,3 +344,71 @@ def test_main_does_not_raise(st_stub, tmp_path, monkeypatch):
             cockpit.main()
         except Exception as exc:
             pytest.fail(f"main() raised on page={page}: {exc!r}")
+
+
+# ---------------------------------------------------------------------------
+# Every page, not just the four that happened to have a test.
+# ---------------------------------------------------------------------------
+
+# Kept in step with the router in main().  The nav was regrouped from a
+# flat 12-item radio into Do/Fix/Look/Setup button groups, and only 4 of
+# the 12 pages had any smoke coverage at the time — a page could break on
+# a refactor and nothing would notice until the owner clicked it.
+ALL_PAGE_RENDERERS = [
+    "render_attention",
+    "render_search",
+    "render_sort_queue",
+    "render_upgrade_queue",
+    "render_to_download",
+    "render_conflicts",
+    "render_duplicates",
+    "render_maintenance",
+    "render_pipeline_preview",
+    "render_stats",
+    "render_activity",
+    "render_settings",
+]
+
+
+@pytest.mark.parametrize("renderer", ALL_PAGE_RENDERERS)
+def test_every_page_renders_against_an_empty_library(
+    st_stub, tmp_path, monkeypatch, renderer
+):
+    """Each page must survive an empty library without raising.
+
+    An empty library is the harshest ordinary case: every "first item"
+    lookup has nothing to bite on, which is exactly where index errors
+    and None-derefs live.
+    """
+    monkeypatch.setenv("MATH_LIBRARY", str(tmp_path))
+    import ui.cockpit as cockpit
+    getattr(cockpit, renderer)()
+
+
+def test_router_covers_every_nav_entry(st_stub):
+    """Every page named in the sidebar must be dispatched by main().
+
+    The sidebar and the router are two separate lists; a page added to
+    one and not the other silently renders nothing.
+    """
+    import inspect
+    import ui.cockpit as cockpit
+    src = inspect.getsource(cockpit.main)
+    sidebar_src = inspect.getsource(cockpit.render_sidebar)
+    for label in ["Search", "Sort Queue", "Upgrade Queue", "To Download",
+                  "Conflicts", "Duplicates", "Maintenance",
+                  "Pipeline Preview", "Stats", "Activity", "Settings"]:
+        assert f'"{label}"' in sidebar_src, f"{label} missing from sidebar"
+        assert f'"{label}"' in src, f"{label} not dispatched by main()"
+
+
+def test_home_and_router_agree_on_the_default_page(st_stub):
+    """The sidebar's default page and the router's fallback must match.
+
+    They disagreed (`Attention` vs `Sort Queue`) and only worked because
+    the sidebar happens to run first and set session_state.
+    """
+    import inspect
+    import ui.cockpit as cockpit
+    router = inspect.getsource(cockpit.main)
+    assert 'st.session_state.get("page", "Attention")' in router
