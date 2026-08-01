@@ -101,3 +101,44 @@ class TestFileIntoTopicNormalizes:
         dest = (lib / "07a - BSDEs" / "01 - Published papers" / "D"
                 / "Dalang, R.C. - Reflected BSDEs and backward equations.pdf")
         assert dest.exists()
+
+
+class TestMultiLetterInitials:
+    """Transliterated Cyrillic given names need 2-3 letter initials.
+
+    "Kabanov, Yu. A." is the correct canonical form — Yu is the single
+    Cyrillic letter Ю.  The spacing fixer used to test a fixed
+    four-character window (upper, dot, upper, dot), so "Yu.A." never
+    matched at all, and in a mixed author list it produced half-spaced
+    output like "Kozlov, I. V., Veretennikov, A.Yu." — 45 such files were
+    measured in the real library.
+    """
+
+    @pytest.mark.parametrize("raw,expected", [
+        ("Kabanov, Yu.A. - Pricing.pdf", "Kabanov, Yu. A. - Pricing.pdf"),
+        ("Neretin, Yu.V. - Gamma.pdf", "Neretin, Yu. V. - Gamma.pdf"),
+        ("Zhang, Zh.Q. - Estimates.pdf", "Zhang, Zh. Q. - Estimates.pdf"),
+        ("Ivanov, Ya.S. - A theorem.pdf", "Ivanov, Ya. S. - A theorem.pdf"),
+        ("Djumanova, R.Kh. - Spectra.pdf", "Djumanova, R. Kh. - Spectra.pdf"),
+        # single letter FOLLOWED by a multi-letter one — the half-spaced shape
+        ("Veretennikov, A.Yu. - Moments.pdf", "Veretennikov, A. Yu. - Moments.pdf"),
+        # a whole mixed list must come out uniformly spaced
+        ("Kozlov, I.V., Veretennikov, A.Yu. - SLLN.pdf",
+         "Kozlov, I. V., Veretennikov, A. Yu. - SLLN.pdf"),
+    ])
+    def test_multi_letter_initials_are_spaced(self, raw, expected):
+        from processing.move_normalizer import normalize_authors_in_name
+        assert normalize_authors_in_name(raw)[0] == expected
+
+    @pytest.mark.parametrize("name", [
+        # Hyphenated initials keep their hyphen and gain no space.
+        "Lions, J.-P. - Analysis.pdf",
+        "Le Gall, J.-F. - Brownian motion.pdf",
+        # Already correct: the pass must be idempotent.
+        "Kabanov, Yu. A. - Pricing.pdf",
+        # A dotted abbreviation inside the TITLE is not an author initial.
+        "Smith, J. - A trip to St.Petersburg.pdf",
+    ])
+    def test_non_initials_are_left_alone(self, name):
+        from processing.move_normalizer import normalize_authors_in_name
+        assert normalize_authors_in_name(name)[0] == name

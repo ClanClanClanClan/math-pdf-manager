@@ -370,25 +370,41 @@ def fix_initial_spacing(author_part: str) -> str:
     prev = None
     while prev != author_part:
         prev = author_part
-        # Manual approach to handle Unicode uppercase letters
-        # Look for pattern: uppercase letter, dot, uppercase letter, dot
-        result = ""
-        i = 0
-        while i < len(author_part):
-            char = author_part[i]
-            if (i + 3 < len(author_part) and 
-                char.isupper() and 
-                author_part[i + 1] == '.' and 
-                author_part[i + 2].isupper() and 
-                author_part[i + 3] == '.'):
-                # Found pattern like "A.B." - insert space
-                result += char + '. ' + author_part[i + 2] + '.'
-                i += 4
-            else:
-                result += char
-                i += 1
-        author_part = result
+        author_part = _UNSPACED_INITIAL_PAIR_RE.sub(_space_initial_pair, author_part)
     return author_part
+
+
+# An initial is a capitalised chunk of 1-4 letters followed by a dot.
+# It is NOT always a single letter: transliterated Cyrillic given names
+# routinely need two or three ("Kabanov, Yu. A.", "Zh.", "Ya.", "Ts.",
+# "Shch."), and the canonical form still spaces them.  The old code
+# tested a fixed four-character window (upper, dot, upper, dot), so
+# "Yu.A." simply never matched — and in a mixed author list it produced
+# half-spaced output like "Kabanov, Yu.M., Kramkov, D. O.".
+#
+# ``[^\W\d_]`` is the Unicode-aware "letter" class, so accented and
+# Cyrillic initials work too.  The lookahead requires the NEXT chunk to
+# be an initial as well, which is what keeps "St.Petersburg" (too long
+# before its dot) and hyphenated "J.-P." untouched.
+_UNSPACED_INITIAL_PAIR_RE = re.compile(
+    r"([^\W\d_]{1,4}\.)(?=[^\W\d_]{1,4}\.)"
+)
+
+
+def _space_initial_pair(m: "re.Match") -> str:
+    """Insert one space after an initial that is glued to the next one.
+
+    Only fires for a genuinely initial-shaped chunk — first letter upper,
+    the rest lower ("Yu.", "A.", "Chr.").  An all-caps run ("USA.") or a
+    lowercase word ("et.") is left exactly as it is.
+    """
+    token = m.group(1)
+    body = token[:-1]
+    if not body[:1].isupper():
+        return token
+    if len(body) > 1 and not body[1:].islower():
+        return token
+    return token + " "
 
 
 def fix_author_suffixes(s: str) -> str:
