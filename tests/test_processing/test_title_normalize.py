@@ -358,3 +358,52 @@ class TestCasingIsReproducible:
         from core.sentence_case import to_sentence_case_academic
         out = {to_sentence_case_academic("Peng g-expectations and BSDEs")[0] for _ in range(25)}
         assert len(out) == 1
+
+
+class TestPublisherBoilerplate:
+    """A PDF saved from a publisher's landing page carries THAT PAGE's
+    title in its metadata, so the journal/volume/publisher tail would be
+    baked straight into the filename.  Measured on the real staging
+    inbox: 15% of proposed names carried such a tail before this guard.
+    """
+
+    @pytest.mark.parametrize("raw,expected", [
+        ("Optimal control of the running max | SIAM Journal on Control and "
+         "Optimization | Vol. 29, No. 4 | Society for Industrial and Applied "
+         "Mathematics", "Optimal control of the running max"),
+        ("On the asymptotic behavior of local times | Theory of Probability "
+         "& Its Applications", "On the asymptotic behavior of local times"),
+        ("Conditional systemic risk measures | SIAM Journal on Financial "
+         "Mathematics | Vol. 12, No. 4", "Conditional systemic risk measures"),
+    ])
+    def test_journal_tail_is_dropped(self, raw, expected):
+        from processing.ingest import _strip_publisher_boilerplate
+        assert _strip_publisher_boilerplate(raw) == expected
+
+    @pytest.mark.parametrize("title", [
+        "A simple proof of the theorem",                 # no pipe at all
+        "Estimating P | Q divergence in high dimensions",  # maths, not a journal
+        "P | Q",                                          # head too short
+    ])
+    def test_genuine_titles_survive(self, title):
+        from processing.ingest import _strip_publisher_boilerplate
+        assert _strip_publisher_boilerplate(title) == title
+
+
+class TestAttentionHumanLabel:
+    """The attention queue showed bare arXiv ids ("2607.13547v1"), which a
+    human cannot make a filing decision from."""
+
+    def test_canonical_stem_is_used_as_is(self, tmp_path):
+        from ui.attention_queue import human_label
+        p = tmp_path / "Dalang, R. C. - Level sets of the Brownian sheet.pdf"
+        p.write_bytes(b"%PDF-1.4\n")
+        assert human_label(p).startswith("Dalang, R. C. - ")
+
+    def test_bare_identifier_falls_back_to_stem_not_crash(self, tmp_path):
+        # No sidecar and no canonical stem: must still return something
+        # printable rather than raising inside the queue.
+        from ui.attention_queue import human_label
+        p = tmp_path / "2607.13547v1.pdf"
+        p.write_bytes(b"%PDF-1.4\n")
+        assert human_label(p) == "2607.13547v1"

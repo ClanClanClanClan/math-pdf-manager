@@ -235,42 +235,35 @@ def render_sidebar() -> None:
             st.success(f"📁 {lib}")
 
         st.divider()
-        # The Attention tab shows a count badge so the user can tell at
-        # a glance whether anything wants their attention right now.
-        # Streamlit reruns the sidebar on every interaction so we cache
-        # the count for 60s — collectors glob the whole library and a
-        # 28k-PDF rglob would dominate the UI loop otherwise.
-        try:
-            _attn_count = _attention_count_cached(str(lib)) if lib else 0
-        except Exception:  # pragma: no cover -- never break the sidebar
-            _attn_count = 0
-        attention_label = (
-            f"Attention ({_attn_count})" if _attn_count else "Attention"
-        )
+        # The badge reads the LAST computed count from session state and
+        # never scans (see _attention_badge): the sidebar renders on
+        # every page, so scanning here made Search/Stats/Settings block
+        # on a 45-113s library walk they never needed.
+        attention_label = _attention_badge()
 
-        page = st.radio(
-            "Page",
-            [
-                attention_label,
-                "Search",
-                "Sort Queue",
-                "Upgrade Queue",
-                "To Download",
-                "Conflicts",
-                "Duplicates",
-                "Maintenance",
-                "Pipeline Preview",
-                "Stats",
-                "Activity",
-                "Settings",
-            ],
-            label_visibility="collapsed",
-        )
-        # Normalise the label back to a canonical page name so the
-        # router below doesn't have to do string matching on the count.
-        if page.startswith("Attention"):
-            page = "Attention"
-        st.session_state.page = page
+        # Grouped by the owner's JOBS, not by subsystem.  The flat
+        # 12-item radio made him the router: he had to know which
+        # module owned his problem before he could start.
+        _GROUPS = [
+            ("Do", [attention_label, "Sort Queue", "Upgrade Queue", "To Download"]),
+            ("Fix", ["Conflicts", "Duplicates", "Maintenance"]),
+            ("Look", ["Search", "Pipeline Preview", "Stats", "Activity"]),
+            ("Setup", ["Settings"]),
+        ]
+        current = st.session_state.get("page", "Attention")
+        for group_name, pages in _GROUPS:
+            st.caption(group_name)
+            for label in pages:
+                canonical = "Attention" if label.startswith("Home") else label
+                if st.button(
+                    label,
+                    key=f"nav_{canonical}",
+                    use_container_width=True,
+                    type="primary" if canonical == current else "secondary",
+                ):
+                    st.session_state.page = canonical
+                    st.rerun()
+        st.session_state.setdefault("page", "Attention")
 
         st.divider()
         # Phase 5: watcher controls live in the sidebar so they're one
@@ -333,6 +326,113 @@ def _iter_sort_candidates(lib: Path) -> list[tuple[Path, str]]:
     return out
 
 
+class _Null:
+    """No-op stand-in for a Streamlit column that should not render.
+
+    Lets a block of widget code stay in one piece while being hidden in
+    a context where it would only be noise (see the Home snooze bar).
+    """
+
+    def button(self, *a, **k) -> bool:      # noqa: D102 - trivial
+        return False
+
+
+def _render_batch_sort(lib: Path, pending: int) -> None:
+    """File many papers in one reversible batch.
+
+    ``processing.bulk_sort`` has always existed, is covered by tests and
+    records ONE undo transaction for the whole run — but nothing in the
+    UI ever called it, so the only way to clear the inbox was the
+    one-paper-at-a-time reviewer below.  At ~1,900 papers that is hours
+    of clicking, which is why the backlog never shrank.
+
+    Dry-run first, always: the owner sees exactly what would move, and
+    only then can he apply.  The batch is bounded so a first run is a
+    small, easily-inspected commitment.
+    """
+    from processing.bulk_sort import bulk_sort
+
+    with st.expander(f"⚡ Sort many at once  ({pending} waiting)", expanded=False):
+        st.caption(
+            "Files every paper the pipeline is confident about, using the "
+            "same rules as the one-by-one reviewer. Originals move to "
+            "`.trash/sorted_originals/` and the whole batch is a single "
+            "undo in **Activity** — anything unclear is left for you."
+        )
+        c1, c2 = st.columns([0.4, 0.6])
+        size = c1.selectbox("How many", ["25", "100", "500", "All"], index=0,
+                            key="bulk_sort_size")
+        limit = None if size == "All" else int(size)
+
+        if c2.button("👁 Preview (changes nothing)", use_container_width=True,
+                     key="bulk_sort_preview"):
+            with st.spinner("Working out where each paper would go…"):
+                st.session_state["bulk_sort_preview_res"] = bulk_sort(
+                    lib, limit=limit, dry_run=True)
+
+        res = st.session_state.get("bulk_sort_preview_res")
+        if not res:
+            return
+
+        ok = [r for r in res["results"] if r.get("ok")]
+        bad = [r for r in res["results"] if not r.get("ok")]
+        m1, m2 = st.columns(2)
+        m1.metric("Would be filed", len(ok))
+        m2.metric("Left for you", len(bad))
+
+        def _name(r: dict) -> str:
+            return Path(str(r.get("source", "?"))).name[:52]
+
+        if ok:
+            # Show the NEW canonical name, not just the destination path —
+            # that is the part worth checking before agreeing to a batch.
+            st.dataframe(
+                [{"now": _name(r),
+                  "becomes": str(r.get("filename", "?"))[:64],
+                  "folder": str(r.get("subfolder", "?"))[:26]} for r in ok[:200]],
+                use_container_width=True, hide_index=True,
+            )
+            if len(ok) > 200:
+                st.caption(f"…and {len(ok) - 200} more, not shown.")
+        if bad:
+            with st.expander(f"{len(bad)} the pipeline won't guess at"):
+                def _why(r: dict) -> str:
+                    # The per-file `actions` trail carries the REAL reason
+                    # ("destination already exists with different content");
+                    # `error` is often just "ingest failed".
+                    for a in r.get("actions") or []:
+                        if str(a).startswith("ERROR"):
+                            return str(a)[6:].lstrip(": ")[:90]
+                    return str(r.get("error", "?"))[:90]
+                st.dataframe(
+                    [{"paper": _name(r), "why": _why(r)} for r in bad[:200]],
+                    use_container_width=True, hide_index=True,
+                )
+
+        if not ok:
+            st.info("Nothing here can be filed automatically.")
+            return
+        st.warning(
+            f"**File {len(ok)} papers now?** They move out of the inbox. "
+            "Reversible in one click from Activity."
+        )
+        if st.checkbox("Yes, I've read the list above", key="bulk_sort_confirm"):
+            if st.button(f"✅ File these {len(ok)} papers", type="primary",
+                         use_container_width=True, key="bulk_sort_apply"):
+                with st.spinner(f"Filing {len(ok)} papers…"):
+                    out = bulk_sort(lib, limit=limit, dry_run=False)
+                _log_activity("sort.bulk", f"{out['filed']} papers",
+                              f"{out['failed']} left",
+                              out.get("transaction_id") or "")
+                st.session_state.pop("bulk_sort_preview_res", None)
+                st.success(
+                    f"Filed {out['filed']} papers "
+                    f"({out['failed']} left for you). Undo in Activity."
+                )
+                _attention_count_cached.clear()
+                st.rerun()
+
+
 def render_sort_queue() -> None:
     st.header("📥 Sort Queue")
     st.caption(
@@ -344,7 +444,7 @@ def render_sort_queue() -> None:
     lib = _library()
     candidates = _iter_sort_candidates(lib)
 
-    col_a, col_b, col_c, col_d = st.columns(4)
+    col_a, col_b, col_c, col_d = st.columns(4)  # noqa: F841 (kept below)
     col_a.metric("Pending", len(candidates))
     col_b.metric("Skipped this session", len(st.session_state.sort_skipped))
     col_c.metric("Filed this session", sum(1 for a in st.session_state.activity_log if a["action"] == "sort.approve"))
@@ -358,13 +458,15 @@ def render_sort_queue() -> None:
                 st.rerun()
         return
 
+    _render_batch_sort(lib, len(candidates))
+
     # Take the first candidate the user hasn't skipped
     pdf, status = candidates[0]
 
     from ui.paper_preview import preview_pdf
     prev = preview_pdf(pdf)
 
-    st.subheader(f"Paper {1} of {len(candidates)} pending")
+    st.subheader(f"{len(candidates)} left to sort — reviewing the next one")
     st.code(str(pdf.relative_to(lib)), language=None)
 
     if prev.error:
@@ -994,15 +1096,17 @@ def _watcher_status_cached() -> dict:
     return watcher_status()
 
 
-@st.cache_data(ttl=60, show_spinner=False)
+@st.cache_data(ttl=1800, show_spinner="Scanning your library…")
 def _gather_attention_cached(library_str: str, include_dismissed: bool) -> list:
-    """Cache the FULL attention list for 60s.
+    """Cache the FULL attention list for 30 minutes.
 
-    The sidebar count and the Attention tab body both call into this,
-    so without caching every interaction in the tab re-globs the
-    library.  Returning the full list (rather than just the count)
-    means the tab body reuses the same data and stays snappy on a
-    28k-PDF library.
+    The TTL used to be 60s — but this scan MEASURES 45-113s on a 29k
+    library (three collectors each walk every PDF and load every
+    sidecar).  A TTL shorter than the computation means the cache can
+    never be warm: every human-paced click paid a full library scan,
+    which is what made the whole cockpit feel broken.  The underlying
+    facts change on the timescale of a watcher run, not a click, so
+    30 minutes is honest; the Home page offers an explicit "Rescan".
     """
     from ui.attention_queue import gather_attention_items
     return gather_attention_items(
@@ -1013,6 +1117,17 @@ def _gather_attention_cached(library_str: str, include_dismissed: bool) -> list:
 def _attention_count_cached(library_str: str) -> int:
     """Thin wrapper that returns the length of the cached attention list."""
     return len(_gather_attention_cached(library_str, False))
+
+
+def _attention_badge() -> str:
+    """Sidebar badge text — NEVER triggers the scan.
+
+    The sidebar renders on every page, so calling the scanner here made
+    Search/Stats/Settings pay a full-library walk they had no use for.
+    We only report the last count the Home page actually computed.
+    """
+    n = st.session_state.get("attn_count_last")
+    return f"Home ({n})" if n else "Home"
 
 
 # Expose ``.clear()`` for action handlers that want to invalidate the
@@ -1483,11 +1598,19 @@ def render_attention() -> None:
         undismiss,
     )
 
-    st.header("📬 Attention Queue")
+    st.header("🏠 Home")
     st.caption(
-        "Everything across the pipeline that wants your eyes. "
-        "Dismissed items disappear for the snooze window and reappear after."
+        "What needs you, grouped. Nothing here changes your library until "
+        "you press a button, and every change can be undone from Activity."
     )
+    _hc = st.columns([0.75, 0.25])
+    with _hc[1]:
+        # The scan is genuinely expensive (a full library walk), so it is
+        # cached for 30 min and refreshed on demand rather than on a
+        # timer the owner cannot see.
+        if st.button("↻ Rescan", use_container_width=True, key="attn_rescan"):
+            _gather_attention_cached.clear()
+            st.rerun()
 
     lib = _library()
     if not lib:
@@ -1501,6 +1624,9 @@ def render_attention() -> None:
     # Use the same 60s cache the sidebar count uses so clicking around
     # the Attention tab doesn't re-glob the library on every rerun.
     items = _gather_attention_cached(str(lib), show_dismissed)
+    # Publish the count for the sidebar badge.  The sidebar must never
+    # run this scan itself — that made every page pay for it.
+    st.session_state["attn_count_last"] = len(items)
     if not items:
         st.success("Nothing needs your attention right now. ✓")
         return
@@ -1518,7 +1644,28 @@ def render_attention() -> None:
         "borderline_match": "Borderline Crossref matches",
         "topic_suggestion": "Topic suggestions to confirm",
         "permanently_unpublished": "Marked permanently unpublished",
+        # Was missing, so the BIGGEST group on the page was headed with
+        # the raw internal key "unsorted_backlog (1861)".
+        "unsorted_backlog": "Waiting to be filed",
     }
+    # One plain sentence per group, so a count means something.
+    source_blurbs = {
+        "watcher_failure": "Files the watcher could not ingest.",
+        "upgrade_flag": "You asked for the published PDF; fetch it.",
+        "aging": "Working papers old enough to check for publication.",
+        "conflict_copy": "Dropbox made a second copy of the same file.",
+        "borderline_match": "A publication match that isn't confident enough to apply.",
+        "topic_suggestion": "Suggested topic folders awaiting your yes/no.",
+        "permanently_unpublished": "You marked these as never-to-be-published.",
+        "unsorted_backlog": "Sitting in the inbox, not yet filed anywhere.",
+    }
+    # Genuinely-blocked work first; bulk backlogs last.  Previously the
+    # order was dict-insertion, so the 8 items actually waiting on a
+    # decision sat below ~2,900 informational rows.
+    source_order = [
+        "watcher_failure", "conflict_copy", "upgrade_flag", "topic_suggestion",
+        "borderline_match", "aging", "permanently_unpublished", "unsorted_backlog",
+    ]
 
     # Bulk dismiss bar: a session-state set of keys the user has
     # checked.  Pruned to live items each render so a previously-
@@ -1530,7 +1677,11 @@ def render_attention() -> None:
     live_keys = {it.key for it in items}
     st.session_state[attn_sel_key] &= live_keys
     attn_selected: set[str] = st.session_state[attn_sel_key]
-    bar = st.columns([1, 1, 2, 2])
+    # The snooze bar only makes sense once a pile is open — on the
+    # summary it read "Dismiss 0 for 7 days" above everything, which is
+    # noise before the owner has chosen anything to act on.
+    _open_now = st.session_state.get("attn_open_group")
+    bar = st.columns([1, 1, 2, 2]) if _open_now else [_Null()] * 4
     if bar[0].button("Select all", key="attn_sel_all",
                      use_container_width=True):
         st.session_state[attn_sel_key] = set(live_keys)
@@ -1568,9 +1719,45 @@ def render_attention() -> None:
         st.rerun()
     st.divider()
 
-    for source_key, source_items in by_source.items():
+    # ---- Summary first: what needs you, at a glance -------------------
+    # The page used to open straight into ~3,261 individual rows, which
+    # is state, not a decision.  These cards say what each pile IS and
+    # how big, and let him open just the one he wants.
+    st.subheader("What needs you")
+    ordered = [(k, by_source[k]) for k in source_order if k in by_source]
+    ordered += [(k, v) for k, v in by_source.items() if k not in source_order]
+    open_key = st.session_state.get("attn_open_group")
+    for i in range(0, len(ordered), 2):
+        for col, (skey, sitems) in zip(st.columns(2), ordered[i:i + 2]):
+            with col, st.container(border=True):
+                st.markdown(
+                    f"**{source_labels.get(skey, skey)}** &nbsp; `{len(sitems)}`"
+                )
+                st.caption(source_blurbs.get(skey, ""))
+                is_open = open_key == skey
+                if st.button(
+                    "Hide" if is_open else "Review these",
+                    key=f"attn_open_{skey}",
+                    use_container_width=True,
+                    type="secondary" if is_open else "primary",
+                ):
+                    st.session_state["attn_open_group"] = None if is_open else skey
+                    st.rerun()
+    st.divider()
+
+    if not open_key or open_key not in by_source:
+        st.info("Pick a pile above to review it. Nothing is changed until you act.")
+        return
+
+    # ---- Only the chosen group, and only a page of it ------------------
+    for source_key, source_items in [(open_key, by_source[open_key])]:
         st.subheader(f"{source_labels.get(source_key, source_key)} ({len(source_items)})")
-        for it in source_items:
+        # Pagination: rendering every item emitted ~13,000 widgets and
+        # made a single click take ~20s.  25 rows keeps it instant.
+        shown_key = f"attn_shown_{source_key}"
+        shown = st.session_state.setdefault(shown_key, 25)
+        page_items = source_items[:shown]
+        for it in page_items:
             with st.container(border=True):
                 # Per-item checkbox in front of the existing content
                 # column.  Toggles fold into the session_state set.
@@ -1767,6 +1954,16 @@ def render_attention() -> None:
                         except Exception as exc:
                             st.error(f"Action failed: {exc}")
                         st.rerun()
+
+        remaining = len(source_items) - len(page_items)
+        if remaining > 0:
+            if st.button(
+                f"Show 25 more  ({remaining} still hidden)",
+                key=f"attn_more_{source_key}",
+                use_container_width=True,
+            ):
+                st.session_state[shown_key] = shown + 25
+                st.rerun()
 
     if show_dismissed:
         with st.expander("Un-dismiss an item", expanded=False):

@@ -95,6 +95,47 @@ _LATEX_MULTILETTER_RE = re.compile(
 )
 
 
+def _strip_publisher_boilerplate(title: str) -> str:
+    """Drop the journal/volume/publisher tail publishers put in ``/Title``.
+
+    Papers saved from a publisher's landing page carry that PAGE's title
+    in the PDF metadata, e.g.::
+
+        Optimal control of the running max | SIAM Journal on Control and
+        Optimization | Vol. 29, No. 4 | Society for Industrial and …
+
+    Measured on the real staging inbox, 15% of proposed filenames carried
+    such a tail (some over 150 characters), which would have been baked
+    into the filename by any bulk filing.  The paper's own title is the
+    FIRST pipe-delimited segment; the rest is site furniture.
+
+    Only fires when a later segment looks like publication furniture, so
+    a genuine title containing a pipe (rare, but "P | Q" appears in
+    probability) survives untouched.
+    """
+    if "|" not in title:
+        return title
+    parts = [p.strip() for p in title.split("|")]
+    head = parts[0]
+    if len(head) < 12:            # too short to be the real title — leave it
+        return title
+    tail = " ".join(parts[1:]).lower()
+    furniture = (
+        "journal", "vol.", "vol ", "no.", "issue", "society", "springer",
+        "elsevier", "wiley", "taylor", "francis", "press", "review of",
+        "proceedings", "annals", "siam", "acm", "ieee", "jstor",
+        "sciencedirect", "researchgate", "arxiv", "doi",
+        # Journal TITLES themselves, for publishers that omit "Journal"
+        # ("… | Theory of Probability & Its Applications").
+        "theory of", "applications", "transactions", "letters", "bulletin",
+        "quarterly", "econometrica", "biometrika", "statistics", "review",
+        "advances in", "archive for", "communications in", "notices",
+    )
+    if any(w in tail for w in furniture):
+        return head
+    return title
+
+
 def _unlatex(text: str) -> str:
     """Convert common LaTeX commands to their Unicode equivalents.
 
@@ -191,6 +232,7 @@ def extract_metadata_from_pdf(pdf_path: Path) -> dict:
         # any downstream processing.
         title = (pdf_meta.get("title") or "").strip()
         if title and len(title) > 5:
+            title = _strip_publisher_boilerplate(title)
             metadata["title"] = unicodedata.normalize("NFC", _unlatex(title))
 
         # Extract author from PDF metadata (same LaTeX cleanup applies)

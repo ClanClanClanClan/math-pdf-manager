@@ -34,6 +34,37 @@ DISMISSALS_PATH = Path.home() / ".mathpdf" / "attention_dismissals.json"
 SEVERITY_ERROR = "error"
 SEVERITY_WARNING = "warning"
 SEVERITY_INFO = "info"
+
+
+def human_label(pdf: Path, *, width: int = 90) -> str:
+    """A label a HUMAN can decide from — never a bare identifier.
+
+    Freshly-dropped arXiv papers are named ``2607.13547v1.pdf``, which
+    tells the owner nothing: he cannot judge where a paper belongs from
+    its arXiv id, so every such row was a dead end.
+
+    Cheapest source first, and none of them touch the network:
+      1. an already-canonical ``Author - Title`` stem;
+      2. the sidecar's cached first-page text (``classifier_text``) —
+         present for ~85% of the staging backlog, so this is free;
+      3. the raw stem, as a last resort.
+    """
+    stem = pdf.stem
+    if " - " in stem:                      # already canonical
+        return stem[:width]
+    try:
+        from processing.identity import PaperIdentity
+        text = (PaperIdentity.load(pdf).classifier_text or "").strip()
+    except Exception:                      # never break the queue over a label
+        text = ""
+    if text:
+        # The first line of a paper's first page is its title often
+        # enough to identify it; collapse whitespace so the row is one
+        # tidy line rather than a wrapped block.
+        flat = " ".join(text.split())
+        if flat:
+            return f"{flat[:width]}…" if len(flat) > width else flat
+    return stem[:width]
 _SEVERITY_RANK = {SEVERITY_ERROR: 0, SEVERITY_WARNING: 1, SEVERITY_INFO: 2}
 
 
@@ -565,8 +596,11 @@ def collect_unsorted_backlog(
             AttentionItem(
                 key=key,
                 source="unsorted_backlog",
-                severity=SEVERITY_WARNING,
-                title=f"Unsorted {age_days}d: {pdf.stem}",
+                # INFO, not WARNING: a backlog is not a fault.  As a
+                # warning it sorted ABOVE the handful of genuinely
+                # blocked items and buried them under ~1.9k rows.
+                severity=SEVERITY_INFO,
+                title=f"{human_label(pdf)}  ·  waiting {age_days}d",
                 detail=(
                     f"Path: `{pdf}`\n\n"
                     f"This paper has sat in **{TO_BE_SORTED}** for "
