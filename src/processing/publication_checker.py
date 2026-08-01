@@ -35,7 +35,7 @@ import sys
 import time
 import unicodedata
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -399,10 +399,18 @@ def scan_directory(
     checker: Optional[CrossrefChecker] = None,
     limit: Optional[int] = None,
     verbose: bool = False,
+    progress: Optional[Callable[[int, int, str], None]] = None,
 ) -> list[dict]:
     """Scan a directory of PDFs and check which ones have been published.
 
     Returns a list of results, one per checked PDF.
+
+    ``progress``
+        Optional ``(done, total, current_name)`` callback, invoked once
+        per PDF.  The cockpit uses it to drive a progress bar so this
+        check can be run from the UI instead of a terminal.  Exceptions
+        raised by the callback are swallowed -- a UI detail must never
+        abort a scan that is paying 1s per query for its results.
     """
     if checker is None:
         cache_path = directory / ".publication_check_cache.json"
@@ -417,6 +425,11 @@ def scan_directory(
     checked_count = 0
 
     for i, pdf in enumerate(pdfs):
+        if progress is not None:
+            try:
+                progress(i, len(pdfs), pdf.name)
+            except Exception:  # pragma: no cover -- a UI callback must
+                pass           # never be able to break a paid-for scan
         title, lastnames = parse_paper_filename(pdf)
         if not title:
             if verbose:

@@ -358,6 +358,63 @@ EDITABLE_CONFIG_KEYS: list[tuple[str, str, type]] = [
 ]
 
 
+# Settings that the CLI world reads from environment variables.  The
+# cockpit user has no shell, so "export it in your rc" is not a remedy
+# he can carry out -- we persist them here and push them into the
+# process instead.
+ENV_STORE_PATH = Path.home() / ".mathpdf" / "cockpit_env.json"
+
+
+def load_env_overrides() -> dict[str, str]:
+    """Read the persisted env-style settings (never raises)."""
+    if not ENV_STORE_PATH.exists():
+        return {}
+    try:
+        data = json.loads(ENV_STORE_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        logger.warning("env store unreadable: %s", exc)
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    return {str(k): str(v) for k, v in data.items()}
+
+
+def apply_env_overrides() -> dict[str, str]:
+    """Push the persisted settings into ``os.environ``.
+
+    Called once at cockpit start-up, before the downloader modules are
+    imported (they snapshot ``UNPAYWALL_EMAIL`` at import time).
+    """
+    values = load_env_overrides()
+    for k, v in values.items():
+        if v:
+            os.environ[k] = v
+    return values
+
+
+def _save_env_override(key: str, value: str) -> None:
+    """Persist one env-style setting and make it effective immediately."""
+    from core.io import atomic_write_text
+    data = load_env_overrides()
+    if value:
+        data[key] = value
+    else:
+        data.pop(key, None)
+    atomic_write_text(ENV_STORE_PATH, json.dumps(data, indent=2))
+    if value:
+        os.environ[key] = value
+    else:
+        os.environ.pop(key, None)
+    # Modules that snapshot the variable at import time are already
+    # loaded in a long-running cockpit session; update them in place so
+    # the new value works without restarting the app.
+    for mod_name in ("downloader.doi_downloader",
+                     "processing.upgrade_to_published"):
+        mod = sys.modules.get(mod_name)
+        if mod is not None and hasattr(mod, key):
+            setattr(mod, key, value)
+
+
 def load_cockpit_config() -> dict:
     """Read the cockpit-relevant config keys.
 
@@ -376,7 +433,8 @@ def load_cockpit_config() -> dict:
         out["notifications"] = cfg.notifications
     except Exception as exc:
         logger.warning("could not load watcher config: %s", exc)
-    out["unpaywall_email"] = os.environ.get("UNPAYWALL_EMAIL", "")
+    out["unpaywall_email"] = (load_env_overrides().get("UNPAYWALL_EMAIL")
+                              or os.environ.get("UNPAYWALL_EMAIL", ""))
     return out
 
 
@@ -427,9 +485,12 @@ def save_cockpit_config(values: dict, *, require_existing_paths: bool = True) ->
     except Exception as exc:
         return False, f"could not save: {exc}"
     extra_msg = ""
-    if values.get("unpaywall_email"):
-        extra_msg = (
-            f"  -- add ``export UNPAYWALL_EMAIL='{values['unpaywall_email']}'`` "
-            f"to your shell rc to persist the Unpaywall email."
-        )
+    if "unpaywall_email" in values:
+        email = str(values["unpaywall_email"] or "").strip()
+        try:
+            _save_env_override("UNPAYWALL_EMAIL", email)
+            extra_msg = ("  Unpaywall email saved and in use." if email
+                         else "  Unpaywall email cleared.")
+        except OSError as exc:
+            extra_msg = f"  (could not save the Unpaywall email: {exc})"
     return True, "config saved" + extra_msg

@@ -160,6 +160,17 @@ def dismiss(key: str, *, days: int = 7, path: Path = DISMISSALS_PATH) -> None:
     _save_dismissals(data, path)
 
 
+def list_dismissals(path: Path = DISMISSALS_PATH) -> dict[str, str]:
+    """Public read of the snooze store — ``{key: dismissed_until_iso}``.
+
+    The cockpit needs this to show WHICH items are snoozed.  Without it
+    the only un-dismiss affordance was a text box asking for an internal
+    item key that is never displayed anywhere in the UI, so snoozing was
+    a one-way door.
+    """
+    return _load_dismissals(path)
+
+
 def undismiss(key: str, *, path: Path = DISMISSALS_PATH) -> None:
     """Remove a dismissal (force the item to reappear)."""
     data = _load_dismissals(path)
@@ -252,7 +263,7 @@ def collect_watcher_failures(
             key=key,
             source="watcher_failure",
             severity=SEVERITY_ERROR if m.group("level") == "ERROR" else SEVERITY_WARNING,
-            title=f"Watcher failed to ingest {Path(filename).name}",
+            title=f"Couldn't be filed automatically: {Path(filename).name}",
             detail=(
                 f"Path: `{filename}`\n\n"
                 f"Last error: `{reason}`"
@@ -260,7 +271,7 @@ def collect_watcher_failures(
             created_at=ts,
             payload={"file": filename, "reason": reason},
             actions=[
-                ("Retry now", "watcher_retry"),
+                ("How do I retry?", "watcher_retry"),
                 ("Dismiss 7d", "dismiss_7d"),
             ],
         )
@@ -438,15 +449,14 @@ def collect_borderline_matches(library_root: Path) -> list[AttentionItem]:
                 key=key,
                 source="borderline_match",
                 severity=SEVERITY_INFO,
-                title=f"Borderline match ({conf:.0%}): {pdf_path.stem}",
+                title=f"Probably published ({conf:.0%} sure): {pdf_path.stem}",
                 detail=(
                     f"Path: `{pdf_path}`\n\n"
-                    f"Crossref hit at {conf:.0%} confidence, between the "
-                    f"state-machine threshold (75%) and the auto-upgrade "
-                    f"threshold (95%).  The system kept the paper in the "
-                    f"recheck loop but won't promote it automatically.  "
-                    f"Review the match and trigger upgrade by hand if it's "
-                    f"correct."
+                    f"A published version was found that matches this paper "
+                    f"{conf:.0%} — likely the same paper, but not certain "
+                    f"enough to swap in automatically.  Open the DOI to "
+                    f"check; if it is the same paper, upgrade it from the "
+                    f"Upgrade Queue."
                 ),
                 created_at=row.get("last_check_date", ""),
                 payload={"path": str(pdf_path), "doi": doi, "confidence": conf},
@@ -482,22 +492,21 @@ def collect_permanently_unpublished(library_root: Path) -> list[AttentionItem]:
                 key=key,
                 source="permanently_unpublished",
                 severity=SEVERITY_INFO,
-                title=f"Stopped checking: {pdf.stem}",
+                title=f"No published version found — stopped looking: {pdf.stem}",
                 detail=(
                     f"Path: `{pdf}`\n\n"
-                    f"The publication-state machine ran out its recheck "
-                    f"budget on this paper with zero Crossref hits and "
-                    f"marked it as permanently unpublished.  Click "
-                    f"**Reset recheck** to drop it back into the live "
-                    f"queue (e.g. you have new information that it was "
-                    f"in fact published)."
+                    f"This paper was searched for a published version "
+                    f"several times over and none was ever found, so the "
+                    f"search was stopped.  If you know it has since been "
+                    f"published, click **Look again** to put it back in "
+                    f"the queue."
                 ),
                 created_at=datetime.fromtimestamp(
                     pdf.stat().st_mtime, tz=timezone.utc
                 ).isoformat(timespec="seconds"),
                 payload={"path": str(pdf)},
                 actions=[
-                    ("Reset recheck", "reset_recheck"),
+                    ("Look again", "reset_recheck"),
                     ("Dismiss 30d", "dismiss_30d"),
                 ],
             )
@@ -531,10 +540,16 @@ def collect_topic_suggestions(library_root: Path) -> list[AttentionItem]:
     except Exception as exc:
         logger.warning("topic-suggestion scan raised: %s", exc)
         return []
+    # A bare code ("07b") means nothing in a list of suggestions -- show
+    # the folder name the owner actually files by hand.  ``code`` is used
+    # for display in the title/detail and for the undo-transaction
+    # description only; the move itself is driven by the paper's sidecar.
+    _names = {d.name[:3]: d.name
+              for d in library_root.glob("07? - *") if d.is_dir()}
     items: list[AttentionItem] = []
     for row in rows:
         pdf = Path(row["path"])
-        code = row["topic"]
+        code = _names.get(row["topic"], row["topic"])
         conf = row["confidence"]
         key = f"topic_suggestion::{pdf.relative_to(library_root)}"
         items.append(
@@ -637,8 +652,13 @@ def gather_attention_items(
     include_dismissed: bool = False,
     dismissals_path: Path = DISMISSALS_PATH,
     collectors: Optional[Iterable[tuple[str, Callable[[Path], list[AttentionItem]]]]] = None,
+    progress: Optional[Callable[[int, int, str], None]] = None,
 ) -> list[AttentionItem]:
     """Run every collector, filter dismissed items, sort, and return.
+
+    ``progress``, if given, is called as ``(step, total, collector_name)``
+    before each collector runs, so a UI can name the check in flight
+    during what is MEASURED as a ~44s sweep.
 
     Sort order: severity (errors first), then ``created_at`` newest
     first.  Items missing ``created_at`` sort to the bottom of their
@@ -647,11 +667,27 @@ def gather_attention_items(
     use_collectors = list(collectors) if collectors is not None else COLLECTORS
 
     all_items: list[AttentionItem] = []
-    for name, fn in use_collectors:
-        try:
-            all_items.extend(fn(library_root))
-        except Exception as exc:
-            logger.warning("collector %s failed: %s", name, exc)
+    # ONE shared sidecar read cache for the whole sweep.  Three of the
+    # collectors independently PaperIdentity.load() every PDF in the
+    # library; MEASURED, that made this function 111s on 29k papers, of
+    # which ~60s was the same JSON parsed a second and third time.  With
+    # the shared cache: 43.8s, identical output.  Every collector is
+    # read-only, which is the precondition the cache documents.
+    from processing.identity import sidecar_read_cache
+    with sidecar_read_cache():
+        for i, (name, fn) in enumerate(use_collectors, 1):
+            # ``progress`` lets the UI show WHICH check is running during
+            # a scan that takes the better part of a minute.  Reporting
+            # must never be able to break the scan.
+            if progress is not None:
+                try:
+                    progress(i, len(use_collectors), name)
+                except Exception:  # pragma: no cover - UI feedback only
+                    logger.debug("progress callback raised", exc_info=True)
+            try:
+                all_items.extend(fn(library_root))
+            except Exception as exc:
+                logger.warning("collector %s failed: %s", name, exc)
 
     if not include_dismissed:
         dismissals = _load_dismissals(dismissals_path)

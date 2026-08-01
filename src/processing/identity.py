@@ -37,6 +37,7 @@ import json
 import logging
 import os
 import shutil
+from contextlib import contextmanager
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -128,6 +129,44 @@ def enable_sidecar_mirror(library_root: Path) -> Path:
     marker = library_root / MIRROR_DIR_NAME
     marker.mkdir(parents=True, exist_ok=True)
     return marker
+
+
+# ---------------------------------------------------------------------------
+# Opt-in read cache for READ-ONLY whole-library sweeps
+# ---------------------------------------------------------------------------
+#
+# ``None`` means "no caching" — that is the state everywhere except inside
+# an explicit ``sidecar_read_cache()`` block, so no writer path can ever
+# see a stale object by accident.
+_SIDECAR_READ_CACHE: Optional[dict] = None
+
+
+@contextmanager
+def sidecar_read_cache():
+    """Memoise ``PaperIdentity.load`` for the duration of ONE read-only sweep.
+
+    Several library-wide scanners each walk every PDF and load every
+    sidecar.  MEASURED on the 29k library: one full sweep of
+    ``PaperIdentity.load`` is ~30s, and the cockpit's attention scan does
+    three of them back-to-back (borderline matches, topic suggestions,
+    permanently-unpublished) for a 111s total.  Sharing the parsed
+    sidecars across those three brings the same scan — byte-identical
+    output, 3,261 items in the same order — down to 44s.
+
+    STRICTLY read-only.  Objects are shared, not copied, and a sidecar
+    written to disk inside the block will NOT be re-read.  Only wrap
+    scanners that make no filesystem changes.  Nesting is safe: an inner
+    block reuses the outer cache and does not clear it.
+    """
+    global _SIDECAR_READ_CACHE
+    if _SIDECAR_READ_CACHE is not None:
+        yield _SIDECAR_READ_CACHE          # already inside a sweep
+        return
+    _SIDECAR_READ_CACHE = {}
+    try:
+        yield _SIDECAR_READ_CACHE
+    finally:
+        _SIDECAR_READ_CACHE = None
 
 
 def sidecar_path(pdf_path: Path) -> Path:
@@ -308,7 +347,25 @@ class PaperIdentity:
         ``schema_version`` we don't understand.  This is deliberately
         forgiving — sidecars are a nice-to-have layer, not a hard
         precondition.
+
+        Inside a :func:`sidecar_read_cache` block the parsed result is
+        memoised (see that function for why, and for the read-only
+        constraint).  Outside one — the default everywhere — this is a
+        straight passthrough and behaviour is unchanged.
         """
+        cache = _SIDECAR_READ_CACHE
+        if cache is None:
+            return cls._load_uncached(pdf_path)
+        key = str(pdf_path)
+        hit = cache.get(key)
+        if hit is None:
+            hit = cls._load_uncached(pdf_path)
+            cache[key] = hit
+        return hit
+
+    @classmethod
+    def _load_uncached(cls, pdf_path: Path) -> "PaperIdentity":
+        """Read and parse one sidecar from disk (no memoisation)."""
         path = sidecar_path(pdf_path)
         if not path.exists():
             return cls()

@@ -76,7 +76,7 @@ def _classify(old_name: str, new_name: str) -> str:
 
 
 def propose_renames(
-    library_root: Path, *, limit: Optional[int] = None
+    library_root: Path, *, limit: Optional[int] = None, progress=None
 ) -> tuple[list[dict], set[str]]:
     """Walk the library; return ``(proposals, pending_words)``.
 
@@ -95,10 +95,24 @@ def propose_renames(
     proposals: list[dict] = []
     pending: set[str] = set()
     n = 0
-    for pdf in iter_pdfs(library_root):
+    # A progress bar needs a denominator; materialising the file list
+    # costs ~5s against an ~85s scan.  Without a callback (CLI, tests)
+    # we stream exactly as before.
+    if progress is not None and limit is None:
+        pdfs = list(iter_pdfs(library_root))
+        total = len(pdfs)
+    else:
+        pdfs = iter_pdfs(library_root)
+        total = limit or 0
+    for pdf in pdfs:
         if limit is not None and n >= limit:
             break
         n += 1
+        if progress is not None:
+            try:
+                progress(n, total, pdf.name)
+            except Exception:  # progress reporting must never abort a scan
+                logger.debug("progress callback raised", exc_info=True)
         try:
             new_name, changed, pend = normalize_full_name(pdf.name, library_root)
         except Exception as exc:  # never let one bad name abort the scan
@@ -128,13 +142,17 @@ def propose_renames(
     return proposals, pending
 
 
-def scan(library_root: Path, *, limit: Optional[int] = None) -> dict:
+def scan(library_root: Path, *, limit: Optional[int] = None, progress=None) -> dict:
     """Read-only summary for the cockpit dry-run.
 
     Returns counts by change-kind, the uncertain-word count, and the full
     proposal list (so the UI can page/preview and later apply a subset).
+
+    ``progress`` is forwarded to :func:`propose_renames`; the sweep is
+    MEASURED at ~85s over 29,393 names, which needs a visible bar.
     """
-    proposals, pending = propose_renames(library_root, limit=limit)
+    proposals, pending = propose_renames(library_root, limit=limit,
+                                         progress=progress)
     by_kind = {AUTHOR: 0, TITLE: 0, BOTH: 0}
     for p in proposals:
         by_kind[p["kind"]] = by_kind.get(p["kind"], 0) + 1

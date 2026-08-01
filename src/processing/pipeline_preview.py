@@ -305,6 +305,7 @@ def preview_topic_filing(
     limit: Optional[int] = None,
     enrich: bool = False,
     with_extras: bool = True,
+    progress=None,
 ) -> tuple[PreviewSummary, list[TopicProposal]]:
     """Run the classifier across the library (or ``scope``) read-only.
 
@@ -328,7 +329,25 @@ def preview_topic_filing(
     filter_routable = scope is None
     subtopic_cache: dict = {}
 
-    for pdf in iter_pdfs(root):
+    # A progress bar needs a denominator.  Materialising the file list
+    # costs ~5s on a 29k library against a run MEASURED at ~636s, which
+    # is a fair trade for an honest percentage; without a progress
+    # callback (every non-UI caller) we keep streaming as before.
+    if progress is not None and limit is None:
+        pdfs = list(iter_pdfs(root))
+        total = len(pdfs)
+    else:
+        pdfs = iter_pdfs(root)
+        total = limit or 0
+    walked = 0
+
+    for pdf in pdfs:
+        walked += 1
+        if progress is not None:
+            try:
+                progress(walked, total, pdf.name)
+            except Exception:  # progress reporting must never abort a scan
+                logger.debug("progress callback raised", exc_info=True)
         if filter_routable and not is_routable(pdf, library_root):
             continue
         if limit is not None and summary.scanned >= limit:
