@@ -227,3 +227,48 @@ class TestApplyRenameRobustness:
         )
         assert out["renamed"] == 1
         assert (tmp_path / "Roe, R. B. - Fine.pdf").exists()
+
+
+class TestCaseOnlyRename:
+    """macOS/APFS is case-insensitive, so a rename that only changes
+    capitalisation has a "destination that already exists" — and it is the
+    SOURCE.  Comparing paths as strings called every such rename a clobber:
+    771 first-word capitalisations were refused in one batch, all reported
+    as "target exists".  The guard exists to stop one paper overwriting
+    ANOTHER, so it must ask the filesystem, not the string.
+    """
+
+    def test_case_only_rename_is_performed(self, tmp_path):
+        from processing.undo_log import UndoLog, logged_rename
+        src = tmp_path / "space-time calculus.pdf"
+        src.write_bytes(b"%PDF-1.4\n")
+        log = UndoLog(log_dir=tmp_path / ".log")
+        log.begin_transaction("case-only")
+        logged_rename(src, tmp_path / "Space-time calculus.pdf", undo_log=log)
+        log.commit()
+        assert [p.name for p in tmp_path.glob("*.pdf")] == \
+            ["Space-time calculus.pdf"]
+
+    def test_a_real_clobber_is_still_refused(self, tmp_path):
+        from processing.undo_log import logged_rename
+        a = tmp_path / "one.pdf"
+        a.write_bytes(b"A")
+        b = tmp_path / "two.pdf"
+        b.write_bytes(b"B")
+        with pytest.raises(FileExistsError):
+            logged_rename(a, b)
+        assert b.read_bytes() == b"B"        # untouched
+
+    def test_apply_renames_performs_a_case_only_change(self, tmp_path):
+        from processing.library_normalize import apply_renames
+        src = tmp_path / "Doe, J. - space-time methods.pdf"
+        src.write_bytes(b"%PDF-1.4\n")
+        out = apply_renames(
+            tmp_path,
+            [{"old": src.name, "new": "Doe, J. - Space-time methods.pdf",
+              "name": "Doe, J. - Space-time methods.pdf",
+              "old_name": src.name, "kind": "title"}],
+            dry_run=False,
+        )
+        assert out["renamed"] == 1, out["skipped"]
+        assert (tmp_path / "Doe, J. - Space-time methods.pdf").exists()

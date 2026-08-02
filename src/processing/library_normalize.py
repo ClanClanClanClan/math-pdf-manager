@@ -218,8 +218,21 @@ def apply_renames(
                     skipped.append({"old": p["old"], "reason": "source gone"})
                     continue
                 if new.exists() and _nfc(str(new)) != _nfc(str(old)):
-                    skipped.append({"old": p["old"], "reason": "target exists"})
-                    continue
+                    # macOS/APFS is case-INSENSITIVE: for a rename that only
+                    # changes capitalisation ("space–time" -> "Space–time")
+                    # the "existing target" IS the source file, so a string
+                    # comparison called every such rename a collision and
+                    # refused it — 771 of them in one batch, silently
+                    # reported as "target exists".  Ask the filesystem
+                    # whether it is really a different file.
+                    same = False
+                    try:
+                        same = old.samefile(new)
+                    except OSError:
+                        same = False
+                    if not same:
+                        skipped.append({"old": p["old"], "reason": "target exists"})
+                        continue
             except OSError as exc:      # unreadable path, ENAMETOOLONG, …
                 skipped.append({"old": p["old"], "reason": f"unusable path: {exc}"})
                 continue

@@ -517,6 +517,22 @@ def logged_copy(
     shutil.copy2(source, destination)
 
 
+def _is_same_file(a: Path, b: Path) -> bool:
+    """Do these two paths name the SAME file on disk?
+
+    Not a path comparison: macOS/APFS is case-insensitive, so a rename
+    that only changes capitalisation ("space–time" -> "Space–time") has a
+    "destination that already exists" which IS the source.  Comparing
+    paths made every such rename look like a clobber and refuse — the
+    guard is meant to stop one paper overwriting ANOTHER, so ask the
+    filesystem, not the string.
+    """
+    try:
+        return a.samefile(b)
+    except OSError:          # one of them vanished, or is unreadable
+        return False
+
+
 def logged_rename(
     old_path: Path, new_path: Path, *, undo_log: Optional[UndoLog] = None
 ) -> None:
@@ -527,11 +543,11 @@ def logged_rename(
     """
     if not old_path.exists():
         raise FileNotFoundError(f"Source does not exist: {old_path}")
-    if new_path.exists() and old_path != new_path:
+    if new_path.exists() and not _is_same_file(old_path, new_path):
         raise FileExistsError(f"Destination already exists: {new_path}")
 
     pair = _maybe_sidecar_pair(old_path, new_path)
-    if pair and pair[1].exists() and pair[0] != pair[1]:
+    if pair and pair[1].exists() and not _is_same_file(pair[0], pair[1]):
         raise FileExistsError(
             f"Destination sidecar already exists: {pair[1]}; refusing to "
             f"clobber another paper's identity"
