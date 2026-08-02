@@ -142,3 +142,33 @@ class TestMultiLetterInitials:
     def test_non_initials_are_left_alone(self, name):
         from processing.move_normalizer import normalize_authors_in_name
         assert normalize_authors_in_name(name)[0] == name
+
+
+class TestAccentedInitials:
+    """The fast-path gate must not be ASCII-only.
+
+    A pre-gate skips the (expensive) author checker when a name has no
+    glued initials.  Written as ``re.compile(r"\\.[A-Z]")`` it missed
+    every non-ASCII capital, so "Nielsen, M.Ø." was never even offered to
+    the checker — which handles it correctly.  135 such names sat
+    unfixed in the real library while the pipeline reported nothing to do.
+    """
+
+    @pytest.mark.parametrize("raw,expected", [
+        ("Nielsen, M.Ø. - Test.pdf", "Nielsen, M. Ø. - Test.pdf"),
+        ("Johansen, S., Nielsen, M.Ø. - X.pdf",
+         "Johansen, S., Nielsen, M. Ø. - X.pdf"),
+        ("Émery, M.É. - Martingales.pdf", "Émery, M. É. - Martingales.pdf"),
+    ])
+    def test_non_ascii_initials_are_spaced(self, raw, expected):
+        from processing.move_normalizer import normalize_authors_in_name
+        assert normalize_authors_in_name(raw)[0] == expected
+
+    def test_gate_still_skips_clean_names(self):
+        # The gate exists for speed; it must keep saying "nothing to do"
+        # for an already-canonical block.
+        from processing.move_normalizer import _has_unspaced_initials
+        assert not _has_unspaced_initials("Smith, J. A., Doe, R. B.")
+        assert not _has_unspaced_initials("Lions, J.-P.")
+        assert _has_unspaced_initials("Smith, J.A.")
+        assert _has_unspaced_initials("Nielsen, M.Ø.")

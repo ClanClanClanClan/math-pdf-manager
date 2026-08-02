@@ -30,13 +30,24 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-# Unspaced consecutive initials ("R.C.", "M.L.") — a dot immediately
-# followed by an uppercase letter.  Spacing these is the ONLY thing the
-# (langdetect-heavy) author checker fixes in a well-formed author block,
-# so when the block has none we skip that call entirely.  Hyphenated
-# initials ("H.-J.") and trailing single initials ("Smith, J.") do not
-# match, and so are correctly left untouched.
-_UNSPACED_INITIALS_RE = re.compile(r"\.[A-Z]")
+def _has_unspaced_initials(author_part: str) -> bool:
+    """True when a dot is glued to a following capital ("R.C.", "M.Ø.").
+
+    Spacing those is the ONLY thing the (langdetect-heavy) author checker
+    changes in a well-formed author block, so when there are none we skip
+    that call entirely — the pre-gate that makes a whole-library sweep
+    affordable.  Hyphenated initials ("H.-J.") and trailing single ones
+    ("Smith, J.") do not match and are correctly left alone.
+
+    Uses ``str.isupper`` rather than a ``[A-Z]`` character class: the
+    ASCII-only version silently skipped every accented initial, so
+    "Nielsen, M.Ø." was never even offered to the checker (which handles
+    it correctly) — 135 such names in the real library.
+    """
+    return any(
+        author_part[i] == "." and author_part[i + 1].isupper()
+        for i in range(len(author_part) - 1)
+    )
 
 # One shared spellchecker for the whole process.  check_filename() builds a
 # fresh SpellChecker() on every call otherwise (~70ms of JSON-dictionary +
@@ -78,7 +89,7 @@ def normalize_authors_in_name(name: str) -> tuple[str, bool]:
         return cosmetic, cosmetic != name
 
     author_part = cosmetic.split(" - ", 1)[0]
-    if not _UNSPACED_INITIALS_RE.search(author_part):
+    if not _has_unspaced_initials(author_part):
         # Author block already has no unspaced initials — the checker would
         # leave it unchanged.  Skip the heavy call (langdetect on every
         # filename) so bulk sweeps over the whole library stay fast.
