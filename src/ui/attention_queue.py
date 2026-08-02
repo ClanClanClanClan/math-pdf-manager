@@ -171,6 +171,17 @@ def list_dismissals(path: Path = DISMISSALS_PATH) -> dict[str, str]:
     return _load_dismissals(path)
 
 
+def list_dismissals(path: Path = DISMISSALS_PATH) -> dict[str, str]:
+    """Public read of the snooze store — ``{key: dismissed_until_iso}``.
+
+    The cockpit needs this to show WHICH items are snoozed.  Without it
+    the only un-dismiss affordance was a text box asking for an internal
+    item key that is never displayed anywhere in the UI, so snoozing was
+    a one-way door.
+    """
+    return _load_dismissals(path)
+
+
 def undismiss(key: str, *, path: Path = DISMISSALS_PATH) -> None:
     """Remove a dismissal (force the item to reappear)."""
     data = _load_dismissals(path)
@@ -404,7 +415,7 @@ def collect_conflict_copies(library_root: Path) -> list[AttentionItem]:
                 payload={"path": str(pdf), "size": pdf.stat().st_size},
                 actions=[
                     ("Open in Finder", "reveal_in_finder"),
-                    ("Delete conflict copy", "delete_conflict"),
+                    ("Move conflict copy to trash", "delete_conflict"),
                     ("Dismiss 7d", "dismiss_7d"),
                 ],
             )
@@ -687,7 +698,27 @@ def gather_attention_items(
             try:
                 all_items.extend(fn(library_root))
             except Exception as exc:
+                # A dropped collector was invisible in the UI.  Two of
+                # them (conflict copies, inbox backlog) have no internal
+                # guard, so a single unreadable file could delete a whole
+                # pile of real work from Home and leave the green
+                # "Nothing needs your attention" in its place.
                 logger.warning("collector %s failed: %s", name, exc)
+                all_items.append(AttentionItem(
+                    key=f"collector_error::{name}",
+                    source="collector_error",
+                    severity=SEVERITY_ERROR,
+                    title=f"One of the checks could not run: {name}",
+                    detail=(
+                        f"`{name}` stopped with: `{exc}`\n\n"
+                        "Anything it would have listed is **not** shown on "
+                        "this page, so the counts here are incomplete.  "
+                        "Press ↻ Rescan; if it keeps happening, the usual "
+                        "cause is a file Dropbox has not finished "
+                        "downloading."
+                    ),
+                    actions=[("Dismiss 7d", "dismiss_7d")],
+                ))
 
     if not include_dismissed:
         dismissals = _load_dismissals(dismissals_path)

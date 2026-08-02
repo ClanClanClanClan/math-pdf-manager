@@ -108,6 +108,13 @@ from ui.cockpit_actions import apply_env_overrides  # noqa: E402
 # any downloader module is imported, since those snapshot the variables
 # at import time.
 apply_env_overrides()
+from ui.cockpit_actions import apply_env_overrides  # noqa: E402
+
+# Settings the CLI reads from the environment (Unpaywall email, …) are
+# saved by the Settings page and pushed into this process here — before
+# any downloader module is imported, since those snapshot the variables
+# at import time.
+apply_env_overrides()
 
 # Subfolder → status hint for bulk_sort
 SORT_SUBFOLDER_STATUS = {
@@ -179,10 +186,16 @@ def _init_state() -> None:
         st.session_state.library_root = str(get_library_root())
     if "sort_skipped" not in st.session_state:
         st.session_state.sort_skipped = _load_skips("sort")
-    if "sort_cursor" not in st.session_state:
-        st.session_state.sort_cursor = 0
+
     if "upgrade_skipped" not in st.session_state:
         st.session_state.upgrade_skipped = _load_skips("upgrade")
+    # The queue reads a STATIC report file: approving a paper does not
+    # remove its entry, so without a separate record of what has been
+    # handled the same paper stays at the head of the queue forever.
+    # Kept apart from the skip list so "put back the ones I skipped"
+    # cannot resurrect a paper whose preprint is already in .trash/.
+    if "upgrade_done" not in st.session_state:
+        st.session_state.upgrade_done = _load_skips("upgrade_done")
     if "upgrade_report_path" not in st.session_state:
         st.session_state.upgrade_report_path = ""
     if "activity_log" not in st.session_state:
@@ -297,6 +310,48 @@ def _render_flashes() -> None:
     """Draw and clear anything queued by ``_flash``."""
     for kind, msg in st.session_state.pop("flash", []):
         {"error": st.error, "warning": st.warning}.get(kind, st.info)(msg)
+
+
+def _flash(kind: str, msg: str) -> None:
+    """Queue a message that survives the ``st.rerun()`` after an action.
+
+    Action handlers draw a result and then rerun unconditionally, which
+    throws the freshly-drawn page away: ``st.toast`` survives that,
+    ``st.error`` / ``st.warning`` / ``st.info`` do not.  So every
+    failure explanation in the cockpit was invisible and a failed click
+    looked exactly like a dead button.  Messages parked here are drawn
+    at the top of the next render.
+    """
+    st.session_state.setdefault("flash", []).append((kind, msg))
+
+
+def _render_flashes() -> None:
+    """Draw and clear anything queued by ``_flash``."""
+    for kind, msg in st.session_state.pop("flash", []):
+        {"error": st.error, "warning": st.warning}.get(kind, st.info)(msg)
+
+
+def _reversible_note(detail: str = "") -> None:
+    """The single reversibility affordance, used under every writing control.
+
+    Every mutation in this app moves files into ``.trash/`` and records a
+    transaction in the operation log, so all of them can be put back from
+    the Activity page.  Almost no button said so, and the route to Undo
+    was a page the owner had no reason to open.  One caption, identical
+    wording, under everything that writes.
+    """
+    st.caption("↩ Reversible — undo it from the **Activity** page"
+               + (f".  {detail}" if detail else "."))
+
+
+def _irreversible_note(detail: str) -> None:
+    """Counterpart for the handful of actions that genuinely cannot be undone.
+
+    Honest labelling is the point: a user who trusts "everything is
+    reversible" everywhere must be told, in the same visual slot, where
+    that stops being true.
+    """
+    st.caption(f"⚠ This one cannot be undone from Activity.  {detail}")
 
 
 def _library() -> Path:
@@ -481,9 +536,16 @@ def render_sidebar() -> None:
 
         st.divider()
         st.caption(
-            "⚠ Approvals write to your library. "
-            "Sources move to `.trash/` and can be recovered or undone."
+            "Nothing in this app deletes a file. Anything you approve can "
+            "be put back."
         )
+        # The standing promise was static text naming a folder he never
+        # sees (`.trash/`) and never naming the page where undo lives.
+        # This is navigation only — it changes nothing.
+        if st.button("↩ Undo a recent change", key="nav_undo_shortcut",
+                     use_container_width=True):
+            st.session_state.page = "Activity"
+            st.rerun()
 
 
 # ---------------------------------------------------------------------------
@@ -608,10 +670,24 @@ def _render_batch_sort(lib: Path, pending: int) -> None:
             # "All" over the 1,933-paper inbox is a >6-minute dry run.
             tick, done = _progress_ui("Reading paper")
             st.session_state["bulk_sort_preview_res"] = bulk_sort(
-                lib, limit=limit, dry_run=True, progress=tick)
+                lib, limit=limit, dry_run=True, progress=tick,
+                exclude=set(st.session_state.sort_skipped))
+            _save_scan("bulk_sort_preview",
+                       st.session_state["bulk_sort_preview_res"])
             done("Preview ready — nothing has been moved.")
 
         res = st.session_state.get("bulk_sort_preview_res")
+        if res is None:
+            # MEASURED >=0.20s/paper: previewing the whole 1,933-paper
+            # inbox is a >6-minute run, and Apply only appears while the
+            # preview is held.  A reload in between charged him twice.
+            res, _age_h = _load_scan("bulk_sort_preview")
+            if res:
+                st.session_state["bulk_sort_preview_res"] = res
+                st.caption(
+                    f"Showing the preview you ran {_age_h:.1f} h ago. "
+                    "Re-preview if papers have arrived since."
+                )
         if not res:
             return
 
@@ -671,18 +747,35 @@ def _render_batch_sort(lib: Path, pending: int) -> None:
                 # and "I should force-reload and hope".
                 tick, done = _progress_ui("Filing paper")
                 out = bulk_sort(lib, limit=limit, dry_run=False,
-                                progress=tick)
+                                progress=tick,
+                                exclude=set(st.session_state.sort_skipped))
                 done()
                 _log_activity("sort.bulk", f"{out['filed']} papers",
                               f"{out['failed']} left",
                               out.get("transaction_id") or "")
                 st.session_state.pop("bulk_sort_preview_res", None)
+                _save_scan("bulk_sort_preview", None)
                 st.success(
                     f"Filed {out['filed']} papers "
                     f"({out['failed']} left for you). Undo in Activity."
                 )
                 _attention_count_cached.clear()
                 st.rerun()
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def _preview_pdf_cached(pdf_str: str, mtime: float, size: int):
+    """Cached ``preview_pdf``, keyed on the file's identity.
+
+    ``preview_pdf`` re-parses the PDF and re-runs the metadata pipeline;
+    measured at 0.25–1.22 s per call on real inbox files.  It ran on
+    EVERY Streamlit rerun, so changing the topic dropdown, editing the
+    proposed filename or pressing Skip each paid another full extraction
+    of the SAME paper.  ``mtime``/``size`` are part of the cache key, so
+    a file that actually changes is re-extracted.
+    """
+    from ui.paper_preview import preview_pdf
+    return preview_pdf(Path(pdf_str))
 
 
 @st.cache_data(ttl=3600, show_spinner=False)
@@ -710,6 +803,19 @@ def render_sort_queue() -> None:
     )
 
     lib = _library()
+    # ``_iter_sort_candidates`` returns [] both when the queue is clear and
+    # when the staging folder cannot be found at all, and the empty state
+    # below celebrates.  A wrong library folder, or Dropbox mid-sync, made
+    # this page announce that the inbox was clear when it was not.
+    if not (lib / TO_BE_SORTED).is_dir():
+        st.error(f"Cannot find `{TO_BE_SORTED}` inside `{lib}`.")
+        st.caption(
+            "That is the folder new papers arrive in.  Either the library "
+            "folder in the sidebar points somewhere else, or Dropbox has "
+            "not synced it yet.  An empty queue here would not mean your "
+            "inbox is clear, so nothing is shown."
+        )
+        return
     candidates = _iter_sort_candidates(lib)
 
     # One line, not four st.metric blocks: below a 640px viewport the columns
@@ -873,6 +979,8 @@ def render_sort_queue() -> None:
     # Approve is taken ~90% of the time on the highest-volume page in the
     # app; it was the same width as Skip/Flag/Open with half the row left
     # empty.
+    _reversible_note("Approve moves this PDF into the folder shown above and "
+                     "puts the original in the trash — nothing is deleted.")
     cols = st.columns([2, 1, 1, 1, 3])
 
     if cols[0].button("✅ Approve", key=f"approve_{pdf}", type="primary"):
@@ -880,7 +988,8 @@ def render_sort_queue() -> None:
         ok, msg = _approve_sort(pdf, edited_name, status, lib,
                                 topic=chosen_topic, preview=prev)
         if ok:
-            st.toast(f"Filed → {destination.relative_to(lib)}")
+            st.toast(f"Filed → {destination.relative_to(lib)}  ·  "
+                     f"undo from Activity")
         else:
             st.toast(f"Failed: {msg}", icon="⚠️")
         st.rerun()
@@ -1052,6 +1161,51 @@ def _report_candidates(report: dict) -> list[dict]:
     return out
 
 
+def _find_publication_reports() -> list[Path]:
+    """Newest-first list of publication-check reports on this machine.
+
+    The Upgrade Queue used to open with a text box asking for the
+    filesystem path of a JSON file produced by a terminal command the
+    owner cannot run — so 1,672 real decisions sat behind a gate he had
+    no way through.  Every report this app can produce lands in one of
+    two known places; find them instead of asking.
+    """
+    cands: list[Path] = []
+    repo_report = Path(__file__).resolve().parents[2] / "publication_report.json"
+    if repo_report.exists():
+        cands.append(repo_report)
+    reports_dir = Path.home() / ".mathpdf" / "reports"
+    if reports_dir.is_dir():
+        cands += [p for p in reports_dir.glob("*.json") if p.is_file()]
+    seen: set[str] = set()
+    out: list[Path] = []
+    for p in sorted(cands, key=lambda q: q.stat().st_mtime, reverse=True):
+        if str(p) in seen:
+            continue
+        seen.add(str(p))
+        out.append(p)
+    return out
+
+
+def _report_candidates(report: dict) -> list[dict]:
+    """Matched entries from EITHER report shape.
+
+    ``processing.publication_checker`` writes ``{"published": [...]}``;
+    ``maintenance.weekly_report`` writes the same entries nested under
+    ``{"publications": {"unpublished": [...], "working": [...]}}``.  The
+    queue only understood the first, so the report the cockpit's own
+    "Run weekly now" button produces was unusable here.
+    """
+    if isinstance(report.get("published"), list):
+        return [e for e in report["published"] if isinstance(e, dict)]
+    pubs = report.get("publications") or {}
+    out: list[dict] = []
+    if isinstance(pubs, dict):
+        for bucket in ("unpublished", "working"):
+            out += [e for e in (pubs.get(bucket) or []) if isinstance(e, dict)]
+    return out
+
+
 def render_upgrade_queue() -> None:
     st.header("⬆ Upgrade Queue")
     st.caption(
@@ -1095,6 +1249,11 @@ def render_upgrade_queue() -> None:
         report = json.loads(rp.read_text())
     except Exception as exc:
         st.error(f"That results file could not be read: {exc}")
+        st.caption(
+            "It was probably still being written when the run was "
+            "interrupted.  Pick an older check from the list above, or run "
+            "a fresh one from **Maintenance → Full weekly run**."
+        )
         return
 
     published = _report_candidates(report)
@@ -1110,16 +1269,19 @@ def render_upgrade_queue() -> None:
     except (TypeError, ValueError):
         min_conf = 0.85
 
+    _done = st.session_state.upgrade_done
     candidates = [
         p for p in published
         if p.get("match", {}).get("confidence", 0) >= min_conf
         and str(p.get("file", "")) not in st.session_state.upgrade_skipped
+        and str(p.get("file", "")) not in _done
     ]
 
-    col_a, col_b, col_c = st.columns(3)
-    col_a.metric("Above threshold", len(candidates))
-    col_b.metric("Skipped (remembered)", len(st.session_state.upgrade_skipped))
-    col_c.metric("Upgraded this session", sum(1 for a in st.session_state.activity_log if a["action"] == "upgrade.approve"))
+    col_a, col_b, col_c, col_d = st.columns(4)
+    col_a.metric("Left to review", len(candidates))
+    col_b.metric("Already handled", len(_done))
+    col_c.metric("Skipped (remembered)", len(st.session_state.upgrade_skipped))
+    col_d.metric("Upgraded this session", sum(1 for a in st.session_state.activity_log if a["action"] == "upgrade.approve"))
 
     if st.session_state.upgrade_skipped and st.button(
         f"↻ Put back the {len(st.session_state.upgrade_skipped)} paper(s) "
@@ -1129,8 +1291,34 @@ def render_upgrade_queue() -> None:
         st.session_state.upgrade_skipped.clear()
         st.rerun()
 
+    if _done and st.button(
+        f"↻ List the {len(_done)} paper(s) already handled again",
+        key="upgrade_relist_done",
+        help="Only puts them back in this list. It does not undo anything "
+             "— undoing an upgrade lives on the Activity page.",
+    ):
+        _done.clear()
+        st.rerun()
+
     if not candidates:
-        st.success(f"🎉 No candidates above confidence {min_conf:.0%}")
+        if not published:
+            st.info(
+                "This check did not find a published version for any of "
+                "your preprints, so there is nothing to upgrade."
+            )
+            st.caption(
+                "Run a fresh check from **Maintenance → Full weekly run** "
+                "when you want to look again."
+            )
+        else:
+            st.success(
+                f"None of the {len(published)} match(es) in this check "
+                f"reach {min_conf:.0%} certainty."
+            )
+            st.caption(
+                "Drag the slider above further to the left to see the less "
+                "certain ones."
+            )
         if st.session_state.upgrade_skipped:
             if st.button("↻ Bring back the "
                          f"{len(st.session_state.upgrade_skipped)} you set aside",
@@ -1139,7 +1327,7 @@ def render_upgrade_queue() -> None:
                 st.rerun()
         return
 
-    _render_batch_upgrade(lib, rp, report, min_conf, len(candidates))
+    _render_batch_upgrade(lib, rp, candidates, min_conf, len(candidates))
 
     entry = candidates[0]
     match = entry.get("match", {})
@@ -1173,11 +1361,19 @@ def render_upgrade_queue() -> None:
         st.write(", ".join(entry.get("parsed_authors", [])) or "_(none)_")
 
     st.markdown("---")
+    _reversible_note("Upgrading downloads the published PDF, files it, and "
+                     "moves this preprint to the trash — not deleted.")
     cols = st.columns([1, 1, 1, 1, 4])
 
     if cols[0].button("✅ Download + Upgrade", key=f"upg_approve_{entry['file']}", type="primary"):
         ok, msg = _approve_upgrade(entry, lib)
         if ok:
+            # The report file is a snapshot and still lists this paper.
+            # Without this line the rerun below puts the paper we just
+            # upgraded straight back at the head of the queue — with its
+            # preprint now in .trash/, so it reads "Preprint missing" —
+            # and the queue never reaches candidate 2.
+            st.session_state.upgrade_done.add(str(entry.get("file", "")))
             st.toast(msg, icon="✅")
         else:
             st.toast(f"Failed: {msg}", icon="⚠️")
@@ -1199,7 +1395,7 @@ def render_upgrade_queue() -> None:
         st.rerun()
 
 
-def _render_batch_upgrade(lib: Path, report_path: Path, report: dict,
+def _render_batch_upgrade(lib: Path, report_path: Path, candidates: list,
                           min_conf: float, pending: int) -> None:
     """Upgrade many preprints in one reversible batch.
 
@@ -1216,20 +1412,22 @@ def _render_batch_upgrade(lib: Path, report_path: Path, report: dict,
     import tempfile
     from processing.upgrade_to_published import process_report
 
-    # ``process_report`` re-reads the file itself and only understands the
-    # ``{"published": [...]}`` layout.  A weekly-report file nests the same
-    # entries one level down, so normalise it into a scratch copy rather
-    # than silently batching zero papers.
-    run_path = report_path
-    if not isinstance(report.get("published"), list):
-        run_path = Path(tempfile.gettempdir()) / "mathpdf_upgrade_batch.json"
-        try:
-            run_path.write_text(
-                json.dumps({"published": _report_candidates(report)}),
-                encoding="utf-8")
-        except OSError as exc:
-            st.caption(f"Batch unavailable for this results file: {exc}")
-            return
+    # ALWAYS run from a scratch copy built out of the LIVE candidate list,
+    # never from the report file.  ``process_report`` re-reads the file and
+    # takes the top N by confidence every time it is called, so batching
+    # off the original repeats the same papers on every run: batch 2
+    # re-downloads everything batch 1 already did (~30s of publisher
+    # traffic each) and counts it as progress.  The candidate list has
+    # skipped and already-handled papers filtered out, so every batch is
+    # fresh work — and it is layout-agnostic, which is what the old
+    # weekly-report special case was for.
+    run_path = Path(tempfile.gettempdir()) / "mathpdf_upgrade_batch.json"
+    try:
+        run_path.write_text(json.dumps({"published": candidates}),
+                            encoding="utf-8")
+    except OSError as exc:
+        st.caption(f"Batch unavailable for this results file: {exc}")
+        return
 
     with st.expander(f"⚡ Do several at once  ({pending} waiting)",
                      expanded=False):
@@ -1294,6 +1492,14 @@ def _render_batch_upgrade(lib: Path, report_path: Path, report: dict,
                     f"{out['flagged']} queued for manual, "
                     f"{out['skipped']} skipped",
                 )
+                # Every paper the batch reached is resolved one way or the
+                # other — upgraded, queued in To Download, or skipped for
+                # want of a DOI.  Record them all, or the next batch takes
+                # the same top-N off the report and does it again.
+                for _r in out.get("results", []):
+                    _f = str(_r.get("file", ""))
+                    if _f:
+                        st.session_state.upgrade_done.add(_f)
                 st.session_state.pop("bulk_upg_preview_res", None)
                 st.success(
                     f"Upgraded {out['downloaded']} · queued "
@@ -1389,11 +1595,23 @@ def _render_normalize_section(lib: Path) -> None:
             # error with nothing kept.
             tick, done = _progress_ui("Checked")
             st.session_state["libnorm_scan_res"] = scan(lib, progress=tick)
+            _save_scan("normalize", st.session_state["libnorm_scan_res"])
             n = st.session_state["libnorm_scan_res"]["total"]
             done(f"{n} filename(s) differ from the canonical form.")
             st.toast(f"{n} filename(s) differ from canonical.")
 
         data = st.session_state.get("libnorm_scan_res")
+        if data is None:
+            # MEASURED 85s over the 29,393 names.  Held only in
+            # session_state it died on every browser reload, so he paid it
+            # again before he could carry on applying batches.
+            data, _age_h = _load_scan("normalize")
+            if data is not None:
+                st.session_state["libnorm_scan_res"] = data
+                st.caption(
+                    f"Showing your last scan, from {_age_h:.1f} h ago — pick "
+                    "up where you left off, or rescan for fresh results."
+                )
         if not data:
             st.info("Click **Scan existing filenames** to see what would change.")
             return
@@ -1484,15 +1702,17 @@ def _render_normalize_section(lib: Path) -> None:
             }
             data["total"] = len(data["proposals"])
             st.session_state["libnorm_scan_res"] = data
+            _save_scan("normalize", data)
             st.rerun()
 
 
 def render_maintenance() -> None:
     st.header("🧹 Maintenance")
     st.caption(
-        "The checks below only look and report — they change nothing.  The "
-        "filename tidy-up at the top does rename files, but only the ones "
-        "you tick, and any batch can be undone from the Activity page."
+        "**Run checks** at the bottom only looks and reports — it changes "
+        "nothing.  Two things on this page DO write: the filename tidy-up "
+        "just below, and the full weekly run *if* you tick “also file the "
+        "safe ones for me”.  Both are reversible from the Activity page."
     )
 
     lib = _library()
@@ -1504,13 +1724,18 @@ def render_maintenance() -> None:
     with st.expander("Full weekly run (subprocess + report)", expanded=False):
         cols_full = st.columns([2, 2, 1])
         auto_apply = cols_full[0].checkbox(
-            "Auto-apply safe transitions",
+            "Also file the safe ones for me (this changes files)",
             value=False,
             help=(
-                "Single-author Crossref hits at >= 0.95 confidence get "
-                "upgraded; aged + permanently-unpublished get moved to 02."
+                "Off = look and report only.  On = papers whose published "
+                "version is a near-certain match (single author, 95%+ "
+                "confidence) are upgraded, and working papers old enough "
+                "are moved to Unpublished papers."
             ),
         )
+        if auto_apply:
+            _reversible_note("With this ticked, the run will move and rename "
+                             "files in your library.")
         limit = cols_full[1].number_input(
             "Crossref query limit (0 = no limit)",
             min_value=0, value=0,
@@ -1531,12 +1756,26 @@ def render_maintenance() -> None:
                     st.session_state["weekly_report_path"] = out.report_path
                 _log_activity("maintenance.run_full", str(lib),
                               out.report_path or "")
-            _wr = st.session_state.get("weekly_report_path")
-            if _wr and st.button("📄 Open the full report", key="open_weekly"):
+            else:
+                # The failure branch used to hang off the "Open the full
+                # report" button instead of off ``out.ok``: a SUCCESSFUL
+                # run painted a red box reading "check complete", and a
+                # real failure was swallowed whenever an old report path
+                # happened to be in session state.
+                st.error(f"The weekly run did not finish: {out.message}")
+                st.caption(
+                    "Nothing in your library was changed.  The usual cause "
+                    "is the network dropping part-way through the Crossref "
+                    "lookups — try again, or set **Crossref query limit** "
+                    "to 100 for a shorter run."
+                )
+        # Drawn outside the click branch so it survives the rerun that
+        # pressing it causes.
+        _wr = st.session_state.get("weekly_report_path")
+        if _wr and Path(_wr).exists():
+            if st.button("📄 Open the full report", key="open_weekly"):
                 import subprocess as _sp
                 _sp.run(["open", str(_wr)], capture_output=True)
-            else:
-                st.error(out.message)
 
     st.divider()
 
@@ -1574,16 +1813,58 @@ def render_maintenance() -> None:
                 box.update(label="Asking Crossref about up to 100 papers — "
                                  "this is the slow one, expect minutes…")
                 st.write("… Crossref lookups running (one network call per paper)")
-                results["publications"] = check_publications(lib, limit=100, verbose=False)
-                st.write("✓ publication check done")
+                try:
+                    results["publications"] = check_publications(
+                        lib, limit=100, verbose=False)
+                    st.write("✓ publication check done")
+                except Exception as exc:
+                    # The only check that needs the network.  Losing the
+                    # other three to a dropped connection — and showing a
+                    # traceback instead of their results — is not
+                    # acceptable for a run that takes minutes.
+                    logger.warning("publication check failed: %s", exc)
+                    st.write(f"✗ publication check could not finish: {exc}")
+                    st.write(
+                        "Check your internet connection and run it again. "
+                        "The other results below are unaffected."
+                    )
             box.update(label="All selected checks finished", state="complete")
 
+        # The Crossref pass costs minutes and finds real upgrade
+        # candidates — but this button only ever put them in session_state,
+        # where a reload erased them and the Upgrade Queue (which reads
+        # report FILES) could never see them.  Write them where that page
+        # already looks.  Nothing is written inside the library.
+        _pubs = results.get("publications") or {}
+        _n_found = (len(_pubs.get("unpublished") or [])
+                    + len(_pubs.get("working") or []))
+        if _n_found:
+            try:
+                _rp = (Path.home() / ".mathpdf" / "reports"
+                       / f"checks_{datetime.now():%Y-%m-%d_%H%M%S}.json")
+                _rp.parent.mkdir(parents=True, exist_ok=True)
+                _rp.write_text(json.dumps({"publications": _pubs}),
+                               encoding="utf-8")
+                st.session_state["upgrade_report_path"] = str(_rp)
+                st.info(
+                    f"{_n_found} newly-published paper(s) found — review "
+                    f"them on the **Upgrade Queue** page, where this run is "
+                    f"now selected for you."
+                )
+            except (OSError, TypeError) as exc:
+                st.warning("Could not save these results for the Upgrade "
+                           f"Queue: {exc}")
         st.success("Done.")
         st.session_state.maintenance_results = results
 
     # Display previous results if any
     res = st.session_state.get("maintenance_results")
     if not res:
+        st.info(
+            "No checks have been run yet.  Tick the ones you want above and "
+            "press **▶ Run checks** — they only look and report; nothing "
+            "in your library is changed."
+        )
         return
 
     st.subheader("Results")
@@ -1643,10 +1924,12 @@ def _watcher_status_cached() -> dict:
     return watcher_status()
 
 
-@st.cache_data(ttl=1800, show_spinner=False)
+_ATTENTION_TTL_SECONDS = 1800
+
+
 def _gather_attention_cached(library_str: str, include_dismissed: bool,
                              _progress=None) -> list:
-    """Cache the FULL attention list for 30 minutes.
+    """Cache the FULL attention list for 30 minutes, WITH live progress.
 
     The TTL used to be 60s — but this scan MEASURES 45-113s on a 29k
     library (three collectors each walk every PDF and load every
@@ -1655,12 +1938,37 @@ def _gather_attention_cached(library_str: str, include_dismissed: bool,
     which is what made the whole cockpit feel broken.  The underlying
     facts change on the timescale of a watcher run, not a click, so
     30 minutes is honest; the Home page offers an explicit "Rescan".
+
+    Cached in session_state rather than with ``@st.cache_data``: a
+    cached function may NOT draw Streamlit elements, so the decorator
+    and the progress bar are mutually exclusive — with both, the whole
+    landing page failed with "a streamlit element is called on some
+    layout block created outside the function".  On a scan this long a
+    progress bar is the difference between "working" and "frozen", so
+    the cache is the part that moves.
     """
+    import time
+    store = st.session_state.setdefault("_attn_cache", {})
+    key = (library_str, include_dismissed)
+    hit = store.get(key)
+    if hit is not None and (time.time() - hit[0]) < _ATTENTION_TTL_SECONDS:
+        return hit[1]
     from ui.attention_queue import gather_attention_items
-    return gather_attention_items(
+    items = gather_attention_items(
         Path(library_str), include_dismissed=include_dismissed,
         progress=_progress,
     )
+    store[key] = (time.time(), items)
+    return items
+
+
+def _clear_attention_cache() -> None:
+    """Drop the cached scan — same contract as ``.clear()`` had."""
+    st.session_state.pop("_attn_cache", None)
+
+
+# Callers (and the post-mutation invalidator) still say `.clear()`.
+_gather_attention_cached.clear = _clear_attention_cache  # type: ignore[attr-defined]
 
 
 def _attention_count_cached(library_str: str) -> int:
@@ -1760,7 +2068,12 @@ def render_stats() -> None:
 
     lib = _library()
     if not lib.exists():
-        st.error("Library not found.")
+        st.error(f"That library folder does not exist: `{lib}`")
+        st.caption(
+            "Open **📁 Library** at the top of the sidebar and point it at "
+            "your Maths folder.  Nothing is broken — the cockpit simply "
+            "cannot see your papers from here."
+        )
         return
 
     # Folder counts (cached)
@@ -1795,7 +2108,25 @@ def render_stats() -> None:
     st.caption("A quick check that the library's bookkeeping is in good "
                "shape. Nothing here changes anything; refreshed every "
                "10 minutes.")
-    h = _library_health_cached(str(lib))
+    try:
+        h = _library_health_cached(str(lib))
+    except Exception as exc:
+        # An 8.3s metadata walk that raises used to end the page in a
+        # traceback and take the trash counts with it.
+        logger.exception("library health scan failed")
+        st.warning(f"The health figures could not be measured: {exc}")
+        st.caption(
+            "The counts above are still correct — only this strip is "
+            "missing.  It usually means a file is mid-sync; press "
+            "**↻ Recompute now** in a minute."
+        )
+        st.divider()
+        st.subheader("Trash (recoverable)")
+        _tc = st.columns(2)
+        _tc[0].metric("Sorted originals", _count_trash(lib, "sorted_originals"))
+        _tc[1].metric("Upgraded preprints",
+                      _count_trash(lib, "upgraded_preprints"))
+        return
     hc = st.columns(4)
     hc[0].metric("Papers with details saved",
                  f"{h['sidecar_coverage']:.1%}",
@@ -1878,15 +2209,51 @@ def render_pipeline_preview() -> None:
         # ~636s (>10 minutes) for the DEFAULT "Whole library / All".
         # A bare spinner for that long is indistinguishable from a hang.
         tick, done = _progress_ui("Read")
-        summary, proposals = preview_topic_filing(
-            lib, scope=scope, limit=limit, enrich=enrich, progress=tick,
-        )
+        try:
+            summary, proposals = preview_topic_filing(
+                lib, scope=scope, limit=limit, enrich=enrich, progress=tick,
+            )
+        except Exception as exc:
+            done()
+            logger.exception("pipeline preview failed")
+            st.error(f"The preview stopped early: {exc}")
+            st.caption(
+                "Nothing was moved or renamed — this screen never changes "
+                "your library.  Try a smaller **Sample** (1000), or one "
+                "folder in **Scope** instead of the whole library; if it "
+                "keeps stopping, that folder holds a PDF that cannot be "
+                "read."
+            )
+            return
         done(f"Classified {summary.scanned:,} papers (nothing was moved).")
+        if summary.scanned == 0:
+            st.warning(
+                "There were no PDFs to look at in that scope — pick a "
+                "different folder, or 'Whole library'."
+            )
         st.session_state["preview_summary"] = summary.to_dict()
         st.session_state["preview_proposals"] = [p.to_dict() for p in proposals]
+        _save_scan("pipeline_preview", {
+            "summary": st.session_state["preview_summary"],
+            "proposals": st.session_state["preview_proposals"],
+        })
 
     s = st.session_state.get("preview_summary")
     proposals = st.session_state.get("preview_proposals")
+    if s is None:
+        # MEASURED ~636s for the default "Whole library / All".  A browser
+        # reload used to throw away all of it — including the trust
+        # metrics this page exists to produce and the apply step gated
+        # behind them.
+        _snap, _age_h = _load_scan("pipeline_preview")
+        if _snap:
+            s = st.session_state["preview_summary"] = _snap.get("summary")
+            proposals = st.session_state["preview_proposals"] = \
+                _snap.get("proposals")
+            st.caption(
+                f"Showing your last preview, from {_age_h:.1f} h ago — "
+                "rerun it for fresh numbers."
+            )
     if not s:
         st.info("Choose a scope and click **Run preview**.")
         return
@@ -2074,12 +2441,57 @@ def render_pipeline_preview() -> None:
             # Fresh numbers next render.
             for k in ("preview_summary", "preview_proposals"):
                 st.session_state.pop(k, None)
+            # …and the on-disk copy, or a reload would resurrect numbers
+            # describing a library state that no longer exists.
+            _save_scan("pipeline_preview", None)
             _count_pdfs_cached.clear()
 
 
 # ---------------------------------------------------------------------------
 # Page: Activity
 # ---------------------------------------------------------------------------
+
+# Internal transaction descriptions -> plain English.  MEASURED against the
+# real log (314 transactions): the commonest strings the owner sees on the
+# only page that offers Undo are 'bulk_sort: 12 papers' (58), 'Watcher:
+# ingest …' (114), 'bulk conflict keep_canonical (3)' (7) and 'dedup' (5).
+# Longest prefix first so 'dedup (manual):' wins over 'dedup'.
+_TX_PHRASES = [
+    ("bulk_sort:", "Filed papers from the inbox —"),
+    ("Cockpit sort:", "Filed a paper —"),
+    ("Watcher: ingest", "Filed automatically —"),
+    ("dedup (manual):", "Removed duplicate copies —"),
+    ("dedup review batch", "Removed duplicate copies (reviewed batch)"),
+    ("dedup", "Removed duplicate copies"),
+    ("bulk conflict keep_canonical", "Kept the original of Dropbox conflict copies"),
+    ("bulk conflict keep_conflict", "Kept the conflicted copy instead of the original"),
+    ("bulk conflict keep_both", "Kept both versions of Dropbox conflicts"),
+    ("conflict keep_canonical:", "Kept the original, trashed the conflict copy —"),
+    ("conflict keep_conflict:", "Kept the conflict copy, trashed the original —"),
+    ("conflict keep_both:", "Kept both versions —"),
+    ("Cockpit upgrade:", "Replaced a preprint with its published version —"),
+    ("normalize existing filenames", "Tidied existing filenames"),
+    ("Bulk topic apply", "Moved papers into topic folders"),
+    ("Accept topic", "Moved a paper into its topic folder —"),
+    ("Reject topic", "Cleared a topic suggestion —"),
+    ("attention: trash conflict", "Moved a conflict copy to the trash —"),
+]
+
+
+def _humanize_tx(desc: str) -> str:
+    """Turn an internal transaction description into something readable.
+
+    He has to understand what a row IS before he can decide to reverse it,
+    and the log is written by the pipeline, not for him.  Anything with no
+    known prefix is passed through unchanged rather than mangled.
+    """
+    d = (desc or "").strip()
+    for prefix, human in _TX_PHRASES:
+        if d.startswith(prefix):
+            rest = d[len(prefix):].strip()
+            return f"{human} {rest}".strip() if rest else human
+    return d or "(no description)"
+
 
 def render_activity() -> None:
     st.header("🕐 Recent activity")
@@ -2101,8 +2513,18 @@ def render_activity() -> None:
     try:
         transactions = log.list_transactions()
     except Exception as exc:
-        transactions = []
-        st.warning(f"Could not read the undo log at {LOG_DIR}: {exc}")
+        # Do NOT fall through to the "Nothing has changed your library
+        # yet" empty state below: that is a factual claim about his
+        # library, and all that happened here is that the history could
+        # not be read.
+        st.error(f"The history of changes could not be read: {exc}")
+        st.caption(
+            f"It is kept in `{LOG_DIR}`.  Your papers are unaffected and "
+            "nothing has been lost.  If that folder is on Dropbox, wait "
+            "for the sync to finish and reload this page — the undo "
+            "history will come back on its own."
+        )
+        return
 
     # Map tx_id -> the richest session label we have, for nicer display.
     session_by_tx = {
@@ -2141,9 +2563,13 @@ def render_activity() -> None:
         when = tx.get("timestamp", "")[:19].replace("T", " ")
         n_ops = tx.get("operations_count", "?")
         undone = tx.get("undone", False)
-        label = f"{when}  ·  {desc}  ·  {n_ops} change(s)" + (
+        label = f"{when}  ·  {_humanize_tx(desc)}  ·  {n_ops} change(s)" + (
             "  ·  ALREADY UNDONE" if undone else "")
-        with st.expander(label, expanded=False):
+        # The Undo button lived inside a collapsed expander, so the one
+        # control this page exists for was invisible until the user guessed
+        # to click a row.  Open the newest still-undoable entry — that is
+        # the row he came here for after a mistaken click.
+        with st.expander(label, expanded=(i == 0 and not undone)):
             st.markdown(f"**Reference**: `{tx_id}`")
             sess = session_by_tx.get(tx_id)
             if sess:
@@ -2260,8 +2686,18 @@ def render_attention() -> None:
             st.rerun()
 
     lib = _library()
-    if not lib:
-        st.warning("Library root not set — see sidebar.")
+    # ``Path("...")`` is always truthy, so the old ``if not lib`` could
+    # never fire.  With a wrong or half-synced folder every collector
+    # returned nothing and this page showed the green "Nothing needs your
+    # attention right now ✓" — the most misleading screen in the app.
+    if not lib.exists():
+        st.error(f"That library folder does not exist: `{lib}`")
+        st.caption(
+            "Open **📁 Library** at the top of the sidebar and point it at "
+            "your Maths folder.  If it is on Dropbox and still syncing, "
+            "wait for Dropbox to finish, then press ↻ Rescan.  Until then "
+            "this page cannot tell 'nothing to do' from 'cannot look'."
+        )
         return
 
     # Allow the user to toggle dismissed items on/off so they can
@@ -2286,10 +2722,24 @@ def render_attention() -> None:
         "unsorted_backlog": "papers waiting in the inbox",
     }
     _tick, _done = _progress_ui("Check", show_eta=False)
-    items = _gather_attention_cached(
-        str(lib), show_dismissed,
-        lambda i, n, name: _tick(i, n, _attn_labels.get(name, name.replace("_", " "))),
-    )
+    try:
+        items = _gather_attention_cached(
+            str(lib), show_dismissed,
+            lambda i, n, name: _tick(i, n, _attn_labels.get(name, name.replace("_", " "))),
+        )
+    except Exception as exc:
+        # This is the landing page and the scan walks every PDF; a raw
+        # traceback here is the first thing he sees after a minute of
+        # waiting.
+        _done()
+        logger.exception("attention scan failed")
+        st.error(f"The check of your library could not finish: {exc}")
+        st.caption(
+            "Nothing was changed.  Press ↻ Rescan to try again — the most "
+            "common cause is a file Dropbox has not finished downloading "
+            "yet, which fixes itself once the sync completes."
+        )
+        return
     _done()
     # Publish the count for the sidebar badge.  The sidebar must never
     # run this scan itself — that made every page pay for it.
@@ -2304,6 +2754,7 @@ def render_attention() -> None:
         by_source.setdefault(it.source, []).append(it)
 
     source_labels = {
+        "collector_error": "Checks that could not run",
         "watcher_failure": "Watcher failures",
         "upgrade_flag": "Manual download requests",
         "aging": "Aging working papers",
@@ -2317,6 +2768,8 @@ def render_attention() -> None:
     }
     # One plain sentence per group, so a count means something.
     source_blurbs = {
+        "collector_error": "A check failed, so some of the counts below are "
+                           "incomplete.",
         "watcher_failure": "Files the watcher could not ingest.",
         "upgrade_flag": "You asked for the published PDF; fetch it.",
         "aging": "Working papers old enough to check for publication.",
@@ -2334,6 +2787,7 @@ def render_attention() -> None:
     # order was dict-insertion, so the 8 items actually waiting on a
     # decision sat below ~2,900 informational rows.
     source_order = [
+        "collector_error",
         "watcher_failure", "conflict_copy", "upgrade_flag", "topic_suggestion",
         "borderline_match", "aging", "permanently_unpublished", "unsorted_backlog",
     ]
@@ -2353,9 +2807,17 @@ def render_attention() -> None:
     # noise before the owner has chosen anything to act on.
     _open_now = st.session_state.get("attn_open_group")
     bar = st.columns([1, 1, 2, 2]) if _open_now else [_Null()] * 4
-    if bar[0].button("Select all", key="attn_sel_all",
-                     use_container_width=True):
-        st.session_state[attn_sel_key] = set(live_keys)
+    if bar[0].button(
+        f"Select all {len(by_source.get(_open_now) or [])} in this pile",
+        key="attn_sel_all",
+        use_container_width=True,
+    ):
+        # Scoped to the OPEN group.  `live_keys` spans every pile, so this
+        # used to arm the neighbouring "Dismiss N for 30 days" over all
+        # ~3,261 items — including the handful of genuinely-blocked ones —
+        # from inside a screen that shows only one pile.
+        st.session_state[attn_sel_key] = {
+            it.key for it in (by_source.get(_open_now) or [])}
         st.rerun()
     if bar[1].button("Clear", key="attn_sel_clear",
                      use_container_width=True,
@@ -2437,16 +2899,16 @@ def render_attention() -> None:
                 # "select" as the label meant 25 identically-named
                 # checkboxes in the accessibility tree, in front of a bulk
                 # action that dismisses real work for 30 days.
+                # The label names the ITEM, so 25 tick boxes are not 25
+                # identical "select"s in the accessibility tree — in front
+                # of a bulk action that snoozes real work for 30 days.
+                # Collapsed keeps it out of the visual noise; Streamlit
+                # still exposes the text to assistive tech.
                 ck = st.checkbox(
                     f"Select: {it.title}",
-                # In a narrow pane this box sits alone on its own line above
-                # the item (the [0.7, 0.3] row below it stacks), so a
-                # collapsed label leaves a tick box that means nothing.
-                ck = st.checkbox(
-                    "Select for bulk dismiss",
                     value=it.key in attn_selected,
                     key=f"attn_sel_{it.key}",
-                )
+                    label_visibility="collapsed",
                 )
                 if ck:
                     attn_selected.add(it.key)
@@ -2488,11 +2950,22 @@ def render_attention() -> None:
                                 dismiss(it.key, days=30)
                                 st.toast(f"Dismissed for 30 days: {it.title}")
                             elif action_id == "mark_flag_done":
+                                # This called ``fp.unlink()`` -- the one hard
+                                # delete in an app whose whole promise is that
+                                # nothing is ever deleted.  The note now goes
+                                # to ``.trash/done_flags/`` through the same
+                                # helper the To Download page already uses.
+                                from ui.cockpit_actions import (
+                                    mark_flag_done as _mark_flag_done,
+                                )
                                 fp = Path(it.payload.get("flag_file", ""))
-                                if fp.exists():
-                                    fp.unlink()
-                                    _log_activity("attention.mark_flag_done", fp.name)
-                                    st.toast(f"Removed flag {fp.name}")
+                                if fp.exists() and _mark_flag_done(fp, lib):
+                                    _log_activity("attention.mark_flag_done",
+                                                  fp.name, ".trash/done_flags/")
+                                    st.toast(
+                                        "Marked done — the note was moved "
+                                        "to the trash folder, not deleted."
+                                    )
                                     # Invalidate cached count so the
                                     # sidebar badge updates immediately
                                     # rather than after the 60s TTL.
@@ -2621,7 +3094,11 @@ def render_attention() -> None:
                                     status = results[0]["status"] if results else "no-op"
                                     _log_activity("attention.transition_aged",
                                                   Path(target_path).name, status)
-                                    st.toast(f"Aging: {status}")
+                                    st.toast(
+                                        f"Moved to Unpublished papers "
+                                        f"({status}) — undo it from the "
+                                        f"Activity page."
+                                    )
                                     _attention_count_cached.clear()
                             elif action_id == "reset_recheck":
                                 # Restore a paper the state machine
@@ -2732,9 +3209,19 @@ def _show_download_hint(doi: str) -> None:
     try:
         from downloader import browser_session as _bs
         diag = _bs.last_diagnosis(doi)
-    except Exception:
+    except Exception as exc:
+        logger.debug("download diagnosis unavailable for %s: %s", doi, exc)
         diag = None
     if not diag:
+        # No specific diagnosis is still no excuse for a bare red error:
+        # say what fixes this most of the time.
+        st.caption(
+            "What usually fixes this: turn your **VPN off**, make sure you "
+            "are signed in to the publisher in Chrome and press **Settings "
+            "→ 🔄 Refresh from Chrome**, then try again.  Otherwise open "
+            "the DOI above and save the PDF into your inbox folder "
+            "yourself — it will be filed from there."
+        )
         return
     st.info(f"ℹ️ Why: {diag['message']}")
     if diag.get("login_url") and diag.get("publisher"):
@@ -2765,8 +3252,17 @@ def render_to_download() -> None:
     # Inbox is where downloaded PDFs land for the watcher to pick up.
     try:
         inbox = WatcherConfig.load().inbox_dir
-    except Exception:
+    except Exception as exc:
+        # Swallowing this meant downloads landed in a GUESSED folder that
+        # the watcher may not be watching — the PDF arrives, nothing
+        # files it, and no screen ever explains why.
         inbox = Path.home() / "Downloads" / "MathInbox"
+        st.warning(
+            f"Your watcher settings could not be read ({exc}), so downloads "
+            f"will be saved to `{inbox}`.  If they are not filed "
+            f"automatically, check **Settings → Watcher settings** and make "
+            f"sure the inbox folder there is this one."
+        )
 
     # --- DOI download form -----------------------------------------
     with st.container(border=True):
@@ -2839,9 +3335,14 @@ def render_to_download() -> None:
                 if st.button(
                     "Mark done", key=f"flag_done_{flag['flag']}",
                     use_container_width=True,
+                    help="Takes this off the list. The note is moved to the "
+                         "library's trash folder, not deleted.",
                 ):
                     if mark_flag_done(flag["flag"], lib):
-                        st.toast(f"Cleared flag {flag['flag'].name}")
+                        _log_activity("download.flag_done", flag["title"],
+                                      ".trash/done_flags/")
+                        st.toast("Marked done — the note moved to the "
+                                 "trash folder, not deleted.")
                         _attention_count_cached.clear()
                         st.rerun()
 
@@ -2867,10 +3368,50 @@ def _render_title_vocabulary(lib: Path) -> None:
         expanded=bool(pending) and len(pending) <= 12,
     ):
         st.caption(
-            f"Ruled so far: {len(vocab['proper'])} proper · "
-            f"{len(vocab['common'])} common.  A ruling applies to every "
+            f"Ruled so far: {len(vocab['proper'])} kept capitalised · "
+            f"{len(vocab['common'])} lowercased.  A ruling applies to every "
             "future move/filing; it never renames files retroactively."
         )
+
+        # A ruling was the one decision in this app with no route back: the
+        # word leaves the pending list and no screen ever showed it again,
+        # yet it silently shapes every future filename.  ``decide()`` already
+        # supports the opposite ruling; nothing in the UI reached it.
+        _ruled = ([(w, "proper") for w in sorted(vocab["proper"])]
+                  + [(w, "common") for w in sorted(vocab["common"])])
+        if _ruled:
+            with st.expander(
+                f"↩ Change a ruling you already made ({len(_ruled)})",
+                expanded=False,
+            ):
+                _q = st.text_input("Find a word", key="vocab_ruled_find",
+                                   placeholder="type part of the word")
+                _hits = [(w, k) for w, k in _ruled
+                         if not _q or _q.lower() in w.lower()][:30]
+                if not _hits:
+                    st.caption("No ruling matches that.")
+                for _w, _k in _hits:
+                    _c = st.columns([3, 2])
+                    _c[0].markdown(
+                        f"**{_w}** — currently "
+                        + ("kept capitalised" if _k == "proper"
+                           else "lowercased"))
+                    _flip = "common" if _k == "proper" else "proper"
+                    if _c[1].button(
+                        ("Lowercase it instead" if _flip == "common"
+                         else "Keep it capitalised instead"),
+                        key=f"vocab_flip_{_k}_{_w}",
+                        use_container_width=True,
+                    ):
+                        decide(lib, _w, _flip)
+                        st.toast(f"'{_w}' is now "
+                                 + ("lowercased." if _flip == "common"
+                                    else "kept capitalised."))
+                        st.rerun()
+                if len(_hits) == 30:
+                    st.caption("Showing the first 30 — type more to narrow it.")
+                st.caption("Changing a ruling affects future filings only — "
+                           "it never renames files you already have.")
 
         # Self-trained assist model (Stage 2): suggests a ruling per pending
         # word.  Trained ONLY on the owner's own data (corpus casing stats,
@@ -3110,7 +3651,10 @@ def render_settings() -> None:
                         except Exception as exc:
                             st.error(f"Import failed: {exc}")
             with _c2:
-                if status.get("has_cache") and st.button("Clear session", key="bs_clear"):
+                if status.get("has_cache") and st.button(
+                    "Forget the imported session", key="bs_clear",
+                    help="Deletes the stored publisher cookies. Not undoable "
+                         "— you would press 'Refresh from Chrome' again."):
                     _bs.clear_cached()
                     _log_activity("settings.browser_session", "", "cleared")
                     st.rerun()
@@ -3156,8 +3700,10 @@ def render_settings() -> None:
                 st.rerun()
             else:
                 st.info("Nothing entered — existing credentials unchanged.")
-        if (_has_user or _has_pwd) and st.button("Clear ETH credentials",
-                                                 key="eth_clear"):
+        if (_has_user or _has_pwd) and st.button(
+                "Clear ETH credentials", key="eth_clear",
+                help="Deletes the stored username and password. This cannot "
+                     "be undone — you would have to type them in again."):
             mgr = get_config_manager()
             mgr.credential_manager.delete_credential("eth_username")
             mgr.credential_manager.delete_credential("eth_password")
@@ -3355,6 +3901,19 @@ def _scan_conflicts_cached(lib_str: str) -> list:
     return scan_conflicts(Path(lib_str))
 
 
+@st.cache_data(ttl=1800, show_spinner="Looking for Dropbox conflict copies…")
+def _scan_conflicts_cached(lib_str: str) -> list:
+    """Cached ``scan_conflicts`` (30-min TTL).
+
+    Measured at 7.1 s on the real library — and it ran on page LOAD and
+    then again on every rerun, i.e. on every single button press, to
+    display 1 conflict.  Resolution handlers clear this cache so the
+    list never shows a conflict that has already been resolved.
+    """
+    from processing.conflict_resolver import scan_conflicts
+    return scan_conflicts(Path(lib_str))
+
+
 def render_conflicts() -> None:
     """Side-by-side conflict-copy resolver."""
     from processing.conflict_resolver import (
@@ -3373,6 +3932,16 @@ def render_conflicts() -> None:
     )
 
     lib = _library()
+    # MEASURED: scan_conflicts() on a nonexistent path returns [], so this
+    # page used to print "No conflict copies detected. ✓" for a library it
+    # could not read at all.
+    if not lib.exists():
+        st.error(f"That library folder does not exist: `{lib}`")
+        st.caption(
+            "Set it in **📁 Library** at the top of the sidebar.  Until "
+            "then this page cannot tell 'no conflicts' from 'cannot look'."
+        )
+        return
     if st.button("↻ Rescan for conflict copies", key="conf_rescan",
                  help="Walks the whole library (about 9 seconds).  The "
                       "result is kept for 30 minutes and refreshes itself "
@@ -3429,7 +3998,9 @@ def render_conflicts() -> None:
         n_ok, n_fail, errors = _conflicts_bulk_apply(
             conflicts, selected, lib, "suggested",
         )
-        st.toast(f"bulk suggested: ok={n_ok} fail={n_fail}")
+        st.toast(f"Resolved {n_ok} conflict(s) the suggested way"
+                 + (f", {n_fail} could not be done" if n_fail else "")
+                 + " — undo from Activity.")
         if errors:
             st.warning("Errors:\n  - " + "\n  - ".join(errors[:8]))
         st.session_state[sel_key] = set()
@@ -3444,7 +4015,9 @@ def render_conflicts() -> None:
         n_ok, n_fail, errors = _conflicts_bulk_apply(
             conflicts, selected, lib, "keep_canonical",
         )
-        st.toast(f"bulk keep canonical: ok={n_ok} fail={n_fail}")
+        st.toast(f"Kept the original for {n_ok} conflict(s)"
+                 + (f", {n_fail} could not be done" if n_fail else "")
+                 + " — undo from Activity.")
         if errors:
             st.warning("Errors:\n  - " + "\n  - ".join(errors[:8]))
         st.session_state[sel_key] = set()
@@ -3459,12 +4032,21 @@ def render_conflicts() -> None:
         n_ok, n_fail, errors = _conflicts_bulk_apply(
             conflicts, selected, lib, "keep_conflict",
         )
-        st.toast(f"bulk keep conflict: ok={n_ok} fail={n_fail}")
+        st.toast(f"Kept the conflicted copy for {n_ok} conflict(s)"
+                 + (f", {n_fail} could not be done" if n_fail else "")
+                 + " — undo from Activity.")
         if errors:
             st.warning("Errors:\n  - " + "\n  - ".join(errors[:8]))
         st.session_state[sel_key] = set()
         _attention_count_cached.clear()
         st.rerun()
+
+    if selected:
+        _reversible_note(
+            f"Each of the {len(selected)} selected conflicts is resolved by "
+            "moving the losing file to the trash — the whole batch can be "
+            "put back."
+        )
 
     st.divider()
 
@@ -3528,6 +4110,7 @@ def render_conflicts() -> None:
                                   msg, tx_id)
                     _attention_count_cached.clear()
                     _scan_conflicts_cached.clear()
+                    _scan_conflicts_cached.clear()
                     st.rerun()
                 else:
                     # No rerun on failure: it erased the reason and the
@@ -3543,6 +4126,8 @@ def render_conflicts() -> None:
             # between 640px and ~1100px wide (measured on the equivalent Sort
             # Queue row: 71px, label broken mid-word).  2x2 keeps every label
             # readable and stacks identically below 640px.
+            _reversible_note("Whichever you keep, the other file is moved to "
+                             "the trash — never deleted.")
             _res1 = st.columns(2)
             _res2 = st.columns(2)
             act_cols = [_res1[0], _res1[1], _res2[0], _res2[1]]
@@ -3612,11 +4197,35 @@ def render_search() -> None:
         st.info("Type author names and/or title words.")
         return
 
-    index = _search_index_cached(str(lib))
+    if not lib.exists():
+        st.error(f"That library folder does not exist: `{lib}`")
+        st.caption(
+            "Set it in **📁 Library** at the top of the sidebar — every "
+            "search will come back empty until then."
+        )
+        return
+    try:
+        index = _search_index_cached(str(lib))
+    except Exception as exc:
+        logger.exception("search index build failed")
+        st.error(f"The list of your papers could not be built: {exc}")
+        st.caption(
+            "Nothing was changed.  If your library is on Dropbox, wait for "
+            "it to finish syncing and search again."
+        )
+        return
     hits = search_index(index, query, limit=200)
     st.caption(f"{len(hits)} result(s)"
                + (" (first 200 shown — refine the query)" if len(hits) == 200 else ""))
     if not hits:
+        st.info("Nothing in your library matches all of those words.")
+        st.caption(
+            "This searches the **file names** (authors and title), not the "
+            "text inside the PDFs.  Try fewer words, or just the author's "
+            "surname, or a different spelling.  A paper that only just "
+            "arrived may still be waiting in the **Sort Queue** and have "
+            "no proper name yet."
+        )
         return
 
     # [8, 1] stacks below a 640px viewport, so each hit became three stacked
@@ -3695,6 +4304,52 @@ def _dup_keepall_undo(lib: Path, sha256: str) -> None:
     p = _dup_keepall_path(lib)
     p.parent.mkdir(parents=True, exist_ok=True)
     atomic_write_text(p, json.dumps(sorted(keep)))
+
+
+# ---------------------------------------------------------------------------
+# Scan snapshots — expensive read-only scans survive a browser reload
+# ---------------------------------------------------------------------------
+
+def _scan_snapshot_path(name: str) -> Path:
+    p = Path.home() / ".mathpdf" / "scans" / f"{name}.json"
+    p.parent.mkdir(parents=True, exist_ok=True)
+    return p
+
+
+def _save_scan(name: str, payload) -> None:
+    """Persist a scan result so a reload doesn't throw the work away.
+
+    Measured cost of re-running these: duplicates ~16 s, same-paper
+    variants 53–113 s, filename normalisation ~25 s.  Keeping them only
+    in ``st.session_state`` meant every browser reload charged the user
+    that again before they could continue reviewing.
+    """
+    try:
+        p = _scan_snapshot_path(name)
+        tmp = p.parent / (p.name + ".tmp")
+        tmp.write_text(
+            json.dumps({"saved_at": time.time(), "payload": payload},
+                       ensure_ascii=False),
+            encoding="utf-8")
+        tmp.replace(p)
+    except (OSError, TypeError) as exc:
+        logger.warning("Could not save %s scan snapshot: %s", name, exc)
+
+
+def _load_scan(name: str, max_age_h: float = 24.0):
+    """Return ``(payload, age_in_hours)``; ``(None, age)`` if absent/stale."""
+    try:
+        blob = json.loads(
+            _scan_snapshot_path(name).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, ValueError):
+        return None, 0.0
+    try:
+        age_h = (time.time() - float(blob.get("saved_at", 0))) / 3600.0
+    except (TypeError, ValueError):
+        return None, 0.0
+    if age_h > max_age_h:
+        return None, age_h
+    return blob.get("payload"), age_h
 
 
 # ---------------------------------------------------------------------------
@@ -3985,6 +4640,17 @@ def render_duplicates() -> None:
                     _dup_keepall_undo(lib, _sha)
                     st.rerun()
 
+    if not auto and not review:
+        st.success(
+            f"Nothing to do here — all {len(groups)} duplicate group(s) "
+            f"from this scan have been resolved or ruled 'keep all'."
+        )
+        st.caption(
+            "Use the list above to bring a ruling back, or press "
+            "**🔍 Scan for duplicates** for a fresh look at the library."
+        )
+        return
+
     # ----- Auto-safe batch -------------------------------------------------
     if auto:
         st.subheader(f"Auto-safe · {len(auto)} groups, {auto_copies} redundant copies")
@@ -4017,6 +4683,8 @@ def render_duplicates() -> None:
                         f"`{_dup_rel(r, lib)}`  ·  _{g.reason}_"
                     )
 
+        _reversible_note("The extra copies move into the library's trash "
+                         "folder; the one marked KEEP does not move.")
         act = len([g for g in auto if g.keep not in excluded])
         if st.button(
             f"🗑 Trash redundant copies for {act} group(s) (reversible)",
@@ -4069,6 +4737,8 @@ def render_duplicates() -> None:
                     format_func=lambda p: labels[p],
                     key=f"dup_rev_keep_{g.sha256[:12]}",
                 )
+                _reversible_note("The copies you don't keep move to the "
+                                 "trash — nothing is deleted.")
                 cols = st.columns(len(options) + 2)
                 for i, p in enumerate(options):
                     if cols[i].button("Open", key=f"dup_rev_open_{g.sha256[:12]}_{i}"):

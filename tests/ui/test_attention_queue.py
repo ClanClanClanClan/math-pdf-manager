@@ -370,7 +370,15 @@ class TestGatherAttentionItems:
                 ("ok", lambda r: [AttentionItem(key="k", source="x", severity=SEVERITY_INFO, title="t")]),
             ],
         )
-        assert [it.key for it in out] == ["k"]
+        # The other collectors still run — one failure must never cost the
+        # whole queue.
+        keys = [it.key for it in out]
+        assert "k" in keys
+        # ...and the failure is now REPORTED rather than swallowed.  A
+        # collector that dies silently means a whole class of work (say
+        # every conflict copy) vanishes from the queue with nothing on
+        # screen to say so, which is indistinguishable from "all clear".
+        assert "collector_error::bad" in keys
 
 
 # ---------------------------------------------------------------------------
