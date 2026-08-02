@@ -1561,6 +1561,133 @@ def _approve_upgrade(entry: dict, lib: Path) -> tuple[bool, str]:
 # Page: Maintenance
 # ---------------------------------------------------------------------------
 
+def _render_title_review(lib: Path, data: dict) -> None:
+    """Review a thousand title renames as a handful of decisions.
+
+    The bucket checkbox below is all-or-nothing: tick "Title casing" and
+    every one of ~1,000 proposals goes.  That is not a review.  Here the
+    same proposals are split by WHAT they change, so the mechanical ones
+    are one approval each and only the genuine judgement calls — about a
+    hundred files, grouped by the word being re-cased — are put in front
+    of him.
+    """
+    from processing.library_normalize import apply_renames
+    from processing.title_review import (
+        COSMETIC, FIRSTWORD, CASE, REWRITE, split_titles, word_decisions,
+        proposals_for_words,
+    )
+
+    titles = [p for p in data["proposals"] if p["kind"] in ("title", "both")]
+    if not titles:
+        return
+    groups = split_titles(titles)
+
+    st.markdown("---")
+    st.markdown("### Title changes, grouped by what they actually change")
+    st.caption(
+        f"{len(titles)} proposed title changes. Most are mechanical; the "
+        "review below is only the part that needs your judgement."
+    )
+
+    def _apply(rows: list, label: str, key: str) -> None:
+        """Shared reversible apply for one group."""
+        if st.button(f"✅ Apply these {len(rows)}", key=f"tr_apply_{key}",
+                     type="primary", use_container_width=True):
+            with st.spinner(f"Renaming {len(rows)} file(s)…"):
+                res = apply_renames(lib, rows, dry_run=False)
+            st.success(
+                f"Renamed {res['renamed']}"
+                + (f" · left alone {len(res['skipped'])}" if res["skipped"] else "")
+                + ". Undo the whole batch from Activity."
+            )
+            if res.get("tx_id"):
+                _log_activity(f"normalize.{key}", str(lib),
+                              f"{res['renamed']} renamed", res["tx_id"])
+            done = {p["old"] for p in rows}
+            data["proposals"] = [p for p in data["proposals"]
+                                 if p["old"] not in done]
+            _save_scan("normalize", data)
+            st.rerun()
+
+    # ---- the two mechanical groups: one approval each -------------------
+    safe = [
+        (FIRSTWORD, "Capitalise the first word of the title",
+         "Sentence case starts with a capital. Nothing else in the name changes."),
+        (COSMETIC, "Spacing, punctuation and accents only",
+         "No word changes — things like “(0,π)” → “(0, π)” or a stray leading space."),
+    ]
+    for kind, title, why in safe:
+        rows = groups[kind]
+        if not rows:
+            continue
+        with st.container(border=True):
+            st.markdown(f"**{title}** &nbsp; `{len(rows)}`")
+            st.caption(why)
+            with st.expander("See examples", expanded=False):
+                for p in rows[:25]:
+                    st.markdown(f"`{p['old_name'][:90]}`\n\n→ **{p['name'][:90]}**")
+                if len(rows) > 25:
+                    st.caption(f"…and {len(rows) - 25} more of the same shape.")
+            _apply(rows, title, kind)
+            st.caption("↩ Reversible — undo from Activity.")
+
+    # ---- the real review: one ruling per WORD ---------------------------
+    case_rows = groups[CASE]
+    if case_rows:
+        decisions = word_decisions(case_rows)
+        approved = set(
+            tuple(x) for x in st.session_state.setdefault("tr_approved", [])
+        )
+        with st.container(border=True):
+            st.markdown(
+                f"**Words to rule on** &nbsp; `{len(decisions)}` "
+                f"(covering {len(case_rows)} files)"
+            )
+            st.caption(
+                "Each row is one decision about one word. Approving it "
+                "settles every file containing that word; a file is only "
+                "renamed once you have approved ALL of its changes."
+            )
+            shown = st.session_state.setdefault("tr_shown", 20)
+            ordered = sorted(decisions.items(), key=lambda kv: -kv[1]["count"])
+            for (old_w, new_w), info in ordered[:shown]:
+                cols = st.columns([0.55, 0.45])
+                with cols[0]:
+                    st.markdown(f"`{old_w}` → **{new_w}**  ·  {info['count']} file(s)")
+                    st.caption(info["examples"][0][:88] if info["examples"] else "")
+                with cols[1]:
+                    on = (old_w, new_w) in approved
+                    if st.checkbox("Accept this change", value=on,
+                                   key=f"tr_w_{old_w}_{new_w}"):
+                        approved.add((old_w, new_w))
+                    else:
+                        approved.discard((old_w, new_w))
+            st.session_state["tr_approved"] = [list(t) for t in approved]
+            if len(ordered) > shown:
+                if st.button(f"Show 20 more ({len(ordered) - shown} left)",
+                             key="tr_more", use_container_width=True):
+                    st.session_state["tr_shown"] = shown + 20
+                    st.rerun()
+
+            ready = proposals_for_words(case_rows, approved)
+            st.markdown(
+                f"**{len(ready)}** file(s) have every one of their changes approved."
+            )
+            if ready:
+                _apply(ready, "approved word changes", "case")
+                st.caption("↩ Reversible — undo from Activity.")
+
+    # ---- anything that genuinely rewrites text --------------------------
+    if groups[REWRITE]:
+        with st.expander(
+            f"⚠ {len(groups[REWRITE])} change the text itself — look before applying",
+            expanded=False,
+        ):
+            for p in groups[REWRITE][:25]:
+                st.markdown(f"`{p['old_name'][:90]}`\n\n→ **{p['name'][:90]}**")
+            st.caption("These are not simple re-casings; check them by eye.")
+
+
 def _render_normalize_section(lib: Path) -> None:
     """Bring EXISTING filenames up to the canonical standard.
 
@@ -1639,6 +1766,8 @@ def _render_normalize_section(lib: Path) -> None:
                     )
                 if len(rows) > 60:
                     st.caption(f"…and {len(rows) - 60} more.")
+
+        _render_title_review(lib, data)
 
         st.divider()
         st.markdown("**Apply a batch** (reversible)")
