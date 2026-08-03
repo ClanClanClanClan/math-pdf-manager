@@ -194,6 +194,36 @@ def _whitelists() -> set:
 # Core
 # ---------------------------------------------------------------------------
 
+# German capitalises EVERY noun, so sentence-casing a German title is not
+# a matter of degree — it is simply wrong ("…vorkommendes Problem" is not
+# "…vorkommendes problem", "Anwendung auf Martingale" is not "…martingale").
+# These markers are function words and inflections that essentially do not
+# occur in an English or French mathematical title, so one hit is enough;
+# "die"/"der" alone would be too eager (both are English words in other
+# senses) and are deliberately absent.
+_GERMAN_MARKERS = frozenset({
+    "und", "über", "für", "auf", "eine", "einer", "einem", "einen",
+    "des", "dem", "den", "zur", "zum", "mit", "durch", "nicht", "ist",
+    "sind", "werden", "wird", "vom", "beim", "im", "aus", "nach",
+    "theorie", "anwendung", "beitrag", "untersuchungen", "bemerkungen",
+    "grundlagen", "einführung", "wahrscheinlichkeitsrechnung",
+})
+
+
+def _is_probably_german(title: str) -> bool:
+    """Does this title read as German?
+
+    Conservative on purpose: a false positive only means the title is
+    left alone (the module's safe default), while a false negative
+    lowercases a German noun, which is a real error in the filename.
+    """
+    words = {w.lower() for w in _WORD_RE.findall(title)}
+    if words & _GERMAN_MARKERS:
+        return True
+    # "ß" is not used in any other language written here.
+    return "ß" in title
+
+
 def _is_plain_capitalized(seg: str) -> bool:
     """True for the ONLY shape we ever consider lowercasing: ``Xxxx…`` —
     initial uppercase ASCII-or-not letter, all remaining letters lowercase,
@@ -240,7 +270,14 @@ def propose_title_case(
     wl = _whitelists()
     proper_all = vocab["proper"] | wl
 
+    german = _is_probably_german(title)
+
     def provably_common(base: str) -> bool:
+        # In a German title every noun is capitalised, so "provably
+        # common" cannot be established from English/French evidence —
+        # nothing is downcased and the title keeps its capitals.
+        if german:
+            return False
         low = base.lower()
         if low in vocab["common"] or low in _BUILTIN_COMMON:
             return True
@@ -276,9 +313,32 @@ def propose_title_case(
     after_period = False           # words after internal ./!/? are preserved
     prev_word_lower = ""           # particle guard ("de Ray")
     after_open_quote = False       # previous token was a bare opening quote
+    in_quote = False               # inside a "…" / «…» / “…” span
+
+    # Quote characters that OPEN and CLOSE a cited span.  The apostrophe
+    # is deliberately absent — it is a possessive ("Girsanov's", "l'") far
+    # more often than a quote, and toggling on it would silently freeze
+    # the rest of the title.
+    _QUOTE_OPEN = "«“"
+    _QUOTE_CLOSE = "»”"
+    _QUOTE_TOGGLE = "\""
+
+    def _quote_state(tok: str, state: bool) -> bool:
+        """Update in-quote state over one token's characters."""
+        for ch in tok:
+            if ch in _QUOTE_OPEN:
+                state = True
+            elif ch in _QUOTE_CLOSE:
+                state = False
+            elif ch in _QUOTE_TOGGLE:
+                state = not state
+        return state
 
     for i, tok in enumerate(tokens):
         words: list = []
+        # A quote that OPENS within this token applies from that point on;
+        # tracked per character below, but the token-level state decides
+        # what the words in the NEXT token inherit.
         if is_mathish(tok):
             # Any leading digit token ("25 years of …") consumes the
             # sentence start — the following word is NOT upcased.
@@ -290,6 +350,28 @@ def propose_title_case(
                 seg = m.group(0)
                 base = seg.split("'")[0].split("’")[0]   # Girsanov's -> Girsanov
                 prev_char = tok[m.start() - 1] if m.start() > 0 else ""
+                # Everything INSIDE quotes is a name being cited — a work,
+                # a forum, a special issue — so the whole span is
+                # preserved, not just the word after the opening mark.
+                # ("Math-for-Industry" 2018, special issue "Physics and
+                # Derivatives", l'"Analyse des données").
+                # State AT THIS WORD, not at the end of the token: the
+                # opening quote is usually inside the same token as the
+                # first quoted word ("“Math-for-Industry”"), so a
+                # token-level flag would protect nothing before it.
+                if _quote_state(tok[:m.start()], in_quote):
+                    cls = KEEP
+                    if base[:1].isupper():
+                        token_properish[i] = True
+                    # A quoted span still consumes the sentence start —
+                    # otherwise the word AFTER it is treated as the
+                    # title's first and capitalised ("« Le pari » mis…"
+                    # became "… Mis…").
+                    very_first = False
+                    after_period = False
+                    words.append((m.span(), seg, base, cls))
+                    prev_word_lower = base.lower() if base.islower() else ""
+                    continue
                 # An opening quote either hugs the word ("«Notes") or stands
                 # as its own token ("« Notes") — both open an embedded title.
                 if (prev_char and prev_char in "\"'“‘«") or (after_open_quote and not words):
@@ -365,6 +447,21 @@ def propose_title_case(
         if tok.rstrip().endswith(_SENTENCE_END):
             after_period = True
             prev_word_lower = ""
+        # A STANDALONE dash separates segments of a filename, and the word
+        # after it starts a new one — a title, a part label, a volume:
+        #   "… derivatives - Lecture 1 - Electricity markets (slides)"
+        #   "Astérisque 379 - Baues, O., … - Symplectic Lie groups"
+        #   "Bourbaki, N. - Eléments de mathématique - Topologie générale"
+        # Splitting the name differently cannot fix this (the author block
+        # really is "Aïd, R." in the first and the title really does
+        # contain dashes), so the boundary is what has to be recognised —
+        # the same treatment ". ! ?" already get.  Measured: 13 of 116
+        # proposals were lowercasing a segment's first word.
+        _bare = tok.strip()
+        if _bare and all(ch in _HYPHENS for ch in _bare):
+            after_period = True
+            prev_word_lower = ""
+        in_quote = _quote_state(tok, in_quote)
         # A token ending in an opening quote ("«") opens an embedded title
         # whose first word lives in the NEXT token.
         stripped = tok.rstrip()

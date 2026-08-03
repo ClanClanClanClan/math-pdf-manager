@@ -407,3 +407,98 @@ class TestAttentionHumanLabel:
         p = tmp_path / "2607.13547v1.pdf"
         p.write_bytes(b"%PDF-1.4\n")
         assert human_label(p) == "2607.13547v1"
+
+
+class TestSegmentBoundaryDash:
+    """A standalone dash starts a new segment; its first word is a start.
+
+    13 of 116 real proposals were lowercasing the first word of a title
+    because the filename carries more than one " - ".  Re-splitting the
+    name cannot fix it: in "Aïd, R. - An introduction … - Lecture 1 -
+    Electricity markets" the author block really is "Aïd, R." and the
+    title really does contain dashes.  The BOUNDARY is what matters —
+    the same treatment ". ! ?" already receive.
+    """
+
+    @pytest.mark.parametrize("title,keeps", [
+        ("An introduction to X and derivatives - Lecture 1 - Electricity markets",
+         "Electricity markets"),
+        ("Baues, O., Cortés, V., - Symplectic Lie groups", "Symplectic Lie"),
+        ("2026 - Chen - Quantum Monte Carlo Algorithm for Option Pricing",
+         "Quantum Monte"),
+        ("Eléments de mathématique - Topologie générale, chapitres 1 à 4",
+         "Topologie générale"),
+        ("Scalar conservation laws - Initial and boundary value problems",
+         "Initial and"),
+    ])
+    def test_word_after_a_standalone_dash_keeps_its_capital(self, title, keeps):
+        assert keeps in propose_title_case(title).proposed
+
+    def test_a_hyphen_inside_a_word_is_not_a_boundary(self):
+        # "Space–time" is ONE word: the dash inside it must not start a
+        # segment, which would re-capitalise the half after it.
+        p = propose_title_case("On Space–time Methods for Diffusions")
+        assert "space–time" in p.proposed
+        assert "–Time" not in p.proposed and "–time" in p.proposed
+
+
+class TestGermanTitles:
+    """German capitalises every noun, so lowercasing one is simply wrong."""
+
+    @pytest.mark.parametrize("title", [
+        "Über ein in der Theorie der säkularen Störungen vorkommendes Problem",
+        "Markov-Komposition und eine Anwendung auf Martingale",
+        "Beitrag zur Theorie des Masses",
+        "Grundlagen der Wahrscheinlichkeitsrechnung",
+    ])
+    def test_german_titles_are_left_alone(self, title):
+        assert propose_title_case(title).proposed == title
+
+    @pytest.mark.parametrize("title,expected", [
+        # English and French must NOT be caught by the detector.
+        ("A study of Integrals and measures", "A study of integrals and measures"),
+        ("Sur les Applications de Banach et leurs Solutions",
+         "Sur les applications de Banach et leurs solutions"),
+    ])
+    def test_other_languages_still_case_normally(self, title, expected):
+        assert propose_title_case(title).proposed == expected
+
+
+class TestQuotedSpansArePreserved:
+    """Everything inside quotes is a cited name, not prose."""
+
+    @pytest.mark.parametrize("title,keeps", [
+        ('Proceedings of the forum “Math-for-Industry” 2018', "Math-for-Industry"),
+        ('Special issue “Physics and Derivatives”, interview',
+         "Physics and Derivatives"),
+        ('A note on the "Local Time" Estimates', '"Local Time"'),
+    ])
+    def test_the_whole_quoted_span_keeps_its_capitals(self, title, keeps):
+        assert keeps in propose_title_case(title).proposed
+
+    def test_text_after_the_closing_quote_is_cased_normally(self):
+        # The span must CLOSE — otherwise one quote freezes the rest of
+        # the title.  (Kept clear of unknown words so the capital-run
+        # coherence rule is not what is being measured here.)
+        p = propose_title_case('The “Magic” of Integrals and Solutions')
+        assert "“Magic”" in p.proposed
+        assert "integrals" in p.proposed and "solutions" in p.proposed
+
+    def test_an_apostrophe_does_not_open_a_quote(self):
+        # "Girsanov's" / "l'" are possessives; toggling on them would
+        # silently preserve the whole rest of the title.
+        p = propose_title_case("Girsanov's Theorem and its Applications")
+        assert "theorem" in p.proposed and "applications" in p.proposed
+
+    def test_a_word_sharing_a_token_with_the_opening_quote_is_protected(self):
+        # The opening mark usually sits in the SAME token as the words it
+        # quotes ("“Math-for-Industry”"), so a state updated only between
+        # tokens protects nothing before it.
+        p = propose_title_case('Proceedings of the forum “Math-for-Industry” 2018')
+        assert "Math-for-Industry" in p.proposed
+
+    def test_a_quoted_span_consumes_the_sentence_start(self):
+        # Otherwise the word AFTER the quote is treated as the title's
+        # first and capitalised: "« Le pari » mis…" became "… Mis…".
+        p = propose_title_case("« Le pari » mis à l’épreuve par les théories")
+        assert "» mis à" in p.proposed
