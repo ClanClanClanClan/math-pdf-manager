@@ -45,7 +45,13 @@ def normalize_filename(name: str) -> str:
     s = re.sub(r"  +", " ", s)
 
     # Fix spaces before commas: "Possamaï , D." → "Possamaï, D."
-    s = re.sub(r"\s+,", ",", s)
+    #
+    # NOT after a dash.  "Reygner, J. - , Propagation of chaos" has a stray
+    # comma opening the title; without the guard this ate the separator's
+    # space and produced "J. -, Propagation", destroying the author/title
+    # boundary — which then hides the file from every rule that splits on
+    # " - ", exactly how "Shiryaev, A.N.-" escaped the author sweep.
+    s = re.sub(r"(?<![-–—‐])\s+,", ",", s)
 
     # Fix missing space after comma: "Possamaï,D." → "Possamaï, D."
     s = re.sub(r",([^\s])", r", \1", s)
@@ -98,6 +104,11 @@ def normalize_filename(name: str) -> str:
     # Normalize dash types: "--" → "–", but keep single "-" in names like "J.-P."
     # Only replace standalone double-dashes (not in initials)
     s = re.sub(r"(?<!\.)--(?!\.)", "–", s)
+
+    # A title that opens with the separator's own punctuation: "J. - ,
+    # Propagation of chaos".  The comma is a leftover from whatever wrote
+    # the name, not part of the title.
+    s = re.sub(r"( - )[,;]\s*", r"\1", s)
 
     # Strip trailing/leading whitespace
     s = s.strip()

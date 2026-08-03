@@ -101,3 +101,33 @@ class TestSeparatorWithItsSpaceEaten:
     def test_a_correct_name_is_left_alone(self, name):
         import unicodedata
         assert normalize_filename(name) == unicodedata.normalize("NFC", name)
+
+
+class TestStrayCommaOpeningTheTitle:
+    """"Reygner, J. - , Propagation of chaos" — the space-before-comma
+    rule ate the separator's own space and produced "J. -, Propagation".
+
+    That is the worst possible failure for this codebase: destroying the
+    " - " boundary hides the file from every rule that splits on it,
+    which is exactly how "Shiryaev, A.N.-" sat out a 6,180-file author
+    sweep.  A cosmetic rule must never be able to cause that.
+    """
+
+    def test_the_separator_survives_and_the_comma_goes(self):
+        assert normalize_filename(
+            "Jourdain, B., Reygner, J. - , Propagation of chaos.pdf"
+        ) == "Jourdain, B., Reygner, J. - Propagation of chaos.pdf"
+
+    def test_a_real_space_before_comma_is_still_fixed(self):
+        assert normalize_filename(
+            "Possamaï , D. - A note on BSDEs.pdf"
+        ) == "Possamaï, D. - A note on BSDEs.pdf"
+
+    @pytest.mark.parametrize("name", [
+        "Bouchard, B., Touzi, N. - Weak dynamic programming, a survey.pdf",
+        "Karatzas, I. - Lectures on finance - Volume II.pdf",
+        "El Karoui, N., Peng, S., Quenez, M. C. - BSDEs in finance.pdf",
+    ])
+    def test_ordinary_names_are_untouched(self, name):
+        import unicodedata
+        assert normalize_filename(name) == unicodedata.normalize("NFC", name)
