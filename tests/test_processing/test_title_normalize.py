@@ -650,3 +650,34 @@ class TestInstitutionNames:
     def test_a_bare_institution_word_still_lowercases(self, tmp_path, title, fragment):
         _rule_phrases(tmp_path, common=self._COMMON)
         assert fragment in propose_title_case(title, tmp_path).proposed
+
+
+class TestSentenceBreakInsideAToken:
+    """A sentence can end mid-token: "airplane?—The correct defence".
+
+    The standalone-dash rule only sees a dash that is its own token, so
+    this segment start was missed and the next word got downcased.
+    """
+
+    @pytest.mark.parametrize("title,keeps", [
+        ("Should we fly in the Lebesgue-designed airplane?—The correct defence",
+         "?—The correct"),
+        ("A result.—Then another", ".—Then"),
+        ("Why bother!—Because it works", "!—Because"),
+        # …and the same break spelled with a plain hyphen.
+        ("Is it true?-Yes indeed", "?-Yes"),
+    ])
+    def test_the_word_after_the_break_keeps_its_capital(self, title, keeps):
+        assert keeps in propose_title_case(title).proposed
+
+    @pytest.mark.parametrize("title", [
+        # A real full stop is followed by a SPACE, which would have split
+        # the token — so a bare "." between letter runs is an
+        # abbreviation, initials or a decimal, never a sentence end.
+        "A study of U.S.A.-based markets and the theory",
+        "Notes on e.g.-style abbreviations in probability",
+        "Growth of 1.5-approximation algorithms for the problem",
+        "On mean-field games and Hamilton–Jacobi equations",
+    ])
+    def test_an_abbreviation_is_not_a_sentence_break(self, title):
+        assert propose_title_case(title).proposed == title

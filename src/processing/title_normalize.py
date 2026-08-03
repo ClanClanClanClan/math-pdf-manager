@@ -45,6 +45,11 @@ _DASH_FOLD_SET = "-–—‐‑‒―−"
 
 def _dash_fold(s: str) -> str:
     return "".join("-" if ch in _DASH_FOLD_SET else ch for ch in s).lower()
+
+
+# "?—", ".—", "!…—": a sentence ending mid-token.  Anchored with .match()
+# between two word runs, so it describes the WHOLE gap between them.
+_SENT_BREAK_RE = re.compile(rf"[.!?…]+\s*[{re.escape(_DASH_FOLD_SET)}]+\s*$")
 # Quote characters that OPEN an embedded title/citation.  French usage
 # separates them with a space ("« Notes historiques »"), so the opener can
 # be a token of its own — the inline ``prev_char`` test alone misses it.
@@ -464,10 +469,25 @@ def propose_title_case(
             after_period = False
             prev_word_lower = ""
         else:
+            _word_end = 0
             for m in _WORD_RE.finditer(tok):
                 seg = m.group(0)
                 base = seg.split("'")[0].split("’")[0]   # Girsanov's -> Girsanov
                 prev_char = tok[m.start() - 1] if m.start() > 0 else ""
+                # A sentence can END inside a token: "airplane?—The correct
+                # defence", "A result.—Then another".  The standalone-dash
+                # rule below only sees a dash that is its own token, so the
+                # segment start was missed and "The" got downcased.
+                #
+                # Requiring a DASH after the mark is what keeps this safe:
+                # a real full stop is followed by a space, which would have
+                # split the token, so a bare "." between two letter runs is
+                # an abbreviation or initials ("U.S.A.", "e.g.") and must
+                # NOT open a segment.
+                if _SENT_BREAK_RE.match(tok, _word_end, m.start()):
+                    after_period = True
+                    prev_word_lower = ""
+                _word_end = m.end()
                 # Everything INSIDE quotes is a name being cited — a work,
                 # a forum, a special issue — so the whole span is
                 # preserved, not just the word after the opening mark.
