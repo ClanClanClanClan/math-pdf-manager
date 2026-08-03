@@ -52,7 +52,7 @@ def load_vocab(library_root: Path) -> dict:
     Missing/corrupt file degrades to an empty vocabulary (never raises) —
     the caser then simply preserves more and queues more.
     """
-    empty = {"proper": set(), "common": set(), "pending": {}}
+    empty = {"proper": set(), "common": set(), "pending": {}, "phrases": []}
     p = vocab_path(library_root)
     try:
         mtime = p.stat().st_mtime
@@ -70,6 +70,11 @@ def load_vocab(library_root: Path) -> dict:
             cached = {
                 "proper": {_norm(w) for w in raw.get("proper", [])},
                 "common": {_norm(w).lower() for w in raw.get("common", [])},
+                # Multi-word names that only make sense WHOLE: "New York",
+                # "American Mathematical Monthly", "Root barrier".  Judged
+                # one word at a time each looks like ordinary vocabulary,
+                # so the phrase is the unit of the owner's ruling.
+                "phrases": [_norm(w) for w in raw.get("phrases", []) if _norm(w)],
                 "pending": {
                     _norm(w): {"count": int(i.get("count", 1)),
                                "example": str(i.get("example", ""))}
@@ -86,6 +91,7 @@ def load_vocab(library_root: Path) -> dict:
     return {
         "proper": set(cached["proper"]),
         "common": set(cached["common"]),
+        "phrases": list(cached.get("phrases", [])),
         "pending": {w: dict(i) for w, i in cached["pending"].items()},
     }
 
@@ -97,6 +103,9 @@ def _save(library_root: Path, vocab: dict) -> None:
     payload = {
         "proper": sorted(vocab["proper"]),
         "common": sorted(vocab["common"]),
+        # Preserved verbatim: dropping these on a save would silently
+        # undo the owner's phrase rulings the next time a word is decided.
+        "phrases": sorted(vocab.get("phrases", [])),
         "pending": {
             w: {"count": i["count"], "example": i["example"][:120]}
             for w, i in sorted(vocab["pending"].items())

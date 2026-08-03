@@ -530,3 +530,123 @@ class TestEllipsisAndCitations:
     def test_a_plain_parenthetical_is_not_a_citation(self, title, expected_fragment):
         out = propose_title_case(title).proposed
         assert expected_fragment in out or expected_fragment.capitalize() in out
+
+
+def _rule_phrases(root, *phrases, common=()):
+    """Persist owner rulings into a throwaway library.
+
+    ``common`` matters more than it looks: the caser never lowercases a
+    word it cannot PROVE ordinary, and a bare tmp library proves nothing.
+    The real library proves "university", "root" and "college" common
+    from its corpus, so a test that omits them is not testing the rule —
+    it just watches the safe default preserve everything.
+    """
+    import json
+    from processing.title_vocab import load_vocab, vocab_path
+    v = load_vocab(root)
+    vp = vocab_path(root)
+    vp.parent.mkdir(parents=True, exist_ok=True)
+    vp.write_text(json.dumps({
+        "proper": sorted(v["proper"]),
+        "common": sorted(v["common"] | {w.lower() for w in common}),
+        "phrases": sorted(phrases), "pending": {},
+    }, ensure_ascii=False))
+    return root
+
+
+class TestRuledPhrases:
+    """A phrase the owner has ruled on is the unit of the decision.
+
+    Judged one word at a time every one of these looks like ordinary
+    vocabulary — "root", "new", "matters", "plus" — so the word-level
+    classifier could never get them right.
+    """
+
+    @pytest.mark.parametrize("title,keeps", [
+        ("On the continuity of the Root barrier", "Root barrier"),
+        ("collected papers of the New York seminar", "New York"),
+        ("Lévy Matters VI. Heat kernel estimates", "Lévy Matters"),
+        # Single token, no space: the word loop still splits it in two, so
+        # it needs the phrase pass exactly as much as "New York" does.
+        ("Euro-Par 2010 parallel processing workshops", "Euro-Par"),
+        ("Statistical analysis of financial data in S-Plus", "S-Plus"),
+    ])
+    def test_ruled_phrase_keeps_its_capitals(self, tmp_path, title, keeps):
+        _rule_phrases(tmp_path, "Root barrier", "New York", "Lévy Matters",
+                      "Euro-Par", "S-Plus")
+        assert keeps in propose_title_case(title, tmp_path).proposed
+
+    def test_same_words_outside_the_phrase_still_lowercase(self, tmp_path):
+        _rule_phrases(tmp_path, "Root barrier", "New York", common=["root"])
+        out = propose_title_case("A study of the Root of a polynomial", tmp_path)
+        assert "the root of" in out.proposed
+
+    @pytest.mark.parametrize("title,intact", [
+        # Whole phrase only — never a fragment inside a longer word.
+        ("Euro-Parliament reports on hedging", "Euro-Parliament"),
+        ("A new S-matrix decomposition", "S-matrix"),
+    ])
+    def test_a_longer_word_is_not_a_phrase_match(self, tmp_path, title, intact):
+        _rule_phrases(tmp_path, "Euro-Par", "S-Plus")
+        assert intact in propose_title_case(title, tmp_path).proposed
+
+
+class TestDashCanonicalisation:
+    """A ruling settles the dash too, not just the capitals.
+
+    "Euro-Par" and "S-Plus" are compounds of clipped parts, so the mark is
+    a hyphen; "Hamilton–Jacobi" links two co-equal names, so it is an en
+    dash.  Only the owner's own rulings are repunctuated.
+    """
+
+    @pytest.mark.parametrize("written", [
+        "Euro–Par 2010 workshops",   # en dash
+        "Euro—Par 2010 workshops",   # em dash
+        "Euro-par 2010 workshops",   # right mark, wrong case
+        "euro–par 2010 workshops",   # both wrong
+    ])
+    def test_any_dash_is_folded_to_the_ruled_spelling(self, tmp_path, written):
+        _rule_phrases(tmp_path, "Euro-Par")
+        assert "Euro-Par 2010" in propose_title_case(written, tmp_path).proposed
+
+    def test_an_unruled_dash_is_never_touched(self, tmp_path):
+        """The safety property: 29k filenames must not be repunctuated by
+        a whitelist entry nobody ruled on."""
+        _rule_phrases(tmp_path, "Euro-Par")
+        out = propose_title_case(
+            "Mean-field games and the Hamilton–Jacobi–Bellman equation",
+            tmp_path).proposed
+        assert "Mean-field" in out and "Hamilton–Jacobi–Bellman" in out
+
+    def test_phrase_rulings_survive_a_word_ruling(self, tmp_path):
+        """decide() rewrites the file; dropping phrases would silently
+        undo the owner's earlier work."""
+        from processing.title_vocab import decide, load_vocab
+        _rule_phrases(tmp_path, "Euro-Par", "New York")
+        decide(tmp_path, "Zorglub", "proper")
+        assert set(load_vocab(tmp_path)["phrases"]) == {"Euro-Par", "New York"}
+
+
+class TestInstitutionNames:
+    """The owner's rule: "university" is an ordinary word EXCEPT where
+    grammar makes it part of a name."""
+
+    # Both halves rule the words common, so the ONLY thing that can save a
+    # capital is the institution rule itself.
+    _COMMON = ["university", "college", "institute", "seminar", "course"]
+
+    @pytest.mark.parametrize("title,fragment", [
+        ("Symposium, University of Illinois, Urbana, 1976", "University of Illinois"),
+        ("Proceedings of the Institute of Mathematics", "Institute of Mathematics"),
+    ])
+    def test_noun_of_name_keeps_its_capital(self, tmp_path, title, fragment):
+        _rule_phrases(tmp_path, common=self._COMMON)
+        assert fragment in propose_title_case(title, tmp_path).proposed
+
+    @pytest.mark.parametrize("title,fragment", [
+        ("Lectures at the University seminar on probability", "university seminar"),
+        ("Notes from a College course on measure theory", "college course"),
+    ])
+    def test_a_bare_institution_word_still_lowercases(self, tmp_path, title, fragment):
+        _rule_phrases(tmp_path, common=self._COMMON)
+        assert fragment in propose_title_case(title, tmp_path).proposed

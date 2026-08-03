@@ -37,6 +37,14 @@ logger = logging.getLogger(__name__)
 # via the en-dash class below).
 _WORD_RE = re.compile(r"[^\W\d_]+(?:['’][^\W\d_]+)*", re.UNICODE)
 _HYPHENS = "-–—‐"
+# Every dash a keyboard, a publisher or a PDF extractor might emit, folded
+# to one mark so a name is recognised however it was typed.  Same length in
+# equals same length out, so string offsets survive the fold.
+_DASH_FOLD_SET = "-–—‐‑‒―−"
+
+
+def _dash_fold(s: str) -> str:
+    return "".join("-" if ch in _DASH_FOLD_SET else ch for ch in s).lower()
 # Quote characters that OPEN an embedded title/citation.  French usage
 # separates them with a space ("« Notes historiques »"), so the opener can
 # be a token of its own — the inline ``prev_char`` test alone misses it.
@@ -263,6 +271,7 @@ def propose_title_case(
             v = load_vocab(library_root)
             vocab["proper"] = v["proper"]
             vocab["common"] = v["common"]
+            vocab["phrases"] = v.get("phrases", [])
         except Exception:  # pragma: no cover
             pass
         try:
@@ -272,6 +281,42 @@ def propose_title_case(
             pass
     wl = _whitelists()
     proper_all = vocab["proper"] | wl
+
+    # CANONICAL SPELLINGS.  A ruled phrase is not just "keep the capitals",
+    # it is *how the owner writes this name* — which settles the dash too.
+    # Typewriter habits scatter a name across "-", "–" and "—"; the library
+    # holds "Euro–Par" and "S–Plus" with en dashes, but both are compounds
+    # of clipped parts (Euro+Par, S+Plus), not links between two co-equal
+    # entities, so the hyphen is the correct mark — the same class as
+    # "mean-field" and "one-dimensional", NOT the "Hamilton–Jacobi" class.
+    # Matching is dash-blind so any spelling is found, and the span is
+    # rewritten to the ruled one.  Deliberately limited to the owner's OWN
+    # phrase rulings: the general whitelist below only preserves case, so a
+    # whitelist entry can never silently repunctuate 29k filenames.
+    _ruled = [p for p in vocab.get("phrases", ()) if len(_WORD_RE.findall(p)) > 1]
+    if _ruled:
+        _folded = _dash_fold(title)
+        _hits: list = []
+        for _ph in sorted(_ruled, key=lambda p: (-len(p), p)):
+            _fph, _start = _dash_fold(_ph), 0
+            while True:
+                _at = _folded.find(_fph, _start)
+                if _at < 0:
+                    break
+                _start, _end = _at + 1, _at + len(_fph)
+                if (_at == 0 or not title[_at - 1].isalpha()) and (
+                        _end >= len(title) or not title[_end].isalpha()) and not any(
+                        _a < _end and _at < _b for _a, _b, _ in _hits):
+                    _hits.append((_at, _end, _ph))
+        if _hits:
+            _hits.sort()
+            _parts, _prev = [], 0
+            for _a, _b, _canon in _hits:
+                _parts.append(title[_prev:_a])
+                _parts.append(_canon)
+                _prev = _b
+            _parts.append(title[_prev:])
+            title = "".join(_parts)
 
     german = _is_probably_german(title)
 
@@ -339,6 +384,50 @@ def propose_title_case(
         if re.search(r"\b(19|20)\d{2}\b", _inner) or re.search(
                 r"\b(vol|no|pp|iss|issue)\b\.?", _inner, re.I):
             _cite_spans.append((_m.start(), _m.end()))
+
+    # PROPER PHRASES.  Some names are only recognisable as a phrase:
+    # "New York", "Euro–Par", "S–Plus", "American Mathematical Monthly",
+    # "Root barrier", "El Karoui", "G–Brownian motion".  Judged word by
+    # word every one of them looks like ordinary vocabulary.  The config
+    # whitelists ALREADY carry 17 such entries, but _whitelists() folds
+    # them into a flat set that is only ever queried one word at a time,
+    # so they could never match; this is what makes them live.
+    # "contains a space" would have been the wrong test: "S-Plus" and
+    # "Euro-Par" are single tokens the word loop still splits in two, so
+    # they need the phrase pass exactly as much as "New York" does.
+    _phrases = sorted(
+        (p for p in (proper_all | set(vocab.get("phrases", ())))
+         if len(_WORD_RE.findall(p)) > 1),
+        key=len, reverse=True,          # longest first: greedy, no overlap
+    )
+    for _ph in _phrases:
+        _start = 0
+        _low_title, _low_ph = title.lower(), _ph.lower()
+        while True:
+            _at = _low_title.find(_low_ph, _start)
+            if _at < 0:
+                break
+            # Whole-phrase only, never a fragment inside a longer word.
+            _before_ok = _at == 0 or not title[_at - 1].isalpha()
+            _end = _at + len(_ph)
+            _after_ok = _end >= len(title) or not title[_end].isalpha()
+            if _before_ok and _after_ok:
+                _cite_spans.append((_at, _end))
+            _start = _at + 1
+
+    # INSTITUTION NAMES.  The owner's rule: "University" is an ordinary
+    # word ("university seminar") EXCEPT where grammar makes it part of a
+    # name — "University of Illinois".  The giveaway is <Noun> of <Name>.
+    _INSTITUTION = (
+        "university", "institute", "academy", "college", "school",
+        "society", "centre", "center", "laboratory", "observatory",
+        "museum", "faculty", "department",
+    )
+    for _m in re.finditer(
+            r"\b([A-ZÀ-ÖØ-Þ][a-zà-öø-ÿ]+)\s+(?:of|für|de|di)\s+"
+            r"[A-ZÀ-ÖØ-Þ]", title):
+        if _m.group(1).lower() in _INSTITUTION:
+            _cite_spans.append((_m.start(1), _m.end(1)))
 
     def _in_citation(pos: int) -> bool:
         return any(a <= pos < b for a, b in _cite_spans)
