@@ -502,3 +502,31 @@ class TestQuotedSpansArePreserved:
         # first and capitalised: "« Le pari » mis…" became "… Mis…".
         p = propose_title_case("« Le pari » mis à l’épreuve par les théories")
         assert "» mis à" in p.proposed
+
+
+class TestEllipsisAndCitations:
+    """Two more boundary classes found by reviewing the real batch."""
+
+    def test_ellipsis_starts_a_new_sentence(self):
+        p = propose_title_case("En passant par hasard… Les probabilités de tous les jours")
+        assert "… Les probabilités" in p.proposed
+
+    @pytest.mark.parametrize("title,keeps", [
+        ("Supplement to a unifying approach "
+         "(Theoretical Economics, Vol. 12, No. 1, January 2017, 25–51)",
+         "Theoretical Economics, Vol. 12, No. 1"),
+        ("Corrigendum to Equivalence of Volterra processes "
+         "[Stochastic Process. Appl. 107 (2003) 327–350]",
+         "[Stochastic Process. Appl."),
+    ])
+    def test_bibliographic_spans_keep_their_capitals(self, title, keeps):
+        assert keeps in propose_title_case(title).proposed
+
+    @pytest.mark.parametrize("title,expected_fragment", [
+        # A plain aside is NOT a citation and must still be cased.
+        ("Mean field games in Economics, part I (slides)", "in economics, part I (slides)"),
+        ("A result with coefficients in (y, z)", "a result"),
+    ])
+    def test_a_plain_parenthetical_is_not_a_citation(self, title, expected_fragment):
+        out = propose_title_case(title).proposed
+        assert expected_fragment in out or expected_fragment.capitalize() in out

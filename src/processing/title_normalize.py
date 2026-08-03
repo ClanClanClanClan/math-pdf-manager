@@ -74,7 +74,10 @@ _GEO_SEED = {
 # Words after INTERNAL sentence punctuation are preserved verbatim (we
 # neither downcase ". Lectures" nor upcase "vs. singular" — abbreviations
 # like vs./cf./no. make period-based sentence detection unsound).
-_SENTENCE_END = (".", "!", "?")
+# "…" ends a clause exactly as "." does — "En passant par hasard… Les
+# probabilités de tous les jours" is two sentences, and "Les" starts the
+# second one.  (The three-dot form is already covered by ".".)
+_SENTENCE_END = (".", "!", "?", "…")
 
 # Lowercase name particles: a capitalized word right after one of these is
 # almost certainly a surname ("résolvantes de Ray", "travaux de Peano") —
@@ -323,6 +326,23 @@ def propose_title_case(
     _QUOTE_CLOSE = "»”"
     _QUOTE_TOGGLE = "\""
 
+    # Bracketed BIBLIOGRAPHIC spans are citations, not prose: the journal
+    # name, volume and pages inside them keep their capitals.
+    #   "… [Stochastic Process. Appl. 107 (2003) 327–350]"
+    #   "… (Theoretical Economics, Vol. 12, No. 1, January 2017, 25–51)"
+    # Only spans that actually look bibliographic qualify — a plain
+    # parenthetical like "(slides)" or "(y, z)" must still be cased
+    # normally, so a bare aside is left alone.
+    _cite_spans: list = []
+    for _m in re.finditer(r"[\(\[]([^\)\]]{6,})[\)\]]", title):
+        _inner = _m.group(1)
+        if re.search(r"\b(19|20)\d{2}\b", _inner) or re.search(
+                r"\b(vol|no|pp|iss|issue)\b\.?", _inner, re.I):
+            _cite_spans.append((_m.start(), _m.end()))
+
+    def _in_citation(pos: int) -> bool:
+        return any(a <= pos < b for a, b in _cite_spans)
+
     def _quote_state(tok: str, state: bool) -> bool:
         """Update in-quote state over one token's characters."""
         for ch in tok:
@@ -333,6 +353,15 @@ def propose_title_case(
             elif ch in _QUOTE_TOGGLE:
                 state = not state
         return state
+
+    # Absolute offset of each token in ``title`` — the citation spans are
+    # measured on the whole string, but the loop below works token by
+    # token.  tokens came from title.split(" "), so one separator each.
+    _tok_offset: list = []
+    _off = 0
+    for _t in tokens:
+        _tok_offset.append(_off)
+        _off += len(_t) + 1
 
     for i, tok in enumerate(tokens):
         words: list = []
@@ -359,7 +388,8 @@ def propose_title_case(
                 # opening quote is usually inside the same token as the
                 # first quoted word ("“Math-for-Industry”"), so a
                 # token-level flag would protect nothing before it.
-                if _quote_state(tok[:m.start()], in_quote):
+                if _quote_state(tok[:m.start()], in_quote) or \
+                        _in_citation(_tok_offset[i] + m.start()):
                     cls = KEEP
                     if base[:1].isupper():
                         token_properish[i] = True

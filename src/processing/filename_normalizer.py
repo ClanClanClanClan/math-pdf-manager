@@ -50,6 +50,19 @@ def normalize_filename(name: str) -> str:
     # Fix missing space after comma: "Possamaï,D." → "Possamaï, D."
     s = re.sub(r",([^\s])", r", \1", s)
 
+    # A colon that a download tool sanitised into a hyphen.
+    #
+    # ":" is illegal in a filename on macOS, so browsers and publisher
+    # sites save "Title: Subtitle" as "Title- Subtitle" — note the
+    # asymmetry, NO space before the hyphen and one after, which a real
+    # author-title separator (" - ") and a real hyphenated word
+    # ("delay-differential") never have.  The house convention turns a
+    # subtitle colon into ", " (cmo.py does this at ingest), so restore
+    # that here; the subtitle's first word then lowercases by the normal
+    # rule.  Measured: 4 files in the library, e.g.
+    # "…delay-differential equations- When delay-systems…".
+    s = re.sub(r"(?<=[^\W\d_])- (?=[A-ZÀ-ÖØ-Þ])", ", ", s)
+
     # Fix spaces around the author-title separator dash
     # "Author  - Title" → "Author - Title"
     # "Author -Title" → "Author - Title"

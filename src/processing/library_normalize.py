@@ -45,6 +45,11 @@ logger = logging.getLogger(__name__)
 # boundary, not a theoretical one.
 _MAX_FILENAME_BYTES = 255
 
+try:                                        # pragma: no cover - trivial
+    from organization.system import TO_BE_SORTED as _STAGING_DIR
+except ImportError:                         # pragma: no cover
+    _STAGING_DIR = "12 - To be sorted"
+
 AUTHOR = "author"   # only the author block changed (initial spacing, cosmetic)
 TITLE = "title"     # only the title changed (safe-default sentence casing)
 BOTH = "both"       # both sides changed
@@ -107,6 +112,12 @@ def propose_renames(
     for pdf in pdfs:
         if limit is not None and n >= limit:
             break
+        # The inbox is not part of the library yet.  Those papers still
+        # carry whatever the publisher or arXiv called them and get their
+        # canonical name when they are FILED, so proposing renames for
+        # them is noise in a review of the existing library.
+        if _STAGING_DIR in pdf.parts:
+            continue
         n += 1
         if progress is not None:
             try:
