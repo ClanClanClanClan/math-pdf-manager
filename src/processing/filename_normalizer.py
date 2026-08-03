@@ -63,6 +63,30 @@ def normalize_filename(name: str) -> str:
     # "…delay-differential equations- When delay-systems…".
     s = re.sub(r"(?<=[^\W\d_])- (?=[A-ZÀ-ÖØ-Þ])", ", ", s)
 
+    # A dash straight after a sentence-ending mark is redundant: the mark
+    # has already closed the sentence, so "airplane?—The correct defence"
+    # and "Mind the cap!—constrained portfolio" are stacking two
+    # separators.  Drop the dash and start the next word as the new
+    # sentence it is.
+    #
+    # Restricted to "?" and "!" ON PURPOSE.  A period is also a sentence
+    # end, but it is equally the end of an abbreviation, and there the
+    # dash is a genuine author-title separator that must survive:
+    #   "…, Jr. - Option pricing theory"
+    #   "Helffer, B., …, et al. - Première classe de Chern"
+    #   "Yoeurp, Ch. - Compléments sur les temps locaux"
+    # No abbreviation ends in "?" or "!", so this cannot misfire.
+    s = re.sub(r"([?!])\s*[-–—‐]+\s*([^\W\d_])",
+               lambda m: f"{m.group(1)} {m.group(2).upper()}", s)
+
+    # The author-title separator with its space eaten: "Itô, K.- Poisson".
+    # The rules below only normalise a dash that ALREADY has a space on
+    # one side, and the sanitised-colon rule above needs a word character
+    # before the dash, so a dash hugging an initial's period fell through
+    # both.  A compound initial ("Zou, H.-F.") is untouched because its
+    # dash has no space after it.
+    s = re.sub(r"(?<=[A-ZÀ-Þ]\.)-\s+(?=[^\W\d_\s])", " - ", s)
+
     # Fix spaces around the author-title separator dash
     # "Author  - Title" → "Author - Title"
     # "Author -Title" → "Author - Title"
