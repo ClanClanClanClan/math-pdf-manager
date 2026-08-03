@@ -741,3 +741,46 @@ class TestCLI:
         main(["drift", str(pdf)])
         out = capsys.readouterr().out
         assert "DRIFT" in out
+
+
+class TestCodeCheckoutIsNeverScanned:
+    """The code lives INSIDE the library root; it holds no papers.
+
+    77 publisher-download test fixtures under ``Scripts/`` were being
+    walked as if they were the owner's papers — inflating the library
+    total, feeding duplicate and variant detection, and collecting 74
+    sidecars of their own.  The owner's rule is blunt: Scripts is never
+    looked at.
+    """
+
+    @pytest.mark.parametrize("rel", [
+        "Scripts/test_springer_comprehensive/springer_open_x.pdf",
+        "Scripts/src/whatever.pdf",
+        ".git/objects/thing.pdf",
+        "node_modules/pkg/doc.pdf",
+        "__pycache__/x.pdf",
+        ".venv/lib/y.pdf",
+        ".trash/duplicates/old.pdf",
+    ])
+    def test_repo_and_trash_paths_are_not_library_pdfs(self, tmp_path, rel):
+        from processing.identity import iter_pdfs
+        p = tmp_path / rel
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_bytes(b"%PDF-1.4\n")
+        assert list(iter_pdfs(tmp_path)) == []
+
+    def test_real_papers_are_still_found(self, tmp_path):
+        from processing.identity import iter_pdfs
+        good = tmp_path / "01 - Published papers" / "D" / "Doe, J. - Paper.pdf"
+        good.parent.mkdir(parents=True, exist_ok=True)
+        good.write_bytes(b"%PDF-1.4\n")
+        assert list(iter_pdfs(tmp_path)) == [good]
+
+    def test_health_counts_exclude_the_checkout_too(self, tmp_path):
+        # The health strip had its own bare rglob and counted them.
+        from maintenance.health import _count_files
+        (tmp_path / "Scripts").mkdir()
+        (tmp_path / "Scripts" / "fixture.pdf").write_bytes(b"%PDF")
+        (tmp_path / "01 - Published papers").mkdir()
+        (tmp_path / "01 - Published papers" / "real.pdf").write_bytes(b"%PDF")
+        assert _count_files(tmp_path, ".pdf") == 1

@@ -14,9 +14,32 @@ from pathlib import Path
 
 
 def _count_files(root: Path, suffix: str) -> int:
+    """Count the owner's files, not the repo's.
+
+    A bare rglob counted the code checkout that lives under the library
+    root (77 publisher-download test fixtures) and everything already
+    thrown away in .trash, so the health numbers overstated the library.
+    Shares the exclusion list with ``iter_pdfs`` rather than keeping a
+    second, drifting copy.
+    """
     if not root.exists():
         return 0
-    return sum(1 for p in root.rglob(f"*{suffix}") if p.is_file())
+    from processing.identity import _NON_LIBRARY_DIRS
+    total = 0
+    for p in root.rglob(f"*{suffix}"):
+        if not p.is_file():
+            continue
+        # Judge the path RELATIVE to the root being counted.  Counting
+        # the library must skip .trash; counting .trash itself must not
+        # skip everything just because the root is named .trash.
+        try:
+            parts = p.relative_to(root).parts
+        except ValueError:          # pragma: no cover - p is under root
+            parts = p.parts
+        if any(part in _NON_LIBRARY_DIRS for part in parts):
+            continue
+        total += 1
+    return total
 
 
 def _age_days(p: Path) -> float:

@@ -234,9 +234,31 @@ def iter_pdfs(root: Path, *, recursive: bool = True):
         return
     walker = root.rglob(PDF_GLOB) if recursive else root.glob(PDF_GLOB)
     for pdf in walker:
-        if ".trash" in pdf.parts:
+        if not _is_library_pdf(pdf):
             continue
         yield pdf
+
+
+# Directories that live INSIDE the library root but hold no papers.  The
+# code checkout is the important one: it sits under the library and had
+# 77 publisher-download test fixtures in it, which every scan counted as
+# the owner's papers — inflating the library total and feeding duplicate
+# and variant detection with files that are not his.
+_NON_LIBRARY_DIRS = frozenset({
+    ".trash",          # recoverable deletions, deliberately out of scope
+    "Scripts",         # the code checkout
+    ".git",
+    "node_modules",
+    "htmlcov",
+    "__pycache__",
+    ".venv",
+    "venv",
+})
+
+
+def _is_library_pdf(pdf: Path) -> bool:
+    """Is this PDF one of the owner's papers, rather than repo furniture?"""
+    return not any(part in _NON_LIBRARY_DIRS for part in pdf.parts)
 
 
 def compute_content_hash(pdf_path: Path) -> str:
