@@ -186,3 +186,32 @@ class TestListing:
         txs = fresh_log.list_transactions()
         assert len(txs) == 3
         assert {t["description"] for t in txs} == {"t1", "t2", "t3"}
+
+
+class TestNeverWritesToTheRealLibrary:
+    """A test run must not land in the owner's real undo history.
+
+    ``UndoLog.__init__`` used to default to a module-level ``LOG_DIR``
+    computed at IMPORT time, so pointing MATH_LIBRARY elsewhere
+    afterwards had no effect.  Helpers that build their own UndoLog deep
+    inside (bulk_sort, process_report, bulk_apply) therefore wrote to the
+    real library during tests: 342 of the 357 entries in his history were
+    test junk, burying the 15 real ones and making Activity useless.
+    """
+
+    def test_default_log_dir_follows_the_environment(self, tmp_path, monkeypatch):
+        from processing.undo_log import UndoLog
+        monkeypatch.setenv("MATH_LIBRARY", str(tmp_path))
+        log = UndoLog()
+        assert tmp_path in log.log_dir.parents or log.log_dir.parent == tmp_path, \
+            f"UndoLog wrote to {log.log_dir}, not under {tmp_path}"
+
+    def test_conftest_points_every_test_at_a_throwaway_library(self):
+        # The autouse guard in tests/conftest.py must actually be active,
+        # so even a test that never thinks about paths is safe.
+        import os
+        from pathlib import Path
+        root = os.environ.get("MATH_LIBRARY", "")
+        assert root, "MATH_LIBRARY is unset — the conftest guard is not running"
+        assert "library" in Path(root).name or "/T/" in root or "tmp" in root.lower(), \
+            f"MATH_LIBRARY points at {root!r}, which may be the real library"

@@ -65,8 +65,14 @@ LOG_DIR = _default_log_dir()
 class UndoLog:
     """Records file operations and provides undo functionality."""
 
-    def __init__(self, log_dir: Path = LOG_DIR):
-        self.log_dir = log_dir
+    def __init__(self, log_dir: Optional[Path] = None):
+        # Resolved HERE, not bound to the module-level LOG_DIR at
+        # definition time.  The old signature froze the real library's
+        # log directory at import, so pointing MATH_LIBRARY somewhere
+        # else afterwards had no effect — which is how a test run wrote
+        # 342 transactions into the owner's real undo history, burying
+        # the 15 genuine ones.
+        self.log_dir = Path(log_dir) if log_dir is not None else _default_log_dir()
         self.log_dir.mkdir(parents=True, exist_ok=True)
         self._current_tx: Optional[dict] = None
         self._tx_id: Optional[str] = None
