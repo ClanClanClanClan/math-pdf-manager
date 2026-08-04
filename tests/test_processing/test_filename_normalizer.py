@@ -131,3 +131,69 @@ class TestStrayCommaOpeningTheTitle:
     def test_ordinary_names_are_untouched(self, name):
         import unicodedata
         assert normalize_filename(name) == unicodedata.normalize("NFC", name)
+
+
+class TestMathematicsIsNotProse:
+    """The author block and the title are different languages: one is
+    names, the other is prose AND MATHEMATICS.  Applying a name rule to a
+    formula is a category error.
+
+    The missing-space-after-comma rule was applied to the whole filename
+    and rewrote the notation of 86 real papers — "C^{0,1}" became
+    "C^{0, 1}" — in a batch labelled "cosmetic, no letters changed".  No
+    letters had changed; the notation had.
+    """
+
+    @pytest.mark.parametrize("name", [
+        "Fießinger, F. - The C^{0,1} Itô–Ventzell formula.pdf",
+        "Winter, N. - W^{2,p} and W^{1,p}-estimates at the boundary.pdf",
+        "Nie, A. - A continuous time GARCH(p,q) process with delay.pdf",
+        "Harris, P. E. - Probabilistic (m,n)–parking functions.pdf",
+        "Zagier, D. - Evaluation of the multiple ζ values ζ(2,...,2,3,2).pdf",
+        "Smith, J. - Coefficients in (y,z) and the map f(x,y).pdf",
+        "Smith, J. - A bound of 10,000 samples in dimension 3.pdf",
+        "Smith, J. - The 1,000,000 dollar problem.pdf",
+        "Drapeau, S. - Li–Yau estimate on RCD^∗(K,N) spaces.pdf",
+    ])
+    def test_a_title_formula_is_never_respaced(self, name):
+        import unicodedata
+        assert normalize_filename(name) == unicodedata.normalize("NFC", name)
+
+    @pytest.mark.parametrize("name,expected", [
+        ("Possamaï,D. - A note on BSDEs.pdf",
+         "Possamaï, D. - A note on BSDEs.pdf"),
+        ("Possamaï,D.,Touzi,N. - Second order BSDEs.pdf",
+         "Possamaï, D., Touzi, N. - Second order BSDEs.pdf"),
+        # The separator must be repaired FIRST, or there is no author block
+        # to scope the rule to.
+        ("Itô,K.- Poisson point processes.pdf",
+         "Itô, K. - Poisson point processes.pdf"),
+    ])
+    def test_the_author_block_still_gets_its_spaces(self, name, expected):
+        assert normalize_filename(name) == expected
+
+
+class TestDoubleDashIsAmbiguous:
+    """"--" is a range between digits and a subtitle break when spaced.
+    Blanket-replacing it with an en dash got both wrong: an en dash joins
+    two co-equal entities, which a title and its subtitle are not."""
+
+    def test_spaced_double_dash_is_a_subtitle_break(self):
+        assert normalize_filename(
+            "C, A. - Robust option pricing -- An empirical study.pdf"
+        ) == "C, A. - Robust option pricing, An empirical study.pdf"
+
+    def test_between_digits_it_is_a_range(self):
+        assert normalize_filename(
+            "S, J. - Collected papers pp. 10--20 of volume III.pdf"
+        ) == "S, J. - Collected papers pp. 10–20 of volume III.pdf"
+
+    def test_the_subtitle_word_then_lowercases(self):
+        """The comma is only half the fix — "An empirical study" is not a
+        new sentence, so the caser must take the capital off."""
+        from processing.title_normalize import propose_title_case
+        stem = normalize_filename(
+            "C, A. - Robust option pricing -- An empirical study.pdf")[:-4]
+        title = stem.split(" - ", 1)[1]
+        assert propose_title_case(title).proposed == (
+            "Robust option pricing, an empirical study")

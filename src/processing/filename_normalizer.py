@@ -53,9 +53,6 @@ def normalize_filename(name: str) -> str:
     # " - ", exactly how "Shiryaev, A.N.-" escaped the author sweep.
     s = re.sub(r"(?<![-–—‐])\s+,", ",", s)
 
-    # Fix missing space after comma: "Possamaï,D." → "Possamaï, D."
-    s = re.sub(r",([^\s])", r", \1", s)
-
     # A colon that a download tool sanitised into a hyphen.
     #
     # ":" is illegal in a filename on macOS, so browsers and publisher
@@ -101,9 +98,35 @@ def normalize_filename(name: str) -> str:
     s = re.sub(r"(?<!\.)  +- +", " - ", s)  # double+ space before dash
     s = re.sub(r"(?<!\.) +- +", " - ", s)   # normalize single space around dash
 
-    # Normalize dash types: "--" → "–", but keep single "-" in names like "J.-P."
-    # Only replace standalone double-dashes (not in initials)
-    s = re.sub(r"(?<!\.)--(?!\.)", "–", s)
+    # Missing space after a comma: "Possamaï,D." → "Possamaï, D."
+    #
+    # AUTHOR BLOCK ONLY, and this is the whole point.  Applied to the full
+    # name it rewrote MATHEMATICS — "C^{0,1}" became "C^{0, 1}", "W^{2,p}"
+    # became "W^{2, p}", "CARMA(p,q)" became "CARMA(p, q)", "10,000" would
+    # become "10, 000".  86 files were damaged that way by a batch labelled
+    # "cosmetic, no letters changed"; no letters had changed, but the
+    # notation had.  Measured over the whole library, the title side has
+    # ZERO commas needing a space and one that must never be touched, so
+    # restricting the rule costs nothing and is the only thing that makes
+    # it structurally unable to reach a formula.
+    #
+    # Deliberately AFTER the separator repairs above: "Possamaï,D.- Title"
+    # has no " - " until they run, and the author block cannot be
+    # identified before the boundary exists.
+    _head, _sep, _tail = s.partition(" - ")
+    if _sep:
+        s = re.sub(r",([^\s])", r", \1", _head) + _sep + _tail
+
+    # "--" is ambiguous, so decide by context rather than blanket-replacing.
+    # Between digits it is a range and becomes an en dash ("pp. 10--20").
+    # Spaced, it is a subtitle break — the same role as the colon handled
+    # above — so it takes the house comma: "…term structure -- An empirical
+    # study" is "…term structure, an empirical study", and the subtitle's
+    # first word then lowercases by the normal rule.  It is NOT an en dash:
+    # that mark joins two co-equal entities, which a title and its subtitle
+    # are not.  Measured: exactly one "--" in 29,336 filenames.
+    s = re.sub(r"(?<=\d)--(?=\d)", "–", s)
+    s = re.sub(r"\s+--\s+", ", ", s)
 
     # A title that opens with the separator's own punctuation: "J. - ,
     # Propagation of chaos".  The comma is a leftover from whatever wrote
