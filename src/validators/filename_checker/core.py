@@ -14,7 +14,7 @@ from .unicode_utils import sanitize_unicode_security, nfc, find_all_exception_sp
 from .tokenization import enforce_ndash_between_authors
 from .math_utils import find_math_regions
 from .text_processing import (
-    fix_ellipsis, fix_ligatures, fix_ligature_words, spell_out_small_numbers,
+    fix_ellipsis, fix_ligatures, fix_ligature_words,
     fix_and_flag_quotes
 )
 from .author_processing import (
@@ -56,6 +56,17 @@ except ImportError:
 
 # Global debug flag
 _DEBUG_ENABLED = False
+
+
+def _digits_of(text: str) -> str:
+    """The digits of ``text``, in order — the fixer chain's invariant.
+
+    A filename records what a paper is CALLED.  The fixers here repair
+    extraction artefacts (ligatures, ellipses, quotes) and may not touch
+    the author's words; digits are the cheapest exact witness of that,
+    and the one that broke ("AR(1)" -> "AR(one)").
+    """
+    return "".join(c for c in text if c.isdigit())
 
 
 def check_filename(
@@ -235,12 +246,23 @@ def check_filename(
         result.add_message("error", flag)
 
     # Apply text fixers with math regions
+    # Every fixer here is a CHARACTER-level repair of an extraction
+    # artifact — a ligature, a three-dot ellipsis, a bad quote.  None of
+    # them may edit the author's words: a filename records what the paper
+    # is called, and rewriting that is not normalisation.
+    #
+    # spell_out_small_numbers was removed for exactly that reason.  It
+    # rewrote 193 real titles, mangled mathematics its heuristic failed to
+    # recognise ("AR(1) processes" -> "AR(one) processes", "GL(3)" ->
+    # "GL(three)"), and was not even self-consistent, because it only
+    # handles a SINGLE digit: "Lectures 5 and 6" -> "Lectures five and 6",
+    # "The magic of 8 and 24" -> "eight and 24".  It also disagreed with
+    # move_normalizer, which keeps the original title, so the same paper
+    # had two canonical names depending on which path last touched it.
     fixers = [
         fix_ellipsis,
         fix_ligatures,
         fix_ligature_words,
-        spell_out_small_numbers,
-        # Note: Some fixers from original are not implemented yet
     ]
     current = title_wo_ext_processed
 
@@ -250,6 +272,17 @@ def check_filename(
         try:
             math_regions_current = find_math_regions(current)
             new = fn(current, math_regions_current, exceptions, phrase_spans)
+            # POSTCONDITION, not a comment: a character-level repair cannot
+            # change which digits the title contains.  find_math_regions
+            # returns [] even for "SU(2)", so math is protected by nothing
+            # but a context heuristic — this is the actual backstop, and it
+            # names the culprit instead of silently shipping its output.
+            if _digits_of(new) != _digits_of(current):
+                result.add_message(
+                    "error",
+                    f"{fn.__name__} altered the digits in the title "
+                    f"('{current}' → '{new}'); its output was discarded")
+                continue
             if new != current:
                 debug_print(f"Fixer {fn.__name__}: '{current}' → '{new}'")
                 result.add_message("info", f"{fn.__name__}: '{current}' → '{new}'")
