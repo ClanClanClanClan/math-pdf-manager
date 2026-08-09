@@ -467,7 +467,8 @@ def render_sidebar() -> None:
         _GROUPS = [
             ("Do", [attention_label, "Sort Queue", "Upgrade Queue", "To Download"]),
             ("Fix", ["Conflicts", "Duplicates", "Maintenance"]),
-            ("Look", ["Search", "Pipeline Preview", "Stats", "Activity"]),
+            ("Look", ["Search", "Pipeline Preview", "Conformance", "Stats",
+                      "Activity"]),
             ("Setup", ["Settings"]),
         ]
         current = st.session_state.get("page", "Attention")
@@ -2170,6 +2171,101 @@ def _to_be_sorted_backlog_cached(lib_str: str) -> dict:
     """
     from maintenance.weekly_report import count_to_be_sorted
     return count_to_be_sorted(Path(lib_str))
+
+
+def render_conformance() -> None:
+    """Does the library match what the rules say it should be?
+
+    Deliberately NOT another list of files to read.  The whole point is
+    to separate the work the owner owes (a title ruling) from the work
+    the CODE owes (a file no rule ever examined), so that the second
+    kind is loud and the first kind is quiet however large it grows.
+    """
+    from maintenance import conformance as C
+
+    _page_header(
+        "🩺", "Conformance",
+        "Whether the 29k files on disk are actually in the state the "
+        "rules describe.",
+        how_it_works=(
+            "Runs the naming pipeline over every filename and checks that "
+            "it is a **fixpoint** — that the rules would change nothing. "
+            "A file the pipeline cannot even reach a verdict on is a bug, "
+            "not a backlog item, and shows up red. Takes about a minute; "
+            "nothing is written to your library."
+        ),
+    )
+
+    rep = st.session_state.get("conformance_report")
+    if st.button("▶ Run the check", type="primary"):
+        bar = st.progress(0.0, text="Examining filenames…")
+
+        def _p(i, n):
+            bar.progress(min(1.0, i / max(n, 1)), text=f"{i:,} / {n:,}")
+        rep = C.run(_library(), progress=_p)
+        bar.empty()
+        st.session_state["conformance_report"] = rep
+        st.session_state["conformance_prev"] = C.load_previous(_library())
+
+    if rep is None:
+        st.info("Not run yet. Press **Run the check**.")
+        return
+
+    delta = C.diff_against(rep, st.session_state.get("conformance_prev"))
+
+    st.markdown("#### Your queue — not a problem")
+    a, b = st.columns(2)
+    a.metric("Awaiting your ruling", f"{rep.counts[C.OWNER_QUEUE]:,}",
+             delta=delta.get(C.OWNER_QUEUE), delta_color="off",
+             help="The code has an opinion and wants you to settle it. "
+                  "This can be any size; it is not a fault.")
+    b.metric("Mechanical, not yet applied", f"{rep.counts[C.MECHANICAL]:,}",
+             delta=delta.get(C.MECHANICAL), delta_color="off",
+             help="Unambiguous changes waiting for an Apply. Should fall "
+                  "to zero after one; if it doesn't, the apply path is broken.")
+
+    st.markdown("#### The code is wrong")
+    c, d, e = st.columns(3)
+    c.metric("Never examined", f"{rep.counts[C.NOT_EXAMINED]:,}",
+             delta=delta.get(C.NOT_EXAMINED),
+             help="No rule reached a verdict. This is the bucket that hid "
+                  "every defect found by eye.")
+    d.metric("Invariant violations", f"{rep.counts[C.VIOLATION]:,}",
+             delta=delta.get(C.VIOLATION),
+             help="A postcondition failed. Always a bug.")
+    e.metric("Canonical", f"{rep.counts[C.CANONICAL]:,}",
+             delta=delta.get(C.CANONICAL), delta_color="off")
+
+    if rep.red_count() == 0:
+        st.success("Every file reached a verdict and every invariant holds. ✓")
+    else:
+        st.warning(
+            f"{rep.red_count():,} file(s) the code cannot account for. "
+            "These are not waiting on you.")
+
+    st.caption(
+        f"{rep.scanned:,} scanned in {rep.duration_s}s · "
+        f"{rep.globals_.get('inbox_skipped', 0):,} inbox papers not judged "
+        "(they are not named yet by design) · sidecar coverage "
+        f"{rep.globals_.get('coverage_pct', 0)}%")
+
+    st.markdown("##### Why, grouped")
+    for key, n in rep.reasons.items():
+        bucket, _, reason = key.partition(":")
+        icon = "🔴" if bucket in C.RED else "•"
+        with st.expander(f"{icon} {n:,} — {reason.replace('-', ' ')}"):
+            rows = [f for f in rep.findings
+                    if f"{f.bucket}:{f.reason}" == key][:200]
+            for f in rows:
+                st.write(f"`{f.path}`")
+                if f.detail:
+                    st.caption(f.detail)
+            if n > len(rows):
+                st.caption(f"… and {n - len(rows):,} more (showing 200)")
+
+    if st.button("💾 Save this report (so tomorrow shows a diff)"):
+        p = C.save(_library(), rep)
+        st.success(f"Saved {p.name}")
 
 
 def render_stats() -> None:
@@ -4992,6 +5088,8 @@ def main() -> None:
         render_maintenance()
     elif page == "Pipeline Preview":
         render_pipeline_preview()
+    elif page == "Conformance":
+        render_conformance()
     elif page == "Stats":
         render_stats()
     elif page == "Activity":
