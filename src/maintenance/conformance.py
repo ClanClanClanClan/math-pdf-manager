@@ -154,6 +154,18 @@ def examine(name: str, library_root: Path) -> tuple[str, str, str]:
     if not changed or proposed == original:
         return CANONICAL, "", ""
 
+    # A change produced ONLY by the maths convention is mechanical, not a
+    # judgement call: the owner settled the rule once, and applying it is
+    # arithmetic.  It has to be recognised before the generic classifier,
+    # which compares letter signatures and therefore reads "l_r" -> "lᵣ"
+    # as a text REWRITE — the most alarming category there is — for what
+    # is only a change of typeface.
+    if " - " in original and " - " in proposed:
+        from processing.math_typography import canonicalise
+        _auth, _title = original.split(" - ", 1)
+        if proposed == f"{_auth} - {canonicalise(_title)}":
+            return MECHANICAL, "math-typography", proposed
+
     # A change that needs a RULING vs one that is pure formatting.  This
     # is the split the owner cares about, and it reuses the classifier
     # already used for the review sheets rather than a second opinion.

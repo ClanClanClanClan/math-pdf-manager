@@ -54,6 +54,11 @@ def _letters_signature(s: str) -> str:
     return re.sub(r"[^\w]", "", decomposed).lower()
 
 
+def _cased_signature(s: str) -> str:
+    """As above but CASE-PRESERVING — the difference the other one hides."""
+    return re.sub(r"[^\w]", "", unicodedata.normalize("NFKD", s))
+
+
 def classify_proposal(old_name: str, new_name: str) -> str:
     """Which kind of title change this is: cosmetic, case, or rewrite."""
     old_t, new_t = _title_of(old_name), _title_of(new_name)
@@ -74,7 +79,15 @@ def classify_proposal(old_name: str, new_name: str) -> str:
             return FIRSTWORD
         return CASE
     if _letters_signature(old_t) == _letters_signature(new_t):
-        return COSMETIC
+        # Same letters — but that signature is LOWERCASED, so on its own
+        # it cannot tell "only punctuation moved" from "the capitals also
+        # moved".  Reaching here at all means the word lists disagreed,
+        # which now happens whenever maths was converted: "L^2" tokenises
+        # as "L" and "L²" as one word, so a title with both a superscript
+        # and a casing decision fell straight through to COSMETIC and the
+        # owner would never have been asked.
+        return (COSMETIC if _cased_signature(old_t) == _cased_signature(new_t)
+                else CASE)
     return REWRITE
 
 

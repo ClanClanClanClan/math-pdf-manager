@@ -66,3 +66,26 @@ def test_split_covers_every_proposal():
             _p("Trading In x", "Trading in x")]
     g = split_titles(rows)
     assert sum(len(v) for v in g.values()) == len(rows)
+
+
+class TestMathsDoesNotHideACasingDecision:
+    """"L^2" tokenises as one word and "L²" as another, so a title with
+    BOTH a superscript conversion and a casing change fell through the
+    word-list branch into a signature comparison that lowercases both
+    sides — and was reported as COSMETIC. The owner would never have
+    been asked about the capitals."""
+
+    def test_maths_plus_casing_is_a_case_decision(self):
+        assert classify_proposal(
+            "S, J. - L^2 Estimates In elliptic Equations.pdf",
+            "S, J. - L² estimates in elliptic equations.pdf") == CASE
+
+    def test_maths_alone_is_still_cosmetic(self):
+        assert classify_proposal(
+            "S, J. - L^2 estimates in elliptic equations.pdf",
+            "S, J. - L² estimates in elliptic equations.pdf") == COSMETIC
+
+    def test_punctuation_alone_is_still_cosmetic(self):
+        assert classify_proposal(
+            "S, J. - A study (0,π) of measures.pdf",
+            "S, J. - A study (0, π) of measures.pdf") == COSMETIC

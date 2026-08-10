@@ -179,3 +179,49 @@ class TestTheReport:
         rep = run(lib)
         save(lib, rep)
         assert load_previous(lib) is None
+
+
+class TestMathsIsMechanicalNotAJudgement:
+    """A change produced only by the maths convention is arithmetic.
+
+    The generic classifier compares letter signatures, so "l_r" -> "lᵣ"
+    reads as a text REWRITE — the loudest category — for a change of
+    typeface the owner already ruled on. Miscategorising it would train
+    the owner to ignore the one bucket that must stay meaningful.
+    """
+
+    @pytest.mark.parametrize("name,frag", [
+        ("Geiss, S. - Norms of diagonal operators in l_r.pdf", "lᵣ"),
+        ("Erdos, P. - On numbers of the form ε_i in a set.pdf", "εᵢ"),
+        ("Smith, J. - L^2 estimates for elliptic equations.pdf", "L²"),
+    ])
+    def test_a_maths_only_change_is_mechanical(self, lib, name, frag):
+        b, reason, detail = examine(name, lib)
+        assert b == MECHANICAL, (b, reason, detail)
+        assert reason == "math-typography"
+        assert frag in detail
+
+    def test_a_casing_change_is_still_the_owners_call(self, lib):
+        b, reason, _d = examine(
+            "Smith, J. - Trading signals In VIX futures.pdf", lib)
+        assert b == OWNER_QUEUE
+
+    def test_maths_AND_casing_together_stays_the_owners_call(self, lib):
+        """Only a PURE maths change is mechanical; if the casing also
+        moved, the owner still has to see it.
+
+        The vocabulary is required: a bare library proves no word common,
+        so the caser would change nothing and the proposal really WOULD
+        be maths-only.  Omitting it is how this test first passed while
+        asserting the opposite of what it claims.
+        """
+        from processing.title_vocab import vocab_path
+        vp = vocab_path(lib)
+        vp.parent.mkdir(parents=True, exist_ok=True)
+        vp.write_text(json.dumps(
+            {"proper": [], "phrases": [], "pending": {},
+             "common": ["estimates", "equations", "elliptic"]},
+            ensure_ascii=False))
+        b, _r, detail = examine(
+            "Smith, J. - L^2 Estimates In elliptic Equations.pdf", lib)
+        assert b == OWNER_QUEUE, detail

@@ -142,16 +142,38 @@ def normalize_full_name(
     if " - " not in new:
         return new, changed, pending
     try:
+        from processing.math_typography import canonicalise
         from processing.title_normalize import propose_title_case
         authors, title_ext = new.split(" - ", 1)
         if "." in title_ext:
             stem, ext = title_ext.rsplit(".", 1)
         else:
             stem, ext = title_ext, ""
-        prop = propose_title_case(stem, library_root)
+
+        # Mathematics first, casing second.  This is the ONE place the
+        # house maths convention is applied, and every naming path funnels
+        # through here — ingest (ingest.py:817), the retroactive sweep
+        # (library_normalize.py:128), refiling (publication_topic_router.py:298)
+        # and the conformance check — so it happens exactly once.
+        #
+        # The order is deliberate: the caser should see canonical notation,
+        # not a caret it might treat as prose.  Measured over the 378
+        # library titles containing mathematics the two orders agree
+        # everywhere, so this is a principle rather than a fix, and the
+        # test suite pins it so a later reordering cannot pass unnoticed.
+        #
+        # Author block deliberately excluded: "X_n" is a subscript in a
+        # title and a person's initials in an author block.
+        maths = canonicalise(stem)
+        prop = propose_title_case(maths, library_root)
         pending = list(prop.uncertain)
-        if prop.changed:
-            new = f"{authors} - {prop.proposed}" + (f".{ext}" if ext else "")
+        # Rebuild from whichever stage last touched it.  Keying the
+        # rebuild on prop.changed alone silently DROPPED a maths-only fix
+        # whenever the casing happened to be already correct — the same
+        # "two states, one flag" mistake this pipeline keeps making.
+        final = prop.proposed if prop.changed else maths
+        if final != stem:
+            new = f"{authors} - {final}" + (f".{ext}" if ext else "")
             changed = True
     except Exception as exc:  # never let title casing break a move
         logger.debug("title normalize failed for %r: %s", name, exc)

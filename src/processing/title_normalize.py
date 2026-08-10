@@ -268,6 +268,10 @@ def propose_title_case(
       that is not a plain ``Xxxx`` shape are preserved verbatim.
     """
     title = unicodedata.normalize("NFC", title)
+    # Held for the returned proposal: `title` is rebound below by the
+    # phrase pass, and comparing the result against the rebound value is
+    # what made `changed` report False after a ruling fired.
+    _caller_title = title
     vocab = {"proper": set(), "common": set()}
     corpus_stats: dict = {}
     if library_root is not None:
@@ -699,7 +703,15 @@ def propose_title_case(
         out_tokens.append("".join(rebuilt))
 
     return TitleProposal(
-        original=title,
+        # The CALLER's string, not the local one.  ``title`` is rebound by
+        # the phrase pass above, so returning it made ``changed`` compare
+        # the result against an already-canonicalised original and answer
+        # False whenever a ruling had fired.  Every caller keys on
+        # ``changed`` — move_normalizer, library_normalize, the topic
+        # router — so the owner's phrase rulings produced a correct
+        # ``proposed`` that no filename ever received.  Caught by the
+        # golden corpus within minutes of it existing.
+        original=_caller_title,
         proposed=" ".join(out_tokens),
         uncertain=uncertain,
     )

@@ -97,10 +97,19 @@ _BARE = r"[^\s{}\[\]\^_,;:()]"
 #: outer expression (q sits behind Σ) and eaten the INNER "n_i", giving
 #: "Σq^{−nᵢ}" — a half-converted form.  Both lookbehinds are width 1, so
 #: they alternate cleanly in a single expression.
+#: The trailing (?![\^_]) refuses an expression followed by a DANGLING
+#: script mark. "a^1^" was converting to "a¹^", putting a script
+#: character hard against a caret — indistinguishable from the
+#: half-raised output this module exists to prevent, and unreadable
+#: either way. A dangling mark means the notation is corrupt, which is
+#: the same class as a nested script or an unbalanced brace, so it gets
+#: the same answer: leave it exactly alone and report it.
+#: Found by fuzzing, not by the library — no real filename contains it.
 _EXPR_RE = re.compile(
     rf"(?:(?<![^\W\d_])|(?<=[{_OPERATORS}]))(?<![0-9])"
     rf"([^\W\d_])"
-    rf"((?:[\^_](?:\{{[^{{}}]*\}}|(?:{_BARE})(?![^\W\d_])))+)",
+    rf"((?:[\^_](?:\{{[^{{}}]*\}}|(?:{_BARE})(?![^\W\d_])))+)"
+    rf"(?![\^_])",
     re.UNICODE,
 )
 _SCRIPT_RE = re.compile(
