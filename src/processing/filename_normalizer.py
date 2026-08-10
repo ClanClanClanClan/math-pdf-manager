@@ -64,7 +64,20 @@ def normalize_filename(name: str) -> str:
     # that here; the subtitle's first word then lowercases by the normal
     # rule.  Measured: 4 files in the library, e.g.
     # "…delay-differential equations- When delay-systems…".
-    s = re.sub(r"(?<=[^\W\d_])- (?=[A-ZÀ-ÖØ-Þ])", ", ", s)
+    # NOT after a superscript or subscript glyph.  "W^{1}- Sobolev"
+    # canonicalises to "W¹- Sobolev", and Python's \d matches only
+    # DECIMAL digits, so "¹" (category No) counts as a word character
+    # here and the rule fired on the SECOND pass, giving "W¹, Sobolev".
+    # The pipeline therefore had no fixpoint: running it twice changed
+    # the answer. A script glyph before the dash means mathematics, and
+    # the dash is a compound, not a sanitised colon.
+    # Written out, NOT as the range ⁰-ⁿ: superscript ¹ ² ³ live in
+    # Latin-1 at U+00B9/B2/B3, outside the U+2070 superscript block, so a
+    # range silently misses the three most common exponents there are.
+    _SCRIPTS = ("⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾ⁿⁱᵃᵇᶜᵈᵉᶠᵍʰʲᵏˡᵐᵒᵖʳˢᵗᵘᵛʷˣʸᶻᵝᵞᵟᶿᵡ"
+                "₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎ₐₑₕᵢⱼₖₗₘₙₒₚᵣₛₜᵤᵥₓᵦᵧᵨᵩᵪ")
+    s = re.sub(rf"(?<=[^\W\d_])(?<![{re.escape(_SCRIPTS)}])- (?=[A-ZÀ-ÖØ-Þ])",
+               ", ", s)
 
     # A dash straight after a sentence-ending mark is redundant: the mark
     # has already closed the sentence, so "airplane?—The correct defence"

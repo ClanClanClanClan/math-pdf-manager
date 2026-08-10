@@ -37,6 +37,14 @@ logger = logging.getLogger(__name__)
 # via the en-dash class below).
 _WORD_RE = re.compile(r"[^\W\d_]+(?:['’][^\W\d_]+)*", re.UNICODE)
 _HYPHENS = "-–—‐"
+#: Unicode superscript/subscript forms.  A single letter followed by one
+#: is a mathematical symbol, not a word to sentence-case.
+_SCRIPT_GLYPHS = (
+    "⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾ⁿⁱ"
+    "ᵃᵇᶜᵈᵉᶠᵍʰʲᵏˡᵐᵒᵖʳˢᵗᵘᵛʷˣʸᶻᵝᵞᵟᶿᵡ"
+    "₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎"
+    "ₐₑₕᵢⱼₖₗₘₙₒₚᵣₛₜᵤᵥₓᵦᵧᵨᵩᵪ"
+)
 # Every dash a keyboard, a publisher or a PDF extractor might emit, folded
 # to one mark so a name is recognised however it was typed.  Same length in
 # equals same length out, so string offsets survive the fold.
@@ -531,6 +539,19 @@ def propose_title_case(
                     after = tok[m.end():m.end() + 1]
                     if len(base) == 1 and after in _HYPHENS:
                         # Math prefixes like "p-adic" at the very start stay.
+                        cls = KEEP
+                    # `after and ...` is load-bearing: at the end of a
+                    # token `after` is "", and "" is a substring of every
+                    # string, so the bare test swallowed EVERY first word.
+                    elif ((after and after in _SCRIPT_GLYPHS)
+                          or any(c in _SCRIPT_GLYPHS for c in base)):
+                        # A single letter carrying a script is a SYMBOL, not
+                        # the first word of a sentence: "e^{-x} decay" had
+                        # become "E⁻ˣ decay" and "x_n converges" "Xₙ
+                        # converges", which is a different variable.  The
+                        # p-adic rule already covers the hyphen form; this
+                        # is the same idea once the maths has been
+                        # canonicalised upstream.
                         cls = KEEP
                     elif base.lower() in _PARTICLES and base.islower():
                         # "de Finetti style theorems" — a leading name

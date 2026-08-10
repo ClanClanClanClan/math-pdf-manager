@@ -92,6 +92,13 @@ _OPERATORS = "ΣΠ∑∏∫∮∇∂√"
 #: "(" stays out: it opens a group, so "e^(|x|²)" is not a one-character
 #: exponent and treating it as one produced "e⁽|x|²)".
 _BARE = r"[^\s{}\[\]\^_,;:()]"
+
+#: A brace group that itself contains a script mark: "2^{-n_k}",
+#: "‖X‖_{L^2}", "ℝ^{n_i}".  Nothing inside one may be rewritten.  Without
+#: this the INNER expression was converted whenever the OUTER carrier was
+#: not matched — a digit or a symbol base — giving "2^{-nₖ}", which is the
+#: half-raised form in a different disguise.
+_PROTECTED_RE = re.compile(r"\{[^{}]*[\^_][^{}]*\}")
 #: ONE pass, not two.  Running an operator-aware second pass afterwards
 #: was too late: with "Σq^{−n_i}" the first pass had already refused the
 #: outer expression (q sits behind Σ) and eaten the INNER "n_i", giving
@@ -108,7 +115,7 @@ _BARE = r"[^\s{}\[\]\^_,;:()]"
 _EXPR_RE = re.compile(
     rf"(?:(?<![^\W\d_])|(?<=[{_OPERATORS}]))(?<![0-9])"
     rf"([^\W\d_])"
-    rf"((?:[\^_](?:\{{[^{{}}]*\}}|(?:{_BARE})(?![^\W\d_])))+)"
+    rf"((?:[\^_](?:\{{[^{{}}]*\}}|(?:{_BARE})(?![^\W_])))+)"
     rf"(?![\^_])",
     re.UNICODE,
 )
@@ -157,6 +164,17 @@ def _rewrite(m: re.Match) -> str:
     for sm in _SCRIPT_RE.finditer(raw):
         kind = sm.group(1)
         content = sm.group(2) if sm.group(2) is not None else sm.group(3)
+        # An EMPTY script is not "fully representable" — _as_script("")
+        # returns "" rather than None, so "L^{}" rendered as "L" and
+        # silently deleted characters from the owner's title.
+        if not content.strip():
+            return m.group(0)
+        # " - " inside a script is the author/title separator wandering
+        # into a formula ("X_{Doob - Meyer}").  Stripping spaces there
+        # welded it shut, which is the one edit that makes a file
+        # invisible to every rule downstream.
+        if " - " in content:
+            return m.group(0)
         # NESTED scripts ("L_{exp_q}", "q^{-n_i}") are beyond this
         # module's grammar.  Guessing produced half-converted output like
         # "q^{−nᵢ}", which is neither form.  Leave the expression exactly
@@ -199,7 +217,18 @@ def canonicalise(title: str) -> str:
     if not _balanced(text):
         return text
     text = _MATHBB_RE.sub(lambda m: _MATHBB.get(m.group(1), m.group(0)), text)
-    return _EXPR_RE.sub(_rewrite, text)
+    guarded = [(g.start(), g.end()) for g in _PROTECTED_RE.finditer(text)]
+
+    def _outer_only(m: re.Match) -> str:
+        # Never rewrite an expression sitting INSIDE a brace group that
+        # already carries a script mark: the outer carrier owns it, and
+        # if the outer carrier was not matched (a digit or symbol base)
+        # the right answer is to leave the whole thing alone.
+        if any(a <= m.start() < b for a, b in guarded):
+            return m.group(0)
+        return _rewrite(m)
+
+    return _EXPR_RE.sub(_outer_only, text)
 
 
 def problems(title: str) -> list:
@@ -212,12 +241,21 @@ def problems(title: str) -> list:
     out = []
     if ("^" in text or "_" in text or "\\math" in text) and not _balanced(text):
         out.append("brackets do not pair up")
-    for m in _EXPR_RE.finditer(text):
+    # Report on the SAME text canonicalise works on.  Scanning the raw
+    # string made problems('\\mathbb{R}^{n_i}') empty while
+    # problems('ℝ^{n_i}') was not — the report disagreed with itself
+    # depending on how the owner had spelled the same thing.
+    scanned = _MATHBB_RE.sub(lambda m: _MATHBB.get(m.group(1), m.group(0)), text)
+    for g in _PROTECTED_RE.finditer(scanned):
+        out.append(f"nested script in {g.group(0)!r}")
+    for m in _EXPR_RE.finditer(scanned):
         for sm in _SCRIPT_RE.finditer(m.group(2)):
             content = sm.group(2) if sm.group(2) is not None else sm.group(3)
-            if "^" in content or "_" in content:
-                out.append(f"nested script in {m.group(0)!r}")
-    return out
+            if not content.strip():
+                out.append(f"empty script in {m.group(0)!r}")
+            elif " - " in content:
+                out.append(f"author/title separator inside {m.group(0)!r}")
+    return sorted(set(out))
 
 
 def describe(before: str, after: str) -> str:
