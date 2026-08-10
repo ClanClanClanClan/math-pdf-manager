@@ -215,3 +215,48 @@ class TestNeverWritesToTheRealLibrary:
         assert root, "MATH_LIBRARY is unset — the conftest guard is not running"
         assert "library" in Path(root).name or "/T/" in root or "tmp" in root.lower(), \
             f"MATH_LIBRARY points at {root!r}, which may be the real library"
+
+
+class TestUndoNeverOverwritesAnOccupant:
+    """Restoring a file on top of a different file destroys a paper to
+    recover another — the one thing an undo must never do.
+
+    `logged_rename` already refuses this. The UNDO path did not: it
+    checked only `dst.exists()` and called shutil.move. 15 recorded
+    operations across two real transactions would take that branch.
+    """
+
+    def test_it_refuses_and_says_why(self, tmp_path):
+        from processing.undo_log import UndoLog, logged_move
+        lib = tmp_path
+        (lib / "a").mkdir(); (lib / "b").mkdir()
+        paper = lib / "a" / "paper.pdf"
+        paper.write_bytes(b"%PDF-1.4 ORIGINAL")
+
+        log = UndoLog(log_dir=lib / ".operation_log")
+        tx = log.begin_transaction("move it away")
+        logged_move(paper, lib / "b" / "paper.pdf", undo_log=log)
+        log.commit()
+
+        # a DIFFERENT paper now occupies the old path
+        intruder = lib / "a" / "paper.pdf"
+        intruder.write_bytes(b"%PDF-1.4 SOMEONE ELSE")
+
+        res = log.undo_transaction(tx)
+        assert intruder.read_bytes() == b"%PDF-1.4 SOMEONE ELSE", \
+            "the occupant was destroyed"
+        assert (lib / "b" / "paper.pdf").exists(), "the moved file still exists"
+        assert any("CANNOT UNDO" in str(r) for r in res), res
+
+    def test_the_ordinary_case_still_works(self, tmp_path):
+        from processing.undo_log import UndoLog, logged_move
+        lib = tmp_path
+        (lib / "a").mkdir(); (lib / "b").mkdir()
+        paper = lib / "a" / "paper.pdf"
+        paper.write_bytes(b"%PDF-1.4 ORIGINAL")
+        log = UndoLog(log_dir=lib / ".operation_log")
+        tx = log.begin_transaction("move it away")
+        logged_move(paper, lib / "b" / "paper.pdf", undo_log=log)
+        log.commit()
+        log.undo_transaction(tx)
+        assert paper.exists() and paper.read_bytes() == b"%PDF-1.4 ORIGINAL"

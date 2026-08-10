@@ -213,6 +213,26 @@ class PDFHandler(FileSystemEventHandler):
             if lock is not None:
                 lock.release()
 
+    def _retire_source(self, path: Path, undo_log) -> Path:
+        """Move an ingested original into the trash, reversibly.
+
+        Returns the destination.  Never overwrites: a second drop of the
+        same filename gets " (2)", because two different papers can
+        easily share a name ("main.pdf", "1-s2.0-....pdf") and silently
+        clobbering one inside the trash defeats the point of having one.
+        """
+        from processing.undo_log import logged_move
+
+        dest_dir = self.config.library_root / ".trash" / "ingested_originals"
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        dest = dest_dir / path.name
+        n = 2
+        while dest.exists():
+            dest = dest_dir / f"{path.stem} ({n}){path.suffix}"
+            n += 1
+        logged_move(path, dest, undo_log=undo_log)
+        return dest
+
     def _ingest(self, path: Path) -> None:
         """Ingest a single PDF file."""
         logger.info("Ingesting: %s", path.name)
@@ -280,14 +300,37 @@ class PDFHandler(FileSystemEventHandler):
                                    f"{result['filename']}\nmatches {twin_short}\n"
                                    f"— review in the Duplicates page", sound="")
 
+                    # Retire the source — NEVER hard-delete it.
+                    #
+                    # This was `path.unlink()`: the original was destroyed
+                    # with no trash copy and no undo record, so the filed
+                    # copy became the only one in existence.  Undoing the
+                    # ingest then removed that copy too (an ingest is
+                    # recorded as a `copy`, and undoing a copy unlinks the
+                    # destination) — leaving ZERO copies of the paper.
+                    #
+                    # It compounds with a 3-second settle: a file still
+                    # being written by cp/curl/scp/a scanner is filed
+                    # truncated and the good original deleted.  Browsers
+                    # are safe only because they write to a temporary
+                    # .crdownload/.part name first.
+                    #
+                    # Retire before commit(), so the move is inside the
+                    # transaction and travels with the rest of the ingest.
+                    if self.config.delete_source and path.exists():
+                        try:
+                            retired = self._retire_source(path, undo_log)
+                            logger.info("Retired source to %s", retired)
+                        except Exception as exc:
+                            # Keeping the original is always safer than
+                            # losing it; say so rather than swallowing it.
+                            logger.warning(
+                                "Could not retire source %s (%s) — LEFT IN "
+                                "PLACE on purpose", path.name, exc)
+
                     # Commit undo log
                     if undo_log:
                         undo_log.commit()
-
-                    # Optionally delete source
-                    if self.config.delete_source and path.exists():
-                        path.unlink()
-                        logger.info("Deleted source: %s", path.name)
             elif result.get("duplicate_of"):
                 # Not an error: the drop is byte-identical to a paper
                 # already filed.  Leave the source in place (don't file a

@@ -262,12 +262,24 @@ class UndoLog:
                 if dry_run:
                     results.append({"action": f"WOULD MOVE BACK: {dst.name} → {src}"})
                 else:
-                    if dst.exists():
+                    if not dst.exists():
+                        results.append({"action": f"SKIP: destination gone: {dst}"})
+                    elif src.exists() and not _is_same_file(src, dst):
+                        # Something ELSE now lives where this file came
+                        # from.  shutil.move would silently overwrite it,
+                        # destroying a paper to restore another — the one
+                        # thing an undo must never do.  `logged_rename`
+                        # already refuses this; the undo path did not.
+                        # 15 recorded operations across two transactions
+                        # would take this branch today.
+                        results.append({
+                            "action": f"CANNOT UNDO: {src} is occupied by a "
+                                      f"different file; refusing to overwrite it"
+                        })
+                    else:
                         src.parent.mkdir(parents=True, exist_ok=True)
                         shutil.move(str(dst), str(src))
                         results.append({"action": f"MOVED BACK: {dst.name} → {src}"})
-                    else:
-                        results.append({"action": f"SKIP: destination gone: {dst}"})
 
             elif op["type"] == "copy":
                 # Undo copy: remove the copy
