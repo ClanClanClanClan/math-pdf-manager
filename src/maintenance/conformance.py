@@ -84,7 +84,19 @@ class ConformanceReport:
     globals_: dict = field(default_factory=dict)
 
     def red_count(self) -> int:
-        return sum(self.counts.get(b, 0) for b in RED)
+        return (sum(self.counts.get(b, 0) for b in RED)
+                + self.globals_.get("library_wide_findings", 0))
+
+    def is_all_clear(self) -> bool:
+        """Green means "I examined things and they were fine".
+
+        Never "there was nothing to examine": an empty library, an
+        unreadable folder or a mistyped root all scanned 0 files and
+        reported "Every file reached a verdict ✓" — the same sentence,
+        and the same lie, as the cockpit banner this module was written
+        to replace.
+        """
+        return self.scanned > 0 and self.red_count() == 0
 
     def to_json(self) -> str:
         d = asdict(self)
@@ -143,7 +155,7 @@ def examine(name: str, library_root: Path) -> tuple[str, str, str]:
 
     # ---- THE PIPELINE ----------------------------------------------------
     try:
-        proposed, changed, _pending = normalize_full_name(original, library_root)
+        proposed, changed, pending = normalize_full_name(original, library_root)
     except Exception as exc:                        # pragma: no cover
         return VIOLATION, "pipeline-raised", f"{type(exc).__name__}: {exc}"
 
@@ -151,8 +163,27 @@ def examine(name: str, library_root: Path) -> tuple[str, str, str]:
         return (VIOLATION, "proposal-too-long",
                 f"{len(proposed.encode('utf-8'))} bytes: {proposed}")
 
+    # The maths module's own refusal list.  It exists precisely to say
+    # "I looked and would not touch this"; not consulting it was the same
+    # mistake in miniature — 5 files with unbalanced brackets or nested
+    # scripts were reported CANONICAL.
+    try:
+        from processing.math_typography import problems as _math_problems
+        _mp = _math_problems(original.split(" - ", 1)[1]) if " - " in original else []
+    except Exception:                               # pragma: no cover
+        _mp = []
+    if _mp:
+        return NOT_EXAMINED, "maths-refused", "; ".join(_mp[:2])
+
     if not changed or proposed == original:
-        return CANONICAL, "", ""
+        # The NAME is a fixpoint — but the caser may have reached it by
+        # preserving words it could not prove either way.  That is a real
+        # open question and it must not hide inside "canonical", which
+        # the owner reads as settled.  It is NOT the owner's review queue
+        # either: the queue is for a proposed change, and there is none.
+        # So: canonical, with the uncertainty reported alongside.
+        return CANONICAL, ("rests-on-undecided-words" if pending else ""), \
+            (", ".join(sorted(set(pending))[:6]) if pending else "")
 
     # A change produced ONLY by the maths convention is mechanical, not a
     # judgement call: the owner settled the rule once, and applying it is
@@ -292,7 +323,16 @@ def check_sidecars(library_root: Path, pdfs: list, all_pdfs: list = None) -> tup
             missing += 1
 
     orphans = 0
+    from processing.identity import _NON_LIBRARY_DIRS
     for sc in mirror.rglob("*.meta.json"):
+        # The mirror shadows .trash too, and a retired paper's record is
+        # unclaimable BY CONSTRUCTION — no PDF will ever match it.  Not
+        # excluding it made 133 of the 159 "orphans" the owner's own
+        # deliberate deletions, a red number that can never reach zero
+        # and grows every time they throw something away.
+        if any(part in _NON_LIBRARY_DIRS
+               for part in sc.relative_to(mirror).parts):
+            continue
         if str(sc) not in claimed:
             orphans += 1
 
@@ -357,11 +397,17 @@ def run(
         if progress and i % 250 == 0:
             progress(i, total)
 
+    # Library-wide findings are NOT files.  Adding them into the per-file
+    # counters made sum(counts) exceed `scanned` by 15 — a file-shaped
+    # metric quietly carrying non-file entries, which is the sort of
+    # arithmetic that makes a whole report untrustworthy.  Keep them
+    # separate and report both.
     sc_findings, sc_stats = check_sidecars(library_root, pdfs[:total],
                                            all_pdfs=all_pdfs)
     cfg_findings = check_config_reachability(library_root)
+    library_wide = 0
     for f in list(sc_findings) + list(cfg_findings):
-        counts[VIOLATION] += 1
+        library_wide += 1
         key = f"{f.bucket}:{f.reason}"
         reasons[key] = reasons.get(key, 0) + 1
         findings.append(f)
@@ -372,8 +418,37 @@ def run(
     rep.counts = counts
     rep.reasons = dict(sorted(reasons.items(), key=lambda kv: -kv[1]))
     rep.findings = findings
-    rep.globals_ = {"inbox_skipped": skipped, **sc_stats}
+    rep.globals_ = {"inbox_skipped": skipped,
+                    "library_wide_findings": library_wide,
+                    "documents_out_of_scope": _out_of_scope(library_root),
+                    **sc_stats}
     return rep
+
+
+def _out_of_scope(library_root: Path) -> int:
+    """Documents the check cannot speak for at all.
+
+    ``iter_pdfs`` globs ``*.pdf``, so 188 .djvu and 9 .epub files are in
+    no bucket and no skip count.  Reporting five buckets that sum to the
+    PDF population, and saying nothing else, invites the reader to
+    conclude the library is accounted for.  It is not — and that is this
+    module's own disease.
+    """
+    from processing.identity import _NON_LIBRARY_DIRS
+    n = 0
+    try:
+        for p in library_root.rglob("*"):
+            if not p.is_file() or p.suffix.lower() == ".pdf":
+                continue
+            rel = p.relative_to(library_root)
+            if any(x in _NON_LIBRARY_DIRS or x.startswith(".") for x in rel.parts):
+                continue
+            if p.suffix.lower() in (".djvu", ".epub", ".ps", ".dvi", ".chm") \
+                    or not p.suffix:
+                n += 1
+    except OSError:                                 # pragma: no cover
+        return -1
+    return n
 
 
 def save(library_root: Path, rep: ConformanceReport) -> Path:

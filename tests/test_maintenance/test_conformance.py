@@ -225,3 +225,80 @@ class TestMathsIsMechanicalNotAJudgement:
         b, _r, detail = examine(
             "Smith, J. - L^2 Estimates In elliptic Equations.pdf", lib)
         assert b == OWNER_QUEUE, detail
+
+
+class TestTheCheckerDoesNotHaveItsOwnDisease:
+    """Four ways this module said "fine" about things it had not settled.
+
+    It exists because "I did not look" and "it is fine" were the same
+    value. Each test below is a place where it made that same mistake.
+    """
+
+    def test_an_empty_scan_is_never_all_clear(self, lib):
+        """An empty library, an unreadable folder or a mistyped root all
+        reported "every invariant holds" — the same sentence, and the
+        same lie, as the banner this module replaced."""
+        rep = run(lib)
+        assert rep.scanned == 0
+        assert not rep.is_all_clear()
+
+    def test_a_real_clean_library_IS_all_clear(self, lib):
+        _add(lib, "Smith, J. - A note on stochastic control.pdf")
+        rep = run(lib)
+        assert rep.scanned == 1
+        assert rep.is_all_clear() == (rep.red_count() == 0)
+
+    def test_undecided_words_are_reported_not_buried(self, lib):
+        """1,595 real files were CANONICAL while the caser had explicitly
+        returned words it could not decide. The name IS a fixpoint, so
+        canonical is right — but the open question must be visible."""
+        b, reason, detail = examine(
+            "Smith, J. - A study of Zorglub calculus.pdf", lib)
+        assert b == CANONICAL
+        assert reason == "rests-on-undecided-words"
+        assert "Zorglub" in detail
+
+    def test_a_settled_title_reports_no_uncertainty(self, lib):
+        b, reason, _d = examine(
+            "Smith, J. - A note on stochastic control.pdf", lib)
+        assert b == CANONICAL and reason == ""
+
+    def test_the_maths_refusal_list_is_consulted(self, lib):
+        """math_typography.problems() exists to say "I looked and would
+        not touch this"; not calling it left 5 files reported canonical
+        with unbalanced brackets or nested scripts."""
+        b, reason, _d = examine(
+            "Geiss, S. - Absolutely L_{exp_q}-summing norms.pdf", lib)
+        assert b == NOT_EXAMINED
+        assert reason == "maths-refused"
+
+    def test_trashed_records_are_not_orphans(self, lib):
+        """133 of 159 "orphans" were the owner's own deleted papers — a
+        red number that could never reach zero."""
+        _add(lib, "Smith, J. - A note on stochastic control.pdf")
+        ghost = (lib / ".mathpdf-sidecars" / ".trash" / "gone.meta.json")
+        ghost.parent.mkdir(parents=True, exist_ok=True)
+        ghost.write_text("{}")
+        rep = run(lib)
+        assert rep.globals_["orphaned_records"] == 0
+
+    def test_library_wide_findings_are_not_counted_as_files(self, lib):
+        """sum(counts) exceeded `scanned` by 15: a file-shaped metric
+        carrying non-file entries."""
+        _add(lib, "Smith, J. - A note on stochastic control.pdf")
+        stray = lib / ".mathpdf-sidecars" / "x.meta.json"
+        stray.parent.mkdir(parents=True, exist_ok=True)
+        stray.write_text("{}")
+        rep = run(lib)
+        assert sum(rep.counts.values()) == rep.scanned
+        assert rep.globals_["library_wide_findings"] >= 1
+        assert rep.red_count() >= rep.globals_["library_wide_findings"]
+
+    def test_out_of_scope_documents_are_counted(self, lib):
+        """188 .djvu and 9 .epub files were in no bucket and no skip
+        count, so five buckets summing to the PDF population read as
+        "the library is accounted for"."""
+        _add(lib, "Smith, J. - A note on stochastic control.pdf")
+        (lib / "01 - Published papers" / "S" / "Old, B. - Scan.djvu").write_text("x")
+        rep = run(lib)
+        assert rep.globals_["documents_out_of_scope"] == 1

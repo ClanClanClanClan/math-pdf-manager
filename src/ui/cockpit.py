@@ -2236,13 +2236,26 @@ def render_conformance() -> None:
     e.metric("Canonical", f"{rep.counts[C.CANONICAL]:,}",
              delta=delta.get(C.CANONICAL), delta_color="off")
 
-    if rep.red_count() == 0:
+    if rep.scanned == 0:
+        # "Nothing was examined" is not "everything is fine".  An empty
+        # library, an unreadable folder or a mistyped root all reported
+        # all-clear — the same lie as the banner this page replaced.
+        st.error(
+            "No documents were examined. That is not a clean bill of "
+            "health — check the library path and folder permissions.")
+    elif rep.is_all_clear():
         st.success("Every file reached a verdict and every invariant holds. ✓")
     else:
         st.warning(
             f"{rep.red_count():,} file(s) the code cannot account for. "
             "These are not waiting on you.")
 
+    oos = rep.globals_.get("documents_out_of_scope", 0)
+    if oos:
+        st.info(
+            f"{oos:,} document(s) are OUT OF SCOPE — .djvu, .epub and "
+            "extension-less files. This check globs *.pdf, so it cannot "
+            "speak for them either way.")
     st.caption(
         f"{rep.scanned:,} scanned in {rep.duration_s}s · "
         f"{rep.globals_.get('inbox_skipped', 0):,} inbox papers not judged "
