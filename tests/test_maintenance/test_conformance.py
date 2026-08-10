@@ -302,3 +302,71 @@ class TestTheCheckerDoesNotHaveItsOwnDisease:
         (lib / "01 - Published papers" / "S" / "Old, B. - Scan.djvu").write_text("x")
         rep = run(lib)
         assert rep.globals_["documents_out_of_scope"] == 1
+
+
+class TestTheCheckerDoesNotGradeItselfWithItself:
+    """E4. The first version asked `proposed == canonicalise(title)` —
+    a tautology, because the pipeline had just applied canonicalise. Any
+    output that function produced, including a wrong one, was stamped
+    "unambiguous, auto-applyable". Verification now uses an INDEPENDENT
+    detector (core.text_processing.math_detector)."""
+
+    def test_a_genuine_maths_change_is_recognised(self, lib):
+        b, reason, _d = examine(
+            "Smith, J. - L^2 estimates for elliptic equations.pdf", lib)
+        assert b == MECHANICAL and reason == "math-typography"
+
+    def test_a_change_touching_PROSE_is_not_called_maths(self, lib, monkeypatch):
+        """The tautology's real cost: a converter that also mangled prose
+        would still have been labelled mechanical. Make it mangle prose
+        and confirm the independent detector refuses the label."""
+        from processing import math_typography as mt
+        real = mt.canonicalise
+        monkeypatch.setattr(
+            mt, "canonicalise",
+            lambda t: real(t).replace("estimates", "ESTIMATES"))
+        b, reason, _d = examine(
+            "Smith, J. - L^2 estimates for elliptic equations.pdf", lib)
+        assert reason != "math-typography", (b, reason)
+
+    def test_the_independent_detector_is_what_decides(self):
+        from maintenance.conformance import _change_confined_to_maths as C
+        assert C("L^2 estimates", "L² estimates")
+        assert not C("L^2 estimates", "L² bounds")
+        assert not C("same", "same")
+
+
+class TestConfigReachabilityHasTeeth:
+    """E9/E10. load_vocab degrades a corrupt or missing file to an EMPTY
+    vocabulary and never raises, so the probe loop ran zero times and
+    returned [] — the same answer as "all fifteen rulings work"."""
+
+    def _write(self, lib, text):
+        from processing.title_vocab import vocab_path
+        vp = vocab_path(lib)
+        vp.parent.mkdir(parents=True, exist_ok=True)
+        vp.write_text(text)
+        return vp
+
+    def test_a_corrupt_vocabulary_is_reported_not_silently_empty(self, lib):
+        self._write(lib, "{not json")
+        out = check_config_reachability(lib)
+        assert any(f.reason == "vocabulary-unreadable" for f in out), out
+
+    def test_rulings_lost_between_file_and_loader_are_reported(self, lib, monkeypatch):
+        self._write(lib, json.dumps(
+            {"proper": [], "common": [], "pending": {},
+             "phrases": ["Euro-Par", "New York", "Root barrier"]}))
+        from processing import title_vocab
+        real = title_vocab.load_vocab
+        monkeypatch.setattr(title_vocab, "load_vocab",
+                            lambda root: dict(real(root), phrases=[]))
+        out = check_config_reachability(lib)
+        assert any(f.reason == "rulings-lost-on-load" for f in out), out
+        assert any("3 in the file, 0 reached" in f.detail for f in out), out
+
+    def test_a_healthy_vocabulary_is_still_silent(self, lib):
+        self._write(lib, json.dumps(
+            {"proper": [], "common": [], "pending": {},
+             "phrases": ["Euro-Par", "New York"]}))
+        assert check_config_reachability(lib) == []

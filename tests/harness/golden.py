@@ -141,6 +141,9 @@ PATHOLOGIES: list = [
     ("A, B. - x_n converges weakly.pdf", "same, subscript"),
     ("A, B. - estimates for elliptic PDEs.pdf",
      "…but an ordinary first word MUST still be capitalised"),
+    ("Delmas, J.-F., Zitt, P.-A., - Vaccinating to eradicate.pdf",
+     "author list ending in a stray comma; 4 real files, one with a "
+     "correctly-named twin already in the library"),
     ("A, B. - L^2" + "x" * 200 + ".pdf", "long title, near the byte limit"),
     ("A, B. - " + "L^2 " * 60 + "end.pdf", "many expressions in one title"),
     ("A, B. - עברית L^2 טקסט.pdf", "RTL text around an expression"),

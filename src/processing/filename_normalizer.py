@@ -146,6 +146,17 @@ def normalize_filename(name: str) -> str:
     # the name, not part of the title.
     s = re.sub(r"( - )[,;]\s*", r"\1", s)
 
+    # …and the mirror image: an author list that ends with a dangling
+    # comma, "Delmas, J.-F., Dronnier, D., Zitt, P.-A., - Vaccinating".
+    # The separator is intact so nothing downstream notices, but the
+    # author block is malformed and one of the three real cases has a
+    # correctly-named twin already in the library — a duplicate waiting
+    # to be missed, because the two names do not match.
+    # Commas AND the whitespace between them: the comma-spacing rule
+    # above has already turned ",," into ", ,", so stripping bare commas
+    # left "M.,  - " with the comma still there and a doubled space.
+    s = re.sub(r"[,\s]*,[,\s]*(?= - )", "", s)
+
     # Strip trailing/leading whitespace
     s = s.strip()
 

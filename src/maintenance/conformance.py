@@ -109,6 +109,60 @@ def _nfc(s: str) -> str:
     return unicodedata.normalize("NFC", s)
 
 
+def _prose_outside_maths(title: str) -> str:
+    """Everything that is NOT mathematics, per an INDEPENDENT detector.
+
+    ``core.text_processing.math_detector`` is a different implementation
+    from the converter under test, which is the point: if the prose
+    survives a change untouched, the change was confined to mathematics,
+    and that conclusion does not depend on the converter agreeing with
+    itself.
+    """
+    from core.text_processing.math_detector import find_math_regions
+    try:
+        regions = sorted(find_math_regions(title))
+    except Exception:                               # pragma: no cover
+        return title
+    # The detector is ASYMMETRIC across the very change we are checking:
+    # for "l_r" it returns the whole expression, but for "lᵣ" it returns
+    # only the "ᵣ", leaving the base letter behind in the prose. Compared
+    # naively, the prose then differs and a correct conversion is judged
+    # unconfined. Extend each region left over its base so both spellings
+    # of the same expression reduce to the same prose.
+    from processing.title_normalize import _SCRIPT_GLYPHS
+    grown = []
+    for a, b in regions:
+        while a > 0 and title[a] in _SCRIPT_GLYPHS and title[a - 1].isalnum():
+            a -= 1
+        grown.append((a, b))
+
+    # MERGE overlaps, do not skip them.  The detector splits "εᵢ" into
+    # two adjacent regions, ['ε', 'ᵢ']; growing the second one leftwards
+    # made it overlap the first, and a plain "if a >= last" then dropped
+    # it — leaving the subscript in the prose and judging a correct
+    # conversion unconfined.
+    merged: list = []
+    for a, b in sorted(grown):
+        if merged and a <= merged[-1][1]:
+            merged[-1] = (merged[-1][0], max(merged[-1][1], b))
+        else:
+            merged.append((a, b))
+
+    out, last = [], 0
+    for a, b in merged:
+        out.append(title[last:a])
+        last = b
+    out.append(title[last:])
+    return "".join(out)
+
+
+def _change_confined_to_maths(old_title: str, new_title: str) -> bool:
+    """True when the ONLY difference lies inside mathematical notation."""
+    if old_title == new_title:
+        return False
+    return _prose_outside_maths(old_title) == _prose_outside_maths(new_title)
+
+
 # ---------------------------------------------------------------------------
 # Per-file classification
 # ---------------------------------------------------------------------------
@@ -191,10 +245,16 @@ def examine(name: str, library_root: Path) -> tuple[str, str, str]:
     # which compares letter signatures and therefore reads "l_r" -> "lᵣ"
     # as a text REWRITE — the most alarming category there is — for what
     # is only a change of typeface.
+    #
+    # Verified with an INDEPENDENT detector, not by re-running the
+    # converter.  The first version asked `proposed == canonicalise(...)`,
+    # which is a tautology: the pipeline had just applied canonicalise,
+    # so the equality always held and ANY output that function produced —
+    # including a wrong one — was stamped "unambiguous, auto-applyable".
+    # A checker must not grade its subject with the subject's own answer.
     if " - " in original and " - " in proposed:
-        from processing.math_typography import canonicalise
-        _auth, _title = original.split(" - ", 1)
-        if proposed == f"{_auth} - {canonicalise(_title)}":
+        if _change_confined_to_maths(original.split(" - ", 1)[1],
+                                     proposed.split(" - ", 1)[1]):
             return MECHANICAL, "math-typography", proposed
 
     # A change that needs a RULING vs one that is pure formatting.  This
@@ -224,10 +284,31 @@ def check_config_reachability(library_root: Path) -> list:
     from processing.title_vocab import load_vocab
 
     out: list = []
+    # load_vocab degrades a corrupt or missing file to an EMPTY vocabulary
+    # and never raises, so the loop below then iterated zero times and
+    # returned [] — the same answer as "all fifteen rulings work". Read
+    # the file independently and compare, so "no rulings survived the
+    # load" cannot masquerade as "no rulings are broken".
+    from processing.title_vocab import vocab_path
+    vp = vocab_path(library_root)
+    raw: dict = {}
+    if vp.exists():
+        try:
+            raw = json.loads(vp.read_text())
+        except (OSError, ValueError) as exc:
+            out.append(Finding("<config>", VIOLATION, "vocabulary-unreadable",
+                               f"{vp.name}: {exc}"))
+            return out
     try:
         vocab = load_vocab(library_root)
     except Exception:                               # pragma: no cover
         return out
+    for _k in ("phrases", "proper", "common"):
+        _want, _got = len(raw.get(_k, ())), len(vocab.get(_k, ()))
+        if _want != _got:
+            out.append(Finding(
+                "<config>", VIOLATION, "rulings-lost-on-load",
+                f"{_k}: {_want} in the file, {_got} reached the classifier"))
 
     # The probe must be a form only the RULING can produce.  Probing with
     # the phrase already correct proves nothing: the safe default
@@ -247,21 +328,17 @@ def check_config_reachability(library_root: Path) -> list:
                 "<config>", VIOLATION, "ruling-cannot-fire",
                 f"phrase {phrase!r} never matches; probe became {got!r}"))
 
-    # A single ruled word cannot be probed the same way — "proper" means
+    # A single ruled word cannot be probed behaviourally — "proper" means
     # "keep the capital", not "restore it", so a lowercase probe SHOULD
-    # stay lowercase.  Check the plumbing instead: the ruling has to
-    # reach the set the classifier actually consults.  This is exactly
-    # what broke for `phrases` (copied out of the vocab and dropped).
-    try:
-        from processing.title_normalize import _whitelists
-        reachable = set(vocab.get("proper", ())) | _whitelists()
-        for word in sorted(vocab.get("proper", ())):
-            if word not in reachable:               # pragma: no cover
-                out.append(Finding(
-                    "<config>", VIOLATION, "ruling-cannot-fire",
-                    f"proper noun {word!r} never reaches the classifier"))
-    except Exception:                               # pragma: no cover
-        pass
+    # stay lowercase and tells us nothing.
+    #
+    # The loop that used to sit here was dead by construction: it built
+    # `reachable = set(vocab['proper']) | _whitelists()` and then asked
+    # whether each member of vocab['proper'] was in it. Always true, in
+    # 0 of 2000 random vocabularies false. It looked like a check and
+    # was a tautology. The count comparison above covers the real
+    # failure — a ruling that does not survive the load — so this is
+    # deleted rather than replaced with another one.
     return out
 
 

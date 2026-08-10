@@ -197,3 +197,35 @@ class TestDoubleDashIsAmbiguous:
         title = stem.split(" - ", 1)[1]
         assert propose_title_case(title).proposed == (
             "Robust option pricing, an empirical study")
+
+
+class TestDanglingCommaBeforeTheSeparator:
+    """E2. "Delmas, J.-F., Dronnier, D., Zitt, P.-A., - Vaccinating" —
+    the author list ends with a stray comma. The separator is intact so
+    nothing downstream notices, and the author pre-gate skips the
+    checker because there are no unspaced initials. One of the three
+    real cases has a correctly-named twin already in the library: a
+    duplicate that can never be matched, because the names differ."""
+
+    @pytest.mark.parametrize("name,expected", [
+        ("Delmas, J.-F., Zitt, P.-A., - Vaccinating to eradicate.pdf",
+         "Delmas, J.-F., Zitt, P.-A. - Vaccinating to eradicate.pdf"),
+        ("Berti, P., Rigo, P., - Asymptotics of certain measures.pdf",
+         "Berti, P., Rigo, P., - Asymptotics of certain measures.pdf".replace(", - ", " - ")),
+        ("Kolasiński, S., Santilli, M.,, - Regularity of sets.pdf",
+         "Kolasiński, S., Santilli, M. - Regularity of sets.pdf"),
+    ])
+    def test_the_dangling_comma_goes(self, name, expected):
+        assert normalize_filename(name) == expected
+
+    @pytest.mark.parametrize("name", [
+        # A comma that is part of the TITLE, nowhere near the separator.
+        "Smith, J. - Measures, integrals and martingales.pdf",
+        # A legitimate two-author block.
+        "Delmas, J.-F., Zitt, P.-A. - Vaccinating to eradicate.pdf",
+        # A title containing its own " - " segment separator.
+        "Aïd, R. - An introduction - Lecture 1 - Electricity markets.pdf",
+    ])
+    def test_ordinary_names_are_untouched(self, name):
+        import unicodedata
+        assert normalize_filename(name) == unicodedata.normalize("NFC", name)
