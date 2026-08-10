@@ -400,7 +400,22 @@ def upgrade_paper(
                         try:
                             trash_dir = library_root / ".trash" / "upgraded_preprints"
                             trash_dir.mkdir(parents=True, exist_ok=True)
+                            # Collision loop: the trash is FLAT, so two
+                            # retired preprints sharing a filename — and
+                            # "main.pdf" / "1-s2.0-….pdf" are shared by
+                            # dozens — meant the second silently
+                            # overwrote the first INSIDE the trash, which
+                            # is precisely where a paper is supposed to
+                            # be safe.  Every other trashing path in the
+                            # codebase (duplicate_scan, conflict_resolver,
+                            # preprint_variants) already does this.
                             trash_path = trash_dir / preprint_path.name
+                            _n = 2
+                            while trash_path.exists():
+                                trash_path = trash_dir / (
+                                    f"{preprint_path.stem} ({_n})"
+                                    f"{preprint_path.suffix}")
+                                _n += 1
 
                             # Audit-10: record BEFORE moving.  Otherwise a
                             # crash between the move and record_move sends

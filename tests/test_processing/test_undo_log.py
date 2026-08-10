@@ -260,3 +260,147 @@ class TestUndoNeverOverwritesAnOccupant:
         log.commit()
         log.undo_transaction(tx)
         assert paper.exists() and paper.read_bytes() == b"%PDF-1.4 ORIGINAL"
+
+
+class TestTheUndoGuaranteeItself:
+    """The seven holes. Each test fails if its fix is reverted."""
+
+    def _log(self, tmp_path):
+        from processing.undo_log import UndoLog
+        return UndoLog(log_dir=tmp_path / ".operation_log")
+
+    # ---- hole 1: nothing reached disk until commit() --------------------
+    def test_operations_are_on_disk_before_commit(self, tmp_path):
+        """A SIGKILL mid-batch used to lose the WHOLE record; the largest
+        real transaction holds 8,514 operations."""
+        log = self._log(tmp_path)
+        tx = log.begin_transaction("big batch")
+        log.record_move(tmp_path / "a.pdf", tmp_path / "b.pdf")
+        journal = (tmp_path / ".operation_log" / f"{tx}.journal.jsonl")
+        assert journal.exists(), "the operation must be durable immediately"
+        assert "a.pdf" in journal.read_text()
+
+    def test_a_crashed_run_is_recovered_into_a_real_transaction(self, tmp_path):
+        log = self._log(tmp_path)
+        tx = log.begin_transaction("interrupted")
+        log.record_move(tmp_path / "a.pdf", tmp_path / "b.pdf")
+        log.record_move(tmp_path / "c.pdf", tmp_path / "d.pdf")
+        # simulate SIGKILL: drop the object without commit()
+        del log
+        fresh = self._log(tmp_path)
+        assert fresh.recover_journals() == [tx]
+        ids = [t["id"] for t in fresh.list_transactions()]
+        assert tx in ids
+        rec = [t for t in fresh.list_transactions() if t["id"] == tx][0]
+        assert rec["operations_count"] == 2
+
+    def test_a_torn_final_line_does_not_lose_the_rest(self, tmp_path):
+        log = self._log(tmp_path)
+        tx = log.begin_transaction("interrupted")
+        log.record_move(tmp_path / "a.pdf", tmp_path / "b.pdf")
+        j = tmp_path / ".operation_log" / f"{tx}.journal.jsonl"
+        j.write_text(j.read_text() + '{"type": "move", "sou')
+        fresh = self._log(tmp_path)
+        assert fresh.recover_journals() == [tx]
+
+    def test_committing_removes_the_journal(self, tmp_path):
+        log = self._log(tmp_path)
+        tx = log.begin_transaction("done")
+        log.record_move(tmp_path / "a.pdf", tmp_path / "b.pdf")
+        log.commit()
+        assert not (tmp_path / ".operation_log" / f"{tx}.journal.jsonl").exists()
+
+    # ---- hole 2: a partial undo burned the transaction -----------------
+    def test_a_partial_undo_stays_retryable(self, tmp_path):
+        from processing.undo_log import logged_move
+        lib = tmp_path
+        (lib / "a").mkdir(); (lib / "b").mkdir()
+        p1 = lib / "a" / "one.pdf"; p1.write_bytes(b"%PDF-1")
+        p2 = lib / "a" / "two.pdf"; p2.write_bytes(b"%PDF-2")
+        log = self._log(tmp_path)
+        tx = log.begin_transaction("move both")
+        logged_move(p1, lib / "b" / "one.pdf", undo_log=log)
+        logged_move(p2, lib / "b" / "two.pdf", undo_log=log)
+        log.commit()
+        (lib / "b" / "one.pdf").unlink()            # one leg becomes unreversible
+        log.undo_transaction(tx)
+        rec = [t for t in log.list_transactions() if t["id"] == tx][0]
+        assert rec.get("undone") is False, "a partial undo must not burn the tx"
+        # the other leg really did come back
+        assert (lib / "a" / "two.pdf").exists()
+
+    def test_a_complete_undo_is_marked_done(self, tmp_path):
+        from processing.undo_log import logged_move
+        lib = tmp_path
+        (lib / "a").mkdir(); (lib / "b").mkdir()
+        p = lib / "a" / "one.pdf"; p.write_bytes(b"%PDF-1")
+        log = self._log(tmp_path)
+        tx = log.begin_transaction("move")
+        logged_move(p, lib / "b" / "one.pdf", undo_log=log)
+        log.commit()
+        log.undo_transaction(tx)
+        rec = [t for t in log.list_transactions() if t["id"] == tx][0]
+        assert rec.get("undone") is True
+
+    # ---- hole 3: discard() threw away work already done ----------------
+    def test_discard_refuses_to_drop_recorded_work(self, tmp_path):
+        log = self._log(tmp_path)
+        tx = log.begin_transaction("partial")
+        log.record_move(tmp_path / "a.pdf", tmp_path / "b.pdf")
+        log.discard()
+        ids = [t["id"] for t in log.list_transactions()]
+        assert tx in ids, "work already on disk must stay undoable"
+
+    def test_discard_still_drops_an_empty_transaction(self, tmp_path):
+        log = self._log(tmp_path)
+        tx = log.begin_transaction("nothing happened")
+        log.discard()
+        assert tx not in [t["id"] for t in log.list_transactions()]
+
+
+class TestSidecarEditsAreReversible:
+    """A sidecar carries a paper's identity — DOI, arXiv id,
+    first-ingested date, cached text. Rewriting one is a mutation of the
+    owner's data just as much as moving the file, yet every writer
+    bypassed the undo log; a bulk pass over 300 sidecars was
+    irreversible."""
+
+    def test_an_edit_is_recorded_and_restorable(self, tmp_path):
+        from processing.identity import PaperIdentity
+        from processing.undo_log import UndoLog
+        pdf = tmp_path / "Smith, J. - A paper.pdf"
+        pdf.write_bytes(b"%PDF-1.4 x")
+        ident = PaperIdentity(original_filename=pdf.name, doi="10.1000/original")
+        ident.save(pdf)
+
+        log = UndoLog(log_dir=tmp_path / ".operation_log")
+        tx = log.begin_transaction("edit identity")
+        ident.doi = "10.1000/CHANGED"
+        ident.save(pdf, recompute_hash=False, undo_log=log)
+        log.commit()
+
+        assert PaperIdentity.load(pdf).doi == "10.1000/CHANGED"
+        log.undo_transaction(tx)
+        assert PaperIdentity.load(pdf).doi == "10.1000/original"
+
+    def test_no_transaction_means_no_change_in_behaviour(self, tmp_path):
+        from processing.identity import PaperIdentity
+        pdf = tmp_path / "Smith, J. - B paper.pdf"
+        pdf.write_bytes(b"%PDF-1.4 y")
+        i = PaperIdentity(original_filename=pdf.name, doi="10.1/a")
+        i.save(pdf)
+        i.doi = "10.1/b"
+        i.save(pdf, recompute_hash=False)          # undo_log omitted
+        assert PaperIdentity.load(pdf).doi == "10.1/b"
+
+    def test_an_unchanged_save_records_nothing(self, tmp_path):
+        from processing.identity import PaperIdentity
+        from processing.undo_log import UndoLog
+        pdf = tmp_path / "Smith, J. - C paper.pdf"
+        pdf.write_bytes(b"%PDF-1.4 z")
+        i = PaperIdentity(original_filename=pdf.name, doi="10.1/a")
+        i.save(pdf)
+        log = UndoLog(log_dir=tmp_path / ".operation_log")
+        log.begin_transaction("no-op")
+        i.save(pdf, recompute_hash=False, undo_log=log)
+        assert not log.has_operations()

@@ -100,11 +100,38 @@ class UndoLog:
         }
         return self._tx_id
 
+    def _append(self, op: dict) -> None:
+        """Record one operation, in memory AND on disk immediately.
+
+        Operations used to accumulate in memory until ``commit()``, which
+        was the only writer.  A SIGKILL, an OOM or a power cut mid-batch
+        therefore left every file already moved and the undo record
+        EMPTY — and the exposure window was the whole batch: the largest
+        real transaction holds 8,514 operations.  The class docstring
+        claimed crash-safety; it was not true.
+
+        Now each operation is appended to a write-ahead journal as it
+        happens, so an interrupted batch is still undoable up to the last
+        completed operation.  ``commit()`` folds the journal into the
+        final record.  Best-effort: a journal write that fails must not
+        abort the caller's work, because a file already moved with no
+        record is strictly worse than a slow one.
+        """
+        self._current_tx["operations"].append(op)
+        try:
+            self._journal_path().open("a", encoding="utf-8").write(
+                json.dumps(op, ensure_ascii=False) + "\n")
+        except OSError as exc:                      # pragma: no cover
+            logger.warning("could not write undo journal: %s", exc)
+
+    def _journal_path(self) -> Path:
+        return self.log_dir / f"{self._tx_id}.journal.jsonl"
+
     def record_move(self, source: Path, destination: Path) -> None:
         """Record a file move/rename operation."""
         if self._current_tx is None:
             raise RuntimeError("No active transaction — call begin_transaction() first")
-        self._current_tx["operations"].append({
+        self._append({
             "type": "move",
             "source": str(source),
             "destination": str(destination),
@@ -114,7 +141,7 @@ class UndoLog:
         """Record a file copy operation."""
         if self._current_tx is None:
             raise RuntimeError("No active transaction — call begin_transaction() first")
-        self._current_tx["operations"].append({
+        self._append({
             "type": "copy",
             "source": str(source),
             "destination": str(destination),
@@ -124,7 +151,7 @@ class UndoLog:
         """Record a file rename operation."""
         if self._current_tx is None:
             raise RuntimeError("No active transaction — call begin_transaction() first")
-        self._current_tx["operations"].append({
+        self._append({
             "type": "rename",
             "source": str(old_path),
             "destination": str(new_path),
@@ -147,7 +174,7 @@ class UndoLog:
         """
         if self._current_tx is None:
             raise RuntimeError("No active transaction — call begin_transaction() first")
-        self._current_tx["operations"].append({
+        self._append({
             "type": "sidecar_edit",
             "path": str(pdf_path),
             "changes": changes,
@@ -171,9 +198,26 @@ class UndoLog:
         the log and the cockpit Activity tab with a 0-op entry that has
         live Undo buttons.  Nothing is on disk until ``commit()``, so
         discarding is just clearing the in-memory state.
+
+        REFUSES to discard work that actually happened.  Several callers
+        do ``except: log.discard()``, which threw away the record of
+        files already moved — the operations were real, only the record
+        vanished.  A transaction with operations is committed instead,
+        marked as failed, so the work stays reversible.
         """
+        if self.has_operations():
+            logger.warning(
+                "discard() called on a transaction with %d recorded "
+                "operation(s); committing it instead so the work stays "
+                "undoable", len(self._current_tx["operations"]))
+            self._current_tx["description"] += " [INCOMPLETE: discarded after partial work]"
+            self.commit()
+            return
+        jp = self._journal_path() if self._tx_id else None
         self._current_tx = None
         self._tx_id = None
+        if jp is not None:
+            jp.unlink(missing_ok=True)
 
     def commit(self) -> Path:
         """Commit the current transaction to disk. Returns the log file path."""
@@ -181,7 +225,14 @@ class UndoLog:
             raise RuntimeError("No active transaction to commit")
 
         log_file = self.log_dir / f"{self._tx_id}.json"
-        log_file.write_text(json.dumps(self._current_tx, indent=2, ensure_ascii=False))
+        # Atomic: the log lives on a Dropbox-synced path, and a raw
+        # write_text of a 4.2 MB record can be torn by a crash or by sync
+        # picking it up mid-write.  A torn record is listed as undoable
+        # and raises JSONDecodeError when clicked.  core.io already had
+        # this helper; this file simply never used it.
+        from core.io import atomic_write_text
+        atomic_write_text(
+            log_file, json.dumps(self._current_tx, indent=2, ensure_ascii=False))
 
         # Also append to the master index
         index_file = self.log_dir / "index.jsonl"
@@ -194,10 +245,64 @@ class UndoLog:
             }
             f.write(json.dumps(summary) + "\n")
 
-        tx_id = self._tx_id
+        # The journal has served its purpose now that the full record is
+        # on disk.
+        self._journal_path().unlink(missing_ok=True)
         self._current_tx = None
         self._tx_id = None
         return log_file
+
+    def recover_journals(self) -> list[str]:
+        """Turn write-ahead journals from crashed runs into real records.
+
+        A journal that still exists has no committed ``<id>.json``, which
+        means the process died between the first operation and the
+        commit.  The operations in it DID happen, so they must become an
+        undoable transaction rather than being discarded — that is the
+        whole point of writing them ahead.
+
+        Returns the transaction ids recovered.  Safe to call at startup.
+        """
+        recovered: list[str] = []
+        for jp in sorted(self.log_dir.glob("*.journal.jsonl")):
+            tx_id = jp.name.split(".journal")[0]
+            if (self.log_dir / f"{tx_id}.json").exists():
+                jp.unlink(missing_ok=True)          # committed; stale journal
+                continue
+            ops = []
+            try:
+                for line in jp.read_text(encoding="utf-8").splitlines():
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        ops.append(json.loads(line))
+                    except ValueError:
+                        # A torn final line is expected after a hard kill.
+                        logger.warning("undo journal %s: dropping torn line", jp.name)
+            except OSError:                         # pragma: no cover
+                continue
+            if not ops:
+                jp.unlink(missing_ok=True)
+                continue
+            tx = {
+                "id": tx_id,
+                "description": f"RECOVERED from an interrupted run ({len(ops)} ops)",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "operations": ops,
+                "undone": False,
+            }
+            from core.io import atomic_write_text
+            atomic_write_text(self.log_dir / f"{tx_id}.json",
+                              json.dumps(tx, indent=2, ensure_ascii=False))
+            with open(self.log_dir / "index.jsonl", "a") as f:
+                f.write(json.dumps({
+                    "id": tx_id, "timestamp": tx["timestamp"],
+                    "description": tx["description"],
+                    "operations_count": len(ops)}) + "\n")
+            jp.unlink(missing_ok=True)
+            recovered.append(tx_id)
+        return recovered
 
     def undo_transaction(
         self, tx_id: str, *, dry_run: bool = False
@@ -333,11 +438,36 @@ class UndoLog:
                     else:
                         results.append({"action": f"SKIP: file gone: {dst}"})
 
-        # Mark transaction as undone
+        # Mark transaction as undone — but ONLY if everything came back.
+        #
+        # It used to set undone=True unconditionally, and line 319 then
+        # refuses to touch an undone transaction ever again. So a single
+        # SKIP (destination gone, source occupied, undone out of order)
+        # burned the whole record: the remaining operations became
+        # permanently unreversible. 122 operations across 4 real
+        # transactions are already stranded that way, 89 of them among
+        # the 6,180 author renames.
+        #
+        # A partial undo now stays RETRYABLE, and remembers which
+        # operations already came back so a retry is not a double-undo.
         if not dry_run:
-            tx["undone"] = True
+            failed = [r for r in results
+                      if str(r.get("action", "")).startswith(("SKIP", "CANNOT"))]
+            tx["undone"] = not failed
             tx["undone_at"] = datetime.now(timezone.utc).isoformat()
-            log_file.write_text(json.dumps(tx, indent=2, ensure_ascii=False))
+            if failed:
+                tx["partial_undo"] = {
+                    "at": tx["undone_at"],
+                    "reversed": len(results) - len(failed),
+                    "not_reversed": [str(r.get("action")) for r in failed],
+                }
+                logger.warning(
+                    "transaction %s only partially undone (%d of %d); it "
+                    "stays retryable", tx_id, len(results) - len(failed),
+                    len(results))
+            from core.io import atomic_write_text
+            atomic_write_text(log_file,
+                              json.dumps(tx, indent=2, ensure_ascii=False))
 
         return results
 

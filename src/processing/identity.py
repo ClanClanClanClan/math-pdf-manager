@@ -412,7 +412,8 @@ class PaperIdentity:
         obj._is_new = False
         return obj
 
-    def save(self, pdf_path: Path, *, recompute_hash: bool = True) -> Path:
+    def save(self, pdf_path: Path, *, recompute_hash: bool = True,
+             undo_log=None) -> Path:
         """Atomically write the sidecar next to ``pdf_path``.
 
         Writes to ``<sidecar>.tmp`` then ``os.replace`` — an interrupted
@@ -423,7 +424,32 @@ class PaperIdentity:
         refreshed from the file on disk.  Pass ``False`` when you're
         saving after a pure metadata edit and want to preserve the
         existing hash without re-reading the PDF.
+
+        ``undo_log`` makes the edit REVERSIBLE.  A sidecar carries a
+        paper's identity — its DOI, arXiv id, first-ingested date,
+        cached text — and rewriting it is a mutation of the owner's data
+        just as much as moving the file is, yet every writer here bypassed
+        the log.  A bulk pass over 300 sidecars was therefore
+        irreversible.  Pass an open transaction and the previous field
+        values are recorded, so undo restores them.
         """
+        if undo_log is not None:
+            try:
+                before = PaperIdentity.load(pdf_path)
+                if before is not None:
+                    old = {k: v for k, v in asdict(before).items()
+                           if not k.startswith("_")}
+                    new = {k: v for k, v in asdict(self).items()
+                           if not k.startswith("_")}
+                    changes = {k: [old.get(k), new.get(k)]
+                               for k in set(old) | set(new)
+                               if old.get(k) != new.get(k)}
+                    if changes:
+                        undo_log.record_sidecar_edit(pdf_path, changes)
+            except Exception as exc:                # never block the write
+                logger.debug("could not record sidecar edit for %s: %s",
+                             pdf_path, exc)
+
         if recompute_hash and pdf_path.exists():
             self.content_sha256 = compute_content_hash(pdf_path)
         if not self.original_filename:

@@ -1092,6 +1092,16 @@ def _approve_sort(
             auto_topic=False,
         )
         if not result.get("ok"):
+            # Commit whatever DID happen before reporting the failure.
+            # Returning here left the transaction uncommitted, so any file
+            # already copied into the library had no undo record at all —
+            # measured at roughly 8% of approvals.  discard() now refuses
+            # to drop recorded work, but the explicit commit keeps the
+            # failure path honest rather than relying on that.
+            if undo_log.has_operations():
+                undo_log.commit()
+            else:
+                undo_log.discard()
             return False, result.get("error", "unknown")
 
         undo_log.commit()
