@@ -456,3 +456,150 @@ class TestBulkSidecarPassesAreReversible:
         PI(original_filename=pdf.name, doi="").save(pdf)
         clear_collection_dois(lib, dry_run=False)
         assert not UndoLog(log_dir=lib / ".operation_log").list_transactions()
+
+
+class TestEveryRestoreBranchIsGuarded:
+    """The guard was added to the `move` branch and not to `rename`.
+
+    Renames are 14,697 of the 15,314 operations in the real log, so 96%
+    of the owner's undo history could still overwrite whatever file now
+    occupies the original name. Both branches now share one helper, and
+    these tests cover BOTH — the earlier suite only covered `move`, which
+    is why the gap survived a full green run.
+    """
+
+    def _setup(self, tmp_path, kind):
+        from processing.undo_log import UndoLog, logged_move, logged_rename
+        lib = tmp_path
+        (lib / "a").mkdir(exist_ok=True)
+        (lib / "b").mkdir(exist_ok=True)
+        paper = lib / "a" / "paper.pdf"
+        paper.write_bytes(b"%PDF ORIGINAL")
+        log = UndoLog(log_dir=lib / ".operation_log")
+        tx = log.begin_transaction(kind)
+        if kind == "move":
+            logged_move(paper, lib / "b" / "paper.pdf", undo_log=log)
+            moved = lib / "b" / "paper.pdf"
+        else:
+            logged_rename(paper, lib / "a" / "renamed.pdf", undo_log=log)
+            moved = lib / "a" / "renamed.pdf"
+        log.commit()
+        return log, tx, paper, moved
+
+    @pytest.mark.parametrize("kind", ["move", "rename"])
+    def test_an_occupied_source_is_never_overwritten(self, tmp_path, kind):
+        log, tx, original, moved = self._setup(tmp_path, kind)
+        original.write_bytes(b"%PDF SOMEONE ELSE")     # a different paper
+        res = log.undo_transaction(tx)
+        assert original.read_bytes() == b"%PDF SOMEONE ELSE", "occupant destroyed"
+        assert moved.exists(), "and the undone file must still exist"
+        assert any("CANNOT UNDO" in str(r) for r in res), res
+
+    @pytest.mark.parametrize("kind", ["move", "rename"])
+    def test_the_ordinary_undo_still_works(self, tmp_path, kind):
+        log, tx, original, moved = self._setup(tmp_path, kind)
+        log.undo_transaction(tx)
+        assert original.exists() and original.read_bytes() == b"%PDF ORIGINAL"
+
+    def test_no_restore_branch_calls_shutil_move_directly(self):
+        """Structural: a future branch must not reintroduce a bare move.
+
+        This is the test that would have caught the original gap — the
+        behavioural ones only covered the branch I happened to fix.
+        """
+        import ast
+        import inspect
+        from processing import undo_log as ul
+        src = inspect.getsource(ul.UndoLog.undo_transaction)
+        tree = ast.parse(src.lstrip())
+        bare = [n.lineno for n in ast.walk(tree)
+                if isinstance(n, ast.Call)
+                and isinstance(n.func, ast.Attribute)
+                and n.func.attr == "move"
+                and getattr(n.func.value, "id", "") == "shutil"]
+        assert not bare, (
+            f"undo_transaction calls shutil.move directly at line(s) {bare}; "
+            "every restore must go through _restore(), which holds the "
+            "occupied-destination guard")
+
+
+class TestSidecarRecordingCannotBeSilentlyDead:
+    """Three ways the recorder looked wired and recorded nothing.
+
+    All three were measured on the real code: a forgotten transaction, a
+    read cache handing back the very object being mutated, and a corrupt
+    sidecar read as an empty one.
+    """
+
+    def _pdf(self, tmp_path, doi="10.1/orig"):
+        from processing.identity import PaperIdentity
+        pdf = tmp_path / "Smith, J. - P.pdf"
+        pdf.write_bytes(b"%PDF x")
+        PaperIdentity(original_filename=pdf.name, doi=doi).save(pdf)
+        return pdf
+
+    def test_a_forgotten_transaction_raises_instead_of_recording_nothing(self, tmp_path):
+        from processing.identity import PaperIdentity
+        from processing.undo_log import UndoLog
+        pdf = self._pdf(tmp_path)
+        log = UndoLog(log_dir=tmp_path / ".operation_log")   # never begun
+        i = PaperIdentity.load(pdf); i.doi = "10.1/new"
+        with pytest.raises(RuntimeError):
+            i.save(pdf, recompute_hash=False, undo_log=log)
+
+    def test_recording_works_inside_a_read_cache(self, tmp_path):
+        """load() hands back the memoised object, so `before` WAS `self`
+        and every diff came out empty."""
+        from processing.identity import PaperIdentity, sidecar_read_cache
+        from processing.undo_log import UndoLog
+        pdf = self._pdf(tmp_path)
+        log = UndoLog(log_dir=tmp_path / ".operation_log")
+        log.begin_transaction("inside a sweep")
+        with sidecar_read_cache():
+            i = PaperIdentity.load(pdf)
+            i.doi = "10.1/changed"
+            i.save(pdf, recompute_hash=False, undo_log=log)
+        assert log.has_operations(), "recording was silently disabled"
+
+    def test_a_corrupt_sidecar_is_refused_not_recorded_as_empty(self, tmp_path):
+        """load() collapses unreadable and absent into the same blank, so
+        a record would claim every field was previously ""."""
+        from processing.identity import PaperIdentity, sidecar_path
+        from processing.undo_log import UndoLog
+        pdf = self._pdf(tmp_path)
+        sidecar_path(pdf).write_text("{corrupt")
+        log = UndoLog(log_dir=tmp_path / ".operation_log")
+        log.begin_transaction("t")
+        i = PaperIdentity(original_filename=pdf.name, doi="10.1/new")
+        i.save(pdf, recompute_hash=False, undo_log=log)
+        assert not log.has_operations(), \
+            "must refuse rather than record blanks as the previous values"
+
+    def test_every_persisted_field_round_trips(self, tmp_path):
+        """Reducing the recorder to a single field left the suite green."""
+        from dataclasses import asdict
+        from processing.identity import PaperIdentity
+        from processing.undo_log import UndoLog
+        pdf = tmp_path / "Smith, J. - Q.pdf"
+        pdf.write_bytes(b"%PDF y")
+        base = PaperIdentity(original_filename=pdf.name, doi="10.1/a",
+                             arxiv_id="2101.00001", content_sha256="deadbeef")
+        base.save(pdf)
+        before = {k: v for k, v in asdict(PaperIdentity.load(pdf)).items()
+                  if not k.startswith("_")}
+
+        changed = PaperIdentity.load(pdf)
+        changed.doi = "10.1/b"
+        changed.arxiv_id = "2202.00002"
+        changed.content_sha256 = "cafebabe"
+        changed.original_filename = "something else.pdf"
+        log = UndoLog(log_dir=tmp_path / ".operation_log")
+        tx = log.begin_transaction("touch several fields")
+        changed.save(pdf, recompute_hash=False, undo_log=log)
+        log.commit()
+        log.undo_transaction(tx)
+
+        after = {k: v for k, v in asdict(PaperIdentity.load(pdf)).items()
+                 if not k.startswith("_")}
+        for k in ("doi", "arxiv_id", "content_sha256", "original_filename"):
+            assert after[k] == before[k], f"{k} did not come back"

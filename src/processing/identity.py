@@ -434,9 +434,32 @@ class PaperIdentity:
         values are recorded, so undo restores them.
         """
         if undo_log is not None:
-            try:
-                before = PaperIdentity.load(pdf_path)
-                if before is not None:
+            path_now = sidecar_path(pdf_path)
+            existed = path_now.exists()
+            readable = True
+            if existed:
+                try:
+                    json.loads(path_now.read_text(encoding="utf-8"))
+                except (OSError, ValueError):
+                    readable = False
+            if existed and not readable:
+                # An UNREADABLE sidecar is not an empty one.  load()
+                # collapses both into a blank PaperIdentity, so recording
+                # here would capture "" as the previous value of every
+                # field and undo would then write those blanks over the
+                # paper's real identity.  Refuse, loudly.
+                logger.warning(
+                    "refusing to record a sidecar edit for %s: the existing "
+                    "sidecar is unreadable, so the previous values are "
+                    "unknown", pdf_path.name)
+            else:
+                try:
+                    # UNCACHED on purpose.  Inside sidecar_read_cache()
+                    # load() hands back the very object being mutated, so
+                    # `before` IS `self`, every diff is empty and recording
+                    # is silently disabled — measured: has_operations()
+                    # stayed False for a real field change.
+                    before = PaperIdentity._load_uncached(pdf_path)
                     old = {k: v for k, v in asdict(before).items()
                            if not k.startswith("_")}
                     new = {k: v for k, v in asdict(self).items()
@@ -446,9 +469,15 @@ class PaperIdentity:
                                if old.get(k) != new.get(k)}
                     if changes:
                         undo_log.record_sidecar_edit(pdf_path, changes)
-            except Exception as exc:                # never block the write
-                logger.debug("could not record sidecar edit for %s: %s",
-                             pdf_path, exc)
+                except RuntimeError:
+                    # "No active transaction" is a PROGRAMMER error, not a
+                    # runtime hiccup.  Swallowing it meant a caller that
+                    # forgot begin_transaction() recorded nothing, warned
+                    # nothing and returned success.
+                    raise
+                except Exception as exc:            # never block the write
+                    logger.warning("could not record sidecar edit for %s: %s",
+                                   pdf_path, exc)
 
         if recompute_hash and pdf_path.exists():
             self.content_sha256 = compute_content_hash(pdf_path)

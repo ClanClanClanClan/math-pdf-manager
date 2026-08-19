@@ -62,6 +62,27 @@ def _default_log_dir() -> Path:
 LOG_DIR = _default_log_dir()
 
 
+def _restore(dst: Path, src: Path, verb: str) -> dict:
+    """Put ``dst`` back at ``src``, refusing to overwrite an occupant.
+
+    ONE implementation for every restore branch, on purpose.  The guard
+    was first added to the ``move`` branch only, while the ``rename``
+    branch kept a bare ``shutil.move`` — and renames are 14,697 of the
+    15,314 operations in the real log, so 96% of the owner's undo
+    history was still able to destroy whatever file now sits at the
+    original name.  A guard that has to be remembered twice is a guard
+    that will be forgotten once.
+    """
+    if not dst.exists():
+        return {"action": f"SKIP: file gone: {dst}"}
+    if src.exists() and not _is_same_file(src, dst):
+        return {"action": f"CANNOT UNDO: {src} is occupied by a different "
+                          f"file; refusing to overwrite it"}
+    src.parent.mkdir(parents=True, exist_ok=True)
+    shutil.move(str(dst), str(src))
+    return {"action": f"{verb}: {dst.name} → {src.name}"}
+
+
 class UndoLog:
     """Records file operations and provides undo functionality."""
 
@@ -367,24 +388,7 @@ class UndoLog:
                 if dry_run:
                     results.append({"action": f"WOULD MOVE BACK: {dst.name} → {src}"})
                 else:
-                    if not dst.exists():
-                        results.append({"action": f"SKIP: destination gone: {dst}"})
-                    elif src.exists() and not _is_same_file(src, dst):
-                        # Something ELSE now lives where this file came
-                        # from.  shutil.move would silently overwrite it,
-                        # destroying a paper to restore another — the one
-                        # thing an undo must never do.  `logged_rename`
-                        # already refuses this; the undo path did not.
-                        # 15 recorded operations across two transactions
-                        # would take this branch today.
-                        results.append({
-                            "action": f"CANNOT UNDO: {src} is occupied by a "
-                                      f"different file; refusing to overwrite it"
-                        })
-                    else:
-                        src.parent.mkdir(parents=True, exist_ok=True)
-                        shutil.move(str(dst), str(src))
-                        results.append({"action": f"MOVED BACK: {dst.name} → {src}"})
+                    results.append(_restore(dst, src, "MOVED BACK"))
 
             elif op["type"] == "copy":
                 # Undo copy: remove the copy
@@ -432,11 +436,7 @@ class UndoLog:
                 if dry_run:
                     results.append({"action": f"WOULD RENAME BACK: {dst.name} → {src.name}"})
                 else:
-                    if dst.exists():
-                        shutil.move(str(dst), str(src))
-                        results.append({"action": f"RENAMED BACK: {dst.name} → {src.name}"})
-                    else:
-                        results.append({"action": f"SKIP: file gone: {dst}"})
+                    results.append(_restore(dst, src, "RENAMED BACK"))
 
         # Mark transaction as undone — but ONLY if everything came back.
         #
