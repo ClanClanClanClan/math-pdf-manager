@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Blocks a commit that breaks the code which can lose a paper.
+#
+# 4 seconds, on purpose. A gate that takes a minute gets bypassed with
+# --no-verify and then it protects nothing; this one is faster than
+# reading the diff. The full suite runs on push, coverage in CI.
+#
+# Installed via: git config core.hooksPath .githooks   (scripts/install_hooks.sh)
+set -uo pipefail
+cd "$(git rev-parse --show-toplevel)" || exit 1
+
+# Only gate commits that touch code or tests.
+if git diff --cached --name-only | grep -qE '^(src|tests|scripts)/'; then
+  echo "pre-commit: safety-critical tests + golden corpus…"
+  if ! PYTHONPATH=src python3.12 -m pytest -q -p no:cacheprovider --no-cov \
+      tests/test_processing/test_undo_log.py \
+      tests/test_processing/test_golden_corpus.py \
+      tests/test_processing/test_math_typography.py \
+      tests/test_processing/test_filename_normalizer.py \
+      tests/test_maintenance/test_conformance.py \
+      tests/test_watcher/test_source_is_never_destroyed.py 2>&1 | tail -20; then
+    echo
+    echo "BLOCKED. The code that moves, renames or deletes a paper is broken,"
+    echo "or the naming pipeline's frozen output changed."
+    echo "If the change is intentional, re-bless the corpus:"
+    echo "    PYTHONPATH=src python3.12 -m tests.harness.golden --bless"
+    echo "and the diff will show up in review."
+    exit 1
+  fi
+fi
+exit 0

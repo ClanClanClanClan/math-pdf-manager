@@ -1,5 +1,11 @@
 name: CI
 
+# The previous version ran `pytest tests/unit` — 22 of 2,109 tests. Every
+# test protecting the code that can move, rename or delete a paper lives
+# in tests/test_processing, tests/test_maintenance, tests/test_watcher and
+# tests/ui, none of which it touched. Six audits found real defects in
+# code that had just passed a "full green run" that never ran.
+
 on:
   push:
     branches: [ main, master ]
@@ -8,24 +14,46 @@ on:
 jobs:
   tests:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
+
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+          cache: pip
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r config/requirements.txt
-      - name: Run unit tests (baseline)
+          pip install pytest pytest-cov hypothesis
+
+      - name: Full test suite
         run: |
-          mkdir -p build/baselines
-          pytest tests/unit --maxfail=1 | tee build/baselines/unit-tests.log
-      - name: Upload baseline logs
+          PYTHONPATH=src python -m pytest -q -p no:cacheprovider \
+            --deselect tests/integration/test_network_unified.py \
+            --cov=src --cov-report=term --cov-report=json
+
+      # Coverage may rise, never fall. Two floors: one overall, one for the
+      # modules that can lose a paper — a single global number lets the
+      # safety-critical set rot while the average is propped up elsewhere.
+      - name: Coverage ratchet
+        run: python scripts/coverage_ratchet.py --check
+
+      # The frozen behaviour of the naming pipeline over 438 inputs: 382
+      # real library filenames plus every pathology and every shipped bug.
+      # Any change to any output fails here and must be re-blessed, which
+      # puts the diff in front of a human in review.
+      - name: Golden corpus (no drift)
+        run: PYTHONPATH=src python -m tests.harness.golden
+
+      - name: Upload coverage
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: unit-test-logs
-          path: build/baselines/
+          name: coverage
+          path: |
+            coverage.json
+            htmlcov/
           if-no-files-found: ignore
