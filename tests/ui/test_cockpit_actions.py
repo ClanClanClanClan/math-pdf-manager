@@ -154,10 +154,20 @@ class TestStartStopWatcher:
         user's own ~/Library/LaunchAgents and proceeds.
         """
         monkeypatch.setenv("HOME", str(tmp_path))
-        ok, msg = start_watcher()
-        # launchctl cannot really bootstrap under a synthetic HOME, so the
-        # call still fails — but it must fail AFTER installing, and say
-        # something other than "go run a script".
+        # _launchctl MUST be stubbed.  It was not, and the comment below
+        # explained the pass as "launchctl cannot really bootstrap under a
+        # synthetic HOME" — which was never the reason.  The bootstrap
+        # failed only because the real agent happened to be loaded
+        # already; the moment it was not, this test LOADED A LAUNCHD AGENT
+        # INTO THE USER'S REAL SESSION, pointing at a plist inside a
+        # pytest tmp_path that is deleted seconds later.  A unit test must
+        # not be able to touch the machine's service manager at all.
+        import subprocess as _sp
+        _failed = _sp.CompletedProcess(
+            args=["launchctl"], returncode=5, stdout="",
+            stderr="Bootstrap failed: 5: Input/output error")
+        with patch("ui.cockpit_actions._launchctl", return_value=_failed):
+            ok, msg = start_watcher()
         assert not ok
         assert "not installed" not in msg
         plist = tmp_path / "Library" / "LaunchAgents" / f"{WATCHER_LABEL}.plist"

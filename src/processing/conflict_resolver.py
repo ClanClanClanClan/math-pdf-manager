@@ -288,7 +288,13 @@ def resolve_keep_conflict(
             promoted = PaperIdentity.load(conflict)
             retiring = PaperIdentity.load(canonical)
             if _merge_sidecars(retiring, promoted):
-                promoted.save(conflict, recompute_hash=False)
+                # The transaction is right there in scope and was
+                # simply not passed: promoting a conflict copy
+                # rewrites the paper's identity, and that half of
+                # the operation was unrecorded while the file
+                # moves around it were.
+                promoted.save(conflict, recompute_hash=False,
+                              undo_log=undo_log)
                 logger.info(
                     "merged canonical sidecar into conflict's sidecar "
                     "before promotion: %s",

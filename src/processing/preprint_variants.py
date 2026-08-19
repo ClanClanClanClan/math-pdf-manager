@@ -91,13 +91,26 @@ def arxiv_id_from_filename(name: str) -> str:
 # Identifier backfill (metadata-only enrichment; no PDF I/O)
 # ---------------------------------------------------------------------------
 
-def backfill_identifiers(library_root: Path, *, limit: Optional[int] = None) -> dict:
+def backfill_identifiers(library_root: Path, *, limit: Optional[int] = None,
+                         undo_log=None) -> dict:
     """Fill empty sidecar ``doi``/``arxiv_id`` from cached text + filename.
 
     Returns ``{"scanned", "doi_added", "arxiv_added"}``.  Best-effort:
     per-sidecar failures are counted, never raised.
+
+    REVERSIBLE.  This writes a paper's identity — its DOI and arXiv id —
+    across hundreds of sidecars in one pass, and did so with no undo
+    record at all: a bad run could not be taken back.  When no
+    ``undo_log`` is supplied one is opened here, so the pass is a single
+    undoable transaction however it is invoked.
     """
     from processing.identity import PaperIdentity, iter_pdfs
+    from processing.undo_log import UndoLog
+
+    own_log = undo_log is None
+    if own_log:
+        undo_log = UndoLog(log_dir=library_root / ".operation_log")
+        undo_log.begin_transaction("backfill sidecar identifiers")
 
     scanned = doi_added = arxiv_added = 0
     for pdf in iter_pdfs(library_root):
@@ -129,14 +142,20 @@ def backfill_identifiers(library_root: Path, *, limit: Optional[int] = None) -> 
             changed = True
         if changed:
             try:
-                ident.save(pdf, recompute_hash=False)
+                ident.save(pdf, recompute_hash=False, undo_log=undo_log)
             except Exception:  # pragma: no cover
                 logger.warning("could not save enriched sidecar for %s", pdf)
+    if own_log:
+        # has_operations() distinguishes "nothing needed doing" from
+        # "work happened": committing an empty tx litters the Activity
+        # tab with a 0-op entry carrying a live Undo button.
+        undo_log.commit() if undo_log.has_operations() else undo_log.discard()
     return {"scanned": scanned, "doi_added": doi_added,
             "arxiv_added": arxiv_added}
 
 
-def clear_collection_dois(library_root: Path, *, dry_run: bool = True) -> dict:
+def clear_collection_dois(library_root: Path, *, dry_run: bool = True,
+                          undo_log=None) -> dict:
     """Clear book/collection DOIs wrongly stored as a paper's own DOI.
 
     A book DOI is printed on every chapter, so an earlier identifier
@@ -146,8 +165,19 @@ def clear_collection_dois(library_root: Path, *, dry_run: bool = True) -> dict:
     the item's own correct DOI and must be kept.  Returns
     ``{"found": [...paths...], "cleared": N}``; ``dry_run`` reports
     without writing.
+
+    REVERSIBLE.  This DELETES a field across many sidecars — the pass
+    that cleaned 228 polluted records had no undo record whatever, so a
+    wrong call could not be taken back.  A transaction is opened here
+    when the caller does not supply one.
     """
     from processing.identity import PaperIdentity, iter_pdfs
+    from processing.undo_log import UndoLog
+
+    own_log = undo_log is None and not dry_run
+    if own_log:
+        undo_log = UndoLog(log_dir=library_root / ".operation_log")
+        undo_log.begin_transaction("clear book/collection DOIs")
 
     def _is_book_or_thesis(rel: str) -> bool:
         parts = rel.split("/")
@@ -173,10 +203,12 @@ def clear_collection_dois(library_root: Path, *, dry_run: bool = True) -> dict:
         if not dry_run:
             ident.doi = ""
             try:
-                ident.save(pdf, recompute_hash=False)
+                ident.save(pdf, recompute_hash=False, undo_log=undo_log)
                 cleared += 1
             except Exception:  # pragma: no cover
                 logger.warning("could not clear book DOI on %s", pdf)
+    if own_log:
+        undo_log.commit() if undo_log.has_operations() else undo_log.discard()
     return {"found": found, "cleared": cleared}
 
 

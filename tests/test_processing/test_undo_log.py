@@ -404,3 +404,55 @@ class TestSidecarEditsAreReversible:
         log.begin_transaction("no-op")
         i.save(pdf, recompute_hash=False, undo_log=log)
         assert not log.has_operations()
+
+
+class TestBulkSidecarPassesAreReversible:
+    """The two passes that rewrite identity across the whole library.
+
+    Both mutated doi/arxiv_id on hundreds of sidecars with no undo record
+    at all — and clear_collection_dois DELETES a field, which is how 228
+    polluted records were cleaned irreversibly.
+    """
+
+    def _lib(self, tmp_path):
+        from processing.identity import PaperIdentity, enable_sidecar_mirror
+        lib = tmp_path / "lib"
+        (lib / "01 - Published papers" / "S").mkdir(parents=True)
+        enable_sidecar_mirror(lib)
+        pdf = lib / "01 - Published papers" / "S" / "Smith, J. - A paper.pdf"
+        pdf.write_bytes(b"%PDF-1.4 content")
+        return lib, pdf, PaperIdentity
+
+    def test_clearing_a_doi_can_be_undone(self, tmp_path):
+        from processing.preprint_variants import clear_collection_dois
+        from processing.undo_log import UndoLog
+        lib, pdf, PI = self._lib(tmp_path)
+        i = PI(original_filename=pdf.name, doi="10.1007/978-3-540-48831-6")
+        i.save(pdf)
+
+        res = clear_collection_dois(lib, dry_run=False)
+        assert res["cleared"] == 1
+        assert PI.load(pdf).doi == ""
+
+        log = UndoLog(log_dir=lib / ".operation_log")
+        txs = log.list_transactions()
+        assert txs, "the bulk pass must leave a transaction"
+        log.undo_transaction(txs[0]["id"])
+        assert PI.load(pdf).doi == "10.1007/978-3-540-48831-6", "the DOI must come back"
+
+    def test_a_dry_run_opens_no_transaction(self, tmp_path):
+        from processing.preprint_variants import clear_collection_dois
+        from processing.undo_log import UndoLog
+        lib, pdf, PI = self._lib(tmp_path)
+        PI(original_filename=pdf.name, doi="10.1007/978-3-540-48831-6").save(pdf)
+        clear_collection_dois(lib, dry_run=True)
+        assert not UndoLog(log_dir=lib / ".operation_log").list_transactions()
+
+    def test_a_pass_that_changes_nothing_leaves_no_empty_transaction(self, tmp_path):
+        """An empty tx shows in the Activity tab with a live Undo button."""
+        from processing.preprint_variants import clear_collection_dois
+        from processing.undo_log import UndoLog
+        lib, pdf, PI = self._lib(tmp_path)
+        PI(original_filename=pdf.name, doi="").save(pdf)
+        clear_collection_dois(lib, dry_run=False)
+        assert not UndoLog(log_dir=lib / ".operation_log").list_transactions()
