@@ -63,11 +63,26 @@ def _pct(data: dict, files: list | None = None) -> float:
 
 
 def measure() -> dict:
-    """Read coverage.json, producing it if absent."""
+    """Read coverage.json — REGENERATED, never trusted as found.
+
+    The first version regenerated it only when absent, so a stale file
+    from an earlier run certified whatever was last measured: the gate
+    would print "coverage holds the line" in 1.7 seconds having executed
+    no tests at all. A check that can pass without measuring is not a
+    check.
+    """
+    data_file = Path(".coverage")
+    if not data_file.exists():
+        raise SystemExit(
+            "no .coverage data file: run the suite with --cov=src first.\n"
+            "  PYTHONPATH=src python3.12 -m pytest --cov=src "
+            "--deselect tests/integration/test_network_unified.py")
     j = Path("coverage.json")
-    if not j.exists():
-        subprocess.run([sys.executable, "-m", "coverage", "json", "-q"],
-                       check=True)
+    before = j.stat().st_mtime if j.exists() else 0.0
+    subprocess.run([sys.executable, "-m", "coverage", "json", "-q"], check=True)
+    if j.stat().st_mtime <= before and before:      # pragma: no cover
+        raise SystemExit("coverage json did not regenerate; refusing to "
+                         "certify a stale measurement")
     data = json.loads(j.read_text())
     return {"overall": _pct(data), "critical": _pct(data, CRITICAL)}
 

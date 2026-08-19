@@ -18,7 +18,8 @@ if git diff --cached --name-only | grep -qE '^(src|tests|scripts)/'; then
       tests/test_processing/test_math_typography.py \
       tests/test_processing/test_filename_normalizer.py \
       tests/test_maintenance/test_conformance.py \
-      tests/test_watcher/test_source_is_never_destroyed.py 2>&1 | tail -20; then
+      tests/test_watcher/test_source_is_never_destroyed.py \
+      tests/safety/ 2>&1 | tail -20; then
     echo
     echo "BLOCKED. The code that moves, renames or deletes a paper is broken,"
     echo "or the naming pipeline's frozen output changed."
