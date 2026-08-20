@@ -213,7 +213,6 @@ _IMPORT_TIME_BINDERS = [
     ("processing.ingest", "LIBRARY_ROOT"),
     ("processing.bulk_sort", "LIBRARY_ROOT"),
     ("processing.upgrade_to_published", "LIBRARY_ROOT"),
-    ("processing.paper_transition", "LIBRARY_ROOT"),
     ("maintenance.weekly_report", "LIBRARY_ROOT"),
     ("watcher.config", "_DEFAULT_LOG_DIR"),
     ("ui.attention_queue", "DISMISSALS_PATH"),

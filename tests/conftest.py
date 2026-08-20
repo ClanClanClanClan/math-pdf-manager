@@ -13,7 +13,7 @@ Two things live here:
    The old autouse fixture below pointed ``MATH_LIBRARY`` at a tmp dir
    *per test*, which is too late for five modules
    (``processing.ingest``, ``processing.bulk_sort``,
-   ``processing.upgrade_to_published``, ``processing.paper_transition``,
+   ``processing.upgrade_to_published``,
    ``maintenance.weekly_report``) that evaluate::
 
        LIBRARY_ROOT = _get_library_root()

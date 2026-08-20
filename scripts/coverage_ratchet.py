@@ -36,7 +36,8 @@ twelve paths it was not on.  Both floors green, exit 0, new untested
 per-file minimum cannot.
 
 The derived scan also found what the hand-written list had missed:
-``src/processing/paper_transition.py`` imports ``shutil`` and sits at
+(``src/processing/paper_transition.py`` was the example here: it
+imported ``shutil``, could move papers, had no importer anywhere and sat at
 0.00% coverage. It had never been on any list.
 
     python3 scripts/coverage_ratchet.py --check     # CI / pre-push
@@ -123,10 +124,11 @@ KNOWN_DEBT: dict[str, str] = {
         "10.84% — Shibboleth session, network-bound",
     "src/downloader/publishers/base.py":
         "34.67% — network-bound publisher adapters",
-    "src/processing/paper_transition.py":
-        "0.00% — FOUND BY THIS RULE. Imports shutil, has no tests at all, "
-        "was on no list. Left as debt only because closing it is not this "
-        "commit's job; it is the loudest line in the report on purpose",
+    # src/processing/paper_transition.py was here at 0.00% — FOUND BY THIS
+    # RULE, which is what the derived scan is for. It has been DELETED
+    # rather than tested: 170 statements that could move papers, with no
+    # importer anywhere in the tree. Untested dangerous code you do not
+    # need is not debt to pay down, it is a hazard to remove.
     "src/processing/upgrade_to_published.py":
         "35.55% — moves preprints aside; covered by tests/safety "
         "conservation laws but not by unit tests",

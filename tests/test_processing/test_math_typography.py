@@ -92,6 +92,22 @@ class TestRefusesRatherThanGuesses:
         assert C(src) == src
         assert problems(src), "and it must be reported, not silently skipped"
 
+    @pytest.mark.parametrize("src,expected", [
+        ("The space L^{} of functions", "empty script"),
+        ("X_{Doob - Meyer} decomposition", "author/title separator inside"),
+        ("On the expansion 1 = Σq^{−n_i}", "nested script"),
+    ])
+    def test_each_refusal_names_ITS_OWN_reason(self, src, expected):
+        """Asserting only that problems() is non-empty let two of its
+        three branches be deleted with the suite still green.
+
+        canonicalise() is genuinely equivalent under those mutations —
+        the all-or-nothing rule refuses anyway — so the REPORT is the
+        only observable difference, and "it said something" is not the
+        same as "it said the right thing".
+        """
+        assert any(expected in p for p in problems(src)), problems(src)
+
 
 class TestProseIsNotMathematics:
     """Each of these was mangled by an earlier version of this module."""

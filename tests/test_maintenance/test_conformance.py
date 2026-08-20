@@ -370,3 +370,73 @@ class TestConfigReachabilityHasTeeth:
             {"proper": [], "common": [], "pending": {},
              "phrases": ["Euro-Par", "New York"]}))
         assert check_config_reachability(lib) == []
+
+
+class TestTheDualRecordDetection:
+    """check_sidecars' branches decide whether a paper has one identity
+    record or two. A mutation campaign forced each to False and all five
+    survived — the whole detection could be deleted silently.
+
+    It is not decorative: 14 real papers hold a record at BOTH the hashed
+    and the naive path, disagreeing on doi, arxiv_id and classifier_text,
+    and whichever one loses is silently wrong forever.
+    """
+
+    def _paper_with_two_records(self, lib):
+        from processing.identity import PaperIdentity, sidecar_path
+        pdf = lib / "01 - Published papers" / "S" / "Smith, J. - Two records.pdf"
+        _write_minimal_pdf(pdf, title="t", author="Smith, J.")
+        PaperIdentity(original_filename=pdf.name, doi="10.1/canonical").save(pdf)
+        canonical = sidecar_path(pdf)
+        naive = (lib / ".mathpdf-sidecars" / pdf.parent.relative_to(lib)
+                 / (pdf.stem + ".meta.json"))
+        naive.parent.mkdir(parents=True, exist_ok=True)
+        if naive != canonical:
+            naive.write_text(json.dumps({"doi": "10.1/DIVERGENT",
+                                         "original_filename": pdf.name}))
+        return pdf, canonical, naive
+
+    def test_two_records_for_one_paper_are_reported(self, lib):
+        from maintenance.conformance import check_sidecars
+        pdf, canonical, naive = self._paper_with_two_records(lib)
+        if naive == canonical:
+            pytest.skip("this library spells both paths the same; nothing to detect")
+        findings, _stats = check_sidecars(lib, [pdf], all_pdfs=[pdf])
+        assert any(f.reason == "two-sidecar-records" for f in findings), findings
+
+    def test_one_record_is_not_reported(self, lib):
+        from processing.identity import PaperIdentity
+        from maintenance.conformance import check_sidecars
+        pdf = lib / "01 - Published papers" / "S" / "Smith, J. - One record.pdf"
+        _write_minimal_pdf(pdf, title="t", author="Smith, J.")
+        PaperIdentity(original_filename=pdf.name, doi="10.1/only").save(pdf)
+        findings, stats = check_sidecars(lib, [pdf], all_pdfs=[pdf])
+        assert not [f for f in findings if f.reason == "two-sidecar-records"]
+        assert stats["papers_with_a_record"] == 1
+        assert stats["papers_without_a_record"] == 0
+
+    def test_a_paper_with_NO_record_is_counted(self, lib):
+        """Coverage that ignores the papers it cannot see is not coverage."""
+        from maintenance.conformance import check_sidecars
+        pdf = lib / "01 - Published papers" / "S" / "Nobody, X. - Unrecorded.pdf"
+        _write_minimal_pdf(pdf, title="t", author="Nobody, X.")
+        _findings, stats = check_sidecars(lib, [pdf], all_pdfs=[pdf])
+        assert stats["papers_without_a_record"] == 1
+        assert stats["coverage_pct"] == 0.0
+
+    def test_coverage_counts_only_judged_papers_but_orphans_are_library_wide(self, lib):
+        """The split that was wrong once already: scoping orphan detection
+        to the judged subset counted every inbox record as an orphan,
+        2,113 instead of 159."""
+        from processing.identity import PaperIdentity
+        from maintenance.conformance import check_sidecars
+        judged = lib / "01 - Published papers" / "S" / "Smith, J. - Judged.pdf"
+        _write_minimal_pdf(judged, title="t", author="Smith, J.")
+        PaperIdentity(original_filename=judged.name).save(judged)
+        skipped = lib / "12 - To be sorted" / "raw.pdf"
+        _write_minimal_pdf(skipped, title="t", author="X")
+        PaperIdentity(original_filename=skipped.name).save(skipped)
+        _f, stats = check_sidecars(lib, [judged], all_pdfs=[judged, skipped])
+        assert stats["pdfs"] == 1, "coverage is over the judged set"
+        assert stats["orphaned_records"] == 0, \
+            "the skipped paper's own record was counted as an orphan"
