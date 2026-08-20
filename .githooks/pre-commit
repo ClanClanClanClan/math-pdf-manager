@@ -11,6 +11,21 @@ cd "$(git rev-parse --show-toplevel)" || exit 1
 
 # Only gate commits that touch code or tests.
 if git diff --cached --name-only | grep -qE '^(src|tests|scripts)/'; then
+  # A test that cannot fail is not evidence. Scoped to the test files in
+  # THIS commit: the tree carries 25 known findings, and blocking every
+  # commit on old debt would just get the hook disabled. New and edited
+  # tests must be clean.
+  CHANGED_TESTS=$(git diff --cached --name-only --diff-filter=ACM \
+                  | grep -E '^tests/.*\.py$' || true)
+  if [ -n "$CHANGED_TESTS" ]; then
+    if ! python3.12 scripts/check_test_quality.py $CHANGED_TESTS; then
+      echo
+      echo "BLOCKED: a test in this commit cannot fail."
+      echo "Give it a postcondition, or delete it — a passing test that"
+      echo "checks nothing is worse than no test."
+      exit 1
+    fi
+  fi
   echo "pre-commit: safety-critical tests + golden corpus…"
   if ! PYTHONPATH=src python3.12 -m pytest -q -p no:cacheprovider --no-cov \
       tests/test_processing/test_undo_log.py \

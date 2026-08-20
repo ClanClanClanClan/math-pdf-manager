@@ -167,9 +167,32 @@ class TestPathologicalInput:
         assert C(C(src)) == C(src)
 
     def test_a_very_long_title_is_handled(self):
+        # The old assertion here ended in "or True", so it held even with
+        # the converter deleted.  State the postcondition on the OUTPUT
+        # instead: 200 expressions in, 200 accounted for, each one either
+        # fully raised or byte-identical -- never half-done.
         src = "Estimates " + " ".join(f"L^{i}" for i in range(200))
         out = C(src)
-        assert "L⁰" in out and "^" not in out.replace("L^", "", 0) or True
+
+        # Every single-digit exponent is representable, so every one of
+        # them must have risen.
+        for i in range(10):
+            assert f"L{_SUP[str(i)]}" in out, f"L^{i} did not rise: {out[:90]!r}"
+        assert re.search(r"L\^\d(?!\d)", out) is None, \
+            f"a bare single-digit caret survived: {out[:90]!r}"
+
+        # A multi-digit bare exponent is currently refused.  Do not pin
+        # the refusal (raising it would be an improvement, not a bug) --
+        # pin the all-or-nothing law: each one is either byte-identical
+        # or fully raised, never half.
+        for i in range(10, 200):
+            raised = "L" + "".join(_SUP[d] for d in str(i))
+            assert f"L^{i}" in out or raised in out, \
+                f"L^{i} came out neither untouched nor fully raised: {out!r}"
+
+        # Conservation: nothing dropped, nothing duplicated, no truncation.
+        assert out.count("L") == 200
+        assert out.startswith("Estimates ")
         assert C(out) == out
 
     @pytest.mark.parametrize("src", [

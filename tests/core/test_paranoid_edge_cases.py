@@ -11,8 +11,6 @@ import sys
 import gc
 import time
 import threading
-import tempfile
-import mmap
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, TimeoutError
 import concurrent.futures
@@ -21,7 +19,7 @@ import pytest
 
 # Import modules to test
 from core.exceptions import (
-    ValidationError, ConfigurationError
+    ValidationError, ConfigurationError, SecurityError
 )
 from core.models import (
     Author, PDFMetadata, ValidationSeverity, ValidationIssue
@@ -59,123 +57,177 @@ class TestExceptionEdgeCases:
             pass
     
     def test_exception_circular_reference(self):
-        """Test exceptions with circular references."""
+        """A circular ``__cause__`` chain must not change what an
+        exception says about itself.
+
+        Previously this called ``str()``/``repr()`` and asserted nothing,
+        so it could only ever have caught a hang.  The property that
+        actually matters is that our rendering is LOCAL: an exception
+        reports its own message and its own details, and does not walk
+        the cause chain (walking it here would recurse forever).
+        """
         exc1 = ValidationError("Error 1")
         exc2 = ConfigurationError("Error 2")
-        
+
         # Create circular reference
         exc1.__cause__ = exc2
         exc2.__cause__ = exc1
-        
-        # Should not cause infinite loop when stringified
-        str(exc1)
-        repr(exc1)
-        
+
+        assert str(exc1) == "Error 1"
+        assert str(exc2) == "Error 2"
+        # The cause must NOT bleed into the rendering \u2014 if it did, the
+        # cycle would make this call non-terminating.
+        assert "Error 2" not in str(exc1)
+        assert "Error 1" not in str(exc2)
+        assert "Error 1" in repr(exc1)
+        # ValidationError builds its own details dict; it must describe
+        # this exception, not the one it was caused by.
+        assert exc1.details["message"] == "Error 1"
+
         # Cleanup
         exc1.__cause__ = None
         exc2.__cause__ = None
         gc.collect()
-    
+
     def test_exception_deep_nesting(self):
-        """Test deeply nested exception chains."""
+        """A 100-deep cause chain must not truncate or merge messages."""
         current = ValidationError("Base")
-        
+
         # Create deep chain (reduced for CI performance)
         for i in range(100):  # Reduced from 1,000 to 100
             new_exc = ValidationError(f"Level {i}")
             new_exc.__cause__ = current
             current = new_exc
-        
-        # Should handle deep chains without stack overflow
-        str(current)
-        
+
+        # The outermost exception renders as itself, not as the chain.
+        assert str(current) == "Level 99"
+        assert current.details["message"] == "Level 99"
+        assert "Base" not in str(current)
+
+        # The chain is intact and walkable to the original base \u2014 a
+        # dropped link would lose the real cause of a failure.
+        depth = 0
+        node = current
+        while node.__cause__ is not None:
+            node = node.__cause__
+            depth += 1
+        assert depth == 100, f"cause chain lost links: depth {depth}"
+        assert str(node) == "Base"
+
         # Cleanup
         current = None
+        node = None
         gc.collect()
-    
-    def test_exception_malicious_attributes(self):
-        """Test exceptions with malicious attribute access."""
-        class EvilException(Exception):
-            @property
-            def message(self):
-                # Malicious property that could cause issues
-                os.system("echo 'should not execute'")
-                return "evil"
-            
-            def __str__(self):
-                # Could try to access files
-                try:
-                    with open("/etc/passwd", "r") as f:
-                        return f.read()
-                except:  # noqa: E722
-                    return "failed"
-        
-        exc = EvilException()
-        # Should safely handle without executing malicious code
-        try:
-            str(exc)
-        except:  # noqa: E722
-            pass
-    
+
+    # NOTE: ``test_exception_malicious_attributes`` used to live here.  It
+    # defined an ``EvilException`` class INSIDE the test, called ``str()``
+    # on it inside ``try: ... except: pass``, and asserted nothing.  No
+    # code from src/ was involved at any point \u2014 it exercised CPython's
+    # ``str()``, and could not have failed even if every module in this
+    # project were deleted.  There is no error-rendering helper in this
+    # codebase for it to have been testing.  Removed rather than
+    # rewritten: inventing a subject for it would be fiction too.
+
     def test_exception_unicode_edge_cases(self):
-        """Test exceptions with problematic Unicode."""
+        """A hostile Unicode message must survive verbatim.
+
+        Not "must not crash" \u2014 that was the old, unassertable version.
+        The message is what a human reads when a paper fails to file, so
+        silent truncation, escaping or re-normalisation of it is a defect
+        even though nothing raises.
+        """
         unicode_nightmares = [
             "\U0001F4A9" * 1000,  # Emoji spam
             "\u200b" * 10000,  # Zero-width spaces
             "\ufeff" * 1000,  # BOMs
             "A" + "\u0301" * 100,  # Combining characters
             "\u202e" + "Hello",  # Right-to-left override
-            "\ud800",  # Unpaired surrogate
+            "\ud800",  # Unpaired surrogate (not UTF-8 encodable)
             "\U00100000",  # Outside BMP
         ]
-        
+
         for nightmare in unicode_nightmares:
             try:
                 raise ValidationError(nightmare)
             except ValidationError as e:
-                # Should handle without crashing
-                str(e)
-                repr(e)
+                assert str(e) == nightmare, (
+                    f"message altered: {len(str(e))} chars out of "
+                    f"{len(nightmare)} in"
+                )
+                assert e.args == (nightmare,)
+                assert e.details["message"] == nightmare
+                # repr must be produceable and must not be empty.
+                assert repr(e)
 
 
 class TestModelEdgeCases:
     """Paranoid tests for model edge cases."""
     
     def test_author_name_attacks(self):
-        """Test Author model with malicious names."""
+        """Hostile text in an author name must be stored, not interpreted.
+
+        The previous version of this test called ``Author(name=...)``.
+        ``Author`` has no ``name`` field, so EVERY iteration raised
+        ``TypeError`` before touching the model; the ``except Exception``
+        below it then asserted only that the TypeError text did not
+        mention /etc/passwd, which it never could.  It tested nothing.
+
+        Rewritten against the real fields.  ``Author`` is a container:
+        the contract is that what goes in comes out unchanged, and that
+        the derived fields it computes are derived from exactly that.
+        """
         attack_names = [
             "';DROP TABLE authors;--",  # SQL injection
             "<script>alert('xss')</script>",  # XSS
-            "\\x00\\x01\\x02",  # Control characters
+            "\x00\x01\x02",  # Control characters
             "A" * 10000,  # Very long name
-            "",  # Empty name
-            None,  # None value
-            123,  # Wrong type
-            ["list", "of", "names"],  # Wrong type
-            {"name": "dict"},  # Wrong type
             "name\nwith\nnewlines",  # Newlines
             "name\twith\ttabs",  # Tabs
             "../../etc/passwd",  # Path traversal
-            "Robert'); INSERT INTO admins VALUES ('hacker",  # SQL injection variant
+            "Robert'); INSERT INTO admins VALUES ('hacker",  # SQL variant
+            "Кабанов",  # Cyrillic
         ]
-        
-        for name in attack_names:
-            try:
-                if isinstance(name, str):
-                    author = Author(name=name)
-                    # Should sanitize or handle gracefully
-                    assert isinstance(author.name, str)
-                else:
-                    # Should reject non-string types
-                    with pytest.raises((TypeError, ValidationError)):
-                        Author(name=name)
-            except Exception as e:
-                # Should not expose system details
-                assert "/etc/passwd" not in str(e)
-                assert "DROP TABLE" not in str(e)
-    
+
+        for given in attack_names:
+            author = Author(given_name=given, family_name="Smith")
+
+            # Stored verbatim: no escaping, no truncation, no stripping.
+            assert author.given_name == given
+            assert author.family_name == "Smith"
+
+            # full_name is exactly the documented composition.
+            assert author.full_name == f"{given} Smith", repr(author.full_name)
+
+            # initials are one "X." per whitespace-separated part of the
+            # given name, upper-cased, in order.
+            parts = given.split()
+            assert author.initials == "".join(p[0].upper() + "." for p in parts), (
+                f"{given!r} -> {author.initials!r}"
+            )
+            # …and they are a function of given_name ALONE: changing the
+            # family name must not move them.
+            other = Author(given_name=given, family_name="Zzz")
+            assert other.initials == author.initials
+
+        # An explicit full_name must win over the computed one.
+        pinned = Author(given_name="Jean", family_name="Jacod",
+                        full_name="Jacod, J.")
+        assert pinned.full_name == "Jacod, J."
+
     def test_pdfmetadata_path_boundaries(self):
-        """Test PDFMetadata with boundary path values."""
+        """A boundary path is stored byte-identical or rejected loudly.
+
+        The old version asserted ``"\\x00" not in metadata.path`` inside a
+        ``try`` whose ``except Exception: pass`` swallowed the resulting
+        AssertionError — so it green-lit a sanitisation guarantee the
+        model does not provide and never did.
+
+        The guarantee that matters for a 29k-file library is the opposite
+        one: metadata must never silently ALTER the owner's path, because
+        a silently altered path is a file nobody can find again.  If a
+        path is unacceptable, the model must raise; quietly rewriting it
+        is the failure mode.
+        """
         boundary_paths = [
             "/" + "a" * 255,  # Max filename length
             "/" + "dir/" * 100 + "file.pdf",  # Deep nesting
@@ -190,18 +242,21 @@ class TestModelEdgeCases:
             "C:\\Windows\\Style\\Path.pdf",  # Windows path on Unix
             "\\\\UNC\\Share\\file.pdf",  # UNC path
         ]
-        
+
         for path in boundary_paths:
             try:
                 metadata = PDFMetadata(path=path, title="Test")
-                # Path should be sanitized
-                assert isinstance(metadata.path, str)
-                # Should not contain null bytes
-                assert "\x00" not in metadata.path
-            except Exception:
-                # Some paths might be rejected, which is fine
-                pass
-    
+            except (ValidationError, ValueError, TypeError):
+                # An explicit refusal is an acceptable answer.
+                continue
+            # Acceptance means byte-identical round-trip.
+            assert metadata.path == path, (
+                f"path silently rewritten: {path!r} -> {metadata.path!r}"
+            )
+            assert str(metadata.path) == path
+            assert metadata.title == "Test"
+
+
     def test_pdfmetadata_massive_authors(self):
         """Test PDFMetadata with excessive author string."""
         # Create large author string (reduced for CI performance)
@@ -278,30 +333,48 @@ class TestDependencyInjectionEdgeCases:
     """Paranoid tests for dependency injection edge cases."""
     
     @pytest.mark.slow
-    def test_container_memory_exhaustion(self):
-        """Test container behavior under memory pressure."""
+    def test_container_does_not_retain_transient_instances(self):
+        """A transient must be fresh AND must not be kept alive.
+
+        The old ``test_container_memory_exhaustion`` resolved 100 1MB
+        objects, caught MemoryError, and asserted nothing — so a
+        container that cached every transient forever (the actual memory
+        exhaustion bug it was named after) passed it.  Assert the two
+        postconditions instead: distinct objects out, and no strong
+        reference left behind.
+        """
         container = DIContainer()
-        
+
         class MemoryHog:
             def __init__(self):
-                self.data = bytearray(1 * 1024 * 1024)  # 1MB per instance (reduced for CI)
-        
+                self.data = bytearray(1 * 1024 * 1024)  # 1MB per instance
+
         # Register as transient (new instance each time)
         container.register_transient(MemoryHog, MemoryHog)
-        
-        # Try to allocate reasonable amount (reduced for CI performance)
-        instances = []
-        try:
-            for _ in range(100):  # Would be 100MB instead of 10GB
-                instances.append(container.resolve(MemoryHog))
-        except MemoryError:
-            # Should handle gracefully
-            pass
-        
-        # Cleanup
+
+        instances = [container.resolve(MemoryHog) for _ in range(100)]
+
+        assert len(instances) == 100
+        assert all(isinstance(i, MemoryHog) for i in instances)
+        # "Transient" means a NEW instance every time — not a cached one.
+        assert len({id(i) for i in instances}) == 100, (
+            "transient registration handed back a shared instance"
+        )
+
+        # And the container must hold no strong reference to any of them,
+        # or 100 resolutions is a 100MB leak.
+        import weakref
+        refs = [weakref.ref(i) for i in instances]
         instances.clear()
+        del instances
         gc.collect()
-    
+        leaked = sum(1 for r in refs if r() is not None)
+        assert leaked == 0, (
+            f"{leaked}/100 transient instances still reachable from the "
+            f"container after the caller dropped them"
+        )
+
+
     def test_container_circular_dependency_variants(self):
         """Test various circular dependency patterns."""
         container = DIContainer()
@@ -600,8 +673,24 @@ class TestValidationServiceEdgeCases:
 class TestSecurityModuleEdgeCases:
     """Paranoid tests for security module edge cases."""
     
-    def test_path_sanitization_advanced(self):
-        """Test advanced path sanitization edge cases."""
+    def test_path_sanitization_advanced(self, tmp_path):
+        """Every traversal attempt is refused, or lands inside base_dir.
+
+        The three assertions here used to sit inside ``try: ... except
+        Exception: pass``.  ``AssertionError`` IS an ``Exception``, so
+        the handler ate the test's own verdict: this path-traversal guard
+        had a test that could not fail.  Two changes: only the documented
+        refusal type is caught, and acceptance is checked against
+        containment in base_dir rather than against substring spelling.
+
+        A positive control is included on purpose — without it, a
+        ``validate_path`` mutated to reject *everything* would pass a
+        suite made only of attacks.
+        """
+        base = tmp_path / "safe"
+        base.mkdir()
+        base_resolved = base.resolve()
+
         advanced_attacks = [
             "test\x00../../etc/passwd",  # Null byte injection
             "test%00../../etc/passwd",  # URL encoded null
@@ -615,19 +704,59 @@ class TestSecurityModuleEdgeCases:
             "test/..%2f..%2f..%2fetc%2fpasswd",  # Mixed encoding
             "test/..%252f..%252fetc%252fpasswd",  # Double encoding
             "/var/www/html/uploads/../../../etc/passwd",  # Realistic path
+            str(base_resolved) + "/../../etc/passwd",  # escape from inside
         ]
-        
+
+        refused = 0
         for attack in advanced_attacks:
             try:
-                result = PathValidator.validate_path(attack, base_dir=Path("/safe"))
-                # Should never allow traversal
-                assert ".." not in str(result)
-                assert "etc/passwd" not in str(result)
-                assert "windows\\system32" not in str(result)
-            except Exception:
-                # Some attacks should be rejected
-                pass
-    
+                result = PathValidator.validate_path(attack, base_dir=base)
+            except SecurityError:
+                # A refusal is the documented, correct answer.
+                refused += 1
+                continue
+            # If it was ACCEPTED, the result must genuinely be contained.
+            resolved = Path(result).resolve()
+            assert resolved.is_relative_to(base_resolved), (
+                f"{attack!r} escaped base_dir: accepted as {resolved}"
+            )
+            assert ".." not in resolved.parts, f"{attack!r} -> {resolved}"
+
+        # Today every one of the above is refused outright.  This line
+        # exists to catch a validator that SILENTLY REDIRECTS instead of
+        # refusing (returning base_dir for anything it dislikes would
+        # satisfy the containment assertion above while losing the
+        # caller's path).  If a future validator legitimately normalises
+        # one of these into base_dir, relax this line deliberately —
+        # never the containment assertion above it.
+        assert refused == len(advanced_attacks), (
+            f"only {refused}/{len(advanced_attacks)} traversal attempts "
+            f"were refused; the rest were silently redirected"
+        )
+
+        # Every attack above is also caught by the suspicious-pattern
+        # screen, so none of them witnesses the base_dir containment
+        # check.  This one does: an ordinary, innocently spelled path
+        # that simply lives outside base_dir.  Delete the containment
+        # check and only this assertion notices.
+        outside = tmp_path / "outside" / "notes.pdf"
+        outside.parent.mkdir()
+        outside.write_bytes(b"%PDF-1.4\n")
+        with pytest.raises(SecurityError):
+            PathValidator.validate_path(outside, base_dir=base)
+
+        # POSITIVE CONTROL: a legitimate path inside base_dir must be
+        # accepted, and returned pointing at the same place.
+        good = base / "papers" / "Ito, K. - Stochastic integral.pdf"
+        good.parent.mkdir(parents=True)
+        good.write_bytes(b"%PDF-1.4\n")
+        accepted = PathValidator.validate_path(good, base_dir=base)
+        assert Path(accepted).resolve() == good.resolve(), (
+            "a legitimate in-base path was rewritten or rejected"
+        )
+        assert Path(accepted).is_relative_to(base_resolved)
+
+
     def test_email_validation_edge_cases(self):
         """Test email validation with edge cases."""
         # Get validation service
@@ -710,25 +839,15 @@ class TestSecurityModuleEdgeCases:
 class TestMemoryAndResourceEdgeCases:
     """Test memory and resource handling edge cases."""
     
-    def test_memory_mapped_file_attacks(self):
-        """Test handling of memory-mapped file attacks."""
-        with tempfile.NamedTemporaryFile() as tf:
-            # Create a sparse file (appears huge but uses little disk)
-            tf.seek(1024 * 1024 * 1024 * 100)  # 100GB
-            tf.write(b'\x00')
-            tf.flush()
-            
-            # Try to memory map it
-            try:
-                with open(tf.name, 'r+b') as f:
-                    # Should handle huge files gracefully
-                    with mmap.mmap(f.fileno(), 0):
-                        # Don't actually read it all
-                        pass
-            except (OSError, OverflowError):
-                # System might prevent huge mmaps
-                pass
-    
+    # NOTE: ``test_memory_mapped_file_attacks`` used to live here.  It
+    # created a 100GB sparse file, called ``mmap.mmap`` on it inside
+    # ``try: ... except (OSError, OverflowError): pass``, and asserted
+    # nothing.  No function from src/ appeared anywhere in it: it was a
+    # test of CPython's ``mmap`` module, with both outcomes declared
+    # acceptable.  Nothing in this codebase mmaps a file, so there is no
+    # subject to point it at.  Removed.  (It also wrote a 100GB sparse
+    # file on every run, on a machine whose Dropbox holds the library.)
+
     def test_process_limit_awareness(self):
         """Test that we can read the system process limit."""
         import resource
@@ -736,26 +855,15 @@ class TestMemoryAndResourceEdgeCases:
         assert soft > 0, "Process limit should be positive"
         assert hard >= soft, "Hard limit should be >= soft limit"
     
-    def test_recursive_data_structure_limits(self):
-        """Test handling of deeply recursive data structures."""
-        # Create deeply nested list (reduced for CI performance)
-        nested = []
-        current = nested
-        for _ in range(1000):  # Reduced from 10,000 to 1,000
-            new_list = []
-            current.append(new_list)
-            current = new_list
-        
-        # Should handle without stack overflow
-        try:
-            str(nested)
-        except RecursionError:
-            # This is acceptable
-            pass
-        
-        # Cleanup
-        nested = None
-        gc.collect()
+    # NOTE: ``test_recursive_data_structure_limits`` used to live here.
+    # It built a 1000-deep nested list and called ``str()`` on it inside
+    # ``try: ... except RecursionError: pass``, asserting nothing — both
+    # outcomes passed, and no project code was involved.  The real
+    # recursion guarantee this project needs is the one asserted by
+    # ``TestValidationServiceEdgeCases.test_validation_recursive_structures``
+    # above, which puts a self-referential dict through
+    # ``UnifiedValidationService`` and requires a ValidationError.
+    # Removed as a duplicate-in-intent test of CPython's ``str()``.
 
 
 if __name__ == "__main__":

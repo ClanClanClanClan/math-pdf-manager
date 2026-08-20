@@ -237,12 +237,20 @@ class PDFHandler(FileSystemEventHandler):
         """Ingest a single PDF file."""
         logger.info("Ingesting: %s", path.name)
 
+        # Bound BEFORE the try, not inside it. The two imports below can
+        # raise (a missing optional dependency, a syntax error in a module
+        # being edited), and the `except Exception` handler at the bottom
+        # evaluates `if undo_log:`. With the name assigned only inside the
+        # try, that handler raised UnboundLocalError, which escapes
+        # _ingest AND process_settled and kills the watcher loop — the
+        # daemon stops filing anything and says nothing.
+        undo_log = None
+
         try:
             from processing.ingest import ingest_paper
             from processing.undo_log import UndoLog
 
             # Set up undo log
-            undo_log = None
             if not self.dry_run:
                 undo_log = UndoLog()
                 undo_log.begin_transaction(f"Watcher: ingest {path.name}")
