@@ -3,8 +3,11 @@
 set -uo pipefail
 cd "$(git rev-parse --show-toplevel)" || exit 1
 echo "pre-push: full suite (~77s)…"
+# -m "not network" excludes the 18 tests that really reach the internet.
+# The old blanket --deselect also threw away 17 mock tests that need
+# nothing and run in 0.27s.
 if ! PYTHONPATH=src python3.12 -m pytest -q -p no:cacheprovider --no-cov \
-    --deselect tests/integration/test_network_unified.py 2>&1 | tail -25; then
+    -m "not network" 2>&1 | tail -25; then
   echo
   echo "BLOCKED: the full suite fails. Push with --no-verify only if you"
   echo "have read every failure and know why it is acceptable."

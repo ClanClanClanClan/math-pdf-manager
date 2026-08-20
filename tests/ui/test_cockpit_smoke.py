@@ -248,8 +248,15 @@ def test_render_settings_does_not_raise(st_stub, tmp_path, monkeypatch):
     cockpit.render_settings()
 
 
-def test_render_conflicts_does_not_raise(st_stub, tmp_path, monkeypatch):
-    """Phase 6 page + Task #8 multi-select renders without crashing."""
+def test_render_conflicts_with_a_desktop_style_conflict_name(
+        st_stub, tmp_path, monkeypatch):
+    """A DESKTOP-X style conflict name, which parses differently from the
+    plain "conflicted copy" form covered below.
+
+    RENAMED: it shared a name with the later test, so Python kept only
+    that definition and THIS ONE HAD NEVER RUN — a duplicate function
+    name is a silently deleted test, and pytest reports nothing amiss.
+    """
     monkeypatch.setenv("MATH_LIBRARY", str(tmp_path))
     # Seed one conflict so the bulk-select bar actually renders.
     (tmp_path / "Foo (DESKTOP-X's conflicted copy 2024-05-13).pdf").write_bytes(

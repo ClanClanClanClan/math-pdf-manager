@@ -40,10 +40,15 @@ jobs:
       - name: Conservation laws (data can never be lost)
         run: PYTHONPATH=src python -m pytest -q tests/safety --no-cov
 
+      # -m "not network", NOT --deselect on the whole file. The blanket
+      # deselect dropped all 35 tests in test_network_unified.py, but 17 of
+      # them are MOCKS that need no network and run in 0.27s — thrown away
+      # on every run for months. The marker excludes exactly the 18 that
+      # genuinely reach the internet.
       - name: Full test suite
         run: |
           PYTHONPATH=src python -m pytest -q -p no:cacheprovider \
-            --deselect tests/integration/test_network_unified.py \
+            -m "not network" \
             --cov=src --cov-report=term --cov-report=json
 
       # Coverage may rise, never fall. Two floors: one overall, one for the
