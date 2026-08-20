@@ -151,3 +151,36 @@ class TestBlackboardBoldIsNotInferred:
     def test_an_explicit_mathbb_still_converts(self):
         """The owner writing it explicitly is not a guess."""
         assert "ℝ" in C("Estimates in \\mathbb{R}")
+
+
+class TestTheSelfCheckActuallyChecks:
+    """`verify_maps()` exists so a mistyped glyph cannot ship.
+
+    Asserting `verify_maps() == []` on the real maps proves nothing: the
+    maps are correct, so a NEUTERED check returns [] as well. A mutation
+    campaign confirmed it — forcing the superscript and subscript
+    conditions to False left every test green.
+
+    Feed it a wrong glyph and require it to notice.
+    """
+
+    def test_a_non_superscript_glyph_is_caught(self, monkeypatch):
+        from processing import math_typography as mt
+        # "ª" FEMININE ORDINAL INDICATOR is the exact trap: it LOOKS like
+        # a raised "a" and is what Unicode's <super> decomposition table
+        # hands you, which is why the maps are written out by hand.
+        monkeypatch.setitem(mt._SUP, "a", "ª")
+        bad = mt.verify_maps()
+        assert bad, "verify_maps accepted FEMININE ORDINAL INDICATOR as a superscript"
+        assert any(entry[1] == "a" for entry in bad), bad
+
+    def test_a_non_subscript_glyph_is_caught(self, monkeypatch):
+        from processing import math_typography as mt
+        monkeypatch.setitem(mt._SUB, "n", "N")      # plain capital, not a script
+        bad = mt.verify_maps()
+        assert bad, "verify_maps accepted a plain letter as a subscript"
+        assert any(entry[0] == "sub" for entry in bad), bad
+
+    def test_the_real_maps_are_still_clean(self):
+        from processing.math_typography import verify_maps
+        assert verify_maps() == []
