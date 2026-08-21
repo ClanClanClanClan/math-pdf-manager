@@ -356,3 +356,155 @@ class TestSuspectIsEvidenceNotAnInstruction:
                            for k in ("apply", "correct", "fix", "rename",
                                      "write", "save"))]
         assert applyish == [], applyish
+
+
+class TestTheTitlesOwnLanguageDecides:
+    """A word unknown to every dictionary is only evidence of a typo when
+    the rest of the title is English.
+
+    "Stochastik" is missing from macOS's German dictionary and sits one
+    edit from "stochastic", which appears 3,817 times in this library —
+    so the statistics were emphatic and completely wrong. The title is
+    "Stochastik für das Lehramt". The answer was in the next three words.
+    """
+
+    @pytest.fixture
+    def mixed(self):
+        """Titles must be REALISTIC to exercise the classifier.
+
+        My first fixture used "Quelques aspets de la finance moderne",
+        which the rule correctly declined to call French: "finance" and
+        "moderne" are both in the English dictionary, so the title has
+        more English-accepted words than French-only ones. The gate never
+        fired and the test passed for the wrong reason.
+        """
+        names = [f"A. - stochastic processes and control {i}" for i in range(30)]
+        names += [f"B. - aspects of applications in analysis {i}" for i in range(30)]
+        names += [f"C. - problems in analysis and geometry {i}" for i in range(30)]
+        names += ["Beiglböck, M. - Stochastik für das Lehramt",
+                  "Dupont, J. - Quelques résultats sur les aspets des "
+                  "mesures aléatoires",
+                  "Vorovka, K. - Poznámka k problemu ruinováni hrácu"]
+        return build_corpus_stats(names)
+
+    def test_a_german_word_in_a_german_title_is_not_a_typo(self, mixed):
+        report = examine_title("Beiglböck, M. - Stochastik für das Lehramt",
+                               mixed)
+        assert report.verdict is not Verdict.TYPO
+        assert "Stochastik" in report.unjudged, report
+
+    def test_a_french_typo_in_a_french_title_IS_still_caught(self, mixed):
+        """The gate has to be this narrow. Suppressing every unknown word
+        in a foreign title was tried and measured: it removed 20 false
+        positives but took ten real ones with it, because a French title
+        can perfectly well contain a French typo."""
+        report = examine_title(
+            "Dupont, J. - Quelques résultats sur les aspets des "
+            "mesures aléatoires", mixed)
+        assert report.verdict is Verdict.TYPO
+        assert [s.lower for s in report.suspects] == ["aspets"]
+
+    def test_a_language_with_no_dictionary_at_all_is_unjudged(self, mixed):
+        """Latin and Czech have no macOS dictionary, so there is no
+        language to compare a suggestion against and the cross-language
+        rule cannot fire. The share of words no dictionary knows is the
+        signal instead."""
+        report = examine_title(
+            "Vorovka, K. - Poznámka k problemu ruinováni hrácu", mixed)
+        assert report.verdict is not Verdict.TYPO
+
+    def test_an_english_title_is_unaffected_by_any_of_this(self, corpus):
+        report = examine_title("White, D. - On makov chains and their limits",
+                               corpus)
+        assert report.verdict is Verdict.TYPO
+
+
+class TestCapitalisingMakesEveryCheckerPermissive:
+    """The trap that made the first version of the language gate useless.
+
+    A capitalised unknown word reads as a proper noun, so the checker
+    accepts it: "Stochastic" passes the GERMAN and FRENCH dictionaries
+    while "stochastic" passes neither. Asking "is this a word of language
+    L" with a capitalised form therefore answers yes for almost anything,
+    and the cross-language rule silently never fired.
+    """
+
+    def test_the_capitalised_form_is_accepted_by_languages_that_lack_it(self):
+        oracle = T._oracle()
+        assert oracle.accepts("Stochastic", "de") is True
+        assert oracle.accepts("stochastic", "de") is False
+
+    def test_membership_uses_the_lowercase_form_only(self):
+        assert T._accepts_lowercase("stochastic", ("de",)) is False
+        assert T._accepts_lowercase("Stochastic", ("de",)) is False
+        assert T._accepts_lowercase("stochastic", T.ENGLISH) is True
+
+    @pytest.mark.parametrize("word,suggestion,langs,cross", [
+        ("stochastik", "stochastic", {"de"}, True),
+        ("bayésien", "bayesian", {"fr"}, True),
+        ("multivariée", "multivariate", {"fr"}, True),
+        ("ergodicité", "ergodicity", {"fr"}, True),
+        # ...but these partners are themselves French, so the pair is a
+        # misspelling and not a language correspondence
+        ("aspets", "aspects", {"fr"}, False),
+        ("inforamtion", "information", {"fr"}, False),
+        ("oprérateurs", "opérateurs", {"fr"}, False),
+        # an English title has no foreign language to appeal to
+        ("wiith", "with", set(), False),
+    ])
+    def test_cross_language_is_judged_on_the_suggestion(self, word, suggestion,
+                                                        langs, cross):
+        assert T.suggestion_is_cross_language(
+            word, suggestion, frozenset(langs)) is cross
+
+
+class TestTheCandidateNeverVotesOnItsOwnLanguage:
+
+    def test_the_candidate_is_excluded_from_the_vote(self):
+        """A title must not be able to declare itself foreign on the
+        strength of the one word being questioned. "Résolution" is
+        French-only, so counting it would make a single-word title
+        French and suppress its own candidate."""
+        assert T.title_languages(["Résolution"], "résolution") == frozenset()
+        assert T.title_languages(["Résolution", "problème"],
+                                 "résolution") == frozenset({"fr"})
+
+    def test_a_foreign_tie_still_counts_as_foreign(self):
+        """Equal evidence either way is not evidence of English. The
+        suppression is conservative by design: it downgrades to UNKNOWN,
+        never to CLEAN."""
+        langs = T.title_languages(["stochastic", "Lehramt"], "stochastik")
+        assert langs == frozenset({"de"})
+
+
+class TestTheUnsupportedLanguageThresholdIsPinnedFromBothSides:
+    """A single threshold needs two tests or it can drift either way.
+
+    Measured on the real queue: Latin and Czech titles score 0.44-1.00 on
+    "share of words no dictionary knows", while English titles carrying a
+    genuine typo top out at 0.25 — and that worst case is a
+    series-prefixed filename whose author block lands on the title side
+    of the first " - ".
+    """
+
+    def test_a_latin_title_just_over_the_line_is_suppressed(self):
+        """Latin scores 0.44, not 1.00 — the maths fragments and the few
+        Latin words English happens to know drag it down. A threshold set
+        loosely enough to miss this lets every Latin title through."""
+        tokens = ["Methodus", "facilis", "inueniendi", "Integrale", "huius",
+                  "formulae", "the", "of", "and", "integral"]
+        assert T.title_is_unsupported_language(tokens, "integrationem")
+
+    def test_an_english_title_with_several_surnames_is_NOT_suppressed(self):
+        """The series-prefix case: "Astérisque 210 - Robbiano, L., Zuily,
+        C. - Analytic theorry..." splits on the FIRST " - ", so the author
+        surnames end up counted as title words no dictionary knows. A
+        threshold set tightly enough to catch that would silence real
+        typos in perfectly ordinary English titles."""
+        tokens = ["Robbiano", "Zuily", "Hörmander", "Kyprianou", "Pihlsgård",
+                  "Analytic", "for", "the", "quadratic", "scattering",
+                  "problem", "with", "smooth", "data", "and", "some"]
+        # 4 of 16 words unknown to every dictionary — 0.25, the measured
+        # worst case for an English title, and the number that decides
+        # where the threshold can sit. Dropping it to 0.15 silences this.
+        assert not T.title_is_unsupported_language(tokens, "theorry")

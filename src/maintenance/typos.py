@@ -44,6 +44,18 @@ MIN_LEN = 5
 MIN_PARTNER_FREQ = 20
 LONG_WORD = 8               # at or above this length, allow 2 edits
 LANGS = ("en", "en_GB", "fr", "de", "it", "es")
+ENGLISH = ("en", "en_GB")
+NON_ENGLISH = ("fr", "de", "it", "es")
+
+# A word unknown to every dictionary is only evidence of a typo when the
+# REST OF THE TITLE is English.  "Stochastik" is missing from macOS's
+# German dictionary, but it sits in "Stochastik für das Lehramt", where
+# every other word is German -- so the honest verdict is "I cannot check
+# this language", not "misspelled".  Measured separation on the real
+# queue: foreign-language false positives score 0.33-1.00 on these
+# signals, real English typos score 0.06-0.25.
+MIN_CONTEXT_WORDS = 3
+UNKNOWN_FRAC = 0.4
 
 _WORD = re.compile(r"[^\W\d_]+", re.UNICODE)
 SEPARATOR = " - "
@@ -350,13 +362,121 @@ def nearest_frequent(word: str, stats: CorpusStats):
     return best
 
 
+def _accepts(word: str, langs) -> bool:
+    """Membership, including the capitalised variant.
+
+    German nouns are only accepted capitalised, so "funktion" needs
+    "Funktion" to be judged fairly.
+
+    A stricter surface-only variant was written for the language
+    CLASSIFIER, on the theory that capitalising an unknown word makes a
+    checker accept it as a proper noun. Measured over all 27,382 names,
+    the two give identical results: accented foreign words are not
+    accepted as English even capitalised. It was an unkillable
+    distinction, so it is gone. The strict form survives only where it is
+    load-bearing -- see _accepts_lowercase.
+    """
+    oracle = _oracle()
+    variants = (word, word.lower(), word.capitalize())
+    return any(oracle.accepts(v, lang) for v in variants for lang in langs)
+
+
+def _accepts_lowercase(word: str, langs) -> bool:
+    """Strict membership: the exact lowercase form only.
+
+    Capitalising makes every checker permissive, because a capitalised
+    unknown word reads as a proper noun -- "Stochastic" is accepted by
+    the German AND French dictionaries while "stochastic" is accepted by
+    neither. Asking "is this a word of language L" therefore has to use
+    the uncapitalised form, or the answer is yes for almost anything.
+
+    Load-bearing for the SUGGESTION test and, measured, nowhere else.
+    """
+    oracle = _oracle()
+    return any(oracle.accepts(word.lower(), lang) for lang in langs)
+
+
+def title_languages(tokens: list, skip: str) -> frozenset:
+    """The non-English languages this title is written in, if any.
+
+    Judged on the OTHER words, never on the candidate itself: a short
+    title would otherwise vote itself foreign on the strength of the one
+    word being questioned.  Returns an empty set for an English title.
+    """
+    english = 0
+    votes: dict = {}
+    for word in tokens:
+        if len(word) < 3 or word.lower() == skip:
+            continue
+        if _accepts(word, ENGLISH):
+            english += 1
+            continue
+        for lang in NON_ENGLISH:
+            if _accepts(word, (lang,)):
+                votes[lang] = votes.get(lang, 0) + 1
+    if not votes:
+        return frozenset()
+    best = max(votes.values())
+    if best < english:
+        return frozenset()
+    return frozenset(lang for lang, n in votes.items() if n == best)
+
+
+def title_is_unsupported_language(tokens: list, skip: str) -> bool:
+    """Is the title in a language macOS ships no dictionary for?
+
+    Latin ("Methodus facilis inueniendi Integrale") and Czech
+    ("Poznámka k problemu ruinováni hrácu") are unknown to all six
+    dictionaries, so there is no language to compare a suggestion
+    against and the cross-language rule above cannot fire. The signal
+    is the share of words no dictionary recognises at all.
+
+    Measured on the real queue: Latin and Czech titles score 0.44-1.00,
+    while English titles carrying a genuine typo score at most 0.25 --
+    and that worst case is a series-prefixed filename whose author block
+    lands on the title side of the first " - ".
+    """
+    unknown = total = 0
+    for word in tokens:
+        if len(word) < 3 or word.lower() == skip:
+            continue
+        total += 1
+        if not _accepts(word, LANGS):
+            unknown += 1
+    return total >= MIN_CONTEXT_WORDS and unknown / total >= UNKNOWN_FRAC
+
+
+def suggestion_is_cross_language(word: str, suggestion: str,
+                                 languages: frozenset) -> bool:
+    """Is the suggested partner merely the English cousin of a foreign word?
+
+    "Stochastik" is missing from macOS's German dictionary, so the corpus
+    offers "stochastic" -- one edit away and very frequent. But the title
+    is "Stochastik für das Lehramt", and "stochastic" is not a German
+    word: the pair is a language correspondence, not a misspelling. Same
+    for bayésien/bayesian, ergodicité/ergodicity, multivariée/multivariate.
+
+    The test must be this narrow. Suppressing EVERY unknown word in a
+    foreign title was tried and measured: it removed 20 false positives
+    but also ten genuine ones -- "aspets" for aspects, "inforamtion" for
+    information, "oprérateurs" for opérateurs, "inégaltés" for inégalités
+    -- because a French title can perfectly well contain a French typo.
+    Those survive here, since their partners are themselves French.
+    """
+    if not languages:
+        return False
+    return (_accepts_lowercase(suggestion, ENGLISH)
+            and not _accepts_lowercase(suggestion, languages))
+
+
 def examine_title(name: str, stats: CorpusStats) -> TypoReport:
     """Pure. Takes the NAME, not the file: no I/O, no library access."""
     name = unicodedata.normalize("NFC", name)
     _author, title = split_name(name)
     suspects_found: list = []
     unjudged: list = []
-    for word in _tokens(title):
+    tokens = _tokens(title)
+    for word in tokens:
         lower = word.lower()
         if len(word) < MIN_LEN:
             continue
@@ -376,6 +496,14 @@ def examine_title(name: str, stats: CorpusStats) -> TypoReport:
         if near is None:
             continue
         suggestion, distance, freq = near
+        # Last gate, and the only one that needs the whole title rather
+        # than the word alone: in a non-English title, an English partner
+        # is a language correspondence rather than a correction.
+        if suggestion_is_cross_language(lower, suggestion,
+                                        title_languages(tokens, lower)) \
+                or title_is_unsupported_language(tokens, lower):
+            unjudged.append(word)
+            continue
         suspects_found.append(Suspect(word=word, lower=lower,
                                       suggestion=suggestion,
                                       distance=distance,
