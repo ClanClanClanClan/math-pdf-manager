@@ -155,3 +155,65 @@ def decide(library_root: Path, word: str, kind: str) -> None:
         vocab["proper"].discard(w)
         vocab["common"].add(w.lower())
     _save(library_root, vocab)
+
+
+# A phrase must contain at least two letter-runs.  "Euro-Par" and "S-Plus"
+# are single tokens but two runs, and they are exactly the rulings that
+# make the difference, so counting SPACES here would reject the cases the
+# store exists for.
+_LETTER_RUN = __import__("re").compile(r"[^\W\d_]+", __import__("re").UNICODE)
+
+
+def decide_phrase(library_root: Path, phrase: str, *, keep: bool) -> bool:
+    """Persist the owner's ruling on a MULTI-WORD name.  Returns True if
+    the store changed.
+
+    ``keep=True``  — this phrase is a proper name; preserve its casing
+    verbatim wherever it appears in a title.
+    ``keep=False`` — revoke a previous ruling; its words go back to being
+    judged one at a time.
+
+    This is the "no" the store never had.  Until it existed, a refusal
+    lived only as an unticked checkbox in Streamlit session state, so the
+    identical proposal came back on the next sweep — and the fifteen
+    rulings already on disk could only be maintained by hand-editing JSON.
+
+    Unlike :func:`record_pending`, this RAISES on bad input.  A ruling
+    that silently does nothing is the precise failure this function was
+    written to end.
+    """
+    p = _norm(phrase)
+    if not p:
+        raise ValueError("phrase must not be empty")
+    if len(_LETTER_RUN.findall(p)) < 2:
+        raise ValueError(
+            f"{phrase!r} is a single word — use decide(word, 'proper'|'common'); "
+            "the phrase store is for names that only make sense whole"
+        )
+    if " - " in p:
+        raise ValueError(
+            f"{phrase!r} contains the author/title separator ' - '; a phrase "
+            "spanning it could never match a title"
+        )
+
+    vocab = load_vocab(library_root)
+    existing = list(vocab.get("phrases", []))
+    # Case-insensitive identity: the whole point of a phrase ruling is to
+    # fix the casing, so "centro internazionale" and "Centro
+    # Internazionale" are the same ruling with different answers.
+    lowered = p.lower()
+    kept = [x for x in existing if x.lower() != lowered]
+    if keep:
+        new = sorted(kept + [p])
+    else:
+        new = sorted(kept)
+    if new == sorted(existing):
+        return False
+    vocab["phrases"] = new
+    _save(library_root, vocab)
+    return True
+
+
+def phrase_rulings(library_root: Path) -> list:
+    """Every phrase ruling currently in force, for review."""
+    return list(load_vocab(library_root).get("phrases", []))
