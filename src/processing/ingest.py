@@ -272,8 +272,18 @@ def extract_metadata_from_pdf(pdf_path: Path) -> dict:
         if arxiv_match:
             metadata["arxiv_id"] = arxiv_match.group(1)
 
-        # Year detection
-        year_match = re.search(r"\b(19\d{2}|20\d{2})\b", pdf_meta.get("creationDate", ""))
+        # Year detection.
+        #
+        # NO trailing \b.  A PDF creation date is "D:20250807120000Z", so the
+        # year is followed by a DIGIT and a trailing word boundary can never
+        # match.  Measured over 519 sampled inbox PDFs: 121 carry a
+        # creationDate, every one of them D:-prefixed, and the old pattern
+        # matched 0 of them.  Two things fell out of that: no working paper
+        # ever got its year subdirectory (0 of 2,073, against 4,053 of the
+        # 4,059 already in the library), and determine_publication_status's
+        # age rule -- the owner's "a preprint we stopped chasing goes to 02"
+        # policy -- is gated on this field and has therefore never fired.
+        year_match = re.search(r"\b(19\d{2}|20\d{2})", pdf_meta.get("creationDate", ""))
         if year_match:
             year_val = int(year_match.group(1))
             from datetime import datetime as _dt
@@ -1058,10 +1068,17 @@ def ingest_paper(
                 # as a pending suggestion.
                 if result.get("topic_suggestion"):
                     identity.topic_suggestion = result["topic_suggestion"]
-                    identity.topic_confidence = result.get("topic_confidence", 0.0)
                 else:
                     identity.topic_suggestion = ""
-                    identity.topic_confidence = 0.0
+                # The confidence is recorded whether or not there is a
+                # SUGGESTION.  It used to be zeroed on the else-branch, which
+                # is the branch an AUTO-FILED paper takes -- so the score was
+                # computed (non-zero for 380 of 2,073 arrivals) and thrown
+                # away one line before the write, and no sidecar in the
+                # library carries a topic confidence for a paper the machine
+                # filed by itself.  Those are exactly the decisions worth
+                # auditing afterwards.
+                identity.topic_confidence = result.get("topic_confidence", 0.0)
                 identity.save(dest_path)
         except Exception as exc:  # pragma: no cover -- best effort
             logger.warning("sidecar write failed for %s: %s", org_result.destination, exc)

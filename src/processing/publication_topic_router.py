@@ -50,13 +50,39 @@ DEFAULT_TOPIC_THRESHOLD = 2.0
 #                                      flagged in the Attention Queue)
 #   confidence < REVIEW_CONFIDENCE  -> standard folder, no suggestion
 #
-# AUTO_CONFIDENCE was raised 0.70 -> 0.75 after the abstract-signal
-# upgrade: measured on the full real library (3,277 hand-filed topic
-# papers classified on cached abstracts), 0.75 holds 99.0% precision at
-# 87% recall — the empirical knee.  0.70 buys only +1% recall for ~0.4%
-# precision; 0.80 costs 13% recall for +0.3% precision.  So 0.75 keeps
-# auto-filing at the user's ~99% precision bar while routing the genuinely
-# ambiguous 07b/07c/07d boundary to the review queue.
+# AUTO_CONFIDENCE stays 0.75, and the comment that used to justify it was
+# wrong in a way worth recording, because the correction is also wrong if
+# applied here.
+#
+# The old text claimed "0.75 holds 99.0% precision at 87% recall" and that
+# "0.80 costs 13% recall for +0.3% precision".  Those numbers came from
+# classifying the 3,277 papers ALREADY hand-filed in a topic folder — the
+# population no threshold ever touches.  Re-measured on papers with no
+# current topic, the enriched classifier gives 66.7% precision at 0.75 and
+# 77.2% at 0.80.  So the old justification is retired.
+#
+# But the audit's conclusion — "raise it to 0.80" — targets the wrong code
+# path, and that is the whole reason this comment is long.  Those figures
+# were measured through pipeline_preview.preview_topic_filing, the COCKPIT
+# bulk-apply path, and that module never reads this constant (grep: the
+# only readers are :127, :186 below).  This constant gates one thing: the
+# SILENT auto-file at ingest.
+#
+# On that path the effect is not a trade, it is a shutoff.  _confidence is
+# strength x dominance with _FULL_STRENGTH_SCORE = 4.0, and an unambiguous
+# paper classified on title plus a few thousand characters scores 3.0 —
+# uncontested but not full strength — hence exactly 0.75.  Measured:
+# "Reflected BSDEs and optimal stopping", "Team-optimal closed-loop
+# Stackelberg strategies" and "Backward stochastic differential equations
+# and their applications" all score 0.75.  Raising the bar to 0.80 stops
+# essentially every arrival from auto-filing.
+#
+# That may well be the right answer — a misfiling is silent while a
+# suggestion is visible in the Attention Queue, and ~1 in 3 of the 343
+# arrivals auto-filed per inbox run is currently wrong.  But it converts
+# roughly 343 silent filings into 343 review items, which is the owner's
+# workflow to change, not a constant to nudge.  Left at 0.75 pending that
+# decision.
 AUTO_CONFIDENCE = 0.75
 REVIEW_CONFIDENCE = 0.40
 

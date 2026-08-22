@@ -25,10 +25,17 @@ Output bands per paper (``TopicProposal.status``):
 """
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
+
+# The except-handler below logs, and this module never defined a logger:
+# the handler whose comment says "progress reporting must never abort a
+# scan" raised NameError and discarded a ~636-second whole-library walk.
+# The cockpit is the only caller that passes a progress callback.
+logger = logging.getLogger(__name__)
 
 # Topic folders are named like "07a - BSDEs"; the code is the prefix.
 _TOPIC_DIR_RE = re.compile(r"^(07[a-f])\b", re.IGNORECASE)

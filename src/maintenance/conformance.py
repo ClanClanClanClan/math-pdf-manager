@@ -533,7 +533,13 @@ def run(
     for i, pdf in enumerate(pdfs[:total]):
         bucket, reason, detail = examine(pdf.name, library_root, corpus)
         counts[bucket] += 1
-        if bucket != CANONICAL:
+        # "or reason": examine() returns (CANONICAL, "rests-on-undecided-words",
+        # words) precisely SO the uncertainty travels with the verdict, and
+        # this line used to drop both the reason and the finding for every
+        # canonical row -- 1,613 files (5.9%), 1,450 distinct words, counted
+        # as settled.  The string is produced in one place and was consumed
+        # in none.
+        if bucket != CANONICAL or reason:
             key = f"{bucket}:{reason}"
             reasons[key] = reasons.get(key, 0) + 1
             findings.append(Finding(
