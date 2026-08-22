@@ -41,3 +41,11 @@ certifi
 
 # Testing (install with: pip install -e ".[dev]")
 # pytest, pytest-cov, pytest-timeout, pytest-asyncio, hypothesis
+
+# Credential storage for the downloaders (secure_credential_manager.py).
+# Imported unguarded and declared nowhere until a manifest check caught it.
+keyring>=24.0
+# Used by core/utils/type_hints.py, unguarded.
+typing_extensions>=4.0
+# Complexity metrics for core/optimization/performance_profiler.py.
+radon>=6.0

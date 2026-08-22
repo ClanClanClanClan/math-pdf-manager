@@ -41,6 +41,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import hashlib
 import shutil
 import sqlite3
 import subprocess
@@ -102,11 +103,11 @@ def _chrome_base() -> Path:
 
 
 def is_supported() -> bool:
-    """True on macOS with pycryptodome available and a Chrome dir present."""
+    """True on macOS with the crypto backend available and Chrome present."""
     if sys.platform != "darwin":
         return False
     try:
-        import Crypto  # noqa: F401
+        from cryptography.hazmat.primitives.ciphers import Cipher  # noqa: F401
     except Exception:
         return False
     return _chrome_base().exists()
@@ -201,26 +202,42 @@ def auto_detect_profile() -> Optional[str]:
     return max(scans, key=lambda s: s.cookie_count).profile
 
 
+def derive_key(password: bytes) -> bytes:
+    """Chrome's macOS key schedule: PBKDF2-HMAC-SHA1, "saltysalt", 1003, 16B.
+
+    hashlib, not pycryptodome. That package was never declared in
+    requirements.txt, so importing it failed in any clean install and
+    took six tests of this module down with it; the standard library has
+    done PBKDF2 since 3.4 and needs no dependency at all.
+    """
+    return hashlib.pbkdf2_hmac("sha1", password, b"saltysalt", 1003, 16)
+
+
 def _safe_storage_key() -> bytes:
     """Derive the AES key from the macOS Keychain (prompts once to Allow)."""
-    from Crypto.Protocol.KDF import PBKDF2
-    from Crypto.Hash import SHA1
-
     pw = subprocess.check_output(
         ["security", "find-generic-password", "-w",
          "-s", _KEYCHAIN_SERVICE, "-a", _KEYCHAIN_ACCOUNT],
         stderr=subprocess.DEVNULL,
     ).strip()
-    return PBKDF2(pw, b"saltysalt", dkLen=16, count=1003, hmac_hash_module=SHA1)
+    return derive_key(pw)
 
 
 def _decrypt(enc: bytes, key: bytes) -> Optional[str]:
-    from Crypto.Cipher import AES
+    """AES-128-CBC with a 16-space IV, via `cryptography` (already a
+    declared dependency) rather than a second, undeclared crypto stack."""
+    from cryptography.hazmat.primitives.ciphers import (
+        Cipher, algorithms, modes)
 
     if not enc or enc[:3] != b"v10":
         return None
     try:
-        pt = AES.new(key, AES.MODE_CBC, b" " * 16).decrypt(enc[3:])
+        body = enc[3:]
+        if len(body) % 16:
+            # CBC needs whole blocks; a truncated value is not decryptable.
+            return None
+        dec = Cipher(algorithms.AES(key), modes.CBC(b" " * 16)).decryptor()
+        pt = dec.update(body) + dec.finalize()
         pad = pt[-1]
         if 1 <= pad <= 16:
             pt = pt[:-pad]

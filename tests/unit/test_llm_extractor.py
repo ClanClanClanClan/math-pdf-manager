@@ -225,16 +225,29 @@ class TestIsAvailable:
         assert llm_module.LLMMetadataExtractor.is_available() is True
 
     def test_not_available_when_missing(self):
-        """is_available() should return False when llama_cpp is not importable."""
-        # Remove any existing mock
-        saved = sys.modules.pop("llama_cpp", None)
+        """is_available() should return False when llama_cpp is not importable.
+
+        Popping the module out of sys.modules does NOT achieve that when
+        the package is genuinely installed — the import simply succeeds
+        again from disk, is_available() returns True, and the test fails
+        for a reason that has nothing to do with the code. Binding the
+        name to None is what makes `import llama_cpp` raise, so this
+        exercises the branch on a machine that has llama_cpp and on one
+        that does not.
+        """
+        saved = sys.modules.get("llama_cpp", "absent")
+        sys.modules["llama_cpp"] = None      # forces ImportError on import
         try:
             import pdf_processing.llm_extractor as mod
             importlib.reload(mod)
             assert mod.LLMMetadataExtractor.is_available() is False
         finally:
-            if saved is not None:
+            if saved == "absent":
+                sys.modules.pop("llama_cpp", None)
+            else:
                 sys.modules["llama_cpp"] = saved
+            import pdf_processing.llm_extractor as mod
+            importlib.reload(mod)
 
 
 # ---------------------------------------------------------------------------

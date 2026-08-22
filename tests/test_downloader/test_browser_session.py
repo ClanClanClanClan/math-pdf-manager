@@ -15,18 +15,18 @@ import pytest
 # ---- helpers --------------------------------------------------------------
 
 def _test_key() -> bytes:
-    from Crypto.Protocol.KDF import PBKDF2
-    from Crypto.Hash import SHA1
-    return PBKDF2(b"unit-test-pw", b"saltysalt", dkLen=16, count=1003,
-                  hmac_hash_module=SHA1)
+    from downloader.browser_session import derive_key
+    return derive_key(b"unit-test-pw")
 
 
 def _v10(value: str, key: bytes) -> bytes:
-    from Crypto.Cipher import AES
+    from cryptography.hazmat.primitives.ciphers import (
+        Cipher, algorithms, modes)
     data = value.encode("utf-8")
     pad = 16 - (len(data) % 16)
     data += bytes([pad]) * pad
-    return b"v10" + AES.new(key, AES.MODE_CBC, b" " * 16).encrypt(data)
+    enc = Cipher(algorithms.AES(key), modes.CBC(b" " * 16)).encryptor()
+    return b"v10" + enc.update(data) + enc.finalize()
 
 
 def _make_profile(base, profile_name, rows):
@@ -175,3 +175,38 @@ class TestCache:
                        "Profile 1")
         out = bs.cookies_for_download(allow_import=False)
         assert out and out[0]["name"] == "a"
+
+
+class TestTheKeyScheduleMatchesChrome:
+    """Known-answer vectors, because the rest of this file is a closed loop.
+
+    Every other test here encrypts with the same library the code
+    decrypts with, so it would pass just as happily if the parameters
+    were wrong — a different salt, a different iteration count, SHA-256
+    instead of SHA-1 — and cookie import would then silently fail
+    against real Chrome while the suite stayed green.
+
+    These hex values pin Chrome's actual macOS schedule:
+    PBKDF2-HMAC-SHA1, salt b"saltysalt", 1003 iterations, 16-byte key.
+    "peanuts" is Chrome's documented fallback password when the Keychain
+    entry is absent, so it is a vector anyone can check against the
+    Chromium source.
+    """
+
+    def test_the_derived_key_is_the_expected_bytes(self):
+        from downloader.browser_session import derive_key
+        assert derive_key(b"unit-test-pw").hex() == \
+            "42f1c1d3e55683e3d7d88cd582f391a1"
+        assert derive_key(b"peanuts").hex() == \
+            "d9a09d499b4e1b7461f28e67972c6dbd"
+
+    def test_the_key_is_128_bit(self):
+        from downloader.browser_session import derive_key
+        assert len(derive_key(b"anything")) == 16
+
+    def test_a_truncated_value_is_declined_not_crashed(self):
+        """AES-CBC needs whole blocks. Chrome's DB can hold a partially
+        written blob; returning None beats raising inside a loop over
+        every cookie."""
+        from downloader.browser_session import _decrypt
+        assert _decrypt(b"v10" + b"\x00" * 5, _test_key()) is None
