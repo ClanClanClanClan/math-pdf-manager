@@ -169,3 +169,198 @@ class TestAProgressCallbackCannotDiscardAScan:
             tmp_path, progress=hostile)
         assert summary.scanned == 3, (
             "a raising progress callback threw the whole scan away")
+
+
+class TestARefusedPaperLeavesNothingBehind:
+    """The gate used to run AFTER the copy.
+
+    bulk_sort called ingest_paper (which copies), then checked the name,
+    then returned ok=False without undoing anything. A scratch run
+    reported "filed 6, failed 9" with fifteen PDFs on disk and fifteen
+    sidecars asserting the rejects had been ingested properly. On the
+    real inbox that is 197 junk-named PDFs written into the library under
+    a message saying they were left behind.
+
+    The existing test for this mocked ingest_paper away and asserted only
+    that ok was False and the source still existed. It never asserted
+    that a destination was NOT created, which is the only thing that
+    actually matters.
+    """
+
+    @pytest.fixture
+    def offline(self, monkeypatch):
+        """No test may reach the network.
+
+        Discovered the hard way: a fixture PDF named after a real arXiv
+        id made this suite call arxiv.org, so the result depended on
+        someone else's uptime and on a paper's metadata never changing.
+        """
+        import urllib.request
+
+        def refuse(*a, **k):
+            raise AssertionError("a test tried to open a network connection")
+        monkeypatch.setattr(urllib.request, "urlopen", refuse)
+        return refuse
+
+    @pytest.fixture
+    def lib(self, tmp_path):
+        for d in ("01 - Published papers", "03 - Working papers",
+                  "12 - To be sorted"):
+            (tmp_path / d).mkdir(parents=True, exist_ok=True)
+        return tmp_path
+
+    def _pdfs_in_library(self, lib):
+        return {p for p in lib.rglob("*.pdf")
+                if "12 - To be sorted" not in p.parts}
+
+    def test_a_junk_named_arrival_writes_no_file(self, lib, offline):
+        """The name must carry NO resolvable identifier.
+
+        My first version used "2105.10623v1.pdf" — a real arXiv id — and
+        the test failed because the pipeline resolved it against the live
+        arXiv API and produced the correct paper. Two lessons: the gate
+        was right, and the suite was reaching the network. Hence the
+        `offline` fixture below.
+        """
+        from processing.ingest import ingest_paper
+        src = write_pdf(lib / "12 - To be sorted" / "scan0001.pdf")
+        before = self._pdfs_in_library(lib)
+
+        result = ingest_paper(src, library_root=lib, status="working",
+                              dry_run=False)
+
+        assert result["success"] is False
+        assert result["identification_state"] == "unidentified"
+        assert self._pdfs_in_library(lib) == before, (
+            "a refused paper was still copied into the library")
+        assert not list(lib.rglob("*.meta.json")), (
+            "a sidecar was written asserting the reject had been ingested")
+        assert src.exists(), "and the original must still be where it was"
+        assert not result["destination"], (
+            "a refused paper reported a destination it was never written "
+            "to — the cockpit renders that field, so this is the "
+            "shows-one-thing-does-another failure in miniature")
+        assert not result["actions"], (
+            "and it reported actions it did not take")
+
+    def test_a_title_that_fell_back_to_the_stem_writes_no_file(self, lib, offline):
+        """The /Author field in this corpus contains "Administrator",
+        "Windows User", "Springer" and — from Preview re-saves — the
+        owner's own name on papers he did not write. An author without a
+        title is not an identification."""
+        from processing.ingest import ingest_paper
+        src = write_pdf(lib / "12 - To be sorted" / "sdarticle.pdf",
+                        author="Windows User")
+        before = self._pdfs_in_library(lib)
+        result = ingest_paper(src, library_root=lib, status="working",
+                              dry_run=False)
+        assert result["success"] is False
+        assert self._pdfs_in_library(lib) == before
+
+    def test_the_watcher_path_inherits_the_same_gate(self, lib, offline):
+        """The watcher calls ingest_paper directly and had no gate, while
+        shipping with delete_source: true — so a junk-named paper was
+        filed as a success, a notification fired, and the original was
+        moved out of the inbox. The watcher only retires the source when
+        result["success"] is true, so this assertion is what protects
+        the original."""
+        from processing.ingest import ingest_paper
+        src = write_pdf(lib / "12 - To be sorted" / "main.pdf")
+        result = ingest_paper(src, library_root=lib, status="working",
+                              dry_run=False, dedup_check=True,
+                              variant_check=True)
+        assert result["success"] is False
+
+    def test_a_real_extraction_still_files(self, lib):
+        from processing.ingest import ingest_paper
+        src = write_pdf(lib / "12 - To be sorted" / "whatever.pdf",
+                        title="On the rate of escape of random walks",
+                        author="Bass, R.")
+        result = ingest_paper(src, library_root=lib, status="published",
+                              dry_run=False)
+        assert result["success"] is True, result.get("error")
+        assert result["identification_state"] == "identified"
+        assert self._pdfs_in_library(lib), "a good paper was not filed"
+
+    def test_an_arrival_already_in_house_form_is_accepted(self, lib):
+        """Its title equals its stem for the good reason that someone
+        already named it properly. 22 of the inbox's papers are like
+        this and they must not be treated as failures."""
+        from processing.ingest import ingest_paper
+        src = write_pdf(lib / "12 - To be sorted" /
+                        "Yor, M. - Some aspects of Brownian motion.pdf")
+        result = ingest_paper(src, library_root=lib, status="published",
+                              dry_run=False)
+        assert result["success"] is True, result.get("error")
+
+    def test_the_owner_naming_it_himself_is_an_identification(self, lib, offline):
+        """A hand-typed name IS the identification, so the gate must not
+        veto it — otherwise the one reliable source of truth in the
+        system is the one thing that cannot get a paper filed."""
+        from processing.ingest import ingest_paper
+        src = write_pdf(lib / "12 - To be sorted" / "scan0001.pdf")
+        result = ingest_paper(
+            src, library_root=lib, status="working", dry_run=False,
+            canonical_override="Kabanov, Yu. M. - On a maximum principle.pdf")
+        assert result["success"] is True, result.get("error")
+
+    def test_force_is_available_for_an_explicit_override(self, lib, offline):
+        from processing.ingest import ingest_paper
+        src = write_pdf(lib / "12 - To be sorted" / "scan0001.pdf")
+        assert ingest_paper(src, library_root=lib, status="working",
+                            dry_run=False, force=True)["success"] is True
+
+    def test_the_verdict_is_reported_even_when_it_passes(self, lib):
+        """Three states, never two. A caller must be able to tell "checked
+        and fine" from "not checked"."""
+        from processing.ingest import ingest_paper
+        src = write_pdf(lib / "12 - To be sorted" / "whatever.pdf",
+                        title="On the rate of escape of random walks",
+                        author="Bass, R.")
+        result = ingest_paper(src, library_root=lib, status="published",
+                              dry_run=True)
+        assert result["identification_state"] in (
+            "identified", "needs_review", "unidentified")
+
+
+class TestATitleWithoutAnAuthorIsNotAnIdentification:
+    """Found by running the gate against 40 real inbox papers rather than
+    by reading it.
+
+    Three came through: "LLM Embedding for Regression Priors", "Systems
+    of Singularly Perturbed Forward-Backward Stochastic Differential
+    Equations and Control Problems", and "Scannable Document" — a
+    scanner's default title. Each has a title, so `title_from_metadata`
+    is true; each differs from its source stem, so the
+    nothing-was-extracted rule misses it; and each has no author, so it
+    files under Z/ where the library already keeps 201 such arrivals
+    that nobody has gone back to.
+    """
+
+    @pytest.mark.parametrize("canonical", [
+        "Scannable Document.pdf",
+        "LLM Embedding for Regression Priors.pdf",
+        "Systems of Singularly Perturbed Forward-Backward SDEs.pdf",
+    ])
+    def test_an_authorless_name_is_held_for_review(self, canonical):
+        from processing.ingest import identification_state, NEEDS_REVIEW
+        state, why = identification_state(canonical, "whatever-the-source-was",
+                                          title_from_metadata=True)
+        assert state == NEEDS_REVIEW, canonical
+        assert "no author" in why
+
+    def test_a_name_with_an_author_still_passes(self):
+        from processing.ingest import identification_state, IDENTIFIED
+        state, _ = identification_state(
+            "Bass, R. - On the rate of escape of random walks.pdf",
+            "sdarticle", title_from_metadata=True)
+        assert state == IDENTIFIED
+
+    def test_the_batch_row_carries_the_verdict(self, tmp_path):
+        """Without this the cockpit can only say ok/not-ok, and cannot
+        tell the owner whether a paper was checked and passed or never
+        checked at all."""
+        import inspect
+        from processing import bulk_sort as bs
+        src = inspect.getsource(bs.sort_one)
+        assert 'result["identification_state"]' in src

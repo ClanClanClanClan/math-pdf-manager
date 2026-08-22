@@ -702,6 +702,65 @@ def metadata_to_cmo(metadata: dict, pdf_path: Path) -> CMO:
 # ---------------------------------------------------------------------------
 # Main ingest logic
 # ---------------------------------------------------------------------------
+#: How well this paper was identified.  Three states, never two: a
+#: filing that could not be checked must not be spelled the same way as
+#: one that was checked and passed.
+IDENTIFIED = "identified"
+NEEDS_REVIEW = "needs_review"
+UNIDENTIFIED = "unidentified"
+
+
+def identification_state(canonical_name: str, source_stem: str,
+                         title_from_metadata: bool) -> tuple:
+    """Judge an extraction BEFORE anything is written.  Returns
+    ``(state, reason)``.
+
+    Two independent signals, either sufficient, both inherited from the
+    gate that used to live in bulk_sort:
+
+      * the canonical name has no author/title separator AND is just the
+        source stem — nothing was extracted at all;
+      * the title fell back to the stem, even though a plausible-looking
+        author may have leaked in from the PDF's /Author field (which in
+        this corpus contains values like "Administrator", "Windows User"
+        and "Springer").
+
+    A file that ARRIVES in house form is identified, not rejected: its
+    title equals its stem for the good reason that someone already named
+    it properly.
+    """
+    has_separator = " - " in canonical_name
+    equals_source = canonical_name == source_stem + ".pdf"
+    if has_separator and equals_source:
+        return IDENTIFIED, ""
+    if not has_separator and equals_source:
+        return UNIDENTIFIED, (
+            f"nothing was extracted; the name would be {canonical_name!r}, "
+            "which is just the source filename")
+    if not title_from_metadata:
+        return NEEDS_REVIEW, (
+            f"the title fell back to the source filename ({canonical_name!r}); "
+            "any author in it came from unverified PDF metadata")
+    if not has_separator:
+        # A title but NO author. The author/title boundary is the whole
+        # data model — it carries the author split, the alpha-folder
+        # routing and the sidecar identity — so a name without one is
+        # invisible to every later stage that splits on " - ".
+        #
+        # Measured on a 40-paper sample of the real inbox, three came
+        # through here: "LLM Embedding for Regression Priors",
+        # "Systems of Singularly Perturbed Forward-Backward Stochastic
+        # Differential Equations and Control Problems", and "Scannable
+        # Document" — a scanner's default title. All three were filed
+        # under Z/, which is where the library keeps the 201 authorless
+        # arrivals nobody has ever gone back to.
+        return NEEDS_REVIEW, (
+            f"a title but no author ({canonical_name!r}); the author/title "
+            "separator is the data model and a file without one is invisible "
+            "to every stage that splits on it")
+    return IDENTIFIED, ""
+
+
 def ingest_paper(
     pdf_path: Path,
     *,
@@ -1013,6 +1072,42 @@ def ingest_paper(
                 result["variant_of"] = twin
         except Exception as exc:  # never block ingest on the check
             logger.warning("variant check failed: %s", exc)
+
+    # ---- QUALITY GATE -------------------------------------------------
+    # BEFORE organize(), because organize() copies the file.
+    #
+    # This check used to live in bulk_sort, AFTER the copy, and returned
+    # ok=False without undoing it: a scratch run reported "filed 6,
+    # failed 9" and left 15 PDFs on disk with 15 sidecars, so the
+    # identity layer then asserted the nine rejects had been properly
+    # ingested. On the real inbox that is 197 junk-named PDFs written
+    # into the library under a message saying they were left behind.
+    #
+    # It also only ever protected ONE of the three arrival paths. The
+    # watcher (watcher/daemon.py) and the Attention retry button both
+    # call ingest_paper directly and had no gate at all — and the
+    # watcher ships with delete_source: true, so a junk-named paper was
+    # filed as a success, announced with a notification, and its
+    # original moved out of the inbox.
+    #
+    # Here, every caller inherits it. force=True is the explicit
+    # override; a hand-typed canonical_override implies it, because the
+    # owner naming a file himself IS the identification.
+    _state, _why = identification_state(
+        canonical_name, pdf_path.stem, result.get("title_from_metadata", True))
+    result["identification_state"] = _state
+    if _state != IDENTIFIED and not (kwargs.get("force") or canonical_override):
+        result["success"] = False
+        result["error"] = f"{_why} — not filed, left where it is"
+        # destination and actions are already "" and [] from the
+        # initialiser at the top of this function, and re-clearing them
+        # here was an unkillable line pretending to be a safeguard. The
+        # contract — a refused paper reports no destination and no
+        # actions — is asserted in the tests instead, where it stays
+        # true whatever this function's initialiser does later.
+        if verbose:
+            print(f"  REFUSED ({_state}): {_why}")
+        return result
 
     # Step 5: Organize (route to correct directory, with undo logging)
     org = OrganizationSystem(library_root, topic=topic, dry_run=dry_run)

@@ -177,6 +177,10 @@ def sort_one(
     result["filename"] = ingest_result.get("filename")
     result["destination"] = ingest_result.get("destination")
     result["actions"] = ingest_result.get("actions", [])
+    # Carry the three-state verdict through. Without it the batch rows
+    # say only ok/not-ok, and the cockpit cannot tell the owner whether
+    # a paper was checked and passed or never checked at all.
+    result["identification_state"] = ingest_result.get("identification_state")
 
     if not ingest_result.get("success"):
         result["error"] = ingest_result.get("error") or "ingest failed (no specific reason)"
