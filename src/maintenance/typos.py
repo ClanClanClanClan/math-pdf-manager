@@ -283,6 +283,9 @@ class CorpusStats:
     title_df: dict = field(default_factory=dict)
     author_tokens: frozenset = frozenset()
     frequent: tuple = ()          # words with df >= MIN_PARTNER_FREQ
+    # Words the owner has ruled correctly spelled. Carried here so that
+    # examine_title stays pure -- it must never read the library itself.
+    ruled_correct: frozenset = frozenset()
 
 
 def split_name(name: str) -> tuple:
@@ -296,7 +299,7 @@ def _tokens(text: str) -> list:
     return _WORD.findall(text)
 
 
-def build_corpus_stats(names) -> CorpusStats:
+def build_corpus_stats(names, ruled_correct=frozenset()) -> CorpusStats:
     """Pure: filenames in, statistics out.
 
     Document frequency, not token frequency -- a word repeated inside one
@@ -317,7 +320,9 @@ def build_corpus_stats(names) -> CorpusStats:
                             if n >= MIN_PARTNER_FREQ))
     return CorpusStats(title_df=title_df,
                        author_tokens=frozenset(authors),
-                       frequent=frequent)
+                       frequent=frequent,
+                       ruled_correct=frozenset(
+                           w.lower() for w in ruled_correct))
 
 
 def _within(a: str, b: str, limit: int) -> "int | None":
@@ -368,17 +373,31 @@ def _accepts(word: str, langs) -> bool:
     German nouns are only accepted capitalised, so "funktion" needs
     "Funktion" to be judged fairly.
 
-    A stricter surface-only variant was written for the language
-    CLASSIFIER, on the theory that capitalising an unknown word makes a
-    checker accept it as a proper noun. Measured over all 27,382 names,
-    the two give identical results: accented foreign words are not
-    accepted as English even capitalised. It was an unkillable
-    distinction, so it is gone. The strict form survives only where it is
-    load-bearing -- see _accepts_lowercase.
+    Used to judge whether a WORD is misspelled. To classify a title's
+    LANGUAGE use _accepts_strict instead -- see the note there.
     """
     oracle = _oracle()
     variants = (word, word.lower(), word.capitalize())
     return any(oracle.accepts(v, lang) for v in variants for lang in langs)
+
+
+def _accepts_strict(word: str, langs) -> bool:
+    """Membership WITHOUT the capitalised variant, for classifying a
+    title's LANGUAGE.
+
+    Capitalising an unknown word makes every checker accept it as a
+    proper noun, so the permissive form says yes to almost anything:
+    "Methodus" and "academiae" pass, the Latin titles stop looking Latin,
+    and the unsupported-language rule goes quiet. Measured over the real
+    library: strict suppresses 16 false positives, permissive only 12.
+
+    This distinction was once deleted as an "equivalent mutant" because a
+    monkeypatched A/B reported no difference. That measurement was wrong,
+    which is why the comparison is now done by editing the source.
+    """
+    oracle = _oracle()
+    return any(oracle.accepts(v, lang)
+               for v in (word, word.lower()) for lang in langs)
 
 
 def _accepts_lowercase(word: str, langs) -> bool:
@@ -408,11 +427,11 @@ def title_languages(tokens: list, skip: str) -> frozenset:
     for word in tokens:
         if len(word) < 3 or word.lower() == skip:
             continue
-        if _accepts(word, ENGLISH):
+        if _accepts_strict(word, ENGLISH):
             english += 1
             continue
         for lang in NON_ENGLISH:
-            if _accepts(word, (lang,)):
+            if _accepts_strict(word, (lang,)):
                 votes[lang] = votes.get(lang, 0) + 1
     if not votes:
         return frozenset()
@@ -441,7 +460,7 @@ def title_is_unsupported_language(tokens: list, skip: str) -> bool:
         if len(word) < 3 or word.lower() == skip:
             continue
         total += 1
-        if not _accepts(word, LANGS):
+        if not _accepts_strict(word, LANGS):
             unknown += 1
     return total >= MIN_CONTEXT_WORDS and unknown / total >= UNKNOWN_FRAC
 
@@ -485,6 +504,9 @@ def examine_title(name: str, stats: CorpusStats) -> TypoReport:
         if stats.title_df.get(lower, 0) != 1:
             continue
         if lower in stats.author_tokens:
+            continue
+        # The owner has looked at this word and said it is a real one.
+        if lower in stats.ruled_correct:
             continue
         verdict = oracle_verdict(word)
         if verdict is Verdict.UNKNOWN:
@@ -536,3 +558,58 @@ def broken_characters(name: str) -> list:
                 unicodedata.category(ch) == "Cf" and ch != "﻿"):
             faults.append((index, ch, "control character", ""))
     return faults
+
+
+# ---------------------------------------------------------------------------
+# the oracle is OS state, so pin it
+# ---------------------------------------------------------------------------
+
+# NSSpellChecker is not a fixed table.  It consults ~/Library/Spelling --
+# a LocalDictionary of words the owner once clicked "Learn", and a
+# dynamic-counts.dat that macOS rewrites as it is used -- so the same
+# filename can be judged differently on two different days.  This bit us
+# during development: one sweep reported 143 suspect words and a later
+# sweep of the identical corpus with identical code reported 147.
+#
+# The defence is not to pretend it is stable but to MEASURE it: a fixed
+# probe list, hashed, recorded alongside every report.  Two reports whose
+# fingerprints differ were produced by two different oracles, and any
+# change in the counts between them has to be read in that light.
+_FINGERPRINT_PROBE = (
+    "American", "Amererican", "behaviour", "behavior", "modelling",
+    "modeling", "stochastic", "stochastik", "Volterra", "McKean",
+    "Vlasov", "teh", "qqqqzzzz", "WIITH", "aspects", "aspets",
+    "opérateurs", "information", "Methodus", "academiae", "problemu",
+    "processus", "differential", "diﬀerential",
+)
+
+
+def oracle_fingerprint() -> str:
+    """A short, stable hash of what this machine's dictionaries say today.
+
+    Record it with any measurement taken from this module. If it changes,
+    the oracle changed, and a difference in the numbers is not evidence
+    that the library changed.
+    """
+    import hashlib
+    verdicts = "".join(f"{w}={oracle_verdict(w).value};"
+                       for w in _FINGERPRINT_PROBE)
+    return hashlib.sha256(verdicts.encode("utf-8")).hexdigest()[:12]
+
+
+def learned_words_in_play(library_root=None) -> int:
+    """How many words the OWNER once taught macOS are in the dictionary.
+
+    Every one of them is a word this detector will call correctly spelled
+    without the owner ever ruling on it here. The spec found that store
+    polluted with LaTeX debris -- hbox, sqrt, newcommand, utf8 -- and at
+    least one learned misspelling, so its size is worth surfacing rather
+    than leaving as invisible influence.
+    """
+    from pathlib import Path
+    local = Path.home() / "Library" / "Spelling" / "LocalDictionary"
+    try:
+        return sum(1 for line in local.read_text(
+            encoding="utf-8", errors="replace").splitlines() if line.strip())
+    except OSError:
+        return 0

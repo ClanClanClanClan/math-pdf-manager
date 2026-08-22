@@ -466,7 +466,7 @@ def render_sidebar() -> None:
         # module owned his problem before he could start.
         _GROUPS = [
             ("Do", [attention_label, "Sort Queue", "Upgrade Queue", "To Download"]),
-            ("Fix", ["Conflicts", "Duplicates", "Maintenance"]),
+            ("Fix", ["Conflicts", "Duplicates", "Spelling", "Maintenance"]),
             ("Look", ["Search", "Pipeline Preview", "Conformance", "Stats",
                       "Activity"]),
             ("Setup", ["Settings"]),
@@ -2183,6 +2183,196 @@ def _to_be_sorted_backlog_cached(lib_str: str) -> dict:
     return count_to_be_sorted(Path(lib_str))
 
 
+def _spelling_scan(lib):
+    """Scan the library for suspected misspellings and broken characters.
+
+    Cached in session state because it walks 27,000 filenames and queries
+    the system dictionary; the owner presses Rescan when he wants it
+    redone.
+    """
+    import unicodedata as U
+    from maintenance.typos import (Verdict, broken_characters,
+                                   build_corpus_stats, examine_title,
+                                   learned_words_in_play, oracle_fingerprint,
+                                   self_check)
+    from processing.identity import iter_pdfs
+    from processing.spelling_vocab import accepted_words
+
+    self_check()          # raises rather than returning a mute oracle
+    names, broken = [], []
+    for pdf in iter_pdfs(lib):
+        rel = pdf.relative_to(lib)
+        if rel.parts and rel.parts[0].startswith("12 - "):
+            continue
+        name = U.normalize("NFC", pdf.name)
+        names.append((name, str(rel)))
+        faults = broken_characters(name)
+        if faults:
+            broken.append({"name": name, "rel": str(rel), "faults": faults})
+    stats = build_corpus_stats((n for n, _ in names),
+                               ruled_correct=accepted_words(lib))
+    suspects = []
+    for name, rel in names:
+        rep = examine_title(name, stats)
+        if rep.verdict is Verdict.TYPO:
+            suspects.append({"name": name, "rel": str(rel),
+                             "suspects": [s.__dict__ for s in rep.suspects]})
+    suspects.sort(key=lambda r: -max(s["suggestion_freq"] for s in r["suspects"]))
+    return {"suspects": suspects, "broken": broken,
+            "scanned": len(names), "oracle": oracle_fingerprint(),
+            "learned": learned_words_in_play()}
+
+
+def render_spelling() -> None:
+    """Suspected misspellings — review only, never automatic.
+
+    Modelled on the title-vocabulary screen rather than the title-review
+    one: that screen keeps its approvals in Streamlit session state, so a
+    browser reload loses them and the identical proposal returns on the
+    next sweep. Every button here writes to the Dropbox-synced ruling
+    store before it returns, and every ruling has a route back.
+    """
+    from processing.library_normalize import apply_renames
+    from processing.spelling_vocab import (CORRECT, DEFERRED, clear_ruling,
+                                           load_rulings, rule)
+
+    lib = _library()
+    _page_header("🔤", "Spelling",
+                 "Words that look wrong. Nothing is corrected automatically.")
+
+    if st.button("↻ Rescan", key="sp_rescan") or "spelling" not in st.session_state:
+        with st.spinner("Reading every filename and asking the dictionary…"):
+            try:
+                st.session_state["spelling"] = _spelling_scan(lib)
+            except Exception as exc:
+                st.error(
+                    f"The spelling oracle is unavailable, so NOTHING was "
+                    f"checked — this is not a clean result: {exc}")
+                return
+    data = st.session_state.get("spelling")
+    if not data:
+        return
+
+    rulings = load_rulings(lib)
+    deferred = rulings[DEFERRED]
+
+    st.caption(
+        f"{data['scanned']:,} filenames · oracle `{data['oracle']}` · "
+        f"{data['learned']:,} words you have taught macOS are treated as "
+        "correct without appearing here.")
+
+    # ---- the certain ones first: no dictionary, no threshold ------------
+    if data["broken"]:
+        st.markdown(f"#### Certain — {len(data['broken'])} broken character(s)")
+        st.caption(
+            "An f-ligature means text was lifted from a PDF without "
+            "normalising; a control character means the name is corrupted. "
+            "No dictionary is involved, so there is no false positive here.")
+        for row in data["broken"]:
+            kinds = ", ".join(sorted({f[2] for f in row["faults"]}))
+            fixed = row["name"]
+            for _i, ch, kind, expansion in row["faults"]:
+                fixed = fixed.replace(ch, expansion if kind == "f-ligature" else "")
+            c = st.columns([6, 2])
+            c[0].write(f"`{row['rel']}`")
+            c[0].caption(f"{kinds} → `{fixed}`")
+            if c[1].button("Fix it", key=f"sp_brk_{row['rel']}",
+                           use_container_width=True):
+                res = apply_renames(
+                    lib, [{"old": row["rel"],
+                           "new": str(Path(row["rel"]).parent / fixed)}],
+                    dry_run=False)
+                if res.get("renamed"):
+                    _log_activity("spelling.character", str(lib),
+                                  row["name"][:60], res.get("tx_id") or "")
+                    st.toast("Renamed — undo it from Activity.")
+                    st.session_state.pop("spelling", None)
+                    st.rerun()
+                else:
+                    st.warning(f"Not renamed: {res.get('skipped')}")
+
+    # ---- the judgement calls --------------------------------------------
+    active = [r for r in data["suspects"]
+              if not all(s["lower"] in deferred for s in r["suspects"])]
+    st.markdown(f"#### Suspected — {len(active)} file(s)")
+    if deferred:
+        st.caption(f"{len(deferred)} word(s) set aside. They still count as "
+                   "suspect in the Conformance report; putting one off does "
+                   "not make it right.")
+    st.caption(
+        "Ranked by how often the suggested word appears elsewhere. Precision "
+        "falls down the list, so the rank tells you when you have passed the "
+        "productive part. **The suggestion is evidence, not an instruction** — "
+        "measured on this library it is wrong for several entries: *lobal* is "
+        "suggested as *local* but means **global**.")
+
+    shown = active[:60]
+    for rank, row in enumerate(shown, 1):
+        for s in row["suspects"]:
+            if s["lower"] in deferred:
+                continue
+            key = f"{row['rel']}::{s['lower']}"
+            with st.container(border=True):
+                st.markdown(
+                    f"**{rank}. {s['word']}** → *{s['suggestion']}* "
+                    f"<span style='opacity:.6'>({s['distance']} edit"
+                    f"{'s' if s['distance'] > 1 else ''}, the suggestion "
+                    f"appears in {s['suggestion_freq']:,} files)</span>",
+                    unsafe_allow_html=True)
+                st.caption(f"`{row['rel']}`")
+                b = st.columns(3)
+                if b[0].button(f"Rename to “{s['suggestion']}”",
+                               key=f"sp_fix_{key}", use_container_width=True):
+                    new = row["name"].replace(s["word"], s["suggestion"], 1)
+                    res = apply_renames(
+                        lib, [{"old": row["rel"],
+                               "new": str(Path(row["rel"]).parent / new)}],
+                        dry_run=False)
+                    if res.get("renamed"):
+                        rule(lib, s["lower"], "typo", s["suggestion"])
+                        _log_activity("spelling.fix", str(lib),
+                                      f"{s['word']} → {s['suggestion']}",
+                                      res.get("tx_id") or "")
+                        st.toast("Renamed — undo it from Activity.")
+                        st.session_state.pop("spelling", None)
+                        st.rerun()
+                    else:
+                        st.warning(f"Not renamed: {res.get('skipped')}")
+                if b[1].button("It's a real word", key=f"sp_ok_{key}",
+                               use_container_width=True):
+                    rule(lib, s["lower"], CORRECT)
+                    st.toast(f"'{s['word']}' will not be raised again.")
+                    st.session_state.pop("spelling", None)
+                    st.rerun()
+                if b[2].button("Not now", key=f"sp_skip_{key}",
+                               use_container_width=True):
+                    rule(lib, s["lower"], DEFERRED)
+                    st.rerun()
+    if len(active) > len(shown):
+        st.caption(f"… and {len(active) - len(shown):,} more. The whole queue "
+                   "is ranked; this shows the top 60.")
+
+    # ---- no ruling is a one-way door ------------------------------------
+    ruled = ([(w, "a real word") for w in sorted(rulings[CORRECT])]
+             + [(w, f"a typo for '{c}'") for w, c in sorted(rulings["typo"].items())]
+             + [(w, "set aside") for w in sorted(deferred)])
+    if ruled:
+        with st.expander(f"↩ Change a ruling you already made ({len(ruled)})"):
+            q = st.text_input("Find a word", key="sp_find",
+                              placeholder="type part of the word")
+            hits = [(w, d) for w, d in ruled if not q or q.lower() in w][:30]
+            for w, desc in hits:
+                c = st.columns([3, 2])
+                c[0].markdown(f"**{w}** — currently {desc}")
+                if c[1].button("Put it back in the queue", key=f"sp_undo_{w}",
+                               use_container_width=True):
+                    clear_ruling(lib, w)
+                    st.session_state.pop("spelling", None)
+                    st.rerun()
+            if not hits:
+                st.caption("No ruling matches that.")
+
+
 def render_conformance() -> None:
     """Does the library match what the rules say it should be?
 
@@ -2224,7 +2414,12 @@ def render_conformance() -> None:
     delta = C.diff_against(rep, st.session_state.get("conformance_prev"))
 
     st.markdown("#### Your queue — not a problem")
-    a, b = st.columns(2)
+    a, b, sp = st.columns(3)
+    sp.metric("Suspected misspellings", f"{rep.counts.get(C.TYPO, 0):,}",
+              delta=delta.get(C.TYPO), delta_color="off",
+              help="A word that appears once in the library while a near "
+                   "neighbour appears many times. Review them on the "
+                   "Spelling page; nothing is ever corrected automatically.")
     a.metric("Awaiting your ruling", f"{rep.counts[C.OWNER_QUEUE]:,}",
              delta=delta.get(C.OWNER_QUEUE), delta_color="off",
              help="The code has an opinion and wants you to settle it. "
@@ -2266,6 +2461,14 @@ def render_conformance() -> None:
             f"{oos:,} document(s) are OUT OF SCOPE — .djvu, .epub and "
             "extension-less files. This check globs *.pdf, so it cannot "
             "speak for them either way.")
+    _fp = rep.globals_.get("typo_oracle")
+    if _fp:
+        st.caption(
+            f"Spelling oracle fingerprint `{_fp}` — macOS's dictionaries are "
+            "mutable (words you have taught it, plus a file the OS rewrites "
+            "as it goes), so two reports with different fingerprints were "
+            "produced by different oracles and a change in the spelling "
+            "count between them is not by itself evidence about the library.")
     st.caption(
         f"{rep.scanned:,} scanned in {rep.duration_s}s · "
         f"{rep.globals_.get('inbox_skipped', 0):,} inbox papers not judged "
@@ -5111,6 +5314,8 @@ def main() -> None:
         render_maintenance()
     elif page == "Pipeline Preview":
         render_pipeline_preview()
+    elif page == "Spelling":
+        render_spelling()
     elif page == "Conformance":
         render_conformance()
     elif page == "Stats":

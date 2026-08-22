@@ -54,8 +54,14 @@ OWNER_QUEUE = "owner_queue"
 MECHANICAL = "mechanical_backlog"
 NOT_EXAMINED = "not_examined"
 VIOLATION = "invariant_violation"
+TYPO = "suspected_typo"
 
 #: Buckets that mean the CODE is wrong, as opposed to work the owner owes.
+#
+#: TYPO is deliberately NOT here.  A misspelling is work the owner owes,
+#: exactly like OWNER_QUEUE; putting it in RED would flip is_all_clear()
+#: permanently and file the spelling backlog under "the code is wrong",
+#: which is the category error this module exists to prevent.
 RED = (NOT_EXAMINED, VIOLATION)
 
 REPORT_DIRNAME = ".mathpdf-config/conformance"
@@ -166,11 +172,22 @@ def _change_confined_to_maths(old_title: str, new_title: str) -> bool:
 # ---------------------------------------------------------------------------
 # Per-file classification
 # ---------------------------------------------------------------------------
-def examine(name: str, library_root: Path) -> tuple[str, str, str]:
+def examine(name: str, library_root: Path,
+            corpus=None) -> tuple[str, str, str]:
     """Classify ONE filename.  Returns ``(bucket, reason, detail)``.
 
-    Pure and side-effect free: it takes the name, not the file, so it is
-    trivially testable and cannot touch the library.
+    It takes the NAME, not the file, so it is trivially testable and
+    never renames anything.  It is not, however, side-effect free: the
+    caser it calls regenerates ``.mathpdf-config/title_corpus_stats.json``
+    under ``library_root`` when that file is stale.  The docstring used
+    to claim purity; it was wrong, and a probe writing into a throwaway
+    library root is how that surfaced.
+
+    ``corpus`` is the typo detector's document-frequency table, which
+    cannot be derived from one filename.  :func:`run` builds it once for
+    the whole sweep and passes it here.  Omitting it SKIPS the spelling
+    check rather than guessing — a single-name caller has no corpus and
+    would otherwise get a fabricated verdict from a corpus of one.
     """
     from processing.filename_normalizer import normalize_filename
     from processing.move_normalizer import normalize_full_name
@@ -228,6 +245,33 @@ def examine(name: str, library_root: Path) -> tuple[str, str, str]:
         _mp = []
     if _mp:
         return NOT_EXAMINED, "maths-refused", "; ".join(_mp[:2])
+
+    # ---- SPELLING --------------------------------------------------------
+    # Placed here on purpose: after the invariants and the two gates (a
+    # bug, and "there is no title to read", both outrank a spelling
+    # opinion) but BEFORE the fixpoint return and the classifier.
+    #
+    # Measured on the real library, all 143 files carrying a suspected
+    # typo are currently CANONICAL — the bucket the owner reads as
+    # settled.  A check placed on any later branch would never see them.
+    # And where a file has both a typo and a proposed rename, the typo
+    # wins: the rename proposed for the Mortini line was
+    # "Amererican mathematical Monthly", i.e. the casing engine building
+    # on a misspelling.  Fix the spelling first, then re-examine.
+    if corpus is not None:
+        try:
+            from maintenance.typos import Verdict, examine_title
+            _typo = examine_title(original, corpus)
+        except Exception as exc:                    # a genuine bug
+            return VIOLATION, "typo-check-raised", f"{type(exc).__name__}: {exc}"
+        if _typo.verdict is Verdict.UNKNOWN:
+            # "I could not look" is NOT_EXAMINED, never CANONICAL.
+            return (NOT_EXAMINED, "typo-oracle-unavailable",
+                    _typo.unknown_reason)
+        if _typo.verdict is Verdict.TYPO:
+            return (TYPO, "suspected-typo",
+                    "; ".join(f"{s.word} → {s.suggestion}"
+                              for s in _typo.suspects[:4]))
 
     if not changed or proposed == original:
         # The NAME is a fixpoint — but the caser may have reached it by
@@ -449,7 +493,8 @@ def run(
     t0 = time.time()
     rep = ConformanceReport()
     counts: dict = {b: 0 for b in
-                    (CANONICAL, OWNER_QUEUE, MECHANICAL, NOT_EXAMINED, VIOLATION)}
+                    (CANONICAL, OWNER_QUEUE, MECHANICAL, TYPO,
+                     NOT_EXAMINED, VIOLATION)}
     reasons: dict = {}
     findings: list = []
 
@@ -463,8 +508,30 @@ def run(
         pdfs.append(pdf)
 
     total = len(pdfs) if limit is None else min(limit, len(pdfs))
+
+    # One corpus for the whole sweep.  Per-file construction would be
+    # O(n^2) over 27,000 names; and a corpus built from ONE name has no
+    # frequent words at all, so it would silently declare every file
+    # clean -- the failure this detector was written to end.
+    corpus = None
+    oracle_fp = ""
+    try:
+        from maintenance.typos import (build_corpus_stats, oracle_fingerprint,
+                                       self_check)
+        self_check()          # raises if the dictionaries are unusable
+        from processing.spelling_vocab import accepted_words
+        corpus = build_corpus_stats((p.name for p in pdfs),
+                                    ruled_correct=accepted_words(library_root))
+        oracle_fp = oracle_fingerprint()
+    except Exception as exc:
+        # Record WHY rather than quietly sweeping without a spell check.
+        reasons[f"{NOT_EXAMINED}:typo-oracle-unavailable"] = 1
+        findings.append(Finding("(library)", NOT_EXAMINED,
+                                "typo-oracle-unavailable",
+                                f"{type(exc).__name__}: {exc}"))
+
     for i, pdf in enumerate(pdfs[:total]):
-        bucket, reason, detail = examine(pdf.name, library_root)
+        bucket, reason, detail = examine(pdf.name, library_root, corpus)
         counts[bucket] += 1
         if bucket != CANONICAL:
             key = f"{bucket}:{reason}"
@@ -495,7 +562,8 @@ def run(
     rep.counts = counts
     rep.reasons = dict(sorted(reasons.items(), key=lambda kv: -kv[1]))
     rep.findings = findings
-    rep.globals_ = {"inbox_skipped": skipped,
+    rep.globals_ = {"typo_oracle": oracle_fp,
+                    "inbox_skipped": skipped,
                     "library_wide_findings": library_wide,
                     "documents_out_of_scope": _out_of_scope(library_root),
                     **sc_stats}
