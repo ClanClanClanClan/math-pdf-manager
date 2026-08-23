@@ -285,6 +285,26 @@ def bulk_sort(
     if limit is not None:
         candidates = candidates[:limit]
 
+    # Resolve every arXiv id in ONE pass of batched requests, before the
+    # per-paper loop touches the network. The API takes 25 ids per call:
+    # measured, the inbox costs 205 minutes one id at a time and 7.3
+    # minutes batched, and the lookup gate was just widened so that far
+    # more papers reach it. Failure is not fatal — each paper falls back
+    # to its own lookup, and offline the run simply proceeds without
+    # arXiv.
+    try:
+        import re as _re
+        from processing.ingest import prefetch_arxiv
+        _pat = _re.compile(
+            r"(\d{4}\.\d{4,5}(?:v\d+)?|[a-z-]+/\d{7}(?:v\d+)?)")
+        _ids = [m.group(1) for (pdf, _s) in candidates
+                if (m := _pat.search(pdf.stem))]
+        if _ids:
+            logger.info("arXiv prefetch: %d of %d ids resolved",
+                        prefetch_arxiv(_ids), len(_ids))
+    except Exception as exc:            # never block a run on the network
+        logger.warning("arXiv prefetch skipped: %s", exc)
+
     if verbose:
         by_sub: dict = {}
         for _, s in candidates:

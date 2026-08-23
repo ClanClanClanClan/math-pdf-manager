@@ -103,6 +103,104 @@ _LATEX_MULTILETTER_RE = re.compile(
 )
 
 
+#: Resolved arXiv records, keyed by version-stripped id.
+#:
+#: The API takes 25 ids per request. One-at-a-time the whole inbox costs
+#: 205 minutes (measured: 7.0 s per single-id call, 1,758 ids); batched
+#: by 25 it costs 7.3 minutes (6.2 s per 25-id call). Inverting the
+#: lookup gate without this would have made every batch run unusable and
+#: handed back the cost objection the inversion was meant to refute.
+_ARXIV_CACHE: dict = {}
+ARXIV_BATCH = 25
+
+
+def _bare_arxiv_id(arxiv_id: str) -> str:
+    return re.sub(r"v\d+$", "", (arxiv_id or "").strip())
+
+
+def _parse_arxiv_entry(entry, ns) -> dict:
+    """One <entry> -> the fields we keep. Pure; no network."""
+    out: dict = {}
+    title_el = entry.find("atom:title", ns)
+    if title_el is not None and title_el.text:
+        out["title"] = unicodedata.normalize(
+            "NFC", re.sub(r"\s+", " ", title_el.text.strip()))
+    authors = []
+    for author_el in entry.findall("atom:author", ns):
+        name_el = author_el.find("atom:name", ns)
+        if name_el is not None and name_el.text:
+            authors.append(name_el.text.strip())
+    if authors:
+        out["authors"] = authors
+    for link in entry.findall("atom:link", ns):
+        if link.get("title") == "doi":
+            out["doi"] = link.get("href", "").replace(
+                "http://dx.doi.org/", "")
+    for cat in entry.findall(
+            "{http://arxiv.org/schemas/atom}primary_category"):
+        out["arxiv_category"] = cat.get("term", "")
+    return out
+
+
+def prefetch_arxiv(arxiv_ids) -> int:
+    """Resolve many ids in batches of 25 and cache them. Returns hits.
+
+    Call this ONCE before a bulk run. Every later per-paper lookup then
+    reads the cache instead of the network.
+    """
+    import xml.etree.ElementTree as ET
+
+    import requests
+
+    ns = {"atom": "http://www.w3.org/2005/Atom"}
+    wanted = [i for i in dict.fromkeys(_bare_arxiv_id(a) for a in arxiv_ids)
+              if i and i not in _ARXIV_CACHE]
+    found = 0
+    for start in range(0, len(wanted), ARXIV_BATCH):
+        chunk = wanted[start:start + ARXIV_BATCH]
+        try:
+            resp = requests.get(
+                "https://export.arxiv.org/api/query"
+                f"?id_list={','.join(chunk)}&max_results={len(chunk)}",
+                timeout=30,
+            )
+            if resp.status_code != 200:
+                continue
+            root = ET.fromstring(resp.content)
+            entries = root.findall("atom:entry", ns)
+            # arXiv returns entries in the order requested.
+            for wanted_id, entry in zip(chunk, entries):
+                rec = _parse_arxiv_entry(entry, ns)
+                if rec.get("title"):
+                    _ARXIV_CACHE[wanted_id] = rec
+                    found += 1
+        except Exception as exc:      # never let a lookup stop a batch
+            logger.warning("arXiv batch lookup failed for %s…: %s",
+                           chunk[0], exc)
+    return found
+
+
+def lookup_arxiv(arxiv_id: str) -> dict:
+    """Cached single lookup. Falls back to one request on a cache miss."""
+    import xml.etree.ElementTree as ET
+
+    import requests
+
+    key = _bare_arxiv_id(arxiv_id)
+    if key in _ARXIV_CACHE:
+        return _ARXIV_CACHE[key]
+    ns = {"atom": "http://www.w3.org/2005/Atom"}
+    resp = requests.get(
+        f"https://export.arxiv.org/api/query?id_list={key}", timeout=10)
+    if resp.status_code != 200:
+        return {}
+    entry = ET.fromstring(resp.content).find("atom:entry", ns)
+    rec = _parse_arxiv_entry(entry, ns) if entry is not None else {}
+    if rec.get("title"):
+        _ARXIV_CACHE[key] = rec
+    return rec
+
+
 def _strip_publisher_boilerplate(title: str) -> str:
     """Drop the journal/volume/publisher tail publishers put in ``/Title``.
 
@@ -158,6 +256,102 @@ def _decode_entities(text: str) -> str:
     out = _html.unescape(text)
     # One more round: some producers double-escape ("&amp;#x2019;").
     return _html.unescape(out) if "&" in out else out
+
+
+#: Letters that carry no combining mark, so NFKD leaves them alone and a
+#: naive ASCII encode DELETES them. Obłój becomes "Obj" and Øksendal
+#: becomes "ksendal" — which is how a corroboration check comes to report
+#: that an author is missing from his own paper.
+_FOLD_EXTRA = str.maketrans({
+    "ł": "l", "Ł": "L", "ø": "o", "Ø": "O", "đ": "d", "Đ": "D",
+    "ð": "d", "Ð": "D", "þ": "th", "Þ": "Th", "ı": "i", "ȷ": "j",
+    "ß": "ss", "æ": "ae", "Æ": "Ae", "œ": "oe", "Œ": "Oe",
+})
+
+
+#: DOI prefixes that belong to funders, repositories and dataset
+#: registrants rather than to the paper. The extractor takes the FIRST
+#: "10.xxxx/" it sees in three pages, and 9 of 219 DOIs found that way
+#: (4.1%) are one of these — a Zenodo deposit or a grant acknowledgement,
+#: not the article.
+_NON_ARTICLE_DOI_PREFIXES = ("10.5281/", "10.54499/", "10.69777/")
+
+
+def _is_bare_identifier(stem: str) -> bool:
+    """Is this filename an identifier rather than someone's title?
+
+    Counts word-like tokens: "2105.10623v1", "10.3934_puqr.2025024",
+    "1-s2.0-S0022247X26001174-main" and "s00245-025-10319-6" have at most
+    one, while a real title has many. Used to decide whether an embedded
+    /Title deserves the benefit of the doubt over a registry lookup — if
+    nobody ever named this file, nobody vouched for its metadata either.
+    """
+    return len(re.findall(r"[^\W\d_]{3,}", stem)) < 3
+
+
+#: Accents that arrive as FREE-STANDING characters rather than combining
+#: marks, and sit BEFORE the letter they belong to.
+#:
+#: This is how a LaTeX-produced PDF's text layer usually comes out:
+#: "Röckner" extracts as "R¨ockner" and "Grüne" as "Gr¨une", using
+#: U+00A8 DIAERESIS, a spacing modifier. NFKD does nothing with it —
+#: there is no combining mark to strip — so squeezing punctuation to
+#: spaces split the surname in two and the author appeared to be absent
+#: from his own paper. Measured before this: 10 of 12 corroboration
+#: flags over a 245-paper sample were accented names, all false.
+_SPACING_ACCENTS = "¨´`ˆ˜¯˘˙˚˝ˇ¸˛^~"
+
+
+def _fold(text: str) -> str:
+    """Accent- and case-insensitive form for comparing two spellings."""
+    text = text.translate(_FOLD_EXTRA)
+    # Delete free-standing accents rather than letting them become word
+    # boundaries below.
+    text = text.translate({ord(c): None for c in _SPACING_ACCENTS})
+    text = unicodedata.normalize("NFKD", text)
+    text = "".join(c for c in text if not unicodedata.combining(c))
+    return re.sub(r"[^a-z0-9]+", " ", text.lower()).strip()
+
+
+def corroborate(title: str, authors: list, fulltext: str) -> list:
+    """Which of these claims does the PAPER ITSELF not support?
+
+    The text is already extracted and sitting in
+    ``metadata["fulltext_sample"]``; nothing was ever asked of it. That
+    is how "Scannable Document" — a scanner's default — and
+    "p02-feige.dvi" became titles, and how 2009.05157 came to be filed
+    as ``Schnur, R. - Random matrices`` when its own first page reads
+    "Saarland University … Prof. Dr. Roland Speicher".
+
+    Returns human-readable misgivings; empty means the front matter
+    backs the claim. Deliberately conservative: an empty or tiny sample
+    yields NO complaints rather than a complaint about everything, since
+    a scanned paper has no text layer and its silence is not evidence.
+    """
+    if not fulltext or len(fulltext) < 200:
+        return []                      # nothing to corroborate against
+    hay = _fold(fulltext)
+    out = []
+
+    words = [w for w in _fold(title).split() if len(w) > 3]
+    if words:
+        present = sum(1 for w in words if w in hay)
+        # Half is a deliberately low bar: publisher front matter reorders
+        # and truncates titles, and the aim is to catch a title that is
+        # not the paper's at all, not to police wording.
+        if present * 2 < len(words):
+            out.append(
+                f"the title is mostly absent from the paper's own first "
+                f"pages ({present} of {len(words)} content words found)")
+
+    for author in authors or []:
+        surname = _fold(str(author).split(",")[0])
+        if len(surname) < 3:
+            continue
+        if surname not in hay:
+            out.append(f"the author surname {author!r} does not appear in "
+                       f"the paper's own first pages")
+    return out
 
 
 def _unlatex(text: str) -> str:
@@ -259,11 +453,16 @@ def extract_metadata_from_pdf(pdf_path: Path) -> dict:
         if title and len(title) > 5:
             title = _strip_publisher_boilerplate(title)
             metadata["title"] = unicodedata.normalize("NFC", _unlatex(_decode_entities(title)))
+            # Provenance. It was recorded on the four API/LLM branches and
+            # nowhere else, and read at exactly one place — so not one
+            # sidecar in the library says where its name came from.
+            metadata["title_source"] = "embedded"
 
         # Extract author from PDF metadata (same LaTeX cleanup applies)
         author_str = (pdf_meta.get("author") or "").strip()
         if author_str:
             metadata["authors_raw"] = _unlatex(_decode_entities(author_str))
+            metadata["author_source"] = "embedded"
 
         # Embedded PDF keywords (publishers often set these) -- a strong
         # topic-classification signal alongside the title.
@@ -330,53 +529,50 @@ def extract_metadata_from_pdf(pdf_path: Path) -> dict:
     except Exception as exc:
         logger.debug("filename-id augmentation failed for %s: %s", pdf_path, exc)
 
-    # Try ArXiv API lookup if we have an arXiv ID
-    if metadata.get("arxiv_id") and not metadata["title"]:
+    # Try the arXiv API when we have an id AND either no title at all, or a
+    # filename that is plainly not a human's title.
+    #
+    # The gate used to be "and not metadata['title']", which sounds
+    # cautious and is the opposite. Measured on the inbox: 1,758 of 2,073
+    # papers carry an arXiv id in the filename, and for 1,688 of them —
+    # 96% — the lookup is SKIPPED because the PDF happens to carry an
+    # embedded /Title. That field is unverified and frequently wrong:
+    # 2009.05157 embeds "Random matrices" by "Ricardo Schnur", while
+    # arXiv (and the paper's own first page) say Lecture Notes on Random
+    # Matrices by Roland Speicher. The registry was standing right there.
+    #
+    # Cost is not the objection either: the API takes 25 ids per call, so
+    # the whole inbox is about 70 requests.
+    if metadata.get("arxiv_id") and (
+            not metadata["title"] or _is_bare_identifier(pdf_path.stem)):
         try:
-            import xml.etree.ElementTree as ET
+            import requests   # noqa: F401  (for the handler below)
 
-            import requests
-
-            arxiv_id = re.sub(r"v\d+$", "", metadata["arxiv_id"])  # strip version
-            resp = requests.get(
-                f"https://export.arxiv.org/api/query?id_list={arxiv_id}",
-                timeout=10,
-            )
-            if resp.status_code == 200:
-                ns = {"atom": "http://www.w3.org/2005/Atom"}
-                root = ET.fromstring(resp.content)
-                entry = root.find("atom:entry", ns)
-                if entry is not None:
-                    title_el = entry.find("atom:title", ns)
-                    if title_el is not None and title_el.text:
-                        metadata["title"] = unicodedata.normalize(
-                            "NFC", re.sub(r"\s+", " ", title_el.text.strip())
-                        )
-                        metadata["title_source"] = "arxiv"
-                    # Authors
-                    arxiv_authors = []
-                    for author_el in entry.findall("atom:author", ns):
-                        name_el = author_el.find("atom:name", ns)
-                        if name_el is not None and name_el.text:
-                            arxiv_authors.append(name_el.text.strip())
-                    if arxiv_authors:
-                        metadata["authors"] = arxiv_authors
-
-                    # Check if ArXiv links to a DOI (paper is published!)
-                    for link in entry.findall("atom:link", ns):
-                        if link.get("title") == "doi":
-                            metadata["doi"] = link.get("href", "").replace("http://dx.doi.org/", "")
-
-                    # Categories
-                    for cat in entry.findall("{http://arxiv.org/schemas/atom}primary_category"):
-                        metadata["arxiv_category"] = cat.get("term", "")
+            rec = lookup_arxiv(metadata["arxiv_id"])
+            if rec.get("title"):
+                metadata["title"] = rec["title"]
+                metadata["title_source"] = "arxiv"
+            if rec.get("authors"):
+                metadata["authors"] = rec["authors"]
+                metadata["author_source"] = "arxiv"
+            if rec.get("doi"):
+                metadata["doi"] = rec["doi"]
+            if rec.get("arxiv_category"):
+                metadata["arxiv_category"] = rec["arxiv_category"]
         except requests.exceptions.RequestException as exc:
             logger.warning("ArXiv API request failed for %s: %s", metadata["arxiv_id"], exc)
         except Exception as exc:
             logger.warning("ArXiv lookup failed for %s: %s", metadata["arxiv_id"], exc)
 
-    # Try Crossref lookup if we have a DOI
-    if metadata.get("doi") and not metadata["title"]:
+    # Crossref, same inversion — and refusing a DOI that is not the
+    # article's. arXiv runs first and sets the title when it succeeds, so
+    # the registry precedence is arXiv before Crossref for the 24 papers
+    # that carry both.
+    _doi = metadata.get("doi") or ""
+    if _doi.startswith(_NON_ARTICLE_DOI_PREFIXES):
+        metadata["doi_rejected"] = _doi
+        _doi = ""
+    if _doi and (not metadata["title"] or _is_bare_identifier(pdf_path.stem)):
         try:
             import requests
 
@@ -1120,7 +1316,22 @@ def ingest_paper(
     # owner naming a file himself IS the identification.
     _state, _why = identification_state(
         canonical_name, pdf_path.stem, result.get("title_from_metadata", True))
+
+    # Ask the paper. The first 4,000 characters were extracted at the top
+    # of this function and then used for nothing but the LLM prompt; a
+    # title and an author list that appear nowhere in a paper's own front
+    # matter are worth a second look, and the check costs microseconds
+    # against text already in memory.
+    if _state == IDENTIFIED:
+        _doubts = corroborate(metadata.get("title", ""),
+                              [a.family for a in (cmo.authors if cmo else [])],
+                              metadata.get("fulltext_sample", ""))
+        if _doubts:
+            _state, _why = NEEDS_REVIEW, "; ".join(_doubts[:3])
+
     result["identification_state"] = _state
+    result["title_source"] = metadata.get("title_source", "filename")
+    result["author_source"] = metadata.get("author_source", "")
     if _state != IDENTIFIED and not (kwargs.get("force") or canonical_override):
         result["success"] = False
         result["error"] = f"{_why} — not filed, left where it is"
