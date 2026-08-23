@@ -290,8 +290,20 @@ def _get_fs_name_max() -> int:
 def _clean_for_fs(text: str) -> str:
     """Remove filesystem-unsafe characters and normalise spaces."""
     text = re.sub(r"[\u0000-\u001f]", "", text)  # control chars
-    text = text.replace("/", "–")   # slash → en-dash
-    text = text.replace("\\", "–")  # backslash → en-dash
+    # "/" is the ONLY character macOS forbids in a filename, and it takes a
+    # HYPHEN, not an en dash.  The house convention reserves the en dash for
+    # two co-equal entities (Hamilton–Jacobi) and uses a hyphen for one word
+    # built from parts — which is exactly what "on/off" and "super/sub" are.
+    text = text.replace("/", "-")
+    # The backslash is NOT replaced, because it is not illegal: verified on
+    # this filesystem, "\\", ":", "|" and "?" are all legal in a macOS
+    # filename.  Rewriting it to an en dash had no safety justification and
+    # did real damage — 89 of the 1,873 inbox titles carry LaTeX residue,
+    # and every one of them was getting a fabricated en dash
+    # ("$-\\infty$" -> "$-–infty$", "$\\mathbb{L}^p$" -> "$–mathbb{L}^p$").
+    # Residue that survives _unlatex is left visible so the conformance and
+    # spelling checks can flag it, rather than disguised as punctuation the
+    # library treats as meaningful.
     # Normalise all Unicode space variants to regular space
     text = re.sub(r"[\u00a0\u2000-\u200a\u202f\u2009]", " ", text)
     text = re.sub(r"\s+", " ", text).strip()

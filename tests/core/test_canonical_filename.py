@@ -251,9 +251,32 @@ class TestFilesystemSafety:
         fn = _fn("Input/output theory", _authors(("Test", "A")))
         assert "/" not in fn
 
-    def test_backslash_replaced(self):
+    def test_backslash_is_NOT_replaced_because_it_is_legal(self):
+        r"""This test used to assert the opposite, under a heading that
+        says "filesystem safety". The premise is false: on macOS only
+        "/" is forbidden in a filename — "\", ":", "|" and "?" are all
+        legal, and there is a test for that below.
+
+        The rewrite was to an EN DASH, which is the one mark the library
+        reserves for two co-equal entities, so it did real damage: 89 of
+        the 1,873 inbox titles carry LaTeX residue and every one was
+        getting a fabricated en dash ("$-\infty$" -> "$-–infty$").
+
+        Residue that survives _unlatex is now left visible, so the
+        conformance and spelling checks can see it, instead of being
+        disguised as punctuation the library treats as meaningful.
+        """
         fn = _fn("Path\\dependent", _authors(("Test", "A")))
-        assert "\\" not in fn
+        assert "\\" in fn
+        assert "–" not in fn, "an en dash was fabricated from a backslash"
+
+    def test_the_forbidden_character_really_is_only_the_slash(self, tmp_path):
+        """The premise the test above rests on, checked rather than
+        assumed."""
+        for ch in ("\\", ":", "|", "?", "*"):
+            p = tmp_path / f"a{ch}b.pdf"
+            p.write_bytes(b"%PDF-")
+            assert p.exists(), f"{ch!r} turned out to be illegal after all"
 
     def test_colon_replaced(self):
         fn = _fn("Title: subtitle", _authors(("Test", "A")))

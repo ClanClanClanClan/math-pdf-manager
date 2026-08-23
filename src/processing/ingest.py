@@ -87,8 +87,16 @@ _LATEX_SPECIAL_CHARS = {
 #   \^o     (one-char accent, no braces)
 #   \^{o}   (one-char accent, with braces)
 #   \c{c}   (multi-letter accent name in braces)
+# "\^o" and "\^{o}".  The trailing "\}?" makes the closing brace optional.
 _LATEX_ACCENT_RE = re.compile(
     r"\\([\^'`\"~.=])\{?([a-zA-Z])\}?"
+)
+# "{\^o}" and "{\^{o}}" — the brace WRAPS the command rather than the
+# letter.  Publishers emit this form and the pattern above matched only
+# its tail, leaving an orphan "{": "It{\^o}" came out as "It{ô".  Tried
+# first, so the wrapping braces are consumed as a pair.
+_LATEX_WRAPPED_ACCENT_RE = re.compile(
+    r"\{\\([\^'`\"~.=])\{?([a-zA-Z])\}?\}"
 )
 _LATEX_MULTILETTER_RE = re.compile(
     r"\\([cvurkH])\{([a-zA-Z])\}"
@@ -136,6 +144,22 @@ def _strip_publisher_boilerplate(title: str) -> str:
     return title
 
 
+def _decode_entities(text: str) -> str:
+    """Turn "&#x2019;" into "'" and "&amp;" into "&".
+
+    Publisher metadata is often HTML-escaped, and the escape survived
+    every stage: two inbox titles carry a literal "&#x2019;" where an
+    apostrophe belongs.  Applied before the LaTeX pass because an entity
+    can hide a backslash or a brace from it.
+    """
+    if not text or "&" not in text:
+        return text
+    import html as _html
+    out = _html.unescape(text)
+    # One more round: some producers double-escape ("&amp;#x2019;").
+    return _html.unescape(out) if "&" in out else out
+
+
 def _unlatex(text: str) -> str:
     """Convert common LaTeX commands to their Unicode equivalents.
 
@@ -162,6 +186,7 @@ def _unlatex(text: str) -> str:
             return m.group(0)
         return unicodedata.normalize("NFC", m.group(2) + combining)
 
+    text = _LATEX_WRAPPED_ACCENT_RE.sub(_accent_replace, text)
     text = _LATEX_ACCENT_RE.sub(_accent_replace, text)
     text = _LATEX_MULTILETTER_RE.sub(_multiletter_replace, text)
 
@@ -233,18 +258,18 @@ def extract_metadata_from_pdf(pdf_path: Path) -> dict:
         title = (pdf_meta.get("title") or "").strip()
         if title and len(title) > 5:
             title = _strip_publisher_boilerplate(title)
-            metadata["title"] = unicodedata.normalize("NFC", _unlatex(title))
+            metadata["title"] = unicodedata.normalize("NFC", _unlatex(_decode_entities(title)))
 
         # Extract author from PDF metadata (same LaTeX cleanup applies)
         author_str = (pdf_meta.get("author") or "").strip()
         if author_str:
-            metadata["authors_raw"] = _unlatex(author_str)
+            metadata["authors_raw"] = _unlatex(_decode_entities(author_str))
 
         # Embedded PDF keywords (publishers often set these) -- a strong
         # topic-classification signal alongside the title.
         kw = (pdf_meta.get("keywords") or "").strip()
         if kw:
-            metadata["keywords"] = _unlatex(kw)
+            metadata["keywords"] = _unlatex(_decode_entities(kw))
 
         # Check for DOI in first few pages
         text = ""
