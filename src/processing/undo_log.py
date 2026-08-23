@@ -73,14 +73,30 @@ def _restore(dst: Path, src: Path, verb: str) -> dict:
     original name.  A guard that has to be remembered twice is a guard
     that will be forgotten once.
     """
-    if not dst.exists():
-        return {"action": f"SKIP: file gone: {dst}"}
-    if src.exists() and not _is_same_file(src, dst):
-        return {"action": f"CANNOT UNDO: {src} is occupied by a different "
-                          f"file; refusing to overwrite it"}
+    blocker = restore_blocker(dst, src)
+    if blocker:
+        return {"action": blocker, "ok": False}
     src.parent.mkdir(parents=True, exist_ok=True)
     shutil.move(str(dst), str(src))
-    return {"action": f"{verb}: {dst.name} → {src.name}"}
+    return {"action": f"{verb}: {dst.name} → {src.name}", "ok": True}
+
+
+def restore_blocker(dst: Path, src: Path) -> str:
+    """Why putting ``dst`` back at ``src`` would fail, or "" if it would work.
+
+    Split out of _restore so the DRY RUN can ask the same question.  It
+    could not before: the dry-run branches simply printed "WOULD MOVE
+    BACK" for every operation without touching the filesystem, so the
+    preview of the oldest transaction showed 15,588 clean rows while the
+    real thing fails on 10 of them.  A preview that cannot fail is not a
+    preview.
+    """
+    if not dst.exists():
+        return f"SKIP: file gone: {dst}"
+    if src.exists() and not _is_same_file(src, dst):
+        return (f"CANNOT UNDO: {src} is occupied by a different file; "
+                f"refusing to overwrite it")
+    return ""
 
 
 class UndoLog:
@@ -355,23 +371,25 @@ class UndoLog:
                 changes = op.get("changes", {})
                 if dry_run:
                     results.append({
-                        "action": f"WOULD RESTORE sidecar fields {list(changes)} on {pdf.name}"
+                        "action": f"WOULD RESTORE sidecar fields {list(changes)} on {pdf.name}",
+                        "ok": True,
                     })
                     continue
                 try:
                     from processing.identity import PaperIdentity
                     ident = PaperIdentity.load(pdf)
                     if ident.is_new():
-                        results.append({"action": f"SKIP: no sidecar to restore: {pdf}"})
+                        results.append({"action": f"SKIP: no sidecar to restore: {pdf}", "ok": False})
                         continue
                     for field, (old_val, _new_val) in changes.items():
                         setattr(ident, field, old_val)
                     ident.save(pdf, recompute_hash=False)
                     results.append({
-                        "action": f"RESTORED sidecar fields {list(changes)} on {pdf.name}"
+                        "action": f"RESTORED sidecar fields {list(changes)} on {pdf.name}",
+                        "ok": True,
                     })
                 except Exception as exc:  # pragma: no cover -- defensive
-                    results.append({"action": f"FAILED to restore sidecar on {pdf}: {exc}"})
+                    results.append({"action": f"FAILED to restore sidecar on {pdf}: {exc}", "ok": False})
                 continue
 
             src = Path(op["source"])
@@ -382,22 +400,30 @@ class UndoLog:
                 if str(dst) in SPECIAL_DEVICES:
                     results.append({
                         "action": f"CANNOT UNDO: file was deleted (recorded as move to {dst}); "
-                                  f"source path {src} is unrecoverable from this log"
+                                  f"source path {src} is unrecoverable from this log",
+                        "ok": False,
                     })
                     continue
                 if dry_run:
-                    results.append({"action": f"WOULD MOVE BACK: {dst.name} → {src}"})
+                    blocker = restore_blocker(dst, src)
+                    results.append(
+                        {"action": blocker or f"WOULD MOVE BACK: {dst.name} → {src}",
+                         "ok": not blocker})
                 else:
                     results.append(_restore(dst, src, "MOVED BACK"))
 
             elif op["type"] == "copy":
                 # Undo copy: remove the copy
                 if dry_run:
-                    results.append({"action": f"WOULD DELETE COPY: {dst}"})
+                    gone = not dst.exists()
+                    results.append(
+                        {"action": (f"SKIP: copy already gone: {dst}" if gone
+                                    else f"WOULD DELETE COPY: {dst}"),
+                         "ok": not gone})
                 else:
                     if dst.exists():
                         dst.unlink()
-                        results.append({"action": f"DELETED COPY: {dst}"})
+                        results.append({"action": f"DELETED COPY: {dst}", "ok": True})
                         # When the undone copy was a topic-router
                         # hardlink, the canonical's sidecar still
                         # advertises the now-dead path in
@@ -429,12 +455,16 @@ class UndoLog:
                                 "from %s sidecar: %s", dst, src, exc,
                             )
                     else:
-                        results.append({"action": f"SKIP: copy already gone: {dst}"})
+                        results.append({"action": f"SKIP: copy already gone: {dst}", "ok": False})
 
             elif op["type"] == "rename":
                 # Undo rename: rename back
                 if dry_run:
-                    results.append({"action": f"WOULD RENAME BACK: {dst.name} → {src.name}"})
+                    blocker = restore_blocker(dst, src)
+                    results.append(
+                        {"action": blocker or
+                         f"WOULD RENAME BACK: {dst.name} → {src.name}",
+                         "ok": not blocker})
                 else:
                     results.append(_restore(dst, src, "RENAMED BACK"))
 

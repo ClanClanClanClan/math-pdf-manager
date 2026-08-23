@@ -3067,8 +3067,31 @@ def _undo_transaction(tx_id: str) -> bool:
     log = UndoLog()
     try:
         results = log.undo_transaction(tx_id, dry_run=False)
-        st.toast(f"Undid {len(results)} ops in {tx_id}", icon="↶")
-        _log_activity("undo", tx_id, "", tx_id)
+        # Count what actually came back, not how many rows were produced.
+        # results includes SKIP and CANNOT UNDO entries, so a completely
+        # REFUSED undo used to toast "Undid 8514 ops" — the most dangerous
+        # sentence this app can show, because the owner then believes the
+        # library is in a state it is not in.
+        done = sum(1 for r in results if r.get("ok"))
+        refused = [r for r in results if not r.get("ok")]
+        if done:
+            st.toast(f"Undid {done} of {len(results)} ops in {tx_id}", icon="↶")
+        if refused:
+            st.warning(
+                f"{len(refused)} of {len(results)} operations could NOT be "
+                f"undone and were left alone. The transaction stays in the "
+                f"list so you can retry after resolving them.")
+            with st.expander(f"What was refused ({len(refused)})"):
+                for r in refused[:200]:
+                    st.write(r["action"])
+                if len(refused) > 200:
+                    st.caption(f"… and {len(refused) - 200:,} more")
+        if not done:
+            st.error(
+                "Nothing was undone. The files are exactly where they were "
+                "before this click.")
+            return False
+        _log_activity("undo", tx_id, f"{done}/{len(results)} ops", tx_id)
         _attention_count_cached.clear()
         return True
     except Exception as exc:
