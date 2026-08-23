@@ -50,39 +50,36 @@ DEFAULT_TOPIC_THRESHOLD = 2.0
 #                                      flagged in the Attention Queue)
 #   confidence < REVIEW_CONFIDENCE  -> standard folder, no suggestion
 #
-# AUTO_CONFIDENCE stays 0.75, and the comment that used to justify it was
-# wrong in a way worth recording, because the correction is also wrong if
-# applied here.
+# AUTO_CONFIDENCE stays 0.75 — one primary keyword is enough to file a
+# paper into a topic folder — because the misfilings it was blamed for
+# had a different cause, now fixed.
 #
-# The old text claimed "0.75 holds 99.0% precision at 87% recall" and that
-# "0.80 costs 13% recall for +0.3% precision".  Those numbers came from
-# classifying the 3,277 papers ALREADY hand-filed in a topic folder — the
-# population no threshold ever touches.  Re-measured on papers with no
-# current topic, the enriched classifier gives 66.7% precision at 0.75 and
-# 77.2% at 0.80.  So the old justification is retired.
+# The arithmetic: a primary keyword is worth 3.0, _FULL_STRENGTH_SCORE is
+# 4.0, and confidence is strength x dominance, so an uncontested single
+# hit gives exactly 0.75 and two hits give 1.00.  Nothing lies between,
+# which is why the cockpit shows a bimodal 75% / 100%.  Raising the bar
+# to 0.80 therefore means "require two keywords", and measured over the
+# 2,073 inbox papers it would move 102 of the 315 auto-filings into the
+# review queue.
 #
-# But the audit's conclusion — "raise it to 0.80" — targets the wrong code
-# path, and that is the whole reason this comment is long.  Those figures
-# were measured through pipeline_preview.preview_topic_filing, the COCKPIT
-# bulk-apply path, and that module never reads this constant (grep: the
-# only readers are :127, :186 below).  This constant gates one thing: the
-# SILENT auto-file at ingest.
+# I raised it, then took it back out.  The primaries really are
+# hyper-specific — "\bmean.field BSDE\b", "\bprincipal.agent\b" — and
+# such a term essentially never appears off-topic, so a single hit is
+# good evidence and 102 extra review items buys little.  The documented
+# failures ("Curve following in illiquid markets" -> Numerical methods, a
+# neural-network HJB paper -> 07e) came instead from co-occurrence
+# patterns whose ".*" was allowed to roam 4,000 characters of body text.
+# That is fixed at its source in topic_classifier._MAX_WILDCARD_GAP, and
+# it is a better trade: auto-filings fall 213 -> 188 with 07e down 38 ->
+# 15, while 07a RISES 123 -> 127 because the spurious matches had been
+# contesting the correct answer.
 #
-# On that path the effect is not a trade, it is a shutoff.  _confidence is
-# strength x dominance with _FULL_STRENGTH_SCORE = 4.0, and an unambiguous
-# paper classified on title plus a few thousand characters scores 3.0 —
-# uncontested but not full strength — hence exactly 0.75.  Measured:
-# "Reflected BSDEs and optimal stopping", "Team-optimal closed-loop
-# Stackelberg strategies" and "Backward stochastic differential equations
-# and their applications" all score 0.75.  Raising the bar to 0.80 stops
-# essentially every arrival from auto-filing.
-#
-# That may well be the right answer — a misfiling is silent while a
-# suggestion is visible in the Attention Queue, and ~1 in 3 of the 343
-# arrivals auto-filed per inbox run is currently wrong.  But it converts
-# roughly 343 silent filings into 343 review items, which is the owner's
-# workflow to change, not a constant to nudge.  Left at 0.75 pending that
-# decision.
+# For the record, the two numbers that are NOT evidence about this
+# constant.  The old comment's "99.0% precision at 87% recall" was
+# measured on the 3,277 papers already hand-filed in a topic folder — the
+# population no threshold touches.  And an audit's "66.7% -> 77.2%" came
+# from pipeline_preview's bulk-apply population; that module never reads
+# this constant (the only readers are :127 and :186 below).
 AUTO_CONFIDENCE = 0.75
 REVIEW_CONFIDENCE = 0.40
 

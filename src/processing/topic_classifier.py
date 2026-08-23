@@ -23,6 +23,7 @@ import argparse
 import json
 import logging
 import re
+from functools import lru_cache
 import sys
 import unicodedata
 from pathlib import Path
@@ -219,6 +220,38 @@ TOPICS = {
 # ---------------------------------------------------------------------------
 # Keyword-based classifier
 # ---------------------------------------------------------------------------
+#: How far apart two anchors of a co-occurrence keyword may be.
+#:
+#: 32 of these patterns use ".*" — "\bnetwork\b.*\boptimal control\b",
+#: "\bprincipal\b.*\bagent\b".  Written for a TITLE, where the two words
+#: are necessarily close, they are matched against up to 4,000 characters
+#: of body text, where they mean almost nothing: measured over the real
+#: inbox, the median winning match spanned 2,083 characters and the
+#: longest 3,901.  A paper saying "network" on its first page and
+#: "optimal control" on its second was filed as 07e on that basis, which
+#: is how a neural-network HJB paper ended up there and had to be pulled
+#: back out by hand.
+#:
+#: Bounding the gap to one long sentence, measured over the 2,073 inbox
+#: papers: auto-filings 213 -> 188, of which 07e falls 38 -> 15 while 07a
+#: RISES 123 -> 127 — spurious cross-topic matches were contesting the
+#: correct answer and dragging its confidence down through the ambiguity
+#: penalty.  80 and 120 behave near-identically; 120 leaves room for a
+#: genuine phrase.
+_MAX_WILDCARD_GAP = 120
+
+
+@lru_cache(maxsize=4096)
+def _compiled(pattern: str):
+    """Compile a keyword pattern with its wildcards bounded.
+
+    Done here rather than by rewriting TOPICS so the table stays plain
+    data that tests and future editors can read and modify literally.
+    """
+    return re.compile(pattern.replace(".*", f".{{0,{_MAX_WILDCARD_GAP}}}"),
+                      re.IGNORECASE)
+
+
 def classify_by_keywords(
     title: str,
     abstract: str = "",
@@ -244,12 +277,12 @@ def classify_by_keywords(
         matched = []
 
         for pattern in topic["primary"]:
-            if re.search(pattern, text, re.IGNORECASE):
+            if _compiled(pattern).search(text):
                 score += topic["primary_weight"]
                 matched.append(pattern)
 
         for pattern in topic["secondary"]:
-            if re.search(pattern, text, re.IGNORECASE):
+            if _compiled(pattern).search(text):
                 score += topic["secondary_weight"]
                 matched.append(pattern)
 

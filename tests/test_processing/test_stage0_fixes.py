@@ -110,7 +110,7 @@ class TestTheAutoFileThresholdGatesOnlyTheSilentPath:
     inapplicable HERE, so nobody re-applies it from the report alone.
     """
 
-    def test_an_unambiguous_paper_scores_exactly_the_threshold(self):
+    def test_an_unambiguous_paper_sits_exactly_ON_the_threshold(self):
         """_confidence is strength x dominance with a full-strength score
         of 4.0, and a clear paper classified on a title scores 3.0 —
         uncontested but not full strength, i.e. exactly 0.75. Raising the
