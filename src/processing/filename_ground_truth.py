@@ -31,12 +31,18 @@ from __future__ import annotations
 
 import re
 import unicodedata
+import json
+import logging
 from dataclasses import dataclass
 from enum import Enum
+from pathlib import Path
+from functools import lru_cache
 from typing import Callable, Iterable, Optional
 
+logger = logging.getLogger(__name__)
+
 __all__ = [
-    "Kind", "Reliability", "Decomposition", "decompose",
+    "Kind", "Role", "Reliability", "Decomposition", "decompose",
     "looks_like_author_block", "looks_like_western_author_list",
     "looks_like_malformed_author_block", "repair_author_block", "AUTHOR_BLOCK_RE",
 ]
@@ -47,6 +53,15 @@ class Kind(str, Enum):
     VOLUME = "volume"
     PROCEEDINGS = "proceedings"
     UNKNOWN = "unknown"
+
+
+class Role(str, Enum):
+    """Whether the name block holds authors, editors, or something unsettled."""
+
+    AUTHOR = "author"
+    EDITOR = "editor"
+    UNCERTAIN = "uncertain"
+    NONE = "none"
 
 
 class Reliability(str, Enum):
@@ -69,13 +84,31 @@ class Decomposition:
     series: str = ""
     ordinal: str = ""
     authors: str = ""
+    #: What the people in ``authors`` DID.
+    #:
+    #: A filename does not say.  Every Messenger of mathematics title page
+    #: reads "EDITED BY" above exactly the names its filename carries, so
+    #: calling them authors attributes a whole journal volume to its four
+    #: editors -- but "Cauchy, A.-L. - Oeuvres completes d'Augustin Cauchy,
+    #: tome I" has the same shape and Cauchy wrote it.  Guessing either way
+    #: is wrong for a few hundred files, so the uncertainty is recorded
+    #: instead of resolved, and a consumer that cares can filter on it.
+    name_role: "Role" = None  # type: ignore[assignment]
     title: str = ""
     kind: Kind = Kind.UNKNOWN
     reliability: Reliability = Reliability.UNKNOWN
     reason: str = ""
     rule: str = ""
+    #: For a result that came from the override table: what settled it.
+    #: A reason explains an abstention; evidence justifies an answer, and
+    #: conflating the two is how "we checked" and "we assumed" become the
+    #: same field.
+    evidence: str = ""
 
     def __post_init__(self) -> None:
+        if self.name_role is None:
+            object.__setattr__(
+                self, "name_role", Role.AUTHOR if self.authors else Role.NONE)
         # The invariant that keeps the three states from collapsing into two.
         if self.reliability is Reliability.UNKNOWN and not self.reason:
             raise ValueError(
@@ -387,16 +420,24 @@ _SERIES_RE = re.compile(
     re.I,
 )
 
-#: A leading ordinal glued on with a hyphen and no spaces -- the Seminaire de
-#: probabilites expose number, "16-Leandre, R., Norris, J. R. - ...", and the
-#: Messenger volume number, "017-Glaisher, J. W. L. - ...".
+#: A leading ordinal glued on with a hyphen and no spaces.
+#:
+#: For the Seminaire de probabilites this is the article's FIRST PAGE in the
+#: bound volume, not an expose number -- volume 12 holds 62 articles numbered
+#: 1, 20, 22, 35, 47, 114 ... 740, and the gaps are article lengths.  The
+#: document says so itself: "134-Lepingle, D. - Une inegalite de martingales"
+#: opens with "Seminaire de probabilites (Strasbourg), tome 12 (1978),
+#: p. 134-137."  (I had this wrong and called it an expose number; a subagent
+#: caught it and the PDF settled it.)  For the Messenger of mathematics the
+#: same slot holds the volume number.
 #:
 #: The ordinal can have TWO parts.  "740-1-Dellacherie, C. - Correction ..."
-#: is correction 1 to expose 740, and "0-1-Murmann, M. G. - Erratum ..." is
-#: the same shape with a zero.  A one-part pattern took "740" and left
-#: "1-Dellacherie, C." in the author slot, which is not an author block, so 34
-#: Seminaire articles fell through to "this volume has no author" -- inventing
-#: an absence exactly the way the naive split invents a presence.
+#: is the second item beginning on page 740 -- an erratum sharing a page with
+#: the article before it -- and "0-1-Murmann, M. G. - Erratum ..." is the same
+#: shape.  A one-part pattern took "740" and left "1-Dellacherie, C." in the
+#: author slot, which is not an author block, so 34 Seminaire articles fell
+#: through to "this volume has no author" -- inventing an absence exactly the
+#: way the naive split invents a presence.
 #:
 #: Candidates are tried LONGEST FIRST and each is accepted only if what
 #: follows really is an author block, so a hyphenated title cannot be mistaken
@@ -426,6 +467,56 @@ _SPACED_ORDINAL_RE = re.compile(
 _AUTHOR_FIRST_DIR_RE = re.compile(r"^(0[123679]|07[a-f])\b")
 _SERIES_DIR_RE = re.compile(r"^(05|08)\b")
 
+#: A title that designates a whole issue or volume of a journal -- "Messenger
+#: of mathematics, volume XVII, May, 1887-April, 1888".  When a name block
+#: sits in front of one of these, those people EDITED the volume; they did
+#: not write it.
+#:
+#: The designation must FOLLOW A COMMA or open the title, and be followed by
+#: whitespace and a complete numeral.  The first version was
+#: ``\b(?:volume|tome|vol\.)\s*[IVXLCDM0-9]`` with re.I, which made
+#: "The role of volume in order book dynamics" a journal volume -- the "i" of
+#: "in" is a Roman numeral once you ignore case -- and turned its three
+#: authors into editors.
+#:
+#: Measured on the library's 23,271 titles, the three changes contribute
+#: unequally: 297 raw matches originally, 264 with the anchor alone, 283 with
+#: ``\s+`` and a whole-numeral alone, 285 with case-sensitivity alone, 258
+#: with all three.  So the ANCHOR did most of the work, and the case fix is
+#: redundant once it is in place: loosening case in the final pattern changes
+#: the verdict on exactly ZERO library filenames.  It stays as defence in
+#: depth, and a mutation that reverts it is equivalent -- recorded here so
+#: nobody has to rediscover that it is untestable.
+_JOURNAL_VOLUME_TITLE_RE = re.compile(
+    r"(?:^|,)\s*(?:[Vv]olume|[Tt]ome|[Vv]ol\.)\s+(?:[IVXLCDM]{1,7}|\d{1,4})\b")
+
+#: Series where the name block was CHECKED against the documents and is
+#: editors.  Every Messenger of mathematics title page examined reads
+#: "EDITED BY" above exactly the names in the filename; the ICM proceedings
+#: name their volume editors the same way.  Anything not on this list gets
+#: Role.UNCERTAIN, not a guess.
+_KNOWN_EDITED_SERIES_RE = re.compile(
+    r"\b(?:Messenger\s+of\s+mathematics"
+    r"|Proceedings\s+of\s+the\s+international\s+congress\s+of\s+mathematicians"
+    r"|Handbook\s+of\b"
+    r"|Quantum\s+probability\s+communications"
+    r"|The\s+new\s+Palgrave\s+dictionary)\b", re.I)
+
+#: A title that announces a COLLECTIVE work -- a colloquium, a seminar, a set
+#: of proceedings.  Only for these does the absence of a name block establish
+#: that the work has no author.
+#:
+#: The distinction was a subagent's finding and it matters: of eight
+#: authorless-looking Asterisque volumes it opened, TWO were single works
+#: whose authors appear only on the title page.  Reporting authors="" for
+#: those asserts the monograph has no author, which is a different and false
+#: claim from "the filename does not say".
+_COLLECTIVE_TITLE_RE = re.compile(
+    r"\b(?:s[ée]minaire|colloque|colloquium|journ[ée]es|congr[èe]s|"
+    r"proceedings|actes|conference|expos[ée]s|table\s+g[ée]n[ée]rale|"
+    r"pages\s+pr[ée]liminaires|m[ée]langes|volume|tome|ann[ée]e|"
+    r"in\s+memoriam|hommage|en\s+l['’]honneur|festschrift)\b", re.I)
+
 #: Titles that announce themselves as a bound volume rather than an article.
 _VOLUME_TITLE_RE = re.compile(
     r"\b(tome|volume|vol\.|ann[ée]e|expos[ée]s|s[ée]rie|fascicule|"
@@ -449,6 +540,19 @@ def _split_author_and_title(rest: str, directory: str, rule: str,
     head, tail = head.strip(), tail.strip()
 
     if sep and looks_like_author_block(head):
+        if _JOURNAL_VOLUME_TITLE_RE.search(tail):
+            # "017-Glaisher, J. W. L. - Messenger of mathematics, volume XVII,
+            # May, 1887-April, 1888".  Glaisher EDITED that volume.  But
+            # "Cauchy, A.-L. - Oeuvres completes d'Augustin Cauchy, tome I"
+            # has the identical shape and Cauchy wrote it.  The names are
+            # kept either way; only the role is left open.
+            role = Role.EDITOR if _KNOWN_EDITED_SERIES_RE.search(tail) else Role.UNCERTAIN
+            return Decomposition(
+                stem="", directory=directory, series=series, ordinal=ordinal,
+                authors=head, name_role=role, title=tail, kind=Kind.VOLUME,
+                reliability=Reliability.RELIABLE,
+                rule=rule + ("+editors" if role is Role.EDITOR else "+role-uncertain"),
+            )
         return Decomposition(
             stem="", directory=directory, series=series, ordinal=ordinal,
             authors=head, title=tail or head, kind=Kind.ARTICLE,
@@ -484,23 +588,60 @@ def _split_author_and_title(rest: str, directory: str, rule: str,
             rule=rule + "+malformed-author",
         )
 
-    # A series folder with no author block: the work has no author.  That is
-    # a finding, not an absence of one.
-    kind = Kind.VOLUME if _VOLUME_TITLE_RE.search(rest) else Kind.PROCEEDINGS
+    # A series folder with no author block.  Whether that means the work HAS
+    # no author depends on what kind of work it is, and the two answers are
+    # not interchangeable.
+    if _COLLECTIVE_TITLE_RE.search(rest):
+        kind = Kind.VOLUME if _VOLUME_TITLE_RE.search(rest) else Kind.PROCEEDINGS
+        return Decomposition(
+            stem="", directory=directory, series=series, ordinal=ordinal,
+            authors="", title=rest, kind=kind,
+            reliability=Reliability.RELIABLE, rule=rule + "+collective",
+        )
     return Decomposition(
         stem="", directory=directory, series=series, ordinal=ordinal,
-        authors="", title=rest, kind=kind,
-        reliability=Reliability.RELIABLE, rule=rule + "+no-author",
+        title=rest, kind=Kind.UNKNOWN, reliability=Reliability.UNKNOWN,
+        reason=("no author block in the name, and the title does not announce "
+                "a collective work -- this may be a monograph whose author is "
+                "only on the title page"),
+        rule=rule + "+no-author-in-name",
     )
 
 
-def decompose(stem: str, directory: str = "") -> Decomposition:
+def decompose(stem: str, directory: str = "", *,
+              use_overrides: bool = True) -> Decomposition:
     """Work out what the parts of ``stem`` are.
 
     ``stem`` is the filename without its ``.pdf``.  ``directory`` is the path
     relative to the library root; it sharpens several rules and is optional,
     because a paper arriving in the inbox has no folder yet.
+
+    ``use_overrides=False`` reports what the RULES alone can do, which is what
+    the tests measure the parser by -- otherwise the override table would
+    silently flatter it.
     """
+    result = _decompose_by_rules(stem, directory)
+    if result.is_reliable or not use_overrides:
+        return result
+    entry = _overrides().get(_nfc(stem).strip())
+    if entry is None:
+        return result
+    return Decomposition(
+        stem=stem, directory=directory,
+        series=entry.get("series", result.series),
+        ordinal=entry.get("ordinal", result.ordinal),
+        authors=entry.get("authors", ""),
+        name_role=Role(entry.get("name_role", "none")),
+        title=entry.get("title") or result.title or _nfc(stem),
+        kind=Kind(entry.get("kind", "unknown")),
+        reliability=Reliability.RELIABLE,
+        rule=f"override({entry.get('confidence', '?')})",
+        evidence=entry.get("evidence", ""),
+    )
+
+
+def _decompose_by_rules(stem: str, directory: str = "") -> Decomposition:
+    """The rules alone, with no override table behind them."""
     raw = stem
     stem = _nfc(stem).strip()
     directory = _nfc(directory)
@@ -513,7 +654,7 @@ def decompose(stem: str, directory: str = "") -> Decomposition:
     def _fill(d: Decomposition) -> Decomposition:
         return Decomposition(
             stem=raw, directory=directory, series=d.series, ordinal=d.ordinal,
-            authors=d.authors, title=d.title, kind=d.kind,
+            authors=d.authors, name_role=d.name_role, title=d.title, kind=d.kind,
             reliability=d.reliability, reason=d.reason, rule=d.rule,
         )
 
@@ -585,6 +726,31 @@ def decompose(stem: str, directory: str = "") -> Decomposition:
     # 6. The ordinary case: "Authors - Title".
     return _fill(_split_author_and_title(stem, directory, "plain",
                                          series="", ordinal=""))
+
+
+#: Ground truth for names the parser cannot settle, each entry carrying the
+#: evidence that settled it -- almost always the document's own title page.
+#:
+#: The table is consulted ONLY after ``decompose`` has already abstained, so
+#: an entry cannot shadow a working rule.  That is a structural guarantee, not
+#: a convention: there is no code path from a RELIABLE parse into this
+#: function.  Override tables normally rot because they quietly accumulate
+#: workarounds for parser bugs; this one cannot.
+_OVERRIDES_PATH = (Path(__file__).resolve().parents[2]
+                   / "data" / "filename_ground_truth_overrides.json")
+
+
+@lru_cache(maxsize=1)
+def _overrides() -> dict:
+    try:
+        with _OVERRIDES_PATH.open(encoding="utf-8") as fh:
+            payload = json.load(fh)
+    except (OSError, ValueError) as exc:
+        logger.warning("filename ground-truth overrides unreadable (%s): %s",
+                       _OVERRIDES_PATH, exc)
+        return {}
+    return {_nfc(e["stem"]): e for e in payload.get("entries", [])
+            if e.get("confidence") != "review"}
 
 
 def _whole_volume_series(stem: str) -> str:

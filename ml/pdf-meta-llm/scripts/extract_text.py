@@ -28,6 +28,7 @@ Usage::
 from pathlib import Path
 import argparse
 import json
+import os
 import re
 import sys
 import unicodedata
@@ -218,54 +219,90 @@ def _to_firstname_lastname(name: str) -> str:
 
 
 def parse_filename(pdf: Path):
-    """Parse ``Author1, Author2 - Title.pdf`` → (title, [authors]).
+    """Parse a library filename -> (title, [authors]) for the training corpus.
 
-    Returns ``(None, [])`` if the filename doesn't match the expected pattern.
+    Returns ``(None, [])`` when the ground truth cannot be established, which
+    is a REFUSAL to emit a training row, not a failure.
 
-    Authors are returned in ``"Firstname Lastname"`` format, matching the
-    system prompt.  Handles the filename convention where commas separate
-    both parts of a name and different authors.
+    This used to be ``stem.split(" - ", 1)`` with a regex in front of it that
+    stripped one leading number.  That is wrong for 3,889 of the library's
+    27,160 names, and wrong in the direction that teaches the model a lie:
 
-    All output strings are NFC-normalised.  macOS stores filenames in NFD
-    (decomposed) form, so ``é`` is stored as ``e`` + combining accent.
-    NFC normalisation ensures training data uses the canonical composed form
-    that the tokenizer and model expect.
+        "Asterisque 390 - Baues, O. - Symplectic Lie groups"
+            author -> "Asterisque 390"
+        "740-1-Dellacherie, C. - Correction ..."
+            the old regex ate "740-", leaving author "1-Dellacherie, C."
+        "Comptes rendus ..., tome 301, serie I - Mathematique, no12 - ..."
+            author -> "Comptes rendus ..., tome 301, serie I"
+
+    That is where ``gt_authors: ["08"]`` in results/eval_llm_100_v2.json came
+    from, and why its nine corrupted-ground-truth samples score 0.44 against
+    0.89 for the other ninety-one.
+
+    Decomposition now comes from ``processing.filename_ground_truth``, which
+    is measured on the whole library: 99.86% of names settled, zero titles
+    ever mistaken for an author block.  Rows it cannot settle are DROPPED
+    rather than guessed -- a wrong label is worse than a missing one, because
+    the model learns it and the test set scores it as correct.
     """
-    # NFC-normalise the stem — critical on macOS where filenames use NFD
-    stem = unicodedata.normalize("NFC", pdf.stem)
+    from processing.filename_ground_truth import (
+        Role, decompose, looks_like_author_block)
 
-    # Strip leading article/page numbers from Séminaire papers: "218-Maitra" → "Maitra"
-    stem = re.sub(r"^\d+\s*[-–]\s*", "", stem)
-
-    # Strip trailing arXiv IDs, years, etc.
-    stem = re.sub(r"\s*\(\d{4}\)\s*$", "", stem)          # trailing (2023)
-    stem = re.sub(r"\s*\d{4}\.\d{4,5}(?:v\d+)?\s*$", "", stem)  # trailing arXiv ID
-
-    if " - " not in stem:
+    parsed = decompose(pdf.stem, _library_relative_dir(pdf))
+    if not parsed.is_reliable:
         return None, []
 
-    authors_part, title = stem.split(" - ", 1)
-    title = title.strip()
-
+    title = unicodedata.normalize("NFC", parsed.title).strip()
     if not title or len(title) < 5:
         return None, []
 
-    # Handle "and" separators first: "Author1 and Author2" or "Author1, Author2 and Author3"
-    # Split on " and " but not on ", and " (which is handled by comma splitting)
-    authors_part = re.sub(r"\s+and\s+", ", ", authors_part)
+    # The old code stripped a trailing "(2013)" and a trailing arXiv id.
+    # It is not done here, and that is deliberate: of the 19 titles ending in
+    # a parenthesised year, "Recursive equilibrium in Krusell and Smith
+    # (1998)", "a correction of Brechet and Jouvet (2009)" and "a comment on
+    # Tirole (1985)" all have the year as PART of the title, while
+    # "Abstract dynamic programming-Athena Scientific (2013)" does not.
+    # A blanket strip is wrong either way, and the filename is the ground
+    # truth being recorded -- so it is recorded. Exactly one title ends in an
+    # arXiv id.
 
-    # Split on commas, then group "Lastname, Initials" pairs together
-    raw_parts = [p.strip() for p in authors_part.split(",") if p.strip()]
+    # A bound volume of Comptes rendus has an academy, not an author, and a
+    # Messenger volume has editors.  Neither is a (title, authors) example of
+    # the task the model is being trained on, so neither becomes a row.
+    if parsed.name_role is not Role.AUTHOR or not parsed.authors:
+        return None, []
+
+    # A block the library itself got wrong -- "Zhang. Y.", "Bertsekas,
+    # Dimitri P", "Diego Compagna and Stefanie Steinhart" -- is a poor label
+    # even though the DECOMPOSITION is right, so it does not become a row.
+    # The model should learn the convention, not its 121 exceptions.
+    if not looks_like_author_block(parsed.authors):
+        return None, []
+
+    raw_parts = [p.strip() for p in parsed.authors.split(",") if p.strip()]
     grouped = _group_author_parts(raw_parts)
-
-    # Convert each "Lastname, Initials" → "Initials Lastname"
     authors = [_to_firstname_lastname(name) for name in grouped]
     authors = [a for a in authors if a and len(a) >= 2]
-
     if not authors:
         return None, []
 
     return title, authors
+
+
+def _library_relative_dir(pdf: Path) -> str:
+    """The PDF's folder relative to the library root, or "" if outside it.
+
+    The folder is real evidence -- an Asterisque file sits in the Asterisque
+    directory -- but it is optional, because a paper arriving in the inbox
+    has no folder yet.
+    """
+    root = os.environ.get("MATH_LIBRARY")
+    if not root:
+        return ""
+    try:
+        return str(pdf.resolve().parent.relative_to(Path(root).resolve()))
+    except (ValueError, OSError):
+        return ""
 
 
 # -------- text extraction helpers --------

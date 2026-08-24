@@ -1,0 +1,362 @@
+{
+ "_comment": [
+  "Ground truth for filenames that filename_ground_truth.decompose() ABSTAINS on.",
+  "Every entry was settled by opening the document, and carries the evidence that",
+  "settled it. An entry may only exist for a stem the parser abstains on -- there",
+  "is a test that fails otherwise -- so this file can never quietly override a",
+  "working rule, which is how override tables normally rot.",
+  "Entries with confidence 'review' are NOT applied; they are questions for the owner."
+ ],
+ "entries": [
+  {
+   "stem": "Astérisque 005 - Pseudofunctions and Helson sets",
+   "directory": "05 - Books and lecture notes/05 - Astérisque",
+   "authors": "",
+   "name_role": "none",
+   "title": "Pseudofunctions and Helson sets",
+   "kind": "proceedings",
+   "confidence": "high",
+   "evidence": "Numdam cover author slot is 'AST', the marker for a volume with no single author"
+  },
+  {
+   "stem": "Astérisque 007–008 - Singularités à Cargèse",
+   "directory": "05 - Books and lecture notes/05 - Astérisque",
+   "authors": "",
+   "name_role": "none",
+   "title": "Singularités à Cargèse",
+   "kind": "proceedings",
+   "confidence": "high",
+   "evidence": "Numdam cover author slot is 'AST', the marker for a volume with no single author"
+  },
+  {
+   "stem": "Astérisque 010 - Prolongement analytique et algèbres de Banach ultramétriques",
+   "directory": "05 - Books and lecture notes/05 - Astérisque",
+   "authors": "Escassut, A., Robba, P.",
+   "name_role": "author",
+   "title": "Prolongement analytique et algèbres de Banach ultramétriques",
+   "kind": "article",
+   "confidence": "medium",
+   "evidence": "Numdam cover names 'ALAIN ESCASSUT'; inner pages add ['Philippe ROBBA']"
+  },
+  {
+   "stem": "Astérisque 011 - Théorèmes de factorisation pour les opérateurs linéaires à valeurs dans les espaces Lᵖ",
+   "directory": "05 - Books and lecture notes/05 - Astérisque",
+   "authors": "Maurey, B.",
+   "name_role": "author",
+   "title": "Théorèmes de factorisation pour les opérateurs linéaires à valeurs dans les espaces Lᵖ",
+   "kind": "article",
+   "confidence": "high",
+   "evidence": "Numdam cover names 'BERNARD MAUREY'; no co-author found on pages 2-4"
+  },
+  {
+   "stem": "Astérisque 012 - Topologie de la dimension trois homotopie et isotopie",
+   "directory": "05 - Books and lecture notes/05 - Astérisque",
+   "authors": "Laudenbach, F.",
+   "name_role": "author",
+   "title": "Topologie de la dimension trois homotopie et isotopie",
+   "kind": "article",
+   "confidence": "high",
+   "evidence": "Numdam cover names 'FRANCOIS LAUDENBACH'; no co-author found on pages 2-4"
+  },
+  {
+   "stem": "Astérisque 019 - Sur quelques équations aux dérivées partielles singulières",
+   "directory": "05 - Books and lecture notes/05 - Astérisque",
+   "authors": "",
+   "name_role": "none",
+   "title": "Sur quelques équations aux dérivées partielles singulières",
+   "kind": "proceedings",
+   "confidence": "high",
+   "evidence": "Numdam cover author slot is 'AST', the marker for a volume with no single author"
+  },
+  {
+   "stem": "Astérisque 022–023 - Oscillateur anharmonique processus de diffusion et mesures quasi-invariantes",
+   "directory": "05 - Books and lecture notes/05 - Astérisque",
+   "authors": "",
+   "name_role": "none",
+   "title": "Oscillateur anharmonique processus de diffusion et mesures quasi-invariantes",
+   "kind": "proceedings",
+   "confidence": "high",
+   "evidence": "Numdam cover author slot is 'AST', the marker for a volume with no single author"
+  },
+  {
+   "stem": "Astérisque 031 - Trois études en dynamique qualitative",
+   "directory": "05 - Books and lecture notes/05 - Astérisque",
+   "authors": "",
+   "name_role": "none",
+   "title": "Trois études en dynamique qualitative",
+   "kind": "proceedings",
+   "confidence": "high",
+   "evidence": "Numdam cover author slot is 'AST', the marker for a volume with no single author"
+  },
+  {
+   "stem": "Astérisque 049 - Système dynamique I, Varsovie",
+   "directory": "05 - Books and lecture notes/05 - Astérisque",
+   "authors": "",
+   "name_role": "none",
+   "title": "Système dynamique I, Varsovie",
+   "kind": "proceedings",
+   "confidence": "high",
+   "evidence": "Numdam cover author slot is 'AST', the marker for a volume with no single author"
+  },
+  {
+   "stem": "Astérisque 050 - Systèmes dynamiques II, Varsovie",
+   "directory": "05 - Books and lecture notes/05 - Astérisque",
+   "authors": "",
+   "name_role": "none",
+   "title": "Systèmes dynamiques II, Varsovie",
+   "kind": "proceedings",
+   "confidence": "high",
+   "evidence": "Numdam cover author slot is 'AST', the marker for a volume with no single author"
+  },
+  {
+   "stem": "Astérisque 051 - Systèmes dynamiques III, Varsovie",
+   "directory": "05 - Books and lecture notes/05 - Astérisque",
+   "authors": "",
+   "name_role": "none",
+   "title": "Systèmes dynamiques III, Varsovie",
+   "kind": "proceedings",
+   "confidence": "high",
+   "evidence": "Numdam cover author slot is 'AST', the marker for a volume with no single author"
+  },
+  {
+   "stem": "Astérisque 075–076 - Analyse des systèmes (Bordeaux, 11–16 septembre 1978)",
+   "directory": "05 - Books and lecture notes/05 - Astérisque",
+   "authors": "",
+   "name_role": "none",
+   "title": "Analyse des systèmes (Bordeaux, 11–16 septembre 1978)",
+   "kind": "proceedings",
+   "confidence": "high",
+   "evidence": "Numdam cover author slot is 'AST', the marker for a volume with no single author"
+  },
+  {
+   "stem": "Astérisque 080 - Analyse sur les variétés (Metz, 1979)",
+   "directory": "05 - Books and lecture notes/05 - Astérisque",
+   "authors": "",
+   "name_role": "none",
+   "title": "Analyse sur les variétés (Metz, 1979)",
+   "kind": "proceedings",
+   "confidence": "high",
+   "evidence": "Numdam cover author slot is 'AST', the marker for a volume with no single author"
+  },
+  {
+   "stem": "Astérisque 087–088 - Tableaux de Young et foncteurs de Schur en algèbre et géométrie (Torun, 1980)",
+   "directory": "05 - Books and lecture notes/05 - Astérisque",
+   "authors": "",
+   "name_role": "none",
+   "title": "Tableaux de Young et foncteurs de Schur en algèbre et géométrie (Torun, 1980)",
+   "kind": "proceedings",
+   "confidence": "high",
+   "evidence": "Numdam cover author slot is 'AST', the marker for a volume with no single author"
+  },
+  {
+   "stem": "Astérisque 089–090 - Analytic solutions of partial differential equations (Trento, 1981)",
+   "directory": "05 - Books and lecture notes/05 - Astérisque",
+   "authors": "",
+   "name_role": "none",
+   "title": "Analytic solutions of partial differential equations (Trento, 1981)",
+   "kind": "proceedings",
+   "confidence": "high",
+   "evidence": "Numdam cover author slot is 'AST', the marker for a volume with no single author"
+  },
+  {
+   "stem": "Astérisque 098–099 - Bifurcation, théorie ergodique et applications (Dijon, juin 1981)",
+   "directory": "05 - Books and lecture notes/05 - Astérisque",
+   "authors": "",
+   "name_role": "none",
+   "title": "Bifurcation, théorie ergodique et applications (Dijon, juin 1981)",
+   "kind": "proceedings",
+   "confidence": "high",
+   "evidence": "Numdam cover author slot is 'AST', the marker for a volume with no single author"
+  },
+  {
+   "stem": "Astérisque 101–102 - Analyse et topologie sur les espaces singuliers (CIRM, 1981) - vol. II - III",
+   "directory": "05 - Books and lecture notes/05 - Astérisque",
+   "authors": "",
+   "name_role": "none",
+   "title": "Analyse et topologie sur les espaces singuliers (CIRM, 1981) - vol. II - III",
+   "kind": "proceedings",
+   "confidence": "high",
+   "evidence": "Numdam cover author slot is 'AST', the marker for a volume with no single author"
+  },
+  {
+   "stem": "Astérisque 107–108 - IIIe rencontre de géométrie de Schnepfenried (mai 1982), vol. I",
+   "directory": "05 - Books and lecture notes/05 - Astérisque",
+   "authors": "",
+   "name_role": "none",
+   "title": "IIIe rencontre de géométrie de Schnepfenried (mai 1982), vol. I",
+   "kind": "proceedings",
+   "confidence": "high",
+   "evidence": "Numdam cover author slot is 'AST', the marker for a volume with no single author"
+  },
+  {
+   "stem": "Astérisque 109–110 - IIIe rencontre de géométrie de Schnepfenried (mai 1982), vol. II",
+   "directory": "05 - Books and lecture notes/05 - Astérisque",
+   "authors": "",
+   "name_role": "none",
+   "title": "IIIe rencontre de géométrie de Schnepfenried (mai 1982), vol. II",
+   "kind": "proceedings",
+   "confidence": "high",
+   "evidence": "Numdam cover author slot is 'AST', the marker for a volume with no single author"
+  },
+  {
+   "stem": "Astérisque 116 - Structure transverse des feuilletages, (Toulouse, 1982)",
+   "directory": "05 - Books and lecture notes/05 - Astérisque",
+   "authors": "",
+   "name_role": "none",
+   "title": "Structure transverse des feuilletages, (Toulouse, 1982)",
+   "kind": "proceedings",
+   "confidence": "high",
+   "evidence": "Numdam cover author slot is 'AST', the marker for a volume with no single author"
+  },
+  {
+   "stem": "Astérisque 118 - Variational methods for equilibrium problems of fluids (Trento, 1983)",
+   "directory": "05 - Books and lecture notes/05 - Astérisque",
+   "authors": "",
+   "name_role": "none",
+   "title": "Variational methods for equilibrium problems of fluids (Trento, 1983)",
+   "kind": "proceedings",
+   "confidence": "high",
+   "evidence": "Numdam cover author slot is 'AST', the marker for a volume with no single author"
+  },
+  {
+   "stem": "Astérisque 119–120 - Cohomologie p-adique",
+   "directory": "05 - Books and lecture notes/05 - Astérisque",
+   "authors": "",
+   "name_role": "none",
+   "title": "Cohomologie p-adique",
+   "kind": "proceedings",
+   "confidence": "high",
+   "evidence": "Numdam cover author slot is 'AST', the marker for a volume with no single author"
+  },
+  {
+   "stem": "Astérisque 150–151 - Singularités d'équations différentielles (Dijon, mai 1985)",
+   "directory": "05 - Books and lecture notes/05 - Astérisque",
+   "authors": "",
+   "name_role": "none",
+   "title": "Singularités d'équations différentielles (Dijon, mai 1985)",
+   "kind": "proceedings",
+   "confidence": "high",
+   "evidence": "Numdam cover author slot is 'AST', the marker for a volume with no single author"
+  },
+  {
+   "stem": "Astérisque 163–164 - On the geometry of differentiable manifolds (Rome, 23–27 juin 1986)",
+   "directory": "05 - Books and lecture notes/05 - Astérisque",
+   "authors": "",
+   "name_role": "none",
+   "title": "On the geometry of differentiable manifolds (Rome, 23–27 juin 1986)",
+   "kind": "proceedings",
+   "confidence": "high",
+   "evidence": "Numdam cover author slot is 'AST', the marker for a volume with no single author"
+  },
+  {
+   "stem": "Astérisque 179–180 - Théorie de Hodge, (Luminy, juin 1987)",
+   "directory": "05 - Books and lecture notes/05 - Astérisque",
+   "authors": "",
+   "name_role": "none",
+   "title": "Théorie de Hodge, (Luminy, juin 1987)",
+   "kind": "proceedings",
+   "confidence": "high",
+   "evidence": "Numdam cover author slot is 'AST', the marker for a volume with no single author"
+  },
+  {
+   "stem": "Astérisque 181–182 - Représentations linéaires des groupes ﬁnis (Luminy, 16–21 mai 1988)",
+   "directory": "05 - Books and lecture notes/05 - Astérisque",
+   "authors": "",
+   "name_role": "none",
+   "title": "Représentations linéaires des groupes ﬁnis (Luminy, 16–21 mai 1988)",
+   "kind": "proceedings",
+   "confidence": "high",
+   "evidence": "Numdam cover author slot is 'AST', the marker for a volume with no single author"
+  },
+  {
+   "stem": "Astérisque 232 - Recent advances in operator algebras",
+   "directory": "05 - Books and lecture notes/05 - Astérisque",
+   "authors": "",
+   "name_role": "none",
+   "title": "Recent advances in operator algebras",
+   "kind": "proceedings",
+   "confidence": "high",
+   "evidence": "Numdam cover author slot is 'AST', the marker for a volume with no single author"
+  },
+  {
+   "stem": "Astérisque 302 - Formes automorphes (II), le cas du groupe GSp(4)",
+   "directory": "05 - Books and lecture notes/05 - Astérisque",
+   "authors": "Laumon, G.",
+   "name_role": "author",
+   "title": "Formes automorphes (II), le cas du groupe GSp(4)",
+   "kind": "article",
+   "confidence": "high",
+   "evidence": "Numdam cover names 'GÉRARD LAUMON'; no co-author found on pages 2-4"
+  },
+  {
+   "stem": "Astérisque 312 - Argos seminar on intersections of modular correspondences",
+   "directory": "05 - Books and lecture notes/05 - Astérisque",
+   "authors": "Vogel, G.",
+   "name_role": "author",
+   "title": "Argos seminar on intersections of modular correspondences",
+   "kind": "article",
+   "confidence": "high",
+   "evidence": "Numdam cover names 'GUNTHER VOGEL'; no co-author found on pages 2-4"
+  },
+  {
+   "stem": "Astérisque S131 - Élie Cartan et les mathématiques d’aujourd’hui, Lyon, 25–29 juin 1984",
+   "directory": "05 - Books and lecture notes/05 - Astérisque",
+   "authors": "",
+   "name_role": "none",
+   "title": "Élie Cartan et les mathématiques d’aujourd’hui, Lyon, 25–29 juin 1984",
+   "kind": "proceedings",
+   "confidence": "high",
+   "evidence": "Numdam cover author slot is 'AST', the marker for a volume with no single author"
+  },
+  {
+   "stem": "Astérisque 319 - Représentations p-adiques de groupes p-adiques I, représentations galoisiennes et (φ, Γ)-modules",
+   "directory": "05 - Books and lecture notes/05 - Astérisque",
+   "authors": "Breuil, C.",
+   "name_role": "author",
+   "title": "Représentations p-adiques de groupes p-adiques I, représentations galoisiennes et (φ, Γ)-modules",
+   "kind": "article",
+   "confidence": "high",
+   "evidence": "Numdam cover names 'CHRISTOPHE BREUIL'; no co-author found on pages 2-4"
+  },
+  {
+   "stem": "223 - Summary",
+   "directory": "05 - Books and lecture notes/05 - Astérisque/Astérisque 052–053 - Temps locaux (Paris VI, 1976–1977)",
+   "authors": "",
+   "name_role": "none",
+   "title": "Summary",
+   "kind": "proceedings",
+   "confidence": "high",
+   "evidence": "Numdam cover author slot is 'AST', the marker for a volume with no single author"
+  },
+  {
+   "stem": "Astérisque 052–053 - Temps locaux (Paris VI, 1976–1977)",
+   "directory": "05 - Books and lecture notes/05 - Astérisque/Astérisque 052–053 - Temps locaux (Paris VI, 1976–1977)",
+   "authors": "",
+   "name_role": "none",
+   "title": "Temps locaux (Paris VI, 1976–1977)",
+   "kind": "proceedings",
+   "confidence": "high",
+   "evidence": "Numdam cover author slot is 'AST', the marker for a volume with no single author"
+  },
+  {
+   "stem": "Mean_Field_Control_on_Spaces_o",
+   "directory": "06 - Theses",
+   "authors": "Yan, Q.",
+   "name_role": "author",
+   "title": "Mean field control on spaces of probability measures, theory, computation, and applications",
+   "kind": "article",
+   "confidence": "high",
+   "evidence": "the filename is TRUNCATED; the dissertation title page (p1) and the embedded /Author both read 'Qinxin Yan', Princeton PhD. The FILE needs renaming, which is the owner's call."
+  },
+  {
+   "stem": "Zame, W.R. – Incentives, contracts, and markets, a general equilibrium theory of firms",
+   "directory": "07b - Contract theory/01 - Published papers/Z",
+   "authors": "Zame, W. R.",
+   "name_role": "author",
+   "title": "Incentives, contracts, and markets, a general equilibrium theory of firms",
+   "kind": "article",
+   "confidence": "high",
+   "evidence": "the separator is an EN DASH, not ' - '. Econometrica 75(5) 2007, p1 reads 'BY WILLIAM R. ZAME'. The FILE needs renaming, which is the owner's call."
+  }
+ ]
+}
