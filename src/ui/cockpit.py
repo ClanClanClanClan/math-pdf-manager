@@ -312,25 +312,6 @@ def _render_flashes() -> None:
         {"error": st.error, "warning": st.warning}.get(kind, st.info)(msg)
 
 
-def _flash(kind: str, msg: str) -> None:
-    """Queue a message that survives the ``st.rerun()`` after an action.
-
-    Action handlers draw a result and then rerun unconditionally, which
-    throws the freshly-drawn page away: ``st.toast`` survives that,
-    ``st.error`` / ``st.warning`` / ``st.info`` do not.  So every
-    failure explanation in the cockpit was invisible and a failed click
-    looked exactly like a dead button.  Messages parked here are drawn
-    at the top of the next render.
-    """
-    st.session_state.setdefault("flash", []).append((kind, msg))
-
-
-def _render_flashes() -> None:
-    """Draw and clear anything queued by ``_flash``."""
-    for kind, msg in st.session_state.pop("flash", []):
-        {"error": st.error, "warning": st.warning}.get(kind, st.info)(msg)
-
-
 def _reversible_note(detail: str = "") -> None:
     """The single reversibility affordance, used under every writing control.
 
@@ -779,21 +760,6 @@ def _preview_pdf_cached(pdf_str: str, mtime: float, size: int):
     return preview_pdf(Path(pdf_str))
 
 
-@st.cache_data(ttl=3600, show_spinner=False)
-def _preview_pdf_cached(pdf_str: str, mtime: float, size: int):
-    """Cached ``preview_pdf``, keyed on the file's identity.
-
-    ``preview_pdf`` re-parses the PDF and re-runs the metadata pipeline;
-    measured at 0.25–1.22 s per call on real inbox files.  It ran on
-    EVERY Streamlit rerun, so changing the topic dropdown, editing the
-    proposed filename or pressing Skip each paid another full extraction
-    of the SAME paper.  ``mtime``/``size`` are part of the cache key, so
-    a file that actually changes is re-extracted.
-    """
-    from ui.paper_preview import preview_pdf
-    return preview_pdf(Path(pdf_str))
-
-
 def render_sort_queue() -> None:
     st.header("📥 Sort Queue")
     st.caption(
@@ -1126,51 +1092,6 @@ def _count_trash(lib: Path, sub: str) -> int:
 # ---------------------------------------------------------------------------
 # Page: Upgrade Queue (preprint → published)
 # ---------------------------------------------------------------------------
-
-def _find_publication_reports() -> list[Path]:
-    """Newest-first list of publication-check reports on this machine.
-
-    The Upgrade Queue used to open with a text box asking for the
-    filesystem path of a JSON file produced by a terminal command the
-    owner cannot run — so 1,672 real decisions sat behind a gate he had
-    no way through.  Every report this app can produce lands in one of
-    two known places; find them instead of asking.
-    """
-    cands: list[Path] = []
-    repo_report = Path(__file__).resolve().parents[2] / "publication_report.json"
-    if repo_report.exists():
-        cands.append(repo_report)
-    reports_dir = Path.home() / ".mathpdf" / "reports"
-    if reports_dir.is_dir():
-        cands += [p for p in reports_dir.glob("*.json") if p.is_file()]
-    seen: set[str] = set()
-    out: list[Path] = []
-    for p in sorted(cands, key=lambda q: q.stat().st_mtime, reverse=True):
-        if str(p) in seen:
-            continue
-        seen.add(str(p))
-        out.append(p)
-    return out
-
-
-def _report_candidates(report: dict) -> list[dict]:
-    """Matched entries from EITHER report shape.
-
-    ``processing.publication_checker`` writes ``{"published": [...]}``;
-    ``maintenance.weekly_report`` writes the same entries nested under
-    ``{"publications": {"unpublished": [...], "working": [...]}}``.  The
-    queue only understood the first, so the report the cockpit's own
-    "Run weekly now" button produces was unusable here.
-    """
-    if isinstance(report.get("published"), list):
-        return [e for e in report["published"] if isinstance(e, dict)]
-    pubs = report.get("publications") or {}
-    out: list[dict] = []
-    if isinstance(pubs, dict):
-        for bucket in ("unpublished", "working"):
-            out += [e for e in (pubs.get(bucket) or []) if isinstance(e, dict)]
-    return out
-
 
 def _find_publication_reports() -> list[Path]:
     """Newest-first list of publication-check reports on this machine.
@@ -4375,19 +4296,6 @@ def _scan_conflicts_cached(lib_str: str) -> list:
     return scan_conflicts(Path(lib_str))
 
 
-@st.cache_data(ttl=1800, show_spinner="Looking for Dropbox conflict copies…")
-def _scan_conflicts_cached(lib_str: str) -> list:
-    """Cached ``scan_conflicts`` (30-min TTL).
-
-    Measured at 7.1 s on the real library — and it ran on page LOAD and
-    then again on every rerun, i.e. on every single button press, to
-    display 1 conflict.  Resolution handlers clear this cache so the
-    list never shows a conflict that has already been resolved.
-    """
-    from processing.conflict_resolver import scan_conflicts
-    return scan_conflicts(Path(lib_str))
-
-
 def render_conflicts() -> None:
     """Side-by-side conflict-copy resolver."""
     from processing.conflict_resolver import (
@@ -4783,48 +4691,6 @@ def _dup_keepall_undo(lib: Path, sha256: str) -> None:
 # ---------------------------------------------------------------------------
 # Scan snapshots — expensive read-only scans survive a browser reload
 # ---------------------------------------------------------------------------
-
-def _scan_snapshot_path(name: str) -> Path:
-    p = Path.home() / ".mathpdf" / "scans" / f"{name}.json"
-    p.parent.mkdir(parents=True, exist_ok=True)
-    return p
-
-
-def _save_scan(name: str, payload) -> None:
-    """Persist a scan result so a reload doesn't throw the work away.
-
-    Measured cost of re-running these: duplicates ~16 s, same-paper
-    variants 53–113 s, filename normalisation ~25 s.  Keeping them only
-    in ``st.session_state`` meant every browser reload charged the user
-    that again before they could continue reviewing.
-    """
-    try:
-        p = _scan_snapshot_path(name)
-        tmp = p.parent / (p.name + ".tmp")
-        tmp.write_text(
-            json.dumps({"saved_at": time.time(), "payload": payload},
-                       ensure_ascii=False),
-            encoding="utf-8")
-        tmp.replace(p)
-    except (OSError, TypeError) as exc:
-        logger.warning("Could not save %s scan snapshot: %s", name, exc)
-
-
-def _load_scan(name: str, max_age_h: float = 24.0):
-    """Return ``(payload, age_in_hours)``; ``(None, age)`` if absent/stale."""
-    try:
-        blob = json.loads(
-            _scan_snapshot_path(name).read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError, ValueError):
-        return None, 0.0
-    try:
-        age_h = (time.time() - float(blob.get("saved_at", 0))) / 3600.0
-    except (TypeError, ValueError):
-        return None, 0.0
-    if age_h > max_age_h:
-        return None, age_h
-    return blob.get("payload"), age_h
-
 
 # ---------------------------------------------------------------------------
 # Scan snapshots — expensive read-only scans survive a browser reload

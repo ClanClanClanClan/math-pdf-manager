@@ -602,13 +602,14 @@ def _maybe_sidecar_pair(source: Path, destination: Path) -> Optional[tuple[Path,
     """
     if source.suffix.lower() != ".pdf":
         return None
-    from processing.identity import sidecar_path
-    src_sidecar = sidecar_path(source)
-    try:
-        if not src_sidecar.exists():
-            return None
-    except OSError:
-        return None  # path too long etc -- treat as no sidecar
+    from processing.identity import find_sidecar, sidecar_path
+    # WHERE IT IS, not where it should be.  Asking sidecar_path() for the
+    # source meant a sidecar stored under an older convention was invisible,
+    # so the PDF moved and its identity stayed behind -- silently, because
+    # "no sidecar" and "sidecar I could not find" returned the same None.
+    src_sidecar = find_sidecar(source)
+    if src_sidecar is None:
+        return None
     dst_sidecar = sidecar_path(destination)
     return src_sidecar, dst_sidecar
 

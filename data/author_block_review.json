@@ -2877,8 +2877,8 @@
    "evidence": "a punctuation edit only; the repair rules were run against 25,198 real titles from your library and matched none of them"
   },
   {
-   "rel": "03 - Working papers/W/2020/Wang, J., Lin, X., Liu, Y., Qilegeri, Lin, H., Wu, M. - A knowledge transfer model for COVID-19 predicting and non-pharmaceutical intervention simulation.pdf",
-   "dir": "03 - Working papers/W/2020",
+   "rel": "03 - Working papers/W/2021/Wang, J., Lin, X., Liu, Y., Qilegeri, Lin, H., Wu, M. - A knowledge transfer model for COVID-19 predicting and non-pharmaceutical intervention simulation.pdf",
+   "dir": "03 - Working papers/W/2021",
    "stem": "Wang, J., Lin, X., Liu, Y., Qilegeri, Lin, H., Wu, M. - A knowledge transfer model for COVID-19 predicting and non-pharmaceutical intervention simulation",
    "before": "Wang, J., Lin, X., Liu, Y., Qilegeri, Lin, H., Wu, M.",
    "after": "Wang, J., Lin, X., Liu, Y., Qilegeri, Feng, K., Lin, H.",

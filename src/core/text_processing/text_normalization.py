@@ -91,13 +91,3 @@ def add_nfd_variants(items: Iterable[str]) -> List[str]:
     return out
 
 
-def split_filename(fn: str) -> tuple[str, str] | None:
-    """Split filename into author and title parts."""
-    # Get services from registry
-    from core.utils.service_registry import get_logging_service
-    logging_service = get_logging_service()
-    
-    if " - " not in fn:
-        logging_service.debug(f"  File doesn't match 'Author - Title' pattern: {fn}")
-        return None
-    return tuple(fn.split(" - ", 1))

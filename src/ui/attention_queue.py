@@ -171,17 +171,6 @@ def list_dismissals(path: Path = DISMISSALS_PATH) -> dict[str, str]:
     return _load_dismissals(path)
 
 
-def list_dismissals(path: Path = DISMISSALS_PATH) -> dict[str, str]:
-    """Public read of the snooze store — ``{key: dismissed_until_iso}``.
-
-    The cockpit needs this to show WHICH items are snoozed.  Without it
-    the only un-dismiss affordance was a text box asking for an internal
-    item key that is never displayed anywhere in the UI, so snoozing was
-    a one-way door.
-    """
-    return _load_dismissals(path)
-
-
 def undismiss(key: str, *, path: Path = DISMISSALS_PATH) -> None:
     """Remove a dismissal (force the item to reappear)."""
     data = _load_dismissals(path)

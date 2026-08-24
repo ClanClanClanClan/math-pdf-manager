@@ -187,7 +187,14 @@ def sidecar_path(pdf_path: Path) -> Path:
     library_root = _library_root_for(pdf_path)
     if library_root is not None:
         try:
-            relative = pdf_path.resolve().relative_to(library_root)
+            # BOTH sides resolved. Comparing a resolved PDF path against an
+            # unresolved root makes relative_to raise wherever the path
+            # contains a symlink -- on macOS /var is one -- and the function
+            # then silently answers with the natural-sibling branch instead
+            # of the mirror. Real library paths have no symlink so the answer
+            # was right there; anything under a temp directory got a
+            # different convention without saying so.
+            relative = pdf_path.resolve().relative_to(library_root.resolve())
         except (ValueError, OSError):
             library_root = None
     if library_root is not None:
@@ -208,6 +215,67 @@ def sidecar_path(pdf_path: Path) -> Path:
     import hashlib as _hashlib
     h = _hashlib.sha1(pdf_path.name.encode("utf-8")).hexdigest()[:16]
     return pdf_path.parent / ".sidecars" / f"{h}.meta.json"
+
+
+def sidecar_candidates(pdf_path: Path) -> list[Path]:
+    """Every location a sidecar for ``pdf_path`` could be sitting in.
+
+    ``sidecar_path`` says where a sidecar SHOULD go.  That is not the same
+    question as where one IS, and conflating them silently orphaned files:
+    a PDF name can be under the 255-byte limit while ``<stem>.meta.json`` is
+    over it, because ".meta.json" is six bytes longer than ".pdf".  Sidecars
+    written before that boundary was handled sit in the mirror tree under
+    their full name; ``sidecar_path`` now answers with the hashed fallback,
+    finds nothing there, and the rename moves the PDF and leaves the sidecar
+    behind.
+
+    Measured over the library: 12 sidecars the resolver could not find, and
+    31 already stranded with no PDF at all.
+
+    Ordered most- to least-canonical, so the first hit is the one to keep.
+    """
+    out: list[Path] = [sidecar_path(pdf_path)]
+    library_root = _library_root_for(pdf_path)
+    if library_root is not None:
+        # Resolve BOTH sides. sidecar_path compares a resolved PDF path
+        # against an unresolved root, and on macOS /var resolves to
+        # /private/var -- so relative_to raises, library_root is discarded,
+        # and it silently answers with the natural-sibling branch instead of
+        # the mirror. Real library paths have no symlink in them so it works
+        # there; a temp directory has one, which is how this surfaced.
+        try:
+            relative = pdf_path.resolve().relative_to(library_root.resolve())
+        except (ValueError, OSError):
+            relative = None
+        if relative is not None:
+            # the mirror entry under its full name, over-long or not
+            out.append(library_root / MIRROR_DIR_NAME
+                       / relative.with_suffix(".meta.json"))
+    # the natural sibling, from before the mirror tree existed
+    out.append(pdf_path.with_suffix(".meta.json"))
+    seen: set[str] = set()
+    unique: list[Path] = []
+    for candidate in out:
+        key = str(candidate)
+        if key not in seen:
+            seen.add(key)
+            unique.append(candidate)
+    return unique
+
+
+def find_sidecar(pdf_path: Path) -> Optional[Path]:
+    """Where this PDF's sidecar actually is, or ``None``.
+
+    Use this for reading and for moving; use :func:`sidecar_path` only to
+    decide where to write a NEW one.
+    """
+    for candidate in sidecar_candidates(pdf_path):
+        try:
+            if candidate.exists():
+                return candidate
+        except OSError:          # ENAMETOOLONG and friends
+            continue
+    return None
 
 
 # Case-insensitive PDF glob.  ``Path.rglob("*.pdf")`` is
