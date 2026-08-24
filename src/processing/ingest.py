@@ -794,7 +794,19 @@ def _parse_segment(seg: str, multiword_surnames: Optional[Set[str]] = None) -> L
     - "First Last, First Last" (multiple authors, comma is author separator —
       arises in PDF embedded metadata when authors are listed with full names)
     """
-    seg = seg.strip()
+    # Strip separator punctuation the strong-separator split leaves
+    # behind. "Gray, A., Greenhalgh, D., Hu, L., Mao, X., and Pan, J."
+    # splits on " and " into a first segment ending in a comma, and
+    # _looks_like_filename_format below requires an EVEN number of
+    # comma-separated parts — the trailing empty part made it nine
+    # instead of eight, the heuristic bailed, and the whole list
+    # collapsed into a single author whose surname was
+    # "Gray, A., Greenhalgh, D., Hu, L., Mao, X.," — producing the
+    # filename "Gray, A. G. D. H. L. M. X., Pan, J. - ….pdf".
+    #
+    # "A, B, C, and D" is the standard English list, so this was every
+    # paper with three or more authors written that way.
+    seg = seg.strip().strip(",;").strip()
     if not seg or seg.lower().rstrip(".") in {"et al", "and others"}:
         return []
 
