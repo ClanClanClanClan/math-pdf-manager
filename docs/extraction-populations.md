@@ -41,7 +41,7 @@ Verdicts are three-valued — CORRECT / WRONG / ABSTAIN — never two.
 ### Ground truth is not free
 
 The naive "split the filename on the first ` - `" is **wrong for 11.8%**
-of the library (3,106 of 26,377). Two shapes:
+of the library (3,106 of 26,377) — since repaired, see below. Two shapes:
 
 | shape | count | example |
 |---|---|---|
@@ -164,6 +164,44 @@ and PyMuPDF can see its tessdata.
   `3e26d41`, with the U+007F/C1 hole in `_clean_for_fs` that a property
   test found. Seven live files are named through it; listed in
   `known-issues-cockpit.md`, not repaired.
+**Ground truth is now repaired** (`3e26d41` … `5f5a44a`).
+`src/processing/filename_ground_truth.py` decomposes a name into
+series / ordinal / authors / role / title / kind, three-valued, and is
+measured on the whole library:
+
+```
+rules alone      27,087   99.73%
+with the table   27,122   99.86%
+author-block recall                       98.73%
+false positives on 23,271 real titles          0
+roles     24,994 author / 1,891 none / 156 editor / 119 uncertain
+```
+
+`data/filename_ground_truth_overrides.json` supplies 35 names the rules
+cannot settle, each with the evidence that settled it — almost always the
+document's own Numdam cover page, whose author slot carries the literal
+sentinel `AST` when a volume has no single author. The table is consulted
+only after the rules abstain, so it cannot shadow a working rule.
+
+The training corpus builder now uses it. Over the whole library that
+changes **502** labels, refuses **1,436** rows that were corrupt, and
+recovers **27** that were silently lost — the corpus goes 26,348 → 24,939.
+A row is refused rather than guessed, because a wrong label is worse than a
+missing one: the model learns it *and* the test set scores it correct.
+
+**Still open — 38 names, all questions rather than failures.** 30 are JEHPS
+archival documents (a letter from Doob, a CV, a photograph, an encyclopedia
+article) whose author exists but is not in the filename; answering `""`
+would assert they have none. 6 are Astérisque volumes needing a judgement,
+including `Astérisque 100 - Faisceaux pervers – A. A. Beilinson, …`, whose
+authors are in the filename after an **en dash**. 2 are defects: the file
+carrying U+001D (issue 12) and a corporate author.
+
+Two files also need renaming, which is the owner's call:
+`Mean_Field_Control_on_Spaces_o` (a truncated Princeton dissertation by
+Qinxin Yan) and `Zame, W.R. – Incentives, contracts, and markets…`, which
+separates with an en dash instead of `" - "`.
+
 - **The author parser collapses some embedded `/Author` strings.**
   `Léandre, R., Norris, J. R.` → `Norris, R. L. J. R.`;
   `Doléans-Dade, C., Dellacherie, C., Meyer, P.-A.` →
