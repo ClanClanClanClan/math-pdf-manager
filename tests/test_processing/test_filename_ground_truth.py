@@ -247,6 +247,30 @@ class TestWhoTheNamesAre:
         assert d.name_role is Role.AUTHOR
         assert d.authors == author
 
+    @pytest.mark.parametrize("stem,directory,names", [
+        ("Astérisque 236 - Émery, M., Yor, M. - Hommage à P.A. Meyer et J. Neveu",
+         AST, "Émery, M., Yor, M."),
+        ("Freidlin, M. I. - The Dynkin Festschrift, Markov processes and their applications",
+         "05 - Books and lecture notes/F", "Freidlin, M. I."),
+        ("Itô, K. - Stochastic analysis, proceedings of the Taniguchi international symposium",
+         "05 - Books and lecture notes/I", "Itô, K."),
+        ("Cano, F., Loray, F. - Équations différentielles et singularités. En l'honneur de J. M. Aroca",
+         "05 - Books and lecture notes/C", "Cano, F., Loray, F."),
+    ])
+    def test_a_festschrift_or_proceedings_names_its_editors(self, stem, directory, names):
+        """71 files in the library, every one checked to be a genuine edited
+        collection. Three were also verified against the documents:
+        Asterisque 287, 298 and 236 say so on their title pages, and 236's
+        Numdam cover carries the "AST" no-author sentinel.
+
+        The pattern has to be tight. Reusing _COLLECTIVE_TITLE_RE, which
+        contains the bare word "volume", marked 242 files including "The role
+        of volume in order book dynamics"."""
+        d = decompose(stem, directory)
+        assert d.name_role is Role.EDITOR
+        assert d.authors == names
+        assert d.kind is Kind.PROCEEDINGS
+
     def test_a_volume_with_no_names_has_role_none(self):
         d = decompose("Comptes rendus hebdomadaires des séances de l'académie des sciences, tome 099, juillet–décembre 1884", CR)
         assert d.name_role is Role.NONE
@@ -462,6 +486,27 @@ class TestWhatItStillDoesNotDo:
         d = decompose("Center for the commercialization of electric technologies - Technology solutions",
                       "02 - Unpublished papers/C")
         assert not d.is_reliable
+
+    def test_a_multi_part_volume_marker_alone_does_not_prove_an_editor(self):
+        """A subagent verified from the title pages that Asterisque 287 and
+        298 name their volume EDITORS, and both are "<Title> (II)" shapes.
+        But "(I)"/"(II)" on its own is weak evidence -- plenty of monographs
+        are in parts -- so the parser does not act on it, and these two are
+        answered as authors. Fixing this needs the documents, not the names.
+        """
+        d = decompose(
+            "Astérisque 287 - de Melo, W., Viana, M., Yoccoz, J.-C. - Geometric methods in dynamics (II)",
+            AST)
+        assert d.name_role is Role.AUTHOR   # known to be wrong; see docstring
+
+    def test_the_seminaire_ordinal_is_not_the_exact_printed_folio(self):
+        """It is a pagination ordinal, and for the recent Springer offprints
+        it disagrees with the printed folio by a page or two -- "361-McGill"
+        prints "364 | P. McGill" and starts at 363. The old Numdam volumes
+        match exactly. The parser reports the number from the NAME and claims
+        nothing about the folio."""
+        d = decompose("361-McGill, P. - A direct proof", "08 - Séminaires/Séminaire 49 - 2018")
+        assert d.ordinal == "361"
 
     def test_an_en_dash_used_as_the_separator_is_not_understood(self):
         """One file in the library separates with " – " instead of " - "."""

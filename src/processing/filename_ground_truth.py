@@ -422,14 +422,21 @@ _SERIES_RE = re.compile(
 
 #: A leading ordinal glued on with a hyphen and no spaces.
 #:
-#: For the Seminaire de probabilites this is the article's FIRST PAGE in the
-#: bound volume, not an expose number -- volume 12 holds 62 articles numbered
-#: 1, 20, 22, 35, 47, 114 ... 740, and the gaps are article lengths.  The
-#: document says so itself: "134-Lepingle, D. - Une inegalite de martingales"
-#: opens with "Seminaire de probabilites (Strasbourg), tome 12 (1978),
-#: p. 134-137."  (I had this wrong and called it an expose number; a subagent
-#: caught it and the PDF settled it.)  For the Messenger of mathematics the
-#: same slot holds the volume number.
+#: For the Seminaire de probabilites it is a PAGINATION ordinal, not an expose
+#: number -- volume 12 holds 62 articles numbered 1, 20, 22, 35, 47, 114 ...
+#: 740, and the gaps are article lengths.  I first called it an expose number,
+#: which is wrong; the document says "Seminaire de probabilites (Strasbourg),
+#: tome 12 (1978), p. 134-137" on the file named "134-Lepingle, D. - ...".
+#:
+#: It is NOT reliably the exact printed start page, and a second subagent
+#: caught me overstating that too: reading the folio off page 2 of all 26
+#: text-bearing offprints in Seminaire 47 (2014), the leading number and the
+#: printed folio disagree -- "361-McGill" prints "364 | P. McGill" and starts
+#: at 363.  The old Numdam volumes match exactly; the recent Springer
+#: offprints are off by a page or two.  So: an ordering key derived from the
+#: volume's pagination, and nothing stronger is claimed.
+#:
+#: For the Messenger of mathematics the same slot holds the volume number.
 #:
 #: The ordinal can have TWO parts.  "740-1-Dellacherie, C. - Correction ..."
 #: is the second item beginning on page 740 -- an erratum sharing a page with
@@ -502,6 +509,25 @@ _KNOWN_EDITED_SERIES_RE = re.compile(
     r"|Quantum\s+probability\s+communications"
     r"|The\s+new\s+Palgrave\s+dictionary)\b", re.I)
 
+#: A title that names the occasion a collection was assembled FOR -- a
+#: Festschrift, a memorial volume, the proceedings of a symposium.  When a
+#: name block sits in front of one of these, those people edited it.
+#:
+#: Deliberately much tighter than _COLLECTIVE_TITLE_RE below, which contains
+#: the bare word "volume" and therefore matches "The role of volume in order
+#: book dynamics".  Reusing it here marked 242 files; this pattern marks 71,
+#: and all 71 were checked by eye to be genuine edited collections -- "The
+#: Dynkin Festschrift", "Hommage a P.A. Meyer et J. Neveu", "Proceedings of
+#: the Taniguchi international symposium".  Three of them were also verified
+#: against the documents by a subagent: Asterisque 287, 298 and 236 all say
+#: so on their title pages, and 236's Numdam cover carries the "AST"
+#: no-author sentinel.
+_EDITED_COLLECTION_TITLE_RE = re.compile(
+    r"\b(?:hommage\s+[àa]|in\s+memoriam|m[ée]langes\s+(?:offerts|en)|festschrift"
+    r"|volume\s+in\s+hono(?:u)?r\s+of|actes\s+(?:du|de\s+la|des)\b"
+    r"|proceedings\s+of\s+(?:the|a)\b|en\s+l['’]honneur\s+de"
+    r"|papers?\s+(?:in|dedicated)\s+hono(?:u)?r)", re.I)
+
 #: A title that announces a COLLECTIVE work -- a colloquium, a seminar, a set
 #: of proceedings.  Only for these does the absence of a name block establish
 #: that the work has no author.
@@ -540,6 +566,15 @@ def _split_author_and_title(rest: str, directory: str, rule: str,
     head, tail = head.strip(), tail.strip()
 
     if sep and looks_like_author_block(head):
+        if _EDITED_COLLECTION_TITLE_RE.search(tail):
+            # "Freidlin, M. I. - The Dynkin Festschrift, Markov processes and
+            # their applications".  Freidlin edited it.
+            return Decomposition(
+                stem="", directory=directory, series=series, ordinal=ordinal,
+                authors=head, name_role=Role.EDITOR, title=tail,
+                kind=Kind.PROCEEDINGS, reliability=Reliability.RELIABLE,
+                rule=rule + "+edited-collection",
+            )
         if _JOURNAL_VOLUME_TITLE_RE.search(tail):
             # "017-Glaisher, J. W. L. - Messenger of mathematics, volume XVII,
             # May, 1887-April, 1888".  Glaisher EDITED that volume.  But
