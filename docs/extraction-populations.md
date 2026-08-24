@@ -4,6 +4,23 @@ Measured 2026-08-24 on the live library, read-only, at commit `3e26d41`.
 Raw data: `census.jsonl` (27,160 rows), `baseline_out.jsonl` and
 `reach_out.jsonl` (1,753 rows each) in the session scratchpad.
 
+## Scope
+
+Five collections are permanently out of scope for ordinary tooling, on the
+owner's standing instruction: **JEHPS**, and under `05 - Books and lecture
+notes` the folders **00 - Histoire de l'académie royale des sciences**,
+**01 - Comptes rendus hebdomadaires**, **02 - Mémoires présentés par divers
+savants** and **11 - Lviv Scottish book**. 1,908 files. They are bound
+academy proceedings and one scanned notebook; they have no author in the
+ordinary sense and every rule written for papers is wrong about them. A
+dedicated pass over them — completing the runs, checking their naming — is
+expected later and must ask for them explicitly.
+
+This is enforced by `src/processing/library_scope.py`, not by remembering.
+It is the single answer to "may tooling touch this?", and it replaced three
+private skip lists that did not agree with each other — which is why the
+instruction had to be given more than once.
+
 ## Why this document exists
 
 Every accuracy figure quoted for extraction in this project so far has

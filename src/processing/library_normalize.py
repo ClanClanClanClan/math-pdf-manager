@@ -33,6 +33,8 @@ so an in-place ``logged_rename`` is safe; were a copy ever to exist,
 from __future__ import annotations
 
 import logging
+
+from processing.library_scope import exclusion_reason
 import unicodedata
 from pathlib import Path
 from typing import Iterable, Optional
@@ -46,7 +48,7 @@ logger = logging.getLogger(__name__)
 _MAX_FILENAME_BYTES = 255
 
 try:                                        # pragma: no cover - trivial
-    from organization.system import TO_BE_SORTED as _STAGING_DIR
+    from organization.system import TO_BE_SORTED as _STAGING_DIR  # noqa: F401
 except ImportError:                         # pragma: no cover
     _STAGING_DIR = "12 - To be sorted"
 
@@ -81,7 +83,8 @@ def _classify(old_name: str, new_name: str) -> str:
 
 
 def propose_renames(
-    library_root: Path, *, limit: Optional[int] = None, progress=None
+    library_root: Path, *, limit: Optional[int] = None, progress=None,
+    skipped: Optional[dict] = None,
 ) -> tuple[list[dict], set[str]]:
     """Walk the library; return ``(proposals, pending_words)``.
 
@@ -109,14 +112,24 @@ def propose_renames(
     else:
         pdfs = iter_pdfs(library_root)
         total = limit or 0
+    if skipped is None:
+        skipped = {}
     for pdf in pdfs:
         if limit is not None and n >= limit:
             break
-        # The inbox is not part of the library yet.  Those papers still
-        # carry whatever the publisher or arXiv called them and get their
-        # canonical name when they are FILED, so proposing renames for
-        # them is noise in a review of the existing library.
-        if _STAGING_DIR in pdf.parts:
+        # Out-of-scope paths are skipped by ONE shared rule -- staging,
+        # non-library content, and the archival collections the owner asked
+        # to leave alone.  This used to be a private "_STAGING_DIR in
+        # pdf.parts" test that knew about the inbox and nothing else, so the
+        # sweep happily proposed renames for 1,908 bound academy volumes
+        # whose names are not meant to follow the paper convention at all.
+        try:
+            _rel = str(pdf.relative_to(library_root))
+        except ValueError:
+            _rel = pdf.name
+        _why = exclusion_reason(_rel)
+        if _why is not None:
+            skipped[_why] = skipped.get(_why, 0) + 1
             continue
         n += 1
         if progress is not None:
@@ -162,8 +175,9 @@ def scan(library_root: Path, *, limit: Optional[int] = None, progress=None) -> d
     ``progress`` is forwarded to :func:`propose_renames`; the sweep is
     MEASURED at ~85s over 29,393 names, which needs a visible bar.
     """
+    skipped: dict[str, int] = {}
     proposals, pending = propose_renames(library_root, limit=limit,
-                                         progress=progress)
+                                         progress=progress, skipped=skipped)
     by_kind = {AUTHOR: 0, TITLE: 0, BOTH: 0}
     for p in proposals:
         by_kind[p["kind"]] = by_kind.get(p["kind"], 0) + 1
@@ -172,6 +186,11 @@ def scan(library_root: Path, *, limit: Optional[int] = None, progress=None) -> d
         "by_kind": by_kind,
         "pending_words": sorted(pending),
         "proposals": proposals,
+        # What the sweep did NOT look at, and why.  A scan that quietly
+        # examines 25,253 of 29,537 files and reports only the 25,253 is
+        # the shape of every wrong conclusion this project has drawn.
+        "skipped": dict(sorted(skipped.items())),
+        "skipped_total": sum(skipped.values()),
     }
 
 

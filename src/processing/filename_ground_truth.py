@@ -153,6 +153,21 @@ class Decomposition:
 # "Caffarelli, LA.." with a doubled period.  Those want fixing in the library,
 # not accommodating in the regex.
 
+def _letter_class(category: str) -> str:
+    """Every letter of ``category`` ("Lu" or "Ll") in Latin, Greek, Cyrillic.
+
+    Hand-enumerating either of these is a mistake, and I made it twice.  The
+    uppercase list missed S-cedilla in "Sengul, B." and L-caron in "Banas,
+    L.", refusing 219 ordinary author blocks.  The lowercase list was
+    "[{_LOWER}]", which stops before t-cedilla, so "Vladut. S." could not be
+    repaired.  unicodedata cannot forget a letter.
+    """
+    ranges = ((0x41, 0x24F), (0x370, 0x3FF), (0x400, 0x52F), (0x1E00, 0x1EFF))
+    return "".join(re.escape(chr(c)) for lo, hi in ranges
+                   for c in range(lo, hi + 1)
+                   if unicodedata.category(chr(c)) == category)
+
+
 def _uppercase_class() -> str:
     """Every uppercase letter in Latin, Greek and Cyrillic, from Unicode.
 
@@ -162,13 +177,11 @@ def _uppercase_class() -> str:
     219 perfectly ordinary author blocks were refused.  Asking unicodedata
     cannot forget a letter.
     """
-    ranges = ((0x41, 0x24F), (0x370, 0x3FF), (0x400, 0x52F), (0x1E00, 0x1EFF))
-    chars = [chr(c) for lo, hi in ranges for c in range(lo, hi + 1)
-             if unicodedata.category(chr(c)) == "Lu"]
-    return "".join(re.escape(c) for c in chars)
+    return _letter_class("Lu")
 
 
 _UPPER = _uppercase_class()
+_LOWER = _letter_class("Ll")
 
 #: Nobiliary and patronymic particles, which are lowercase by convention and
 #: may sit anywhere inside a surname: "Chaudru de Raynal", "van Handel",
@@ -193,7 +206,7 @@ _SURNAME = rf"(?:{_WORD}(?:[-\s'’]*(?:{_WORD}|{_PAREN}))*)"
 #: Initials are not always one letter.  Cyrillic transliterations need two or
 #: three -- "Kabanov, Yu. A.", "Zhikov, V. V.", "Khasminskii, R. Z." -- and
 #: hyphenated given names keep the hyphen: "Bouchaud, J.-P.".
-_INITIAL = rf"(?:[{_UPPER}](?:[a-zà-ÿ]{{1,2}})?\.)"
+_INITIAL = rf"(?:[{_UPPER}](?:[{_LOWER}]{{1,2}})?\.)"
 _INITIALS = rf"(?:{_INITIAL}(?:[-\s]*{_INITIAL})*)"
 #: "Harvey, F.R., Lawson, Jr., H.B." -- the suffix is its own comma-separated
 #: part, which is why it has to be modelled rather than stripped.
@@ -275,22 +288,33 @@ _REPAIRS = (
     # An initial that lost its period, before a comma or at the end.
     (re.compile(rf"([{_UPPER}])(,|$)"), r"\1.\2"),
     # A period where the comma between two authors belongs: "Zhang. Y.".
-    (re.compile(rf"([a-zà-ÿ])\.\s+([{_UPPER}]\.)"), r"\1, \2"),
+    (re.compile(rf"([{_LOWER}])\.\s+([{_UPPER}]\.)"), r"\1, \2"),
     # A doubled period: "Caffarelli, LA..".
     (re.compile(r"\.\.+"), "."),
     # No separator at all between two authors: "Reitich, F. Soner, H. M.".
-    (re.compile(rf"([{_UPPER}]\.)\s+([{_UPPER}][a-zà-ÿ])"), r"\1, \2"),
+    (re.compile(rf"([{_UPPER}]\.)\s+([{_UPPER}][{_LOWER}])"), r"\1, \2"),
     # A comma before a hyphenated initial: "Bouchaud, J, -P.".
     (re.compile(rf"([{_UPPER}]),\s*-([{_UPPER}])"), r"\1.-\2"),
     # A missing comma before the initials, at the end of the block
     # ("van Handel R.") or in the middle of a list ("Capponi, A., Jia R.,
     # Yu, S.").
-    (re.compile(rf"([a-zà-ÿ])\s+([{_UPPER}]\.(?:\s*[{_UPPER}]\.)*)(,|$)"), r"\1, \2\3"),
+    (re.compile(rf"([{_LOWER}])\s+([{_UPPER}]\.(?:\s*[{_UPPER}]\.)*)(,|$)"), r"\1, \2\3"),
     # Initials run together: "Caffarelli, LA." for "Caffarelli, L. A.".
     (re.compile(rf"(,\s*)([{_UPPER}])([{_UPPER}])\."), r"\1\2. \3."),
     # Initials with no space: "Kedlaya, K.S." -- legal in the library, but it
     # appears here because some blocks need it BEFORE another repair applies.
     (re.compile(rf"([{_UPPER}]\.)([{_UPPER}]\.)"), r"\1 \2"),
+    # A shifted keystroke where the period should be: "Mayboroda, S>".
+    (re.compile(rf"([{_UPPER}])[>,;:]([\s,]|$)"), r"\1.\2"),
+    # An underscore where the hyphen belongs: "Meyer, P._A.".
+    (re.compile(rf"([{_UPPER}]\.)_([{_UPPER}])"), r"\1-\2"),
+    # A space before the comma: "Li , Y.".
+    (re.compile(r"\s+,"), ","),
+    # Initials separated by a space but missing the first period:
+    # "Leon, J A." -> "Leon, J. A.".
+    (re.compile(rf"(,\s*)([{_UPPER}])\s+([{_UPPER}]\.)"), r"\1\2. \3"),
+    # A hyphenated given name missing the period: "Yen, L-H.".
+    (re.compile(rf"(,\s*)([{_UPPER}])-([{_UPPER}]\.)"), r"\1\2.-\3"),
 )
 
 #: How many distinct repairs may be applied before the block stops being a

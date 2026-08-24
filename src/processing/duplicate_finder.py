@@ -23,6 +23,8 @@ import logging
 import re
 import sys
 import unicodedata
+
+from processing.library_scope import in_scope
 from collections import defaultdict
 from pathlib import Path
 from typing import Optional
@@ -122,10 +124,14 @@ def find_duplicates(
     # 12 - To be sorted/ is a staging area for un-renamed bulk imports;
     # those PDFs haven't been canonicalized yet so duplicate detection across
     # them is meaningless (would just flag every paper as "different from itself").
-    SKIP_PREFIXES = ("Scripts", "archive", ".", "unicode", "12 - To be sorted")
+    # One shared scope rule rather than a private prefix tuple.  The old one
+    # knew about Scripts and the inbox; it did not know that the bound
+    # academy volumes are supposed to share titles -- "Comptes rendus ...,
+    # tome 271" and "tome 272" are different books that differ by a digit --
+    # so every one of them looked like a near-duplicate of its neighbour.
     for pdf in iter_pdfs(library_root):
         rel = pdf.relative_to(library_root)
-        if any(part.startswith(SKIP_PREFIXES) for part in rel.parts):
+        if not in_scope(str(rel)):
             continue
 
         stem = unicodedata.normalize("NFC", pdf.stem)
