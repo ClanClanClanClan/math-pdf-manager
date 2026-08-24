@@ -320,7 +320,7 @@ class TestAuthorBlockRecogniser:
         "Leutscher de las Nieves, M.",
         "abd Ellah, A. E.",
         "Seifried (née Müller), S.",           # parenthetical maiden name
-        "Harvey, F.R., Lawson, Jr., H.B.",     # generational suffix
+        "Harvey, F. R., Lawson, Jr., H. B.",   # generational suffix
         "Neufeld, A., et al.",
         "Émery, M., Yor, M.",
     ])
@@ -352,6 +352,143 @@ class TestAuthorBlockRecogniser:
                       "Δ, Γ and bucket hedging of interest rate derivatives",
                       "Ginzburg-Landau equation and motion by mean curvature, I, convergence"]:
             assert not looks_like_author_block(title)
+
+
+class TestInitialsAreSpaced:
+    r""""R. C.", never "R.C." -- the house convention, and the reason
+    ``fix_initial_spacing`` exists.
+
+    The separator between initials used to be optional in the pattern, one
+    character: ``[-\s]*``. That quietly made "G.B." canonical, so 106 unspaced
+    blocks passed the check, and the repair chain stopped the moment it
+    produced "Asheim, G.B." rather than going on to "Asheim, G. B.". The owner
+    spotted it in the review and asked whether it was me or the code.
+    """
+
+    @pytest.mark.parametrize("broken,repaired", [
+        ("Asheim, G.B, Ekeland, I.", "Asheim, G. B., Ekeland, I."),
+        ("Barles, G., Soner, H.M", "Barles, G., Soner, H. M."),
+        ("Chitashvili, R. J., Mania, M.G", "Chitashvili, R. J., Mania, M. G."),
+        ("Dahlberg B.E.J., Kenig C. E.", "Dahlberg, B. E. J., Kenig, C. E."),
+        ("He, X..D., Strub, M. S., Zariphopoulou, T.",
+         "He, X. D., Strub, M. S., Zariphopoulou, T."),
+        ("Pauwels, E.J, Rogers, L. C. G.", "Pauwels, E. J., Rogers, L. C. G."),
+        ("Rogers, L. C. G., Veraart, L. A.M", "Rogers, L. C. G., Veraart, L. A. M."),
+        ("Tse, A. S.L, Zheng, H.", "Tse, A. S. L., Zheng, H."),
+        ("García Trillos, C.A, García Trillos, N.",
+         "García Trillos, C. A., García Trillos, N."),
+        ("Mishura, Yu. S., Shelyazhenko, P.S, Shevchenko, G. M",
+         "Mishura, Yu. S., Shelyazhenko, P. S., Shevchenko, G. M."),
+        # the suffix survives the spacing repair
+        ("Harvey, F.R., Lawson, Jr., H.B.", "Harvey, F. R., Lawson, Jr., H. B."),
+    ])
+    def test_the_repair_spaces_them(self, broken, repaired):
+        assert repair_author_block(broken) == repaired
+
+    @pytest.mark.parametrize("broken,repaired", [
+        ("Kabanov, Yu.A.", "Kabanov, Yu. A."),
+        ("Mishura, Yu.M., Kramkov, D. O.", "Mishura, Yu. M., Kramkov, D. O."),
+        ("Zhikov, V.V.", "Zhikov, V. V."),
+    ])
+    def test_multi_letter_initials_are_spaced_too(self, broken, repaired):
+        """An initial is not always one letter -- Cyrillic transliterations
+        need "Yu.", "Zh.", "Kh." -- and a plain ``([A-Z]\\.)([A-Z]\\.)`` pattern
+        cannot see "Yu.A." at all.
+
+        This is what delegating to the LIVE ``fix_initial_spacing`` buys. The
+        other implementation in the repo, ``validators/author_parser.py``, is
+        the frozen 2025-07 layer and is ASCII-only: it leaves "Kabanov, Yu.A."
+        untouched. Both mutants -- dropping the helper, and swapping it for
+        the frozen one -- survived until this test existed."""
+        assert repair_author_block(broken) == repaired
+
+    @pytest.mark.parametrize("unspaced", [
+        "Asheim, G.B.", "Kabanov, Yu.A.", "Kedlaya, K.S.", "Dahlberg, B.E.J."])
+    def test_an_unspaced_block_is_not_canonical(self, unspaced):
+        """It reads as correct and is not. If this passes as canonical the
+        repair chain stops one step early."""
+        assert not looks_like_author_block(unspaced)
+
+    @pytest.mark.parametrize("spaced", [
+        "Asheim, G. B.", "Kabanov, Yu. A.", "Bouchaud, J.-P.", "Meyer, P.-A.",
+        "Rogers, L. C. G."])
+    def test_a_spaced_block_is_canonical(self, spaced):
+        """Hyphenated given names separate with the hyphen, not a space, and
+        must keep passing."""
+        assert looks_like_author_block(spaced)
+
+
+class TestHonorificsAreNotSurnames:
+    """"Dr. Z" is the byline of a betting column, not "Surname, Initials".
+
+    The period-for-comma repair turned it into "Dr, Z." and proposed that for
+    three files before the owner caught it.
+    """
+
+    @pytest.mark.parametrize("pseudonym", ["Dr. Z", "Prof. X", "Mr. Y"])
+    def test_not_treated_as_a_mispunctuated_block(self, pseudonym):
+        assert not looks_like_malformed_author_block(pseudonym)
+
+    @pytest.mark.parametrize("pseudonym", ["Dr. Z", "Prof. X", "Mr. Y"])
+    def test_and_no_repair_is_offered(self, pseudonym):
+        """The predicate and the repairer must agree. The guard lived only in
+        the predicate at first, so one said "not a broken author block" while
+        the other returned "Dr, Z." for the same string."""
+        assert repair_author_block(pseudonym) is None
+
+    def test_the_name_survives_into_the_decomposition(self):
+        d = decompose("Dr. Z - Take a chance", "01 - Published papers/D")
+        assert d.is_reliable
+        assert d.authors == "Dr. Z"
+        assert d.title == "Take a chance"
+
+
+class TestMononyms:
+    """One name, no initial. Real people have them -- and so does every author
+    whose initial was dropped, which is the problem.
+
+    Accepting bare names GENERICALLY made seven real defects canonical at a
+    stroke: Sass, Joo, Tamtalini, Khelfallah and Mokobodzki all stopped being
+    flagged because each looked like a mononym. A dropped initial is common
+    and a mononym is rare, so the default is to flag.
+    """
+
+    def test_a_confirmed_mononym_is_accepted(self):
+        """Qilegeri is the fourth author of the COVID knowledge-transfer paper
+        (KDD 2020, arXiv:2004.12433) and an MSc in the same Beihang group as
+        its first author. Verified against arXiv and the group's alumni page."""
+        assert looks_like_author_block(
+            "Wang, J., Lin, X., Liu, Y., Qilegeri, Feng, K., Lin, H.")
+
+    @pytest.mark.parametrize("dropped_initial", [
+        "Kaakaï, S., Matoussi, A., Tamtalini",
+        "Belak, C., Menkens, O., Sass",
+        "Erdős, P., Joó, M., Joó",
+        "Bouleau, N., Feyel, D., Hirsch, F., Mokobodzki",
+        "Guerdouh, D., Khelfallah, Mezerdi, B.",
+    ])
+    def test_an_unconfirmed_bare_name_is_flagged(self, dropped_initial):
+        """Every one of these is a real author with a real initial that the
+        filename lost. They must not pass as mononyms."""
+        assert not looks_like_author_block(dropped_initial)
+
+    @pytest.mark.parametrize("one_word", [
+        "Qilegeri", "Martingales", "Pre-hedging", "SOS", "Analysis I"])
+    def test_a_bare_name_alone_is_never_an_author_block(self, one_word):
+        """Not even a confirmed one: nothing distinguishes it from a one-word
+        title, and this library has several."""
+        assert not looks_like_author_block(one_word)
+
+    def test_a_known_mononym_cannot_launder_a_broken_list(self):
+        """Removing the mononym must leave something canonical, or a list that
+        is broken for OTHER reasons would pass just by containing one."""
+        assert not looks_like_author_block("Qilegeri, Wu, M")
+
+    def test_an_orphan_initial_is_not_a_mononym(self):
+        """"Almgren, R, Chriss, N. A." -- the "R" is an initial that lost its
+        period, not a second person."""
+        assert not looks_like_author_block("Almgren, R, Chriss, N. A.")
+        assert repair_author_block("Almgren, R, Chriss, N. A.") == "Almgren, R., Chriss, N. A."
 
 
 class TestMalformedBlocks:

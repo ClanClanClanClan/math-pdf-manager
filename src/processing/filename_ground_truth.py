@@ -43,7 +43,7 @@ logger = logging.getLogger(__name__)
 
 __all__ = [
     "Kind", "Role", "Reliability", "Decomposition", "decompose",
-    "looks_like_author_block", "looks_like_western_author_list",
+    "looks_like_author_block", "looks_like_western_author_list", "KNOWN_MONONYMS",
     "looks_like_malformed_author_block", "repair_author_block", "AUTHOR_BLOCK_RE",
 ]
 
@@ -207,10 +207,45 @@ _SURNAME = rf"(?:{_WORD}(?:[-\s'’]*(?:{_WORD}|{_PAREN}))*)"
 #: three -- "Kabanov, Yu. A.", "Zhikov, V. V.", "Khasminskii, R. Z." -- and
 #: hyphenated given names keep the hyphen: "Bouchaud, J.-P.".
 _INITIAL = rf"(?:[{_UPPER}](?:[{_LOWER}]{{1,2}})?\.)"
-_INITIALS = rf"(?:{_INITIAL}(?:[-\s]*{_INITIAL})*)"
+#: Initials are SEPARATED, by a space or by a hyphen: "R. C.", "J.-P.".
+#: The separator used to be optional ("[-\s]*"), which quietly made "G.B."
+#: canonical -- so 106 unspaced blocks passed the check, and the repair chain
+#: stopped the moment it produced "Asheim, G.B." instead of going on to
+#: "Asheim, G. B.".  The owner spotted it in the review and asked whether it
+#: was me or the code. It was the code, in this character.
+_INITIALS = rf"(?:{_INITIAL}(?:[-\s]+{_INITIAL})*)"
 #: "Harvey, F.R., Lawson, Jr., H.B." -- the suffix is its own comma-separated
 #: part, which is why it has to be modelled rather than stripped.
 _SUFFIX = r"(?:Jr|Sr|II|III|IV)\.?"
+
+#: A MONONYM -- a person with one name and no initial to give.  "Qilegeri" is
+#: a Mongolian single name; she is the fourth author of the COVID knowledge-
+#: transfer paper and an MSc in the same Beihang group as its first author.
+#: Indonesian and Javanese names do the same thing.
+#:
+#: The negative lookahead is what makes this safe: a bare capitalised word
+#: counts as an author only when it is NOT followed by initials, so
+#: "Smith, J., Jones, A." still parses as two authors rather than four.
+#: Mononyms are ALLOWED ONLY BY NAME.
+#:
+#: A bare surname inside an author list is ambiguous in exactly the wrong
+#: direction: "Qilegeri" is a Mongolian single name, and "Kaakai, S.,
+#: Matoussi, A., Tamtalini" is Achraf Tamtalini with his initial dropped.
+#: Nothing in the string tells them apart.
+#:
+#: Accepting bare names generically made SEVEN real defects canonical at a
+#: stroke -- Sass, Joo, Tamtalini, Khelfallah, Mokobodzki and two more all
+#: stopped being flagged, because each looked like a mononym. A dropped
+#: initial is common and a mononym is rare, so the default is to flag, and a
+#: confirmed mononym is added here with its evidence.
+KNOWN_MONONYMS = {
+    # Fourth author of "A knowledge transfer model for COVID-19 predicting
+    # and non-pharmaceutical intervention simulation" (KDD 2020,
+    # arXiv:2004.12433); an MSc in the Beihang BIGSCity group led by that
+    # paper's first author. Verified against arXiv and the group's alumni
+    # page, 2026-08-24.
+    "Qilegeri",
+}
 _ONE_AUTHOR = rf"{_SURNAME},\s*(?:{_SUFFIX},\s*)?{_INITIALS}"
 
 AUTHOR_BLOCK_RE = re.compile(
@@ -230,9 +265,32 @@ def _nfc(text: str) -> str:
     return unicodedata.normalize("NFC", text or "")
 
 
+#: One author written out in full.  At least one must be present.
+_FULL_UNIT_RE = re.compile(rf"{_SURNAME},\s*(?:{_SUFFIX},\s*)?{_INITIALS}")
+
+
 def looks_like_author_block(segment: str) -> bool:
-    """Is this segment a canonical ``Surname, I. N.`` author block?"""
-    return bool(AUTHOR_BLOCK_RE.match(_nfc(segment).strip()))
+    """Is this segment a canonical ``Surname, I. N.`` author block?
+
+    A mononym -- one name, no initial -- counts, but only alongside at least
+    one author written out in full.  "Qilegeri" is a person; "Martingales" is
+    a title, and nothing about the two strings distinguishes them.
+    """
+    seg = _nfc(segment).strip()
+    if AUTHOR_BLOCK_RE.match(seg) and _FULL_UNIT_RE.search(seg):
+        return True
+    # A confirmed mononym standing among ordinary authors.  Removing it must
+    # leave a block that is canonical on its own, so one known single name
+    # cannot launder a list that is broken for other reasons.
+    if not any(m in seg for m in KNOWN_MONONYMS):
+        return False
+    stripped = seg
+    for mononym in KNOWN_MONONYMS:
+        stripped = re.sub(rf",\s*{re.escape(mononym)}\b", "", stripped)
+        stripped = re.sub(rf"^{re.escape(mononym)},\s*", "", stripped)
+    return (stripped != seg
+            and bool(AUTHOR_BLOCK_RE.match(stripped))
+            and bool(_FULL_UNIT_RE.search(stripped)))
 
 
 #: A second, weaker recogniser for author lists written in Western order --
@@ -317,10 +375,48 @@ _REPAIRS = (
     (re.compile(rf"(,\s*)([{_UPPER}])-([{_UPPER}]\.)"), r"\1\2.-\3"),
 )
 
+
+def _space_initials(text: str) -> str:
+    """"Kabanov, Yu.A." -> "Kabanov, Yu. A."
+
+    Delegates to the LIVE validator rather than repeating the rule.  There
+    are two ``fix_initial_spacing`` implementations in this repository; the
+    one in ``validators/author_parser.py`` is the frozen 2025-07 layer and is
+    ASCII-only, so it leaves "Kabanov, Yu.A." alone.  The one under
+    ``filename_checker`` is Unicode-aware and knows an initial is not always
+    a single letter.  Import cost measured at 154 ms, once.
+    """
+    try:
+        from validators.filename_checker.author_processing import fix_initial_spacing
+    except Exception:                      # pragma: no cover - defensive
+        return text
+    return fix_initial_spacing(text)
+
+
+#: Repairs that are functions rather than regex pairs.
+_REPAIR_FUNCS = (_space_initials,)
+
 #: How many distinct repairs may be applied before the block stops being a
-#: typo and starts being something else.  Three is enough for every real case
-#: in the library and small enough that a title cannot reach canonical form.
+#: typo and starts being something else.
+#:
+#: MEASURED over every non-canonical block in the library, the longest chain
+#: actually needed is TWO -- "Garcia Trillos, C.A, Garcia Trillos, N." wants a
+#: period and then the initials spaced.  Three leaves one spare.  I first put
+#: four here with a comment claiming the real maximum was three; that was a
+#: guess dressed as a measurement, and the measurement says two.
+#:
+#: The bound is therefore not exercised by anything in the library, so a
+#: mutation that lowers it to two survives.  Recorded rather than papered over
+#: with a synthetic test.
+#:
+#: Small enough that no title reaches canonical form: measured at 0 of 25,198.
 _MAX_REPAIRS = 3
+
+
+#: A title of address opening the segment.  Whoever follows it is being
+#: named, not surnamed.
+_HONORIFIC_RE = re.compile(
+    r"^(?:Dr|Prof|Professor|Mr|Mrs|Ms|Miss|Sir|Lord|Lady|Rev|Fr|St)\.?\s", re.I)
 
 
 def looks_like_malformed_author_block(segment: str) -> bool:
@@ -340,12 +436,19 @@ def looks_like_malformed_author_block(segment: str) -> bool:
     # in 23,271 titles, but it is the exact shape this class must not have.
     if "," not in seg and "." not in seg:
         return False
+    # "Dr. Z" is a pseudonym -- the byline of a betting column -- not
+    # "Surname, Initials".  Without this guard the period-for-comma repair
+    # turned it into "Dr, Z.", which is nonsense, and it was proposed for
+    # three files before the owner caught it.
+    if _HONORIFIC_RE.match(seg):
+        return False
     frontier = {seg}
     for _ in range(_MAX_REPAIRS):
         nxt = set()
         for candidate in frontier:
-            for pattern, replacement in _REPAIRS:
-                repaired = pattern.sub(replacement, candidate)
+            for edit in _REPAIRS + _REPAIR_FUNCS:
+                repaired = (edit(candidate) if callable(edit)
+                            else edit[0].sub(edit[1], candidate))
                 if repaired == candidate:
                     continue
                 if looks_like_author_block(repaired):
@@ -367,12 +470,19 @@ def repair_author_block(segment: str) -> Optional[str]:
     seg = _nfc(segment).strip()
     if looks_like_author_block(seg):
         return seg
+    # Same guard as the predicate.  It lived only there at first, so the
+    # PREDICATE correctly said "Dr. Z" is not a mispunctuated author block
+    # while the REPAIRER cheerfully returned "Dr, Z." -- two functions
+    # disagreeing about the same string is worse than either being wrong.
+    if _HONORIFIC_RE.match(seg):
+        return None
     frontier = {seg}
     for _ in range(_MAX_REPAIRS):
         nxt = set()
         for candidate in sorted(frontier):
-            for pattern, replacement in _REPAIRS:
-                repaired = pattern.sub(replacement, candidate)
+            for edit in _REPAIRS + _REPAIR_FUNCS:
+                repaired = (edit(candidate) if callable(edit)
+                            else edit[0].sub(edit[1], candidate))
                 if repaired == candidate:
                     continue
                 if looks_like_author_block(repaired):
