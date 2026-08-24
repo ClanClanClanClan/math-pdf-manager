@@ -232,6 +232,49 @@ unauthenticated GET.
 
 ---
 
+## 12. Seven files are named with invisible control characters
+
+Found 2026-08-24 while measuring extraction; the code hole is fixed in
+`3e26d41`, the seven existing files are NOT touched because renaming
+live library data is the owner's call.
+
+`_clean_for_fs` stripped only U+0000-U+001F, so U+007F DELETE and the
+C1 block U+0080-U+009F went into filenames unnoticed. And it was never
+applied to the author block at all.
+
+```
+03 - Working papers/B/2023/
+    Bodnariu, A., Lindensj<U+007F>o, K. - A controller-stopper-game with hidden controller type.pdf
+01 - Published papers/B/
+    Benezet<U+0084>, C., Gobet, E., Targino, R. - Transform MCMC schemes for sampling intractable factor copula models.pdf
+01 - Published papers/B/
+    Buckdahn, R., Li, J. - Stochastic differential games and viscosity solutions of Hamilton-Jacobi-<U+0080><U+0093>Bellman-Isaacs equations.pdf
+07b - Contract theory/02 - Unpublished papers/
+    Mason, R., V<U+001D>alimaki, J. - Dynamic moral hazard and stopping.pdf
+07b - Contract theory/01 - Published papers/C/
+    Cvitanic<U+0087>, J., Radas, S., Sikic, H. - Co-development ventures, optimal time of entry and profit-sharing.pdf
+06 - Theses/Z/
+    Zheng, C. - Methode de "Malliavin-Stein" multi-dimensionelle sur l'espace de Poisson<U+0010><U+0011> - applications aux theoremes centraux limites.pdf
+06 - Theses/C/
+    Corlay, S. - Quelques aspets<U+001C> de la quantiation optimale et appliations<U+001C> a la finance.pdf
+```
+
+They sort wrongly, they do not match a search for the visible text, and
+Finder shows nothing unusual.
+
+Two of them need more than a strip. The Buckdahn file's
+`<U+0080><U+0093>` sits where an en dash belongs — it is a UTF-8 en dash
+that lost its lead byte, so the repair is "restore the dash", not
+"delete two characters". And the Corlay file has real typos underneath:
+"aspets", "quantiation", "appliations" are missing letters, which the
+spelling check should be catching independently of the control
+characters.
+
+**What the cockpit needs:** a Maintenance row that lists files whose
+names contain any category-Cc codepoint, shows the before/after, and
+routes the fix through the normal reversible rename. Not an auto-apply —
+two of these seven need a human to decide what the character was.
+
 ## Fixed on 2026-08-24
 
 - **Undo reported success without checking.** The preview printed "WOULD
