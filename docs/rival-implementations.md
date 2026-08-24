@@ -36,7 +36,49 @@ version gets wrong for 3,889 files.
 
 ## Kept, deliberately
 
-### `fix_initial_spacing` — two implementations, neither dominant
+### `fix_initial_spacing` — RESOLVED: one implementation, three adapters
+
+`src/core/initials.py` is now the only implementation. The two functions in
+`validators` and the wrapper in `processing.filename_ground_truth` are thin
+adapters over it. Import cost 4 ms, against 154 ms for the route through the
+validator package.
+
+It is the **union**, not a choice between them:
+
+| case | live | frozen | unified |
+|---|---|---|---|
+| `Kabanov, Yu.A.` → `Yu. A.` | ✓ | ✗ ASCII-only | ✓ |
+| `Kyprianou, A.E` → `A. E` | ✗ | ✓ | ✓ |
+| `St.Petersburg` unchanged | ✓ | ✓ | ✓ |
+| `A.s. approximation…` unchanged | **✗ emits `A. s.`** | ✓ | ✓ |
+
+The last row is a bug the live one had, not a gap: its guard inspected the
+matched token and never what followed. Requiring the *following* chunk to be
+initial-shaped refuses it, and every lowercase abbreviation with it —
+`i.i.d.`, `w.r.t.`, `r.c.l.l.`, 23 titles.
+
+Two hand-written guards went away with it. An initial is now defined by its
+shape — one capital, then at most three lowercase — and that single fact
+rejects all-caps runs (`USA.`), lowercase words (`et.`) and real words after
+a period (`St.Petersburg`, `O.Brien`) without a special case for any of them.
+
+**Measured against the old live rule over the whole library: it changes
+exactly 9 more author blocks — the nine the frozen one caught — and ZERO more
+titles.** No new damage.
+
+The fixpoint loop both predecessors carried is gone. `re.sub` replaces every
+non-overlapping match and inserting a space never creates a new adjacency, so
+one pass always suffices: checked over every author block and filename in the
+library and over 200,000 synthetic strings, one pass and the fixpoint never
+disagree. Keeping it would have been a branch no test could reach.
+
+**The precondition survives and is the real answer.** Apply this to an author
+block, never a title. `S.M.F.`, `C.I.M.E.`, `U.S.`, `P.D.E.` are acronyms and
+would be spaced; `Varadhan, S.R.S.` and `R.E.A.C. Paley` are people and should
+be. No rule reading the string alone separates them. Every production caller
+is inside `fix_author_block`, traced over all 29,678 PDFs.
+
+### The two implementations before this (kept for the record)
 
 * `validators/filename_checker/author_processing.py` — live, Unicode-aware,
   knows an initial can be several letters (`Kabanov, Yu.A.` → `Yu. A.`).

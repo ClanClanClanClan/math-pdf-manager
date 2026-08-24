@@ -49,14 +49,11 @@ class AuthorParser:
         if not author_part:
             return author_part
             
-        # Pattern for initials like "J.D." or "A.B.C."
-        pattern = r'([A-Z])\.([A-Z])'
-        
-        # Keep applying until no more matches (for cases like A.B.C.D.)
-        while re.search(pattern, author_part):
-            author_part = re.sub(pattern, r'\1. \2', author_part)
-            
-        return author_part
+        # Delegates to core.initials, the single implementation. The
+        # ASCII-only pattern that used to live here could not see
+        # "Kabanov, Yu.A." at all -- an initial is not always one letter.
+        from core.initials import space_initials
+        return space_initials(author_part)
     
     def fix_author_suffixes(self, text: str) -> str:
         """Fix spacing around author suffixes"""

@@ -252,24 +252,7 @@ class CMO:
         self, all_segments: List[str], title_part: str, max_bytes: int
     ) -> str:
         """Include as many authors as possible, using 'et al.' when truncated."""
-        n = len(all_segments)
-        et_al = ", et al."
-
-        full = ", ".join(all_segments) + title_part
-        if len(full.encode("utf-8")) <= max_bytes:
-            return full
-
-        lo, hi, best_k = 1, n - 1, 1
-        while lo <= hi:
-            mid = (lo + hi) // 2
-            candidate = ", ".join(all_segments[:mid]) + et_al + title_part
-            if len(candidate.encode("utf-8")) <= max_bytes:
-                best_k = mid
-                lo = mid + 1
-            else:
-                hi = mid - 1
-
-        return ", ".join(all_segments[:best_k]) + et_al + title_part
+        return build_with_max_authors(all_segments, title_part, max_bytes)
 
     # Convenience accessors -------------------------------------------------
     def list_author_names(self) -> List[str]:
@@ -307,6 +290,44 @@ def _get_fs_name_max() -> int:
         _FS_NAME_MAX = 255
 
     return _FS_NAME_MAX
+
+
+#: The library's spelling, measured: 10 of the 12 existing names that carry
+#: it write ", et al." with the comma. (The other two are defects -- one is
+#: missing the comma, one is spelled "etal".)
+ET_AL = ", et al."
+
+
+def build_with_max_authors(
+    all_segments: List[str], title_part: str, max_bytes: int
+) -> str:
+    """Keep the TITLE entire and drop authors from the end until it fits.
+
+    Binary-searches for the largest number of authors that still leaves room,
+    then appends ", et al.". Module-level rather than a method because the
+    rename sweep needs it too: ``library_normalize`` used to SKIP a name that
+    came out over the byte limit, which is how three papers ended up
+    uncorrectable -- spacing the initials of a 15-author paper pushes the name
+    to 257 bytes against a 255 limit, and skipping meant their author blocks
+    stayed wrong.
+    """
+    et_al = ET_AL
+    full = ", ".join(all_segments) + title_part
+    if len(full.encode("utf-8")) <= max_bytes:
+        return full
+
+    n = len(all_segments)
+    lo, hi, best_k = 1, n - 1, 1
+    while lo <= hi:
+        mid = (lo + hi) // 2
+        candidate = ", ".join(all_segments[:mid]) + et_al + title_part
+        if len(candidate.encode("utf-8")) <= max_bytes:
+            best_k = mid
+            lo = mid + 1
+        else:
+            hi = mid - 1
+
+    return ", ".join(all_segments[:best_k]) + et_al + title_part
 
 
 def _clean_for_fs(text: str) -> str:

@@ -33,6 +33,7 @@ so an in-place ``logged_rename`` is safe; were a copy ever to exist,
 from __future__ import annotations
 
 import logging
+import re
 
 from processing.library_scope import exclusion_reason
 import unicodedata
@@ -80,6 +81,49 @@ def _classify(old_name: str, new_name: str) -> str:
     if author_changed:
         return AUTHOR
     return TITLE
+
+
+def _fit_to_limit(filename: str) -> Optional[str]:
+    """Bring an over-long canonical filename under the byte limit.
+
+    Authors are dropped from the end and ", et al." appended; the title is
+    never touched. Returns ``None`` if it cannot be made to fit -- a title
+    long enough to overflow on its own is a different problem and is not
+    silently mangled here.
+
+    An "et al." already present is preserved: the source block is stripped of
+    it before parsing (``parse_authors_string`` discards it anyway) and it is
+    re-applied, because a name that says eleven authors when the paper has
+    more is a worse answer than a name that says eleven and "et al.".
+    """
+    from arxivbot.models.cmo import ET_AL, build_with_max_authors
+
+    stem, dot, ext = filename.rpartition(".")
+    if not dot or " - " not in stem:
+        return None
+    authors, _, title = stem.partition(" - ")
+
+    had_et_al = bool(re.search(r",?\s*et\s*al\.?\s*$", authors, re.I))
+    authors = re.sub(r",?\s*et\s*al\.?\s*$", "", authors, flags=re.I).strip()
+
+    from processing.ingest import parse_authors_string
+    parsed = parse_authors_string(authors)
+    segments = [f"{a.family}, {a.initials()}." if a.initials() else a.family
+                for a in parsed if a.family]
+    if not segments:
+        return None
+    if had_et_al and len(segments) > 1:
+        # Force the truncation branch so the marker survives even when the
+        # full list would have fitted.
+        segments = segments[:-1] if len(segments) > 1 else segments
+
+    title_part = f" - {title}.{ext}"
+    candidate = build_with_max_authors(segments, title_part, _MAX_FILENAME_BYTES)
+    if had_et_al and ET_AL.strip() not in candidate:
+        candidate = ", ".join(segments) + ET_AL + title_part
+    if len(candidate.encode("utf-8")) > _MAX_FILENAME_BYTES:
+        return None
+    return candidate
 
 
 def propose_renames(
@@ -278,8 +322,17 @@ def apply_renames(
             # because Path.exists() RAISES ENAMETOOLONG rather than
             # returning False — which aborted a 6,186-file batch partway.
             if len(new.name.encode("utf-8")) > _MAX_FILENAME_BYTES:
-                skipped.append({"old": p["old"], "reason": "name too long"})
-                continue
+                # Do not give up on it. The rule for this already exists --
+                # keep the TITLE entire and drop authors from the end,
+                # minimally, with ", et al." -- and skipping meant three
+                # papers whose initials needed spacing could never be
+                # corrected, because spacing a 15-author block pushes the
+                # name from 249 bytes to 257.
+                shortened = _fit_to_limit(new.name)
+                if shortened is None:
+                    skipped.append({"old": p["old"], "reason": "name too long"})
+                    continue
+                new = new.with_name(shortened)
             try:
                 if not old.exists():
                     skipped.append({"old": p["old"], "reason": "source gone"})

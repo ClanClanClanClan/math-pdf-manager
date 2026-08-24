@@ -379,18 +379,13 @@ _REPAIRS = (
 def _space_initials(text: str) -> str:
     """"Kabanov, Yu.A." -> "Kabanov, Yu. A."
 
-    Delegates to the LIVE validator rather than repeating the rule.  There
-    are two ``fix_initial_spacing`` implementations in this repository; the
-    one in ``validators/author_parser.py`` is the frozen 2025-07 layer and is
-    ASCII-only, so it leaves "Kabanov, Yu.A." alone.  The one under
-    ``filename_checker`` is Unicode-aware and knows an initial is not always
-    a single letter.  Import cost measured at 154 ms, once.
+    Delegates to ``core.initials``, which is now the ONLY implementation of
+    the rule -- the two ``fix_initial_spacing`` functions in ``validators``
+    are thin adapters over the same code. Import cost 4 ms, against 154 ms
+    for the route through the validator package.
     """
-    try:
-        from validators.filename_checker.author_processing import fix_initial_spacing
-    except Exception:                      # pragma: no cover - defensive
-        return text
-    return fix_initial_spacing(text)
+    from core.initials import space_initials
+    return space_initials(text)
 
 
 #: Repairs that are functions rather than regex pairs.
