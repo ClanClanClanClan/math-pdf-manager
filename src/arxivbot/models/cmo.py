@@ -341,6 +341,15 @@ def _clean_for_fs(text: str) -> str:
     # ever looked at the first range.  Found by a property test, not by
     # reading the code.
     text = re.sub(r"[\u0000-\u001f\u007f-\u009f]", "", text)  # C0, DEL, C1
+    # ...and the INVISIBLE FORMAT characters, category Cf: zero-width space,
+    # zero-width joiner, soft hyphen, byte-order mark, the bidi marks. Same
+    # argument as the control characters above -- they are unreadable in
+    # Finder, they break sort order and they defeat search -- and the same
+    # bug, found the same way: a property test generated U+200B. Of these
+    # only the SOFT HYPHEN was actually reaching filenames (the others are
+    # caught downstream), and no library filename carries one today, so this
+    # closes a hole rather than repairing damage.
+    text = "".join(c for c in text if unicodedata.category(c) != "Cf")
     # "/" is the ONLY character macOS forbids in a filename, and it takes a
     # HYPHEN, not an en dash.  The house convention reserves the en dash for
     # two co-equal entities (Hamilton–Jacobi) and uses a hyphen for one word

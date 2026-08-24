@@ -46,6 +46,38 @@ class TestControlCharacters:
         assert "4<8=8AB@0B>@" in out
 
 
+INVISIBLE = [("\u200b", "zero-width space"), ("\u00ad", "soft hyphen"),
+             ("\ufeff", "byte-order mark"), ("\u200d", "zero-width joiner"),
+             ("\u200e", "left-to-right mark"), ("\u2060", "word joiner")]
+
+
+class TestInvisibleFormatCharacters:
+    """Category Cf, the same argument as the control characters above.
+
+    A property test found this with U+200B, months after the Cc fix: the
+    sanitiser stripped Cc and stopped. Of these only the SOFT HYPHEN was
+    actually reaching filenames -- the rest are caught downstream -- and no
+    library filename carries one today, so this closes a hole rather than
+    repairing damage.
+    """
+
+    @pytest.mark.parametrize("ch,name", INVISIBLE, ids=[n for _, n in INVISIBLE])
+    def test_stripped_from_a_surname(self, ch, name):
+        out = _name([Author(family=f"Ab{ch}cd", given="John")])
+        assert not any(unicodedata.category(c) == "Cf" for c in out), repr(out)
+        assert "Abcd, J." in out
+
+    @pytest.mark.parametrize("ch,name", INVISIBLE, ids=[n for _, n in INVISIBLE])
+    def test_stripped_from_a_title(self, ch, name):
+        out = _name([Author(family="Smith", given="John")],
+                    title=f"A te{ch}st title")
+        assert not any(unicodedata.category(c) == "Cf" for c in out), repr(out)
+
+    def test_a_surname_that_is_only_invisible_characters_drops_the_author(self):
+        out = _name([Author(family="\u200b\u00ad", given="John")])
+        assert out == "A test title.pdf", repr(out)
+
+
 class TestTheOneCharacterMacosForbids:
     def test_slash_in_a_surname_becomes_a_hyphen(self):
         assert _name([Author(family="Sm/ith", given="John")]).startswith("Sm-ith, J.")
@@ -102,9 +134,9 @@ class TestOrdinaryNamesAreUntouched:
 class TestProperties:
     @settings(max_examples=300, deadline=None)
     @given(st.text(min_size=1, max_size=40), st.text(max_size=20))
-    def test_output_never_contains_a_control_character_or_a_slash(self, family, given):
+    def test_output_never_contains_an_invisible_character_or_a_slash(self, family, given):
         out = _name([Author(family=family, given=given or None)])
-        assert not any(unicodedata.category(c) == "Cc" for c in out)
+        assert not any(unicodedata.category(c) in ("Cc", "Cf") for c in out)
         assert "/" not in out.removesuffix(".pdf")
 
     @settings(max_examples=150, deadline=None)
@@ -117,6 +149,13 @@ class TestProperties:
         by splitting on the comma -- with one in the name the round trip
         measures the test's own parsing, not the sanitiser."""
         once = _name([Author(family=family, given="A")])
+        if "," not in once:
+            # Cleaning erased the surname entirely, so the name is
+            # title-only and there is no surname to feed back. That is
+            # correct behaviour, not a fixpoint violation -- and hypothesis
+            # found it with a zero-width space, which is exactly the class
+            # of character the sanitiser was extended to strip.
+            return
         surname = once.split(",")[0]
         twice = _name([Author(family=surname, given="A")])
         assert once == twice

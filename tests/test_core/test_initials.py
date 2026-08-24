@@ -192,7 +192,80 @@ class TestWhatItDeliberatelyDoesNot:
         """
         assert space_initials(acronym) != acronym
 
+    def test_an_initial_glued_to_a_SURNAME_is_not_separated(self):
+        """"Meyer, P.-A.Smith" stays glued. That is a missing separator
+        between an initial and a surname, which is a different rule from
+        spacing two initials -- and the shape occurs ZERO times in the
+        library, so buying it would cost more than it is worth."""
+        assert space_initials("Meyer, P.-A.Smith") == "Meyer, P.-A.Smith"
+
     def test_it_does_not_add_a_missing_period(self):
         """"A.E" becomes "A. E", not "A. E.". Supplying the missing period is
         a repair, and it lives in filename_ground_truth.repair_author_block."""
         assert space_initials("Kyprianou, A.E") == "Kyprianou, A. E"
+
+
+class TestCasesFromTheAdversaries:
+    """Three adversarial agents attacked a rival design and, in doing so,
+    enumerated shapes worth pinning here. All of these already pass; the
+    value is that a future change cannot break them quietly."""
+
+    @pytest.mark.parametrize("broken,fixed", [
+        # a surname with no comma before the initials
+        ("van Beek P.A.", "van Beek P. A."),
+        ("de Vylder F.E.", "de Vylder F. E."),
+        ("el Karoui N.M.", "el Karoui N. M."),
+        # a generational suffix after the run
+        ("King, M.L. Jr.", "King, M. L. Jr."),
+        # a multi-letter initial whose FINAL period is missing -- both gaps
+        # of the old implementations in one string
+        ("Kabanov, Yu.A", "Kabanov, Yu. A"),
+        ("Veretennikov, A.Yu", "Veretennikov, A. Yu"),
+        # two runs in one block: neither may be left half-spaced
+        ("Zhang, A.B. Wang, C.D.", "Zhang, A. B. Wang, C. D."),
+        # a run followed by something that is not a name
+        ("Smith, A.B. 3rd", "Smith, A. B. 3rd"),
+        # doubled whitespace before the run
+        ("Rogers, L.  C.G.", "Rogers, L.  C. G."),
+        # an apostrophe surname
+        ("O’Brien A.B.", "O’Brien A. B."),
+        # a two-letter given-name abbreviation, not an initial pair
+        ("Nelson, Ed.W.", "Nelson, Ed. W."),
+    ])
+    def test_handled(self, broken, fixed):
+        assert space_initials(broken) == fixed
+
+
+class TestSeriesLabelsInTheAuthorSlot:
+    """127 files put "Mémoires de la S.M.F. 2e série, tome N (YYYY)" in the
+    author slot. Spacing it to "S. M. F." would be wrong.
+
+    The rule DOES rewrite that string if handed it -- no string-level rule
+    can tell an institution's initials from a person's. What protects those
+    127 files is that the rename path never hands it over: the decomposer
+    recognises the segment as a series label, not an author block. Verified
+    against all 127, through the real ``normalize_full_name``.
+    """
+
+    SMF = "Mémoires de la S.M.F. 2e série, tome 44–45 (1991)"
+
+    def test_the_raw_rule_would_rewrite_it(self):
+        """Stated plainly so nobody mistakes the protection for immunity."""
+        assert space_initials(self.SMF) != self.SMF
+        assert "S. M. F." in space_initials(self.SMF)
+
+    def test_the_rename_path_leaves_it_alone(self):
+        from processing.move_normalizer import normalize_full_name
+        stem = f"{self.SMF} - Unterberger, A. - Quantification relativiste"
+        out = normalize_full_name(stem + ".pdf")
+        name = out[0] if isinstance(out, (tuple, list)) else out
+        assert "S.M.F." in name, "the series label was spaced out"
+        assert "S. M. F." not in name
+
+    def test_the_decomposer_calls_it_a_series_not_an_author(self):
+        from processing.filename_ground_truth import decompose
+        d = decompose(f"{self.SMF} - Unterberger, A. - Quantification relativiste",
+                      "05 - Books and lecture notes/03 - Mémoires de la société mathématique de France")
+        assert d.is_reliable
+        assert d.authors == "Unterberger, A."
+        assert "S.M.F." in d.series

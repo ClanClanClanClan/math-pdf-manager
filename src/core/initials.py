@@ -39,8 +39,23 @@ and would wrongly mangle
 
 Both are "capital, period, capital, period". No rule reading the string
 alone can separate a person from an acronym, so the caller has to know
-which it is holding. Every production caller does: they are all inside
-``fix_author_block`` and its siblings.
+which it is holding.
+
+CORRECTION. I first wrote that every production caller is inside
+``fix_author_block``. That is wrong, and an adversarial agent caught it:
+``processing.filename_ground_truth`` also reaches this rule, through
+``_REPAIR_FUNCS`` in ``repair_author_block`` and
+``looks_like_malformed_author_block``. The substance survives -- every one
+of those call sites passes the FIRST SEGMENT of a filename, the author slot,
+never the title side -- but "all inside fix_author_block" was not true and
+the guarantee is worth stating accurately: the callers pass the author slot.
+
+The author slot is not always an author, either. 127 files put
+"Mémoires de la S.M.F. 2e série, tome N (YYYY)" there, and this rule would
+happily make it "S. M. F.". What protects them is one layer up: the
+decomposer recognises that segment as a SERIES LABEL and never offers it as
+an author block. Verified against all 127 through the real rename path --
+0 rewritten.
 """
 from __future__ import annotations
 
