@@ -150,10 +150,16 @@ class CMO:
         title = _clean_for_fs(title)
 
         # Build filename with as many authors as possible
-        if not self.authors:
+        all_segments = self._author_segments() if self.authors else []
+        if not all_segments:
+            # Either there were no authors, or sanitising removed every
+            # one of them (a surname that was nothing but control
+            # characters).  Both mean the same thing here: there is no
+            # author block, so the name is the title alone.  Falling
+            # through instead produced " - A test title.pdf", with a
+            # leading separator and an empty author slot.
             base = title
         else:
-            all_segments = self._author_segments()
             separator = " - "
             title_part = separator + title
 
@@ -220,10 +226,26 @@ class CMO:
         for author in self.authors:
             family = unicodedata.normalize("NFC", author.family or "")
             initials = unicodedata.normalize("NFC", author.initials() or "")
-            if initials:
+            # The title goes through _clean_for_fs; the author block never
+            # did, so anything filesystem-hostile in a surname walked
+            # straight into the filename.  Measured on a 1,753-paper
+            # stratified sample of the library, read through opaque
+            # symlinks: 11 proposed names carried a raw U+0010, all from
+            # one family of scanned Russian PDFs whose embedded /Author is
+            # mojibake for "Администратор".  A surname containing "/" is
+            # rarer but worse -- "/" is the one character macOS actually
+            # forbids.
+            family = _clean_for_fs(family)
+            initials = _clean_for_fs(initials)
+            if family and initials:
                 segments.append(f"{family}, {initials}.")
-            else:
+            elif family:
                 segments.append(family)
+            elif initials:
+                # Cleaning ate the surname entirely.  Emitting ", J." would
+                # produce a filename starting with a comma, so drop the
+                # author rather than invent a shape the library never uses.
+                continue
         return segments
 
     def _build_with_max_authors(
@@ -289,7 +311,15 @@ def _get_fs_name_max() -> int:
 
 def _clean_for_fs(text: str) -> str:
     """Remove filesystem-unsafe characters and normalise spaces."""
-    text = re.sub(r"[\u0000-\u001f]", "", text)  # control chars
+    # All THREE control ranges, not just C0.  The old pattern stopped at
+    # U+001F, so U+007F DELETE and the C1 block U+0080-U+009F walked
+    # through -- and seven files in the live library are named through
+    # that hole today, among them "Lindensj<U+007F>o", "Benezet<U+0084>"
+    # and "Cvitanic<U+0087>".  They are invisible in Finder, they break
+    # sorting and search, and nothing flagged them because the check only
+    # ever looked at the first range.  Found by a property test, not by
+    # reading the code.
+    text = re.sub(r"[\u0000-\u001f\u007f-\u009f]", "", text)  # C0, DEL, C1
     # "/" is the ONLY character macOS forbids in a filename, and it takes a
     # HYPHEN, not an en dash.  The house convention reserves the en dash for
     # two co-equal entities (Hamilton–Jacobi) and uses a hyphen for one word
