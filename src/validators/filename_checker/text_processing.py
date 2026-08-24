@@ -684,66 +684,6 @@ def fix_ascii_punctuation(text: str, regions, _exc=None, spans=None):
     return result
 
 
-def to_sentence_case_academic(
-    text: str, caps_whitelist: set, dash_whitelist: set
-):
-    """Convert to sentence case while preserving whitelisted terms - RESTORED from original"""
-    
-    if not text:
-        return text, False
-
-    original = text
-    # Import here to avoid circular imports
-    from .math_utils import find_math_regions
-    math_regions = find_math_regions(text)
-
-    result = []
-    i = 0
-    first_letter_found = False
-
-    while i < len(text):
-        char = text[i]
-        in_math = any(start <= i < end for start, end in math_regions)
-
-        if in_math:
-            result.append(char)
-        elif char.isalpha() and not first_letter_found:
-            result.append(char.upper())
-            first_letter_found = True
-        elif char.isalpha():
-            word_start = i
-            while word_start > 0 and (
-                text[word_start - 1].isalnum() or text[word_start - 1] in "-'–"
-            ):
-                word_start -= 1
-            word_end = i
-            while word_end < len(text) and (
-                text[word_end].isalnum() or text[word_end] in "-'–"
-            ):
-                word_end += 1
-
-            current_word = text[word_start:word_end]
-
-            # Use whitelists from config.yaml
-            if current_word in caps_whitelist or current_word in dash_whitelist:
-                result.append(char)
-            else:
-                result.append(char.lower())
-        else:
-            result.append(char)
-
-        i += 1
-
-    result_text = "".join(result)
-    return result_text, result_text != original
-
-
-def to_sentence_case(text: str, whitelist: set) -> str:
-    """Sentence case conversion compatibility - RESTORED from original"""
-    result, _ = to_sentence_case_academic(text, whitelist, set())
-    return result
-
-
 def fix_thousand_separators(text: str, regions, _exc, spans):
     """Fix thousand separators in numbers - RESTORED from original"""
     if not re.search(r'\b\d{4,}\b', text) and not THOUSANDS_RE.search(text):
