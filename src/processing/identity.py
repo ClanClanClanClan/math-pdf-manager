@@ -336,6 +336,29 @@ class PaperIdentity:
     topic_suggestion: str = ""
     topic_confidence: float = 0.0
 
+    # WHERE THIS PAPER'S NAME CAME FROM, and how sure the pipeline was.
+    #
+    # ``title_source`` was computed on four branches of ingest and read at
+    # exactly one place, so not one of the 29,509 sidecars could say
+    # whether its name came from the PDF's own metadata, from arXiv, from
+    # Crossref, from a local model, or from the filename it arrived with.
+    # A name derived from an unverified /Author field and a name confirmed
+    # against arXiv looked identical afterwards — which is how
+    # "Schnur, R. - Random matrices" sat in the library indistinguishable
+    # from a correct filing.
+    #
+    #   title_source / author_source
+    #       "embedded" | "arxiv" | "crossref" | "hal" | "llm" | "filename"
+    #   identification_state
+    #       "identified" | "needs_review" | "unidentified"
+    #   identification_note
+    #       why, when it is not "identified" — e.g. which surname the
+    #       paper's own front matter does not contain.
+    title_source: str = ""
+    author_source: str = ""
+    identification_state: str = ""
+    identification_note: str = ""
+
     # Cached classifier signal: the paper's abstract / first-pages text,
     # extracted once and stored so the topic classifier can read the
     # actual content (not just the filename) without re-parsing the PDF.

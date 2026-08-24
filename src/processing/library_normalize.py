@@ -175,6 +175,12 @@ def scan(library_root: Path, *, limit: Optional[int] = None, progress=None) -> d
     }
 
 
+#: How long a rename batch waits for the library lock before giving up.
+#: Long enough to outlast the watcher filing one paper, short enough that
+#: a cockpit button always comes back.
+LOCK_WAIT_SECONDS = 30.0
+
+
 def apply_renames(
     library_root: Path,
     proposals: Iterable[dict],
@@ -182,6 +188,7 @@ def apply_renames(
     dry_run: bool = True,
     pending_words: Optional[Iterable[str]] = None,
     undo_log=None,  # type: ignore[no-untyped-def]
+    lock_held: bool = False,
 ) -> dict:
     """Rename the given ``proposals`` in one reversible transaction.
 
@@ -199,6 +206,36 @@ def apply_renames(
             "would_rename": len(items),
             "sample": items[:50],
         }
+
+    # ---- TAKE THE LIBRARY LOCK -----------------------------------------
+    # Here, not at the call sites. LibraryLock existed and had exactly one
+    # production user, watcher/daemon.py:198 — while the cockpit, which
+    # produced the 8,514- and 3,842-operation rename batches, never took
+    # it at all, and the watcher runs 24/7 under KeepAlive. Four cockpit
+    # paths call this function; a guard that has to be remembered four
+    # times is a guard that will be forgotten once.
+    #
+    # Bounded wait, not the context manager: LibraryLock.__enter__ blocks
+    # FOREVER by default, and a Streamlit button that never returns is
+    # worse than one that says the library is busy.
+    from processing.locking import LibraryLock
+
+    lock = None
+    if not lock_held:
+        lock = LibraryLock(library_root)
+        if not lock.acquire(blocking=True, timeout=LOCK_WAIT_SECONDS):
+            return {
+                "dry_run": False,
+                "renamed": 0,
+                "skipped": [{"old": p.get("old", ""), "reason": "library busy"}
+                            for p in items],
+                "tx_id": None,
+                "error": (
+                    f"another process is working on the library (waited "
+                    f"{LOCK_WAIT_SECONDS}s). Nothing was renamed. This is "
+                    f"usually the watcher filing an arrival; try again in a "
+                    f"moment."),
+            }
 
     from processing.undo_log import UndoLog, logged_rename
 
@@ -262,6 +299,8 @@ def apply_renames(
             else:
                 log.discard()
                 tx_id = None
+        if lock is not None:
+            lock.release()
 
     # Queue uncertain words (best-effort; never fails the batch).
     if pending_words:

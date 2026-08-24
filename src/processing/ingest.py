@@ -118,6 +118,22 @@ def _bare_arxiv_id(arxiv_id: str) -> str:
     return re.sub(r"v\d+$", "", (arxiv_id or "").strip())
 
 
+def _entry_arxiv_id(entry, ns) -> str:
+    """The id THIS entry is about, from its own <id> element.
+
+    Load-bearing. arXiv does NOT return entries in the order they were
+    requested — asking for [2105.10623, 2009.05157, 1706.03762,
+    2301.00001, 2401.12345] returns them as [2301, 1706, 2401, 2009,
+    2105]. Pairing request order against response order therefore gives
+    every paper somebody else's title and authors, and with the lookup
+    gate widened that lands in the filename.
+    """
+    el = entry.find("atom:id", ns)
+    if el is None or not el.text:
+        return ""
+    return _bare_arxiv_id(el.text.rsplit("/", 1)[-1])
+
+
 def _parse_arxiv_entry(entry, ns) -> dict:
     """One <entry> -> the fields we keep. Pure; no network."""
     out: dict = {}
@@ -167,12 +183,17 @@ def prefetch_arxiv(arxiv_ids) -> int:
             if resp.status_code != 200:
                 continue
             root = ET.fromstring(resp.content)
-            entries = root.findall("atom:entry", ns)
-            # arXiv returns entries in the order requested.
-            for wanted_id, entry in zip(chunk, entries):
+            requested = set(chunk)
+            for entry in root.findall("atom:entry", ns):
+                # Key on the entry's OWN id. Zipping against the request
+                # order was wrong: arXiv reorders freely, so every record
+                # was filed under the wrong paper.
+                entry_id = _entry_arxiv_id(entry, ns)
+                if entry_id not in requested:
+                    continue
                 rec = _parse_arxiv_entry(entry, ns)
                 if rec.get("title"):
-                    _ARXIV_CACHE[wanted_id] = rec
+                    _ARXIV_CACHE[entry_id] = rec
                     found += 1
         except Exception as exc:      # never let a lookup stop a batch
             logger.warning("arXiv batch lookup failed for %s…: %s",
@@ -195,7 +216,15 @@ def lookup_arxiv(arxiv_id: str) -> dict:
     if resp.status_code != 200:
         return {}
     entry = ET.fromstring(resp.content).find("atom:entry", ns)
-    rec = _parse_arxiv_entry(entry, ns) if entry is not None else {}
+    if entry is None:
+        return {}
+    # Even a single-id query is checked against the entry's own id: an
+    # unknown id makes arXiv return an error entry rather than nothing.
+    if _entry_arxiv_id(entry, ns) not in ("", key):
+        logger.warning("arXiv returned %s for a query about %s; ignoring",
+                       _entry_arxiv_id(entry, ns), key)
+        return {}
+    rec = _parse_arxiv_entry(entry, ns)
     if rec.get("title"):
         _ARXIV_CACHE[key] = rec
     return rec
@@ -1330,6 +1359,7 @@ def ingest_paper(
             _state, _why = NEEDS_REVIEW, "; ".join(_doubts[:3])
 
     result["identification_state"] = _state
+    result["identification_note"] = _why if _state != IDENTIFIED else ""
     result["title_source"] = metadata.get("title_source", "filename")
     result["author_source"] = metadata.get("author_source", "")
     if _state != IDENTIFIED and not (kwargs.get("force") or canonical_override):
@@ -1410,6 +1440,14 @@ def ingest_paper(
                 # filed by itself.  Those are exactly the decisions worth
                 # auditing afterwards.
                 identity.topic_confidence = result.get("topic_confidence", 0.0)
+                # Provenance, persisted. Computing it and dropping it on
+                # the floor is the defect this was meant to fix.
+                identity.title_source = result.get("title_source", "")
+                identity.author_source = result.get("author_source", "")
+                identity.identification_state = result.get(
+                    "identification_state", "")
+                identity.identification_note = result.get(
+                    "identification_note", "")
                 identity.save(dest_path)
         except Exception as exc:  # pragma: no cover -- best effort
             logger.warning("sidecar write failed for %s: %s", org_result.destination, exc)

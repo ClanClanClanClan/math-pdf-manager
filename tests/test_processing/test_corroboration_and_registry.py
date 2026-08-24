@@ -125,6 +125,7 @@ class TestTheRegistryIsConsultedWhenTheFilenameIsJunk:
         _ATOM = """<?xml version="1.0"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
  <entry>
+  <id>http://arxiv.org/abs/2009.05157v1</id>
   <title>Lecture Notes on Random Matrices</title>
   <author><name>Roland Speicher</name></author>
  </entry>
@@ -299,8 +300,12 @@ class TestTheLookupIsBatched:
         _ARXIV_CACHE.clear()
 
     def _feed(self, ids):
+        # Every entry carries its own <id>, as arXiv's really does. A
+        # fake that omits it cannot show the ordering bug that shipped —
+        # and could not have caught it.
         entries = "".join(
-            f"<entry><title>Paper {i}</title>"
+            f"<entry><id>http://arxiv.org/abs/{i}v1</id>"
+            f"<title>Paper {i}</title>"
             f"<author><name>Author {i}</name></author></entry>"
             for i in ids)
         return ('<?xml version="1.0"?><feed '
@@ -362,3 +367,91 @@ class TestTheLookupIsBatched:
         monkeypatch.setattr(requests, "get", boom)
         from processing.ingest import prefetch_arxiv
         assert prefetch_arxiv(["2401.00001", "2401.00002"]) == 0
+
+
+class TestEachRecordGoesToTheRightPaper:
+    """arXiv does NOT return entries in the order they were requested.
+
+    Verified against the live API: asking for
+    [2105.10623, 2009.05157, 1706.03762, 2301.00001, 2401.12345]
+    returns them as [2301, 1706, 2401, 2009, 2105].
+
+    The first version of the batch lookup zipped the request list against
+    the response list. Every paper therefore got somebody else's title
+    and authors — and with the lookup gate widened, that goes straight
+    into the filename. It was invisible to every unit test, because a
+    fake API that answers in order cannot show it, and it was caught only
+    by validating 600 real papers against arXiv and noticing the titles
+    were shifted by one.
+    """
+
+    @pytest.fixture(autouse=True)
+    def clear_cache(self):
+        from processing.ingest import _ARXIV_CACHE
+        _ARXIV_CACHE.clear()
+        yield
+        _ARXIV_CACHE.clear()
+
+    @pytest.fixture
+    def shuffling_api(self, monkeypatch):
+        """Answers correctly, but in reverse order — as arXiv does."""
+        def fake_get(url, *a, **k):
+            ids = url.split("id_list=")[1].split("&")[0].split(",")
+            entries = "".join(
+                f"<entry><id>http://arxiv.org/abs/{i}v1</id>"
+                f"<title>Title of {i}</title>"
+                f"<author><name>Author {i}</name></author></entry>"
+                for i in reversed(ids))
+
+            class R:
+                status_code = 200
+                content = ('<?xml version="1.0"?><feed '
+                           f'xmlns="http://www.w3.org/2005/Atom">{entries}'
+                           '</feed>').encode()
+            return R
+        import requests
+        monkeypatch.setattr(requests, "get", fake_get)
+
+    def test_a_reordered_response_is_still_filed_correctly(self,
+                                                           shuffling_api):
+        from processing.ingest import _ARXIV_CACHE, prefetch_arxiv
+        ids = ["2105.10623", "2009.05157", "1706.03762", "2301.00001"]
+        assert prefetch_arxiv(ids) == 4
+        for i in ids:
+            assert _ARXIV_CACHE[i]["title"] == f"Title of {i}", (
+                f"{i} was given another paper's record")
+            assert _ARXIV_CACHE[i]["authors"] == [f"Author {i}"]
+
+    def test_an_entry_nobody_asked_for_is_ignored(self, monkeypatch):
+        """An unknown id makes arXiv return an error entry rather than
+        nothing; caching it under the requested id would invent a paper."""
+        def fake_get(url, *a, **k):
+            class R:
+                status_code = 200
+                content = (
+                    '<?xml version="1.0"?><feed '
+                    'xmlns="http://www.w3.org/2005/Atom"><entry>'
+                    '<id>http://arxiv.org/api/errors#incorrect_id</id>'
+                    '<title>Error</title></entry></feed>').encode()
+            return R
+        import requests
+        monkeypatch.setattr(requests, "get", fake_get)
+        from processing.ingest import _ARXIV_CACHE, prefetch_arxiv
+        assert prefetch_arxiv(["9999.99999"]) == 0
+        assert "9999.99999" not in _ARXIV_CACHE
+
+    def test_a_single_lookup_checks_the_id_too(self, monkeypatch):
+        def fake_get(url, *a, **k):
+            class R:
+                status_code = 200
+                content = (
+                    '<?xml version="1.0"?><feed '
+                    'xmlns="http://www.w3.org/2005/Atom"><entry>'
+                    '<id>http://arxiv.org/abs/1111.11111v1</id>'
+                    '<title>Some other paper entirely</title>'
+                    '</entry></feed>').encode()
+            return R
+        import requests
+        monkeypatch.setattr(requests, "get", fake_get)
+        from processing.ingest import lookup_arxiv
+        assert lookup_arxiv("2222.22222") == {}

@@ -47,6 +47,13 @@ class _StreamlitModule(types.ModuleType):
     def __init__(self):
         super().__init__("streamlit")
         self.session_state = _SessionState()
+        # Every streamlit attribute a page touches, in order.
+        #
+        # Without this the smoke tests could only say "rendering did not
+        # raise", which is equally true of a page that returns on its
+        # first line. Nine of them asserted nothing at all and the commit
+        # gate was right to refuse them.
+        self.calls: list = []
 
     def cache_data(self, *args, **kwargs):
         # Behaves both as ``@st.cache_data`` (no args) and ``@st.cache_data(ttl=60)``.
@@ -60,13 +67,19 @@ class _StreamlitModule(types.ModuleType):
         return _wrap
 
     def columns(self, spec, *a, **kw):
+        self.calls.append("columns")
         n = spec if isinstance(spec, int) else len(spec)
         return [_NullCM() for _ in range(n)]
 
     def tabs(self, labels, *a, **kw):
+        self.calls.append("tabs")
         return [_NullCM() for _ in labels]
 
     def __getattr__(self, name):
+        if not name.startswith("_"):
+            # Normal attribute lookup found nothing, so this is a widget
+            # call; record it before handing back the no-op.
+            self.__dict__.setdefault("calls", []).append(name)
         # Default: every method call returns a NullCM (also callable),
         # every property read returns None.  Booleans default False so
         # button/checkbox handlers don't fire spuriously.
@@ -171,8 +184,11 @@ def test_render_attention_does_not_raise(st_stub, tmp_path, monkeypatch):
     # Point the cockpit at an empty synth library
     monkeypatch.setenv("MATH_LIBRARY", str(tmp_path))
     import ui.cockpit as cockpit
+    st_stub.calls.clear()   # measure THIS page, not main() at import
     cockpit.render_attention()
-
+    assert st_stub.calls, (
+        "the page rendered NOTHING — a silent early return passes a "
+        "'does not raise' test just as well as a working page")
 
 def test_all_render_functions_exist(st_stub):
     """Every page wired into main() must actually be defined."""
@@ -198,8 +214,11 @@ def test_render_pipeline_preview_empty_does_not_raise(st_stub, tmp_path, monkeyp
     """Pipeline Preview with no prior run shows the info prompt path."""
     monkeypatch.setenv("MATH_LIBRARY", str(tmp_path))
     import ui.cockpit as cockpit
+    st_stub.calls.clear()   # measure THIS page, not main() at import
     cockpit.render_pipeline_preview()
-
+    assert st_stub.calls, (
+        "the page rendered NOTHING — a silent early return passes a "
+        "'does not raise' test just as well as a working page")
 
 def test_render_pipeline_preview_with_results_does_not_raise(st_stub, tmp_path, monkeypatch):
     """With seeded results, the metrics + band expanders + dataframe all
@@ -223,8 +242,11 @@ def test_render_pipeline_preview_with_results_does_not_raise(st_stub, tmp_path, 
          "status": "move", "current_topic": None, "proposed_topic": "07a",
          "suggested_topic": None, "confidence": 0.9},
     ]
+    st_stub.calls.clear()   # measure THIS page, not main() at import
     cockpit.render_pipeline_preview()
-
+    assert st_stub.calls, (
+        "the page rendered NOTHING — a silent early return passes a "
+        "'does not raise' test just as well as a working page")
 
 def test_render_to_download_does_not_raise(st_stub, tmp_path, monkeypatch):
     """Phase 5 page: 04/ browser + DOI form."""
@@ -233,8 +255,11 @@ def test_render_to_download_does_not_raise(st_stub, tmp_path, monkeypatch):
     flag.write_text("DOI: 10.1/x\nURL: https://doi.org/10.1/x\n", encoding="utf-8")
     monkeypatch.setenv("MATH_LIBRARY", str(tmp_path))
     import ui.cockpit as cockpit
+    st_stub.calls.clear()   # measure THIS page, not main() at import
     cockpit.render_to_download()
-
+    assert st_stub.calls, (
+        "the page rendered NOTHING — a silent early return passes a "
+        "'does not raise' test just as well as a working page")
 
 def test_render_settings_does_not_raise(st_stub, tmp_path, monkeypatch):
     """Phase 5 page: config form (incl. the ETH-credential section)."""
@@ -245,8 +270,11 @@ def test_render_settings_does_not_raise(st_stub, tmp_path, monkeypatch):
     # re-reads the module attribute at call time).
     import core.config.secure_config as sc
     monkeypatch.setattr(sc, "get_secure_credential", lambda *a, **k: None)
+    st_stub.calls.clear()   # measure THIS page, not main() at import
     cockpit.render_settings()
-
+    assert st_stub.calls, (
+        "the page rendered NOTHING — a silent early return passes a "
+        "'does not raise' test just as well as a working page")
 
 def test_render_conflicts_with_a_desktop_style_conflict_name(
         st_stub, tmp_path, monkeypatch):
@@ -264,8 +292,11 @@ def test_render_conflicts_with_a_desktop_style_conflict_name(
     )
     (tmp_path / "Foo.pdf").write_bytes(b"%PDF-1.4 canon")
     import ui.cockpit as cockpit
+    st_stub.calls.clear()   # measure THIS page, not main() at import
     cockpit.render_conflicts()
-
+    assert st_stub.calls, (
+        "the page rendered NOTHING — a silent early return passes a "
+        "'does not raise' test just as well as a working page")
 
 def test_conflicts_bulk_apply_single_transaction(st_stub, tmp_path, monkeypatch):
     """Task #8: bulk resolution wraps every conflict in one undo
@@ -304,6 +335,7 @@ def test_render_conflicts_does_not_raise(st_stub, tmp_path, monkeypatch):
     import ui.cockpit as cockpit
 
     # Empty library -> success state
+    st_stub.calls.clear()   # measure THIS page, not main() at import
     cockpit.render_conflicts()
 
     # One conflict + canonical pair -> renders the diff card
@@ -311,8 +343,11 @@ def test_render_conflicts_does_not_raise(st_stub, tmp_path, monkeypatch):
     (tmp_path / "Foo (conflicted copy 2024-05-13).pdf").write_bytes(
         b"%PDF-1.4 a"
     )
+    st_stub.calls.clear()   # measure THIS page, not main() at import
     cockpit.render_conflicts()
-
+    assert st_stub.calls, (
+        "the page rendered NOTHING — a silent early return passes a "
+        "'does not raise' test just as well as a working page")
 
 def test_render_sort_queue_with_real_pdf_does_not_raise(st_stub, tmp_path, monkeypatch):
     """Drive render_sort_queue() with a PDF in 12/ to exercise the
@@ -338,8 +373,11 @@ def test_render_sort_queue_with_real_pdf_does_not_raise(st_stub, tmp_path, monke
     monkeypatch.setenv("MATH_LIBRARY", str(tmp_path))
 
     import ui.cockpit as cockpit
+    st_stub.calls.clear()   # measure THIS page, not main() at import
     cockpit.render_sort_queue()
-
+    assert st_stub.calls, (
+        "the page rendered NOTHING — a silent early return passes a "
+        "'does not raise' test just as well as a working page")
 
 def test_main_does_not_raise(st_stub, tmp_path, monkeypatch):
     """``main()`` is what streamlit calls when you ``streamlit run cockpit.py``.
@@ -392,23 +430,51 @@ def test_every_page_renders_against_an_empty_library(
     monkeypatch.setenv("MATH_LIBRARY", str(tmp_path))
     import ui.cockpit as cockpit
     getattr(cockpit, renderer)()
-
+    assert st_stub.calls, (
+        "the page rendered NOTHING — a silent early return passes a "
+        "'does not raise' test just as well as a working page")
 
 def test_router_covers_every_nav_entry(st_stub):
     """Every page named in the sidebar must be dispatched by main().
 
     The sidebar and the router are two separate lists; a page added to
     one and not the other silently renders nothing.
+
+    The list of labels is DERIVED from the sidebar, not written out here.
+    It used to be eleven hardcoded strings, and by the time anyone looked
+    it was missing "Conformance", "Attention" and "Spelling" — so the
+    guard against a page that nobody routes had itself stopped guarding
+    against three of them. A checklist that must be updated by hand has
+    the same failure mode as the thing it is checking.
     """
+    import ast
     import inspect
+    import textwrap
+
     import ui.cockpit as cockpit
+
     src = inspect.getsource(cockpit.main)
     sidebar_src = inspect.getsource(cockpit.render_sidebar)
-    for label in ["Search", "Sort Queue", "Upgrade Queue", "To Download",
-                  "Conflicts", "Duplicates", "Maintenance",
-                  "Pipeline Preview", "Stats", "Activity", "Settings"]:
-        assert f'"{label}"' in sidebar_src, f"{label} missing from sidebar"
-        assert f'"{label}"' in src, f"{label} not dispatched by main()"
+
+    # _GROUPS = [("Do", [...]), ("Fix", [...]), ...] — take the page names
+    # out of the inner lists; the group headings are not pages.
+    labels = []
+    tree = ast.parse(textwrap.dedent(sidebar_src))
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Assign):
+            continue
+        if not any(getattr(t, "id", "") == "_GROUPS" for t in node.targets):
+            continue
+        for group in node.value.elts:
+            for item in group.elts[1].elts:
+                if isinstance(item, ast.Constant) and isinstance(item.value, str):
+                    labels.append(item.value)
+
+    assert len(labels) >= 11, (
+        f"only found {len(labels)} nav labels — the _GROUPS literal moved "
+        "and this test is no longer reading it")
+    for label in labels:
+        assert f'"{label}"' in src, f"{label} is in the sidebar but main() never dispatches it"
 
 
 def test_home_and_router_agree_on_the_default_page(st_stub):

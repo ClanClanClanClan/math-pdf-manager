@@ -2289,7 +2289,7 @@ def render_spelling() -> None:
                     st.session_state.pop("spelling", None)
                     st.rerun()
                 else:
-                    st.warning(f"Not renamed: {res.get('skipped')}")
+                    st.warning(res.get("error") or f"Not renamed: {res.get('skipped')}")
 
     # ---- the judgement calls --------------------------------------------
     active = [r for r in data["suspects"]
@@ -2337,7 +2337,7 @@ def render_spelling() -> None:
                         st.session_state.pop("spelling", None)
                         st.rerun()
                     else:
-                        st.warning(f"Not renamed: {res.get('skipped')}")
+                        st.warning(res.get("error") or f"Not renamed: {res.get('skipped')}")
                 if b[1].button("It's a real word", key=f"sp_ok_{key}",
                                use_container_width=True):
                     rule(lib, s["lower"], CORRECT)
