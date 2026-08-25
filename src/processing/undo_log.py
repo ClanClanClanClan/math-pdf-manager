@@ -421,9 +421,32 @@ class UndoLog:
                                     else f"WOULD DELETE COPY: {dst}"),
                          "ok": not gone})
                 else:
-                    if dst.exists():
-                        dst.unlink()
-                        results.append({"action": f"DELETED COPY: {dst}", "ok": True})
+                    # DO NOT UNLINK. This is the only hard delete of a
+                    # library PDF in src/, and it has already cost a paper:
+                    # transaction 9b9d5b2f584e recorded
+                    # "move ... Abraham, R., Delmas, J.-F., Weibel, J. -
+                    # Probability-graphons ... -> /dev/null". That file is
+                    # gone from 03 - Working papers/A/2023 and from its
+                    # intended home in 01 - Published papers/Z; the only
+                    # reason the paper still exists is an accidental copy
+                    # under 07e - Optimal control on networks.
+                    #
+                    # Undoing a copy is a deletion, and this project does not
+                    # hard-delete. It retires.
+                    #
+                    # It also REFUSES when the original is gone. Undoing a
+                    # copy is only safe if the thing it was copied from
+                    # survives; otherwise "remove the duplicate" removes the
+                    # last remaining version.
+                    if dst.exists() and not src.exists():
+                        results.append(
+                            {"action": (f"REFUSED: the original is gone, so this "
+                                        f"copy is the only version left: {dst}"),
+                             "ok": False})
+                    elif dst.exists():
+                        retired = _retire_to_trash(dst, "undone_copies")
+                        results.append({"action": f"RETIRED COPY: {dst} → {retired}",
+                                        "ok": True})
                         # When the undone copy was a topic-router
                         # hardlink, the canonical's sidecar still
                         # advertises the now-dead path in
@@ -710,6 +733,31 @@ def _is_same_file(a: Path, b: Path) -> bool:
         return a.samefile(b)
     except OSError:          # one of them vanished, or is unreadable
         return False
+
+
+def _retire_to_trash(path: Path, reason: str) -> Path:
+    """Move ``path`` into ``<library>/.trash/<reason>/`` instead of deleting it.
+
+    Nothing in this project hard-deletes a library PDF. The one branch that
+    did -- undoing a copy -- is the branch that lost a paper.
+
+    The name is made unique rather than overwritten: two undone copies of the
+    same paper must not silently become one.
+    """
+    from core.config_paths import get_library_root
+    try:
+        root = Path(get_library_root())
+    except Exception:                                   # pragma: no cover
+        root = path.parent
+    trash = root / ".trash" / reason
+    trash.mkdir(parents=True, exist_ok=True)
+    target = trash / path.name
+    n = 1
+    while target.exists():
+        target = trash / f"{path.stem} ({n}){path.suffix}"
+        n += 1
+    path.rename(target)
+    return target
 
 
 def logged_rename(

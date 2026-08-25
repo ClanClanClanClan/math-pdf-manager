@@ -107,3 +107,4 @@ Thumbs.db
 # Dropbox conflicts
 *conflicted copy*
 .pdf_cache/
+coverage.json

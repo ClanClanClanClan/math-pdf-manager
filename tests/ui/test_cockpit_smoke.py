@@ -396,25 +396,53 @@ def test_main_does_not_raise(st_stub, tmp_path, monkeypatch):
 # Every page, not just the four that happened to have a test.
 # ---------------------------------------------------------------------------
 
-# Kept in step with the router in main().  The nav was regrouped from a
-# flat 12-item radio into Do/Fix/Look/Setup button groups, and only 4 of
-# the 12 pages had any smoke coverage at the time — a page could break on
-# a refactor and nothing would notice until the owner clicked it.
-ALL_PAGE_RENDERERS = [
-    "render_attention",
-    "render_search",
-    "render_sort_queue",
-    "render_upgrade_queue",
-    "render_to_download",
-    "render_conflicts",
-    "render_duplicates",
-    "render_maintenance",
-    "render_pipeline_preview",
-    "render_conformance",
-    "render_stats",
-    "render_activity",
-    "render_settings",
-]
+# DERIVED from the module, not hand-listed.
+#
+# The hand-written list was itself the bug it was meant to prevent. It was
+# added when the nav was regrouped from a flat 12-item radio into Do/Fix/Look/
+# Setup groups and only 4 of the 12 pages had coverage -- but it was a COPY of
+# the router, so a page added afterwards was covered only if someone
+# remembered to add it here. Nobody did: render_spelling shipped as a page and
+# never appeared in this list, so it has never once been smoke-tested.
+#
+# Discovering the pages instead means the omission cannot recur. A renderer
+# that is not a page must now be named in _NOT_A_PAGE with a reason, which is
+# a claim someone can check -- silence no longer excludes anything.
+_NOT_A_PAGE = {
+    # Chrome, not a page: draws the nav into st.sidebar and returns the
+    # chosen page. It has no empty-library case of its own -- it renders the
+    # same buttons whatever the library holds -- and it is exercised by the
+    # router tests below.
+    "render_sidebar",
+}
+
+
+def _all_page_renderers():
+    import ui.cockpit as cockpit
+    found = {n for n in dir(cockpit)
+             if n.startswith("render_") and callable(getattr(cockpit, n))}
+    unknown = _NOT_A_PAGE - found
+    assert not unknown, (
+        f"_NOT_A_PAGE names renderers that no longer exist: {sorted(unknown)}. "
+        f"Delete them from the set -- a stale exclusion silently drops a page."
+    )
+    return sorted(found - _NOT_A_PAGE)
+
+
+ALL_PAGE_RENDERERS = _all_page_renderers()
+
+
+def test_the_smoke_list_covers_every_page():
+    """The list must be derived, and must not have quietly emptied.
+
+    A discovery helper that returns nothing turns every parametrised test
+    below into zero tests, which reports as success. The floor is the 13
+    pages that existed when this was written plus render_spelling, which
+    the hand-written list had missed.
+    """
+    assert len(ALL_PAGE_RENDERERS) >= 14, ALL_PAGE_RENDERERS
+    assert "render_spelling" in ALL_PAGE_RENDERERS
+    assert "render_sidebar" not in ALL_PAGE_RENDERERS
 
 
 @pytest.mark.parametrize("renderer", ALL_PAGE_RENDERERS)
