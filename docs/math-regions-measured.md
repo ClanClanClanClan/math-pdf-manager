@@ -1,97 +1,135 @@
-# find_math_regions, measured against a hand-labelled corpus
+# find_math_regions, measured
 
 ## The corpus
 
-345 library titles, hand-decided, drawn by seeded stratified sampling
-(seed 20260825) from the 25,049 unique titles that
-`filename_ground_truth.decompose` returns RELIABLE for, over the 25,246
-in-scope PDFs `library_scope` admits. 201 maths spans, 1,042 protected
-characters, 166 positive / 179 negative titles.
+345 library titles, hand-decided, drawn by seeded stratified sampling (seed
+20260825) from the 25,049 unique titles that `filename_ground_truth.decompose`
+returns RELIABLE for, over the 25,246 in-scope PDFs `library_scope` admits.
+201 maths spans, 1,042 protected characters, 166 positive / 179 negative.
 
-Every offset was verified by slicing the NFC title and reading the
-result. Labels were authored as inline `⟦⟧` markers and the de-marked
-text was confirmed byte-identical to the library title before offsets
-were computed, so a transcription slip cannot silently shift an offset.
+Committed as `tests/fixtures/math_regions_ground_truth.json`, carrying its own
+sampling frame and its two conventions. Re-deriving it costs a day of
+labelling.
 
-Stored at `scratchpad/gtlane/gt_final.json` during the run. **It is not
-in the repo** — it lives in a session scratchpad and will be deleted.
-Re-deriving it costs a day of labelling. If it matters, it should be
-committed as a test fixture; that has not been done.
-
-## Scores, character level, all on those 345 titles
+## Scores, character level, on those 345 titles
 
 | implementation | precision | recall | F1 | exact |
 |---|---|---|---|---|
-| `validators/filename_checker/math_utils` (pre-20f039c) | 0.043 | 0.236 | 0.073 | 106/345 |
-| `core/text_processing/math_detector` (pre-20f039c) | 0.495 | 0.755 | 0.598 | 195/345 |
+| `filename_checker/math_utils` (pre-20f039c) | 0.043 | 0.236 | 0.073 | 106/345 |
+| `text_processing/math_detector` (pre-20f039c) | 0.495 | 0.755 | 0.598 | 195/345 |
 | `validators/math_handler` | 1.000 | 0.000 | — | 179/345 |
-| **`core/math_regions` (committed, 20f039c)** | **0.681** | **0.872** | **0.765** | **272/345** |
-| candidate synthesis (not landed) | 1.000 | 0.996 | 0.998 | 343/345 |
+| `core/math_regions` at 20f039c | 0.681 | 0.872 | 0.765 | 272/345 |
+| **`core/math_regions` now** | **1.000** | **0.996** | **0.998** | **343/345** |
 
-Both rows for the committed and candidate modules were re-scored
-locally against the same corpus, not taken from the agents' self-reports.
+Re-scored locally against the fixture, not taken from any agent's self-report.
+`tests/test_core/test_math_regions_scored.py` pins these as floors
+(P ≥ 0.995, R ≥ 0.99, exact ≥ 340, claim-share ≤ 0.045) and carries a
+meta-test asserting each floor strictly excludes the old scanner's score.
 
-## Why the candidate is not landed
+## A measurement that was worthless, and the one that replaced it
 
-**It changes nothing the owner would see.** Proposing a title-case for
-all 25,049 library titles under each module gives **identical output on
-all 25,049** — zero differing proposals, zero errors either side. The
-caser's own acronym / mixed-case / accented branches already cover the
-cases where the two detectors disagree, so the detector's extra accuracy
-does not reach a filename.
+The earlier version of this document argued against landing on the grounds
+that `processing.title_normalize.propose_title_case` produced identical
+output on all 25,049 titles under either module.
 
-It also breaks 13 existing tests (not the 6 the reviewing agent
-reported — they ran one of the two suites):
+**That number was real and meaningless.** `propose_title_case` never calls
+`find_math_regions` — instrumented, 0 calls. Substituting `lambda t: []` gives
+the same 0 differences. It measured nothing.
 
-* 7 in `tests/core/test_math_tokenization.py` — LaTeX. `\[...\]` and
-  `\(...\)` return no regions, so the tokeniser's one-MATH-token-per-
-  formula contract fails. The library contains zero LaTeX titles, so
-  this is a contract for a consumer, not for the library.
-* 3 convention — `Γ-convergence` yields `Γ`, not `Γ-convergence`. This
-  is arguably the better answer (the word "convergence" is ordinary
-  English and title-casing may legitimately touch it), and the caser
-  handles the mid-word span correctly, but it is a deliberate
-  convention change and the tests encode the old one.
-* 1 ASCII hyphen-minus is not in the operator tables, so `2Jₛ-Rₛ`
-  splits where `2Jₛ−Rₛ` would not. Real, 9 titles.
-* 2 LaTeX partial spans.
+The consumer that *does* consult it is
+`core.sentence_case.to_sentence_case_academic`. Measured through it over all
+25,049 titles, before and after:
 
-**Recommendation: land it only alongside a consumer that needs it.**
-Today the accuracy is unbanked. The gap it would close is real but
-latent.
+* **167 titles change.**
+* **3 destroyed titles → 0** (see below).
+* Lost protection, exhaustive: **1 title / 3 characters**, against the old
+  module's 137 titles / 145 characters measured in the same direction.
 
-## What the committed module gets wrong, measured
+Examples of the gain: `G-normal` no longer becomes `g-normal`; `C[0, ∞)` no
+longer `c[0, ∞)`; `K–rough` no longer `k–rough`; `sin(x):xdx` no longer
+`sin(x):Xdx`; `n:2` no longer `n:Two`.
 
-It misses 561 titles, all ASCII notation. Per-construct recall: Unicode
-blackboard-bold, superscript, subscript, Greek, calculus operators and
-brace groups all 100%; caret-after-capital 98.3%; `C_b` underscore 95%.
-Then it falls off: BMO 7/27, UMD 0/8, VMO 0/8, 2D|3D 0/12, GL|SL|SU(...)
-2/9, Q-learning 0/24, N-player 1/28, p-adic 11/54, G-expectation 3/72.
+## Two bugs found in the consumers, not in the detector
 
-The shape of the gap is precise: **it knows a Greek letter before a
-hyphen is mathematics (σ-algebra, 31/31) but not that a Latin one is.**
+**`sentence_case` replaced three real titles with the single letter `X`.**
+It collected WORD tokens and, finding none, returned `"X"`. A title with no
+WORD tokens is not empty — it is usually a title that is *entirely*
+mathematics or one whitelisted phrase. `F-processes`, `G-expectations` and
+`Freefem++` were destroyed; so was `L^2`. The bug predates all of this work
+and gets **worse** the better the detector is, because a more accurate
+detector claims more titles whole. Fixed: no WORD tokens but some MATH or
+PHRASE token means no case change is needed, so the title is returned
+unchanged. `"X"` now means only "there is genuinely nothing here to case".
 
-Unbanked as above — `title_normalize` protects these anyway today. The
-exposure is if that branch ever changes.
+**The sentence-start scan walked through mathematics.** Deciding whether a
+word starts a sentence means scanning back for sentence-ending punctuation and
+stopping at the first content token. It stopped at a WORD but passed straight
+through a MATH or PHRASE token. Because the library writes `/` as `:`,
+`1/H-variation` is stored as `1:H-variation`; the scan passed through the MATH
+token `H`, hit the `:`, read it as a sentence end, and capitalised
+`Variation`. Fixed by treating MATH and PHRASE as content. 8 titles affected,
+all 8 corrected.
 
-## A redundancy that unification removed
+## One rule, one implementation
 
-`maintenance/conformance.py::_prose_outside_maths` imported
-`math_detector.find_math_regions` *because it was a different
-implementation*, and said so. Commit 20f039c pointed that name at
-`core.math_regions`, so the check now compares the converter against
-itself. Nothing failed — the redundancy just stopped existing. The
-docstring has been corrected to say what the check now actually buys.
+`math_tokenization.py` kept a private `r'\$\$[^$]+\$\$'` rule and appended its
+spans to whatever `find_math_regions` returned. It did not merely duplicate
+the shared rule, it **overrode** it: on `$$the quick brown fox$$` the single
+implementation correctly refuses four ordinary English words and the private
+regex protected them anyway. Deleted. Measured safe: 0 of the 25,049 in-scope
+titles contain a `$` at all. The differential tests are kept, now asserting
+that every MATH token the tokeniser emits came from `find_math_regions`.
 
-## Acronyms
+## Performance
 
-`title_normalize.propose_title_case` was checked directly: BMO, UMD,
-VMO, BV, BSDE and PDE are all preserved unchanged. The open worry that
-"~2,000 case-sensitive occurrences are protected by nobody" does not
-materialise.
+The first landing candidate was **super-linear on brackets**: a 64-character
+input of nested parentheses took 660 ms against the old module's 0.01 ms, and
+grew roughly quadratically beyond. Cause: every bracket interior was re-parsed
+by a fresh throw-away parser, once per enclosing start position — 36,256
+tokenisations of that 64-character input.
+
+Fixed by memoising the four pure parse functions, plus one step budget shared
+across a whole call (`MAX_PARSE_STEPS`) and `MAX_INPUT_CHARS`. Measured now:
+
+| input | old | now |
+|---|---|---|
+| the 64-char bracket pathology | 0.01 ms | 1.34 ms |
+| worst 251-char nested `()` | — | 2.50 ms |
+| typical library title | — | 0.021 ms |
+
+251 bytes is the enforced filename cap. The longest real library title is 229
+characters, so `MAX_INPUT_CHARS` (1,000) is not reachable from a filename.
+
+## Still open, recorded rather than implied
+
+* **The apostrophe class** in `core/math_tokenization.py` and
+  `core/tokenization.py` contains U+0027 twice and U+2019 never, so `don't`
+  and `don’t` tokenise differently — 1,116 and 444 real titles respectively.
+  The obvious one-character fix was **measured and is a net regression**: 27
+  proposals better, 21 worse, 58 characters destroyed through the real
+  consumer. Held deliberately, with a strict `xfail` recording it.
+* **A hyphen/minus residual**: `2J_s-R_s, s≥0` yields two MATH tokens where
+  the U+2212 spelling yields one, so the two leave different prose residues
+  and `conformance.py` would judge the same edit differently. The subscript
+  spelling the library actually uses agrees under both, so no real title is
+  affected. Strict `xfail`.
+* **`A(H1N1)` → `a(h1n1)`** on one title. The detector refuses it deliberately:
+  a virus strain designation is a name, not notation. It belongs to the
+  acronym branch, whose rule (2–3 letters, `isupper`) does not cover a
+  four-character mixed alphanumeric token.
+* **`D-modules` → `D-Modules`** on one title, the same class as the `1:H`
+  case above but not fixed by it.
+
+## Mutation
+
+89 mutants across 89 distinct decision points, 84 killed. Of the 5 survivors,
+2 are provably dead branches and 3 are reachable but change none of the 25,049
+real titles. The module's own 184-case expectation table is now wired into
+pytest as individual test ids — it was previously reachable only under
+`if __name__ == "__main__"` and was the sole thing catching 13 mutants.
 
 ## Caveat on the 1.000
 
-Precision 1.000 is measured on the 345 titles the candidate was tuned
-against. It is an upper bound, not a generalisation guarantee, and no
-second hand-labelled sample exists.
+Precision 1.000 is measured on the 345 titles the design was tuned against. It
+is an upper bound, not a generalisation estimate, and no second hand-labelled
+sample exists.

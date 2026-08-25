@@ -120,15 +120,21 @@ def robust_tokenize_with_math(
     phrase_by_start = {s: (e, v) for s, e, v in kept}
 
     # ── 3. maths (excluding phrases) ───────────────────────────────────────
-    math_spans = math_detector.find_math_regions(text)
-    
-    # Also detect $$...$$ display math explicitly since math_detector doesn't handle it well
-    display_math_pattern = re.compile(r'\$\$[^$]+\$\$')
-    for m in display_math_pattern.finditer(text):
-        math_spans.append(m.span())
-    
-    # Remove duplicates and sort
-    math_spans = sorted(set(math_spans))
+    # ONE RULE, ONE IMPLEMENTATION. This used to append the spans of a
+    # PRIVATE r'\$\$[^$]+\$\$' rule, on the grounds that the detector "doesn't
+    # handle it well". That was true of the old detector and is no longer:
+    # core.math_regions has a delimiter-aware LaTeX phase that returns $$…$$
+    # as one span including its delimiters.
+    #
+    # The private rule was not merely redundant, it OVERRODE the shared one
+    # and won where they disagreed: on '$$the quick brown fox$$' the single
+    # implementation correctly refuses (four ordinary English words), and the
+    # private regex protected them anyway. A second opinion that always wins
+    # is not a safety net, it is a shadow rule.
+    #
+    # Removal is safe on real data: measured read-only, 0 of the 25,049
+    # in-scope library titles contain a "$" at all.
+    math_spans = sorted(set(math_detector.find_math_regions(text)))
     
     math_by_start = {}
     

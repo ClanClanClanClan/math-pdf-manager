@@ -278,6 +278,21 @@ def to_sentence_case_academic(
         
         # If no word tokens, handle special cases
         if not word_tokens:
+            # A title with no WORD tokens is not necessarily an empty title.
+            # It is usually a title that is ENTIRELY mathematics or entirely
+            # one whitelisted phrase -- and those need no case change at all,
+            # because every character in them is already protected.
+            #
+            # Falling through to "X" here DESTROYED three real library titles:
+            # "F-processes" and "G-expectations" tokenise as a single PHRASE
+            # (both are in the capitalisation whitelist) and "Freefem++" as a
+            # single MATH token, and all three came back as the one character
+            # "X". "L^2" did too. The bug predates the maths-detector work and
+            # gets worse the better the detector is, because a more accurate
+            # detector claims MORE titles whole.
+            keeps = [t for t in tokens if t.kind in ('MATH', 'PHRASE')]
+            if keeps:
+                return title, False
             # Check if it's punctuation only
             punct_tokens = [token for token in tokens if token.kind == 'PUNCT']
             if punct_tokens:
@@ -285,7 +300,8 @@ def to_sentence_case_academic(
                 result = "X " + ''.join(token.value for token in tokens)
                 return result, True
             else:
-                # No words or punctuation, return X
+                # Genuinely nothing to case: no words, no maths, no phrase,
+                # no punctuation. This is the only "X" that means "empty".
                 return "X", True
         
         # Handle emoji/punctuation stripping at the beginning
@@ -477,8 +493,23 @@ def to_sentence_case_academic(
                                         break
                                 is_sentence_start = True
                                 break
-                        elif tokens[j].kind == 'WORD':
-                            # Found a word before any punctuation, not sentence start
+                        elif tokens[j].kind in ('WORD', 'MATH', 'PHRASE'):
+                            # Found CONTENT before any punctuation, so this is
+                            # not a sentence start.
+                            #
+                            # MATH and PHRASE used to be missing here, and the
+                            # scan walked straight through them to whatever
+                            # punctuation lay beyond. In "A remark on the
+                            # 1:H-variation of the fractional Brownian motion"
+                            # it passed through the MATH token "H", reached the
+                            # ":" of "1:H" -- which the library writes for "/"
+                            # -- read it as a sentence-ending colon, and
+                            # capitalised "Variation".
+                            #
+                            # A mathematical token is content exactly as a word
+                            # is. Whatever sits between us and the punctuation,
+                            # if it is content then we are not at a sentence
+                            # start.
                             break
 
                 # Opening-quote detection: if the word is immediately after an
