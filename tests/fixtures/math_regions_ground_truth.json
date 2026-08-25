@@ -1,0 +1,2785 @@
+{
+ "_readme": "345 library titles, hand-decided, drawn by seeded stratified sampling (seed 20260825) from the 25,049 unique RELIABLE titles over the 25,246 in-scope PDFs. 201 spans, 1,042 protected characters, 166 positive / 179 negative. Span edges are case-bearing characters: enclosing brackets are trimmed unless a matching opener sits inside, so '(Ap) condition' gives 'Ap' but 'AR(1)' gives 'AR(1)'. Bare lexical acronyms (BSDE, PDE, BMO, COVID-19) are deliberately NOT maths -- title_normalize's acronym branch owns them, and double-owning the decision would penalise a correct detector.",
+ "labelled": [
+  {
+   "title": "An expanded local variance γ model",
+   "math_spans": [
+    [
+     27,
+     28
+    ]
+   ],
+   "why": "maths: 'γ' — bare Greek symbol. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "L^∞:L¹ duality results in optimal control problems",
+   "math_spans": [
+    [
+     0,
+     6
+    ]
+   ],
+   "why": "maths: 'L^∞:L¹' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "β variables as times spent in [0, ∞[ by certain perturbed Brownian motions",
+   "math_spans": [
+    [
+     0,
+     1
+    ],
+    [
+     31,
+     35
+    ]
+   ],
+   "why": "maths: 'β'; '0, ∞' — bare Greek symbol, other notation. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Etude probabiliste des transformées de Riesz et de l'espace H¹ sur les sphères",
+   "math_spans": [
+    [
+     60,
+     62
+    ]
+   ],
+   "why": "maths: 'H¹' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Multi-leader–follower incentive Stackelberg game for infinite-horizon Markov jump linear stochastic systems with H_∞ constraint",
+   "math_spans": [
+    [
+     113,
+     116
+    ]
+   ],
+   "why": "maths: 'H_∞' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Optimal stopping of a Brownian excursion and an α-dimensional Bessel bridge",
+   "math_spans": [
+    [
+     48,
+     49
+    ]
+   ],
+   "why": "maths: 'α' — bare Greek symbol. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "An α-potential game framework for N-player games",
+   "math_spans": [
+    [
+     3,
+     4
+    ],
+    [
+     34,
+     35
+    ]
+   ],
+   "why": "maths: 'α'; 'N' — bare Greek symbol, bare Latin variable letter. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "A Donsker δ functional approach to optimal insider control and applications to finance",
+   "math_spans": [
+    [
+     10,
+     11
+    ]
+   ],
+   "why": "maths: 'δ' — bare Greek symbol. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Existence and uniqueness for viscosity solutions of degenerate quasilinear elliptic equations in ℝⁿ",
+   "math_spans": [
+    [
+     97,
+     99
+    ]
+   ],
+   "why": "maths: 'ℝⁿ' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Le dual de H¹(ℝᵛ), démonstrations probabilistes",
+   "math_spans": [
+    [
+     11,
+     17
+    ]
+   ],
+   "why": "maths: 'H¹(ℝᵛ)' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Maximal φ-inequalities for nonnegative submartingales",
+   "math_spans": [
+    [
+     8,
+     9
+    ]
+   ],
+   "why": "maths: 'φ' — bare Greek symbol. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Benfordness of the generalized γ distribution",
+   "math_spans": [
+    [
+     31,
+     32
+    ]
+   ],
+   "why": "maths: 'γ' — bare Greek symbol. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "A robust α-stable central limit theorem under sublinear expectation without integrability condition",
+   "math_spans": [
+    [
+     9,
+     10
+    ]
+   ],
+   "why": "maths: 'α' — bare Greek symbol. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Necessary and sufficient conditions for the existence of α-determinantal processes",
+   "math_spans": [
+    [
+     57,
+     58
+    ]
+   ],
+   "why": "maths: 'α' — bare Greek symbol. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Growth rate for β-expansions",
+   "math_spans": [
+    [
+     16,
+     17
+    ]
+   ],
+   "why": "maths: 'β' — bare Greek symbol. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "C¹ regularity of solutions of the Monge–Ampère equation for optimal transport in dimension two",
+   "math_spans": [
+    [
+     0,
+     2
+    ]
+   ],
+   "why": "maths: 'C¹' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Randomised Euler–Maruyama method for SDEs with Hölder continuous drift coefficient driven by α-stable Lévy process",
+   "math_spans": [
+    [
+     93,
+     94
+    ]
+   ],
+   "why": "maths: 'α' — bare Greek symbol. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Interior C² estimate for Hessian quotient equation in dimension three",
+   "math_spans": [
+    [
+     9,
+     11
+    ]
+   ],
+   "why": "maths: 'C²' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Empirical approximation of the Gaussian distribution in ℝᵈ",
+   "math_spans": [
+    [
+     56,
+     58
+    ]
+   ],
+   "why": "maths: 'ℝᵈ' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "ε-Nash mean field game theory for nonlinear stochastic dynamical systems with mixed agents",
+   "math_spans": [
+    [
+     0,
+     1
+    ]
+   ],
+   "why": "maths: 'ε' — bare Greek symbol. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "BSDE approach for α-potential stochastic differential games",
+   "math_spans": [
+    [
+     18,
+     19
+    ]
+   ],
+   "why": "maths: 'α' — bare Greek symbol. Case- or word-rewriting these characters would be wrong; the rest is prose. Note: bare lexical acronyms (BSDE) left unmarked: case-protected by the acronym rule, not the maths rule."
+  },
+  {
+   "title": "Pricing American options under variance γ",
+   "math_spans": [
+    [
+     40,
+     41
+    ]
+   ],
+   "why": "maths: 'γ' — bare Greek symbol. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Bounded solutions, Lᵖ (p>1) solutions and L¹ solutions for one dimensional BSDEs under general assumptions",
+   "math_spans": [
+    [
+     19,
+     21
+    ],
+    [
+     23,
+     26
+    ],
+    [
+     42,
+     44
+    ]
+   ],
+   "why": "maths: 'Lᵖ'; 'p>1'; 'L¹' — formula / (in)equality, sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Well-posedness of density dependent SDE driven by α-stable process with Hölder drifts",
+   "math_spans": [
+    [
+     50,
+     51
+    ]
+   ],
+   "why": "maths: 'α' — bare Greek symbol. Case- or word-rewriting these characters would be wrong; the rest is prose. Note: bare lexical acronyms (SDE) left unmarked: case-protected by the acronym rule, not the maths rule."
+  },
+  {
+   "title": "The growth rate and dimension theory of β-expansions",
+   "math_spans": [
+    [
+     40,
+     41
+    ]
+   ],
+   "why": "maths: 'β' — bare Greek symbol. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Sobolev regularity for the Monge−Ampère equation, with application to the semigeostrophic equations",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "Many proofs that Σ_{n=1}^∞ 1:n² = π²:6 can be found in the conformal invariance of planar Brownian motion",
+   "math_spans": [
+    [
+     17,
+     38
+    ]
+   ],
+   "why": "maths: 'Σ_{n=1}^∞ 1:n² = π²:6' — formula / (in)equality. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Constructing Γ-martingales with prescribed limit, using backwards SDE",
+   "math_spans": [
+    [
+     13,
+     14
+    ]
+   ],
+   "why": "maths: 'Γ' — bare Greek symbol. Case- or word-rewriting these characters would be wrong; the rest is prose. Note: bare lexical acronyms (SDE) left unmarked: case-protected by the acronym rule, not the maths rule."
+  },
+  {
+   "title": "Remormalisation et convergence en loi pour certaines multiples associées au mouvement brownien dans ℝᵈ",
+   "math_spans": [
+    [
+     100,
+     102
+    ]
+   ],
+   "why": "maths: 'ℝᵈ' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Optimal control of diffusion processes, ∞-order variational analysis and numerical solution",
+   "math_spans": [
+    [
+     40,
+     41
+    ]
+   ],
+   "why": "maths: '∞' — other notation. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Muckenhoupt’s (Aₚ) condition and the existence of the optimal martingale measure",
+   "math_spans": [
+    [
+     15,
+     17
+    ]
+   ],
+   "why": "maths: 'Aₚ' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "A note on the equality π²:6=Σ_{n≥1}1:n²",
+   "math_spans": [
+    [
+     23,
+     39
+    ]
+   ],
+   "why": "maths: 'π²:6=Σ_{n≥1}1:n²' — formula / (in)equality. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "The stochastic equation Yₜ₊₁=AₜYₜ + Bₜ with non-stationary coefficients",
+   "math_spans": [
+    [
+     24,
+     38
+    ]
+   ],
+   "why": "maths: 'Yₜ₊₁=AₜYₜ + Bₜ' — formula / (in)equality. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "A game-theoretic explanation of the √dt effect",
+   "math_spans": [
+    [
+     36,
+     39
+    ]
+   ],
+   "why": "maths: '√dt' — other notation. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Systems of quasilinear parabolic equations in ℝⁿ and systems of quadratic backward stochastic differential equations",
+   "math_spans": [
+    [
+     46,
+     48
+    ]
+   ],
+   "why": "maths: 'ℝⁿ' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Conditional analysis on ℝᵈ",
+   "math_spans": [
+    [
+     24,
+     26
+    ]
+   ],
+   "why": "maths: 'ℝᵈ' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "The generalized–Euler-constant function γ(z) and a generalization of Somos’s quadratic recurrence constant",
+   "math_spans": [
+    [
+     40,
+     44
+    ]
+   ],
+   "why": "maths: 'γ(z)' — symbol expression. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "KrigHedge, Gaussian process surrogates for Δ hedging",
+   "math_spans": [
+    [
+     43,
+     44
+    ]
+   ],
+   "why": "maths: 'Δ' — bare Greek symbol. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Locally finite-dimensional shift-invariant spaces in ℝᵈ",
+   "math_spans": [
+    [
+     53,
+     55
+    ]
+   ],
+   "why": "maths: 'ℝᵈ' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Pricing with variance γ information",
+   "math_spans": [
+    [
+     22,
+     23
+    ]
+   ],
+   "why": "maths: 'γ' — bare Greek symbol. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Δ-hedged gains and the negative market volatility risk premium",
+   "math_spans": [
+    [
+     0,
+     1
+    ]
+   ],
+   "why": "maths: 'Δ' — bare Greek symbol. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Bartlett’s Δ in the SABR model",
+   "math_spans": [
+    [
+     11,
+     12
+    ]
+   ],
+   "why": "maths: 'Δ' — bare Greek symbol. Case- or word-rewriting these characters would be wrong; the rest is prose. Note: bare lexical acronyms (SABR) left unmarked: case-protected by the acronym rule, not the maths rule."
+  },
+  {
+   "title": "Notes sur la fonction ζ de RIemann, 3",
+   "math_spans": [
+    [
+     22,
+     23
+    ]
+   ],
+   "why": "maths: 'ζ' — bare Greek symbol. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "L²-hedging under partial observation",
+   "math_spans": [
+    [
+     0,
+     2
+    ]
+   ],
+   "why": "maths: 'L²' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Les filtrations de |X| et X⁺, lorsque X est une semi-martingale continue",
+   "math_spans": [
+    [
+     20,
+     21
+    ],
+    [
+     26,
+     28
+    ],
+    [
+     38,
+     39
+    ]
+   ],
+   "why": "maths: 'X'; 'X⁺'; 'X' — bare Latin variable letter, other notation. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "On L²-projection on a space of stochastic integrals",
+   "math_spans": [
+    [
+     3,
+     5
+    ]
+   ],
+   "why": "maths: 'L²' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Properties of the distribution of the random variable defined by A₂-continued fraction with independent elements",
+   "math_spans": [
+    [
+     65,
+     67
+    ]
+   ],
+   "why": "maths: 'A₂' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "New constructions of functions holomorphic in the unit ball of Cⁿ",
+   "math_spans": [
+    [
+     63,
+     65
+    ]
+   ],
+   "why": "maths: 'Cⁿ' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Existence and uniqueness of solution to scalar BSDEs with Lexp(μ*sqrt(2log(1+L)))-integrable terminal values, the critical case",
+   "math_spans": [
+    [
+     58,
+     81
+    ]
+   ],
+   "why": "maths: 'Lexp(μ*sqrt(2log(1+L)))' — designator with parenthesised argument. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "A class of special L_∞ spaces",
+   "math_spans": [
+    [
+     19,
+     22
+    ]
+   ],
+   "why": "maths: 'L_∞' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Sur l'expression de la dualité entre H¹ et BMO",
+   "math_spans": [
+    [
+     37,
+     39
+    ]
+   ],
+   "why": "maths: 'H¹' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose. Note: bare lexical acronyms (BMO) left unmarked: case-protected by the acronym rule, not the maths rule."
+  },
+  {
+   "title": "Précisions sur l'existence et la continuité des temps locaux d'intersection du mouvement brownien dans ℝ²",
+   "math_spans": [
+    [
+     103,
+     105
+    ]
+   ],
+   "why": "maths: 'ℝ²' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Two-sided inequalities for the density function's maximum of weighted sum of χ-square variables",
+   "math_spans": [
+    [
+     77,
+     78
+    ]
+   ],
+   "why": "maths: 'χ' — bare Greek symbol. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "A transformation from prediction to past of an L²-stochastic process",
+   "math_spans": [
+    [
+     47,
+     49
+    ]
+   ],
+   "why": "maths: 'L²' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "The two-sided exit problem for a random walk on ℤ with infinite variance I",
+   "math_spans": [
+    [
+     48,
+     49
+    ]
+   ],
+   "why": "maths: 'ℤ' — blackboard-bold set symbol. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Why is the effect of transaction costs O(δ^⅔)?",
+   "math_spans": [
+    [
+     39,
+     45
+    ]
+   ],
+   "why": "maths: 'O(δ^⅔)' — designator with parenthesised argument. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Characterization of submartingales of a new class (Σʳ)",
+   "math_spans": [
+    [
+     51,
+     53
+    ]
+   ],
+   "why": "maths: 'Σʳ' — symbol expression. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "On the random series Σ±λⁿ (an Erdős problem)",
+   "math_spans": [
+    [
+     21,
+     25
+    ]
+   ],
+   "why": "maths: 'Σ±λⁿ' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Characterisation of honest times and optional semimartingales of class-(Σ)",
+   "math_spans": [
+    [
+     72,
+     73
+    ]
+   ],
+   "why": "maths: 'Σ' — bare Greek symbol. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Trading algorithms with learning in latent α models",
+   "math_spans": [
+    [
+     43,
+     44
+    ]
+   ],
+   "why": "maths: 'α' — bare Greek symbol. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Notes sur la fonction ζ de Riemann, 2",
+   "math_spans": [
+    [
+     22,
+     23
+    ]
+   ],
+   "why": "maths: 'ζ' — bare Greek symbol. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Limits of certain subhomogeneous C^∗-algebras",
+   "math_spans": [
+    [
+     33,
+     36
+    ]
+   ],
+   "why": "maths: 'C^∗' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "On the distribution of the weighted sum of χ-squared variables",
+   "math_spans": [
+    [
+     43,
+     44
+    ]
+   ],
+   "why": "maths: 'χ' — bare Greek symbol. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "On some properties of the β inverse Rayleigh distribution",
+   "math_spans": [
+    [
+     26,
+     27
+    ]
+   ],
+   "why": "maths: 'β' — bare Greek symbol. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "The α-hypergeometric stochastic volatility model",
+   "math_spans": [
+    [
+     4,
+     5
+    ]
+   ],
+   "why": "maths: 'α' — bare Greek symbol. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Sharp inequalities for martingales with values in lᴺ_∞",
+   "math_spans": [
+    [
+     50,
+     54
+    ]
+   ],
+   "why": "maths: 'lᴺ_∞' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "The tracking error rate of the Δ–Γ hedging strategy",
+   "math_spans": [
+    [
+     31,
+     34
+    ]
+   ],
+   "why": "maths: 'Δ–Γ' — symbol expression. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Packing 1.35⋅10¹¹ rectangles into a unit square",
+   "math_spans": [
+    [
+     8,
+     17
+    ]
+   ],
+   "why": "maths: '1.35⋅10¹¹' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Uniform integrability and local convexity in L⁰",
+   "math_spans": [
+    [
+     45,
+     47
+    ]
+   ],
+   "why": "maths: 'L⁰' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Inégalités relatives aux processus d'Ornstein–Uhlenbeck à n paramètres et capacités Gaussiennes c_{n,2}",
+   "math_spans": [
+    [
+     58,
+     59
+    ],
+    [
+     96,
+     103
+    ]
+   ],
+   "why": "maths: 'n'; 'c_{n,2}' — bare Latin variable letter, sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "On diffusion processes with drift in L_{d+1}",
+   "math_spans": [
+    [
+     37,
+     44
+    ]
+   ],
+   "why": "maths: 'L_{d+1}' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Sharp local propagation of chaos for mean field particles with W^{-1,∞} kernels",
+   "math_spans": [
+    [
+     63,
+     71
+    ]
+   ],
+   "why": "maths: 'W^{-1,∞}' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "The equivalence of axiom (*)^+ and axiom (*)^{++}",
+   "math_spans": [
+    [
+     25,
+     30
+    ],
+    [
+     41,
+     49
+    ]
+   ],
+   "why": "maths: '(*)^+'; '(*)^{++}' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "C^{1,1} regularity for degenerate elliptic obstacle problems",
+   "math_spans": [
+    [
+     0,
+     7
+    ]
+   ],
+   "why": "maths: 'C^{1,1}' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "C^{1,1}-smoothness of constrained solutions in the calculus of variations with application to mean field games",
+   "math_spans": [
+    [
+     0,
+     7
+    ]
+   ],
+   "why": "maths: 'C^{1,1}' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "W^{σ,p} a priori estimates for fully nonlinear integro-differential equations",
+   "math_spans": [
+    [
+     0,
+     7
+    ]
+   ],
+   "why": "maths: 'W^{σ,p}' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Renormalized solutions of some transport equations with partially W^{1,1} velocities and applications",
+   "math_spans": [
+    [
+     66,
+     73
+    ]
+   ],
+   "why": "maths: 'W^{1,1}' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "A counterexample to C^{2,1} regularity for parabolic fully nonlinear equations",
+   "math_spans": [
+    [
+     20,
+     27
+    ]
+   ],
+   "why": "maths: 'C^{2,1}' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Characterization of the unique expansions 1 = Σ_{i=1}^∞ q^(−n_i} and related problems",
+   "math_spans": [
+    [
+     42,
+     64
+    ]
+   ],
+   "why": "maths: '1 = Σ_{i=1}^∞ q^(−n_i}' — formula / (in)equality. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "The C^{0,1} Itô–Ventzell formula for weak Dirichlet processes",
+   "math_spans": [
+    [
+     4,
+     11
+    ]
+   ],
+   "why": "maths: 'C^{0,1}' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Local C^{0,α} estimates for viscosity solutions of Neumann-type boundary value problems",
+   "math_spans": [
+    [
+     6,
+     13
+    ]
+   ],
+   "why": "maths: 'C^{0,α}' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Interior pointwise C¹ and C^{1,1,} regularity of solutions for general semilinear elliptic equation in nondivergence form",
+   "math_spans": [
+    [
+     19,
+     21
+    ],
+    [
+     26,
+     34
+    ]
+   ],
+   "why": "maths: 'C¹'; 'C^{1,1,}' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "A total variation version of Breuer–Major central limit theorem under D^{1,2} assumption",
+   "math_spans": [
+    [
+     70,
+     77
+    ]
+   ],
+   "why": "maths: 'D^{1,2}' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Polynomial decay in W^{2,ε} estimates for viscosity supersolutions of fully nonlinear elliptic equations",
+   "math_spans": [
+    [
+     20,
+     27
+    ]
+   ],
+   "why": "maths: 'W^{2,ε}' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Interior C^{2,α} regularity theory for a class of nonconvex fully nonlinear elliptic equations",
+   "math_spans": [
+    [
+     9,
+     16
+    ]
+   ],
+   "why": "maths: 'C^{2,α}' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "On the sequence of numbers of the form ε₀+ε₁q+…+εₙqⁿ, εᵢ ∈ {0, 1}",
+   "math_spans": [
+    [
+     39,
+     65
+    ]
+   ],
+   "why": "maths: 'ε₀+ε₁q+…+εₙqⁿ, εᵢ ∈ {0, 1}' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Rough volatility and CGMY jumps with a finite history and the rough Heston model - small time asymptotics in the ksqrt{t} regime",
+   "math_spans": [
+    [
+     113,
+     121
+    ]
+   ],
+   "why": "maths: 'ksqrt{t}' — other notation. Case- or word-rewriting these characters would be wrong; the rest is prose. Note: bare lexical acronyms (CGMY) left unmarked: case-protected by the acronym rule, not the maths rule."
+  },
+  {
+   "title": "C^{1,⅓-} very weak solutions to the two dimensional Monge–Ampére equation",
+   "math_spans": [
+    [
+     0,
+     8
+    ]
+   ],
+   "why": "maths: 'C^{1,⅓-}' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "C^{1, β) and W^{2, p} regularity for some singular Monge–Ampère equations",
+   "math_spans": [
+    [
+     0,
+     8
+    ],
+    [
+     13,
+     21
+    ]
+   ],
+   "why": "maths: 'C^{1, β)'; 'W^{2, p}' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "An {l₁, l₂, l_∞}-regularization approach to high-dimensional errors-in-variables models",
+   "math_spans": [
+    [
+     4,
+     15
+    ]
+   ],
+   "why": "maths: 'l₁, l₂, l_∞' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "SOC-MartNet, a martingale neural network for the Hamilton–Jacobi–Bellman equation without explicit inf_{u∈U}H in stochastic optimal controls",
+   "math_spans": [
+    [
+     99,
+     109
+    ]
+   ],
+   "why": "maths: 'inf_{u∈U}H' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose. Note: bare lexical acronyms (SOC) left unmarked: case-protected by the acronym rule, not the maths rule."
+  },
+  {
+   "title": "C^{2,α} regularity of free boundaries in parabolic non-local obstacle problems",
+   "math_spans": [
+    [
+     0,
+     7
+    ]
+   ],
+   "why": "maths: 'C^{2,α}' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Convexity of solutions and C^{1,1} estimates for fully nonlinear elliptic equations",
+   "math_spans": [
+    [
+     27,
+     34
+    ]
+   ],
+   "why": "maths: 'C^{1,1}' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "C^{1,α} regularity for stationary mean-field games with logarithmic coupling",
+   "math_spans": [
+    [
+     0,
+     7
+    ]
+   ],
+   "why": "maths: 'C^{1,α}' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "C^{1,α} regularity of solutions of some degenerate fully non-linear elliptic equations",
+   "math_spans": [
+    [
+     0,
+     7
+    ]
+   ],
+   "why": "maths: 'C^{1,α}' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Arrêt par régions de {Sₙ:n, n € N²}",
+   "math_spans": [
+    [
+     22,
+     34
+    ]
+   ],
+   "why": "maths: 'Sₙ:n, n € N²' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "W^{2,p} and W^{1,p}-estimates at the boundary for solutions of fully nonlinear, uniformly elliptic equations",
+   "math_spans": [
+    [
+     0,
+     7
+    ],
+    [
+     12,
+     19
+    ]
+   ],
+   "why": "maths: 'W^{2,p}'; 'W^{1,p}' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Two short proofs of the formula ∑_{n=0}^∞ 1:(2n+1)² = 𝜋²:8",
+   "math_spans": [
+    [
+     32,
+     58
+    ]
+   ],
+   "why": "maths: '∑_{n=0}^∞ 1:(2n+1)² = 𝜋²:8' — formula / (in)equality. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "C^{1,1} regularity for principal–agent problems",
+   "math_spans": [
+    [
+     0,
+     7
+    ]
+   ],
+   "why": "maths: 'C^{1,1}' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "C^{1+α} regularity of viscosity solutions for fully nonlinear parabolic equations",
+   "math_spans": [
+    [
+     0,
+     7
+    ]
+   ],
+   "why": "maths: 'C^{1+α}' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "New Wallis- and Catalan-type infinite products for π, e, and sqrt{2 + sqrt{2}}",
+   "math_spans": [
+    [
+     51,
+     52
+    ],
+    [
+     54,
+     55
+    ],
+    [
+     61,
+     78
+    ]
+   ],
+   "why": "maths: 'π'; 'e'; 'sqrt{2 + sqrt{2}}' — bare Greek symbol, bare Latin variable letter, other notation. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Sur la représentation des (Fₜ₋=σ{Bₛ₋, s≤t})-martingales",
+   "math_spans": [
+    [
+     27,
+     42
+    ]
+   ],
+   "why": "maths: 'Fₜ₋=σ{Bₛ₋, s≤t}' — formula / (in)equality. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Global C^{1,α} regularity for Monge–Ampère equations on planar convex domains",
+   "math_spans": [
+    [
+     7,
+     14
+    ]
+   ],
+   "why": "maths: 'C^{1,α}' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "C^{1,α}-regularity for solutions of degenerate:singular fully nonlinear parabolic equations",
+   "math_spans": [
+    [
+     0,
+     7
+    ]
+   ],
+   "why": "maths: 'C^{1,α}' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "H_∞-constrained incentive Stackelberg games for discrete-time stochastic systems with multiple followers",
+   "math_spans": [
+    [
+     0,
+     3
+    ]
+   ],
+   "why": "maths: 'H_∞' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "On diffusion processes with drift in L_d",
+   "math_spans": [
+    [
+     37,
+     40
+    ]
+   ],
+   "why": "maths: 'L_d' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Estimations d'erreur dans L^∞ pour les inéquations à obstacle",
+   "math_spans": [
+    [
+     26,
+     29
+    ]
+   ],
+   "why": "maths: 'L^∞' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Monetary utility functions on C_b(X) spaces",
+   "math_spans": [
+    [
+     30,
+     36
+    ]
+   ],
+   "why": "maths: 'C_b(X)' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "C^∞ regularity in semilinear free boundary problems",
+   "math_spans": [
+    [
+     0,
+     3
+    ]
+   ],
+   "why": "maths: 'C^∞' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Volumes mixtes et sous-espaces lⁿ_1 des espaces de Banach",
+   "math_spans": [
+    [
+     31,
+     35
+    ]
+   ],
+   "why": "maths: 'lⁿ_1' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "C^{2,α} estimates for nonlinear elliptic equations of twisted type",
+   "math_spans": [
+    [
+     0,
+     7
+    ]
+   ],
+   "why": "maths: 'C^{2,α}' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Absolutely L_{exp_q}-summing norms of diagonal operators in l_r and limit orders of L_exp-summing operators",
+   "math_spans": [
+    [
+     11,
+     20
+    ],
+    [
+     60,
+     63
+    ],
+    [
+     84,
+     89
+    ]
+   ],
+   "why": "maths: 'L_{exp_q}'; 'l_r'; 'L_exp' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "On potentials of Itô processes with drift in L_{d+1}",
+   "math_spans": [
+    [
+     45,
+     52
+    ]
+   ],
+   "why": "maths: 'L_{d+1}' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Sur la forme intégro-différentielle des opérateurs de Cₖ^∞ dans C satisfaisant au principe du maximum",
+   "math_spans": [
+    [
+     54,
+     58
+    ],
+    [
+     64,
+     65
+    ]
+   ],
+   "why": "maths: 'Cₖ^∞'; 'C' — bare Latin variable letter, sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "On the circle, GMCᵞ=lim CβEₙ for γ=(2:β)^½ (γ≤1)",
+   "math_spans": [
+    [
+     15,
+     28
+    ],
+    [
+     33,
+     42
+    ],
+    [
+     44,
+     47
+    ]
+   ],
+   "why": "maths: 'GMCᵞ=lim CβEₙ'; 'γ=(2:β)^½'; 'γ≤1' — formula / (in)equality. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Fermeture de G_T(Θ) et de L²(F₀)+G_T(Θ)",
+   "math_spans": [
+    [
+     13,
+     19
+    ],
+    [
+     26,
+     39
+    ]
+   ],
+   "why": "maths: 'G_T(Θ)'; 'L²(F₀)+G_T(Θ)' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Some properties of solutions of Itô equations with drift in L_{d+1}",
+   "math_spans": [
+    [
+     60,
+     67
+    ]
+   ],
+   "why": "maths: 'L_{d+1}' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Law invariant risk measures on L^∞(ℝᵈ)",
+   "math_spans": [
+    [
+     31,
+     38
+    ]
+   ],
+   "why": "maths: 'L^∞(ℝᵈ)' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "A characterization of the closure of H^∞ in BMO",
+   "math_spans": [
+    [
+     37,
+     40
+    ]
+   ],
+   "why": "maths: 'H^∞' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose. Note: bare lexical acronyms (BMO) left unmarked: case-protected by the acronym rule, not the maths rule."
+  },
+  {
+   "title": "Three-level multi-leader–follower incentive Stackelberg differential game with H_∞ constraint",
+   "math_spans": [
+    [
+     79,
+     82
+    ]
+   ],
+   "why": "maths: 'H_∞' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "\"Lebesgue measure\" on ℝ^∞",
+   "math_spans": [
+    [
+     22,
+     25
+    ]
+   ],
+   "why": "maths: 'ℝ^∞' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "The heat equation in L_q((0, T), Lₚ)-spaces with weights",
+   "math_spans": [
+    [
+     21,
+     36
+    ]
+   ],
+   "why": "maths: 'L_q((0, T), Lₚ)' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "C^∞-regularization of ODEs perturbed by noise",
+   "math_spans": [
+    [
+     0,
+     3
+    ]
+   ],
+   "why": "maths: 'C^∞' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "A new Mertens decomposition of Y^{g,ξ}-submartingale systems. Application to BSDEs with weak constraints at stopping times",
+   "math_spans": [
+    [
+     31,
+     38
+    ]
+   ],
+   "why": "maths: 'Y^{g,ξ}' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "A C^{0,1}-functional Itô’s formula and its applications in mathematical finance",
+   "math_spans": [
+    [
+     2,
+     9
+    ]
+   ],
+   "why": "maths: 'C^{0,1}' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "H^∞ type optimal control problems, algebraic Riccati equations and differential games",
+   "math_spans": [
+    [
+     0,
+     3
+    ]
+   ],
+   "why": "maths: 'H^∞' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Le théorème de Pitman, le groupe quantique SU_q(2), et une question de P.-A. Meyer",
+   "math_spans": [
+    [
+     43,
+     50
+    ]
+   ],
+   "why": "maths: 'SU_q(2)' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Convex increasing functionals on C_b(X) spaces",
+   "math_spans": [
+    [
+     33,
+     39
+    ]
+   ],
+   "why": "maths: 'C_b(X)' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "The Landau equation for Maxwellian molecules and the Brownian motion on SO_N(ℝ)",
+   "math_spans": [
+    [
+     72,
+     79
+    ]
+   ],
+   "why": "maths: 'SO_N(ℝ)' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "A bipolar theorem for L⁰_+(Ω, ℱ, ℙ)",
+   "math_spans": [
+    [
+     22,
+     35
+    ]
+   ],
+   "why": "maths: 'L⁰_+(Ω, ℱ, ℙ)' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "A method of evaluating ζ(2) and ∫₀^∞ sin(x):xdx",
+   "math_spans": [
+    [
+     23,
+     27
+    ],
+    [
+     32,
+     47
+    ]
+   ],
+   "why": "maths: 'ζ(2)'; '∫₀^∞ sin(x):xdx' — sub/superscripted space or operator name, symbol expression. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "An optional decomposition of Y^{g,ξ}-submartingales and applications to the hedging of American options in incomplete markets",
+   "math_spans": [
+    [
+     29,
+     36
+    ]
+   ],
+   "why": "maths: 'Y^{g,ξ}' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Second order parabolic Hamilton–Jacobi–Bellman equations in Hilbert spaces and stochastic control, L²_μ approach",
+   "math_spans": [
+    [
+     99,
+     103
+    ]
+   ],
+   "why": "maths: 'L²_μ' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Stochastic optimal control in Hilbert spaces, C^{1,1} regularity of the value function and optimal synthesis via viscosity solutions",
+   "math_spans": [
+    [
+     46,
+     53
+    ]
+   ],
+   "why": "maths: 'C^{1,1}' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Which is greater, e^π or πᵉ? An unorthodox solution to a classic puzzle",
+   "math_spans": [
+    [
+     18,
+     21
+    ],
+    [
+     25,
+     27
+    ]
+   ],
+   "why": "maths: 'e^π'; 'πᵉ' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Exact and asymptotic distribution theory for the empirical correlation of two AR(1) processes",
+   "math_spans": [
+    [
+     78,
+     83
+    ]
+   ],
+   "why": "maths: 'AR(1)' — designator with parenthesised argument. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Une construction du groupe de Fischer Fi(24)",
+   "math_spans": [
+    [
+     38,
+     44
+    ]
+   ],
+   "why": "maths: 'Fi(24)' — designator with parenthesised argument. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Uniqueness of solution to scalar BSDEs with Lexp(μ*sqrt(2log(1+L)))-integrable terminal values",
+   "math_spans": [
+    [
+     44,
+     67
+    ]
+   ],
+   "why": "maths: 'Lexp(μ*sqrt(2log(1+L)))' — designator with parenthesised argument. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Frontière de Martin du dual de SU(2)",
+   "math_spans": [
+    [
+     31,
+     36
+    ]
+   ],
+   "why": "maths: 'SU(2)' — designator with parenthesised argument. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Existence of solution to scalar BSDEs with Lexp(sqrt(2:λ*log(1+L)))-integrable terminal values",
+   "math_spans": [
+    [
+     43,
+     67
+    ]
+   ],
+   "why": "maths: 'Lexp(sqrt(2:λ*log(1+L)))' — designator with parenthesised argument. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "L’opérateur de Laplace–Beltrami du demi-plan et les quantifications linéaire et projective de SL(2, R)",
+   "math_spans": [
+    [
+     94,
+     102
+    ]
+   ],
+   "why": "maths: 'SL(2, R)' — designator with parenthesised argument. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "A new lower bound for the Ramsey numbers R(3, k)",
+   "math_spans": [
+    [
+     41,
+     48
+    ]
+   ],
+   "why": "maths: 'R(3, k)' — designator with parenthesised argument. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Linear quadratic mean field games, decentralized O(1:N)-Nash equilibria",
+   "math_spans": [
+    [
+     49,
+     55
+    ]
+   ],
+   "why": "maths: 'O(1:N)' — designator with parenthesised argument. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Viscosity solutions of Hamilton–Jacobi equations in proper CAT(0) spaces",
+   "math_spans": [
+    [
+     59,
+     65
+    ]
+   ],
+   "why": "maths: 'CAT(0)' — designator with parenthesised argument. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "La conjecture de Langlands locale pour GL(3)",
+   "math_spans": [
+    [
+     39,
+     44
+    ]
+   ],
+   "why": "maths: 'GL(3)' — designator with parenthesised argument. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Les représentations supercuspidales des groupes métaplectiques sur GL(2) et leurs caractères",
+   "math_spans": [
+    [
+     67,
+     72
+    ]
+   ],
+   "why": "maths: 'GL(2)' — designator with parenthesised argument. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Formes automorphes (II), le cas du groupe GSp(4)",
+   "math_spans": [
+    [
+     42,
+     48
+    ]
+   ],
+   "why": "maths: 'GSp(4)' — designator with parenthesised argument. Case- or word-rewriting these characters would be wrong; the rest is prose. Note: the parenthesised text is ordinary English/editorial and is NOT protected; bare lexical acronyms (II) left unmarked: case-protected by the acronym rule, not the maths rule."
+  },
+  {
+   "title": "On the search of genuine p-adic modular L-functions for GL(n). With a correction to \"on p-adic L-functions of GL(2)×GL(2) over totally real fields\"",
+   "math_spans": [
+    [
+     25,
+     26
+    ],
+    [
+     40,
+     41
+    ],
+    [
+     56,
+     61
+    ],
+    [
+     88,
+     89
+    ],
+    [
+     95,
+     96
+    ],
+    [
+     110,
+     121
+    ]
+   ],
+   "why": "maths: 'p'; 'L'; 'GL(n)'; 'p'; 'L'; 'GL(2)×GL(2)' — bare Latin variable letter, designator with parenthesised argument. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Représentations linéaires des groupes ﬁnis (Luminy, 16–21 mai 1988)",
+   "math_spans": [],
+   "why": "no maths. Reason: digits are dates, volume or issue numbers, not notation."
+  },
+  {
+   "title": "Reflected backward SDEs with general jumps (in Russian)",
+   "math_spans": [],
+   "why": "no maths. Reason: the parenthesised text is ordinary English or an editorial gloss, not notation."
+  },
+  {
+   "title": "The evolutionary game of pressure (or interference), resistance and collaboration",
+   "math_spans": [],
+   "why": "no maths. Reason: the parenthesised text is ordinary English or an editorial gloss, not notation."
+  },
+  {
+   "title": "A semigroup point of view on splitting schemes for stochastic (partial) differential equations",
+   "math_spans": [],
+   "why": "no maths. Reason: the parenthesised text is ordinary English or an editorial gloss, not notation."
+  },
+  {
+   "title": "Stochastic differential equations, theory and practice of numerical solution (in Russian)",
+   "math_spans": [],
+   "why": "no maths. Reason: the parenthesised text is ordinary English or an editorial gloss, not notation."
+  },
+  {
+   "title": "The nonlinear transformation of Gaussian measure on Banach space and its absolute continuity (I)",
+   "math_spans": [],
+   "why": "no maths. Reason: the parenthesised text is ordinary English or an editorial gloss, not notation; Roman numerals are part/volume numbers, not notation."
+  },
+  {
+   "title": "Spatial branching processes, superprocesses and snakes (slides)",
+   "math_spans": [],
+   "why": "no maths. Reason: the parenthesised text is ordinary English or an editorial gloss, not notation."
+  },
+  {
+   "title": "Processus canoniquement mesurables (ou Doob avait raison)",
+   "math_spans": [],
+   "why": "no maths. Reason: the parenthesised text is ordinary English or an editorial gloss, not notation."
+  },
+  {
+   "title": "Backward stochastic differential equations driven by G–Brownian Motion with uniformly continuous coefficients in (y,z)",
+   "math_spans": [
+    [
+     53,
+     54
+    ],
+    [
+     114,
+     117
+    ]
+   ],
+   "why": "maths: 'G'; 'y,z' — bare Latin variable letter, other notation. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Allocation tactique (slides)",
+   "math_spans": [],
+   "why": "no maths. Reason: the parenthesised text is ordinary English or an editorial gloss, not notation."
+  },
+  {
+   "title": "Structure transverse des feuilletages, (Toulouse, 1982)",
+   "math_spans": [],
+   "why": "no maths. Reason: digits are dates, volume or issue numbers, not notation."
+  },
+  {
+   "title": "Représentations p-adiques de groupes p-adiques I, représentations galoisiennes et (φ, Γ)-modules",
+   "math_spans": [
+    [
+     16,
+     17
+    ],
+    [
+     37,
+     38
+    ],
+    [
+     83,
+     87
+    ]
+   ],
+   "why": "maths: 'p'; 'p'; 'φ, Γ' — bare Latin variable letter, symbol expression. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Distributions sur l'espace de Wiener (suite), d'après Kubo et Yokoi",
+   "math_spans": [],
+   "why": "no maths. Reason: the parenthesised text is ordinary English or an editorial gloss, not notation."
+  },
+  {
+   "title": "Strongly quasiconvex functions, what we know (so far)",
+   "math_spans": [],
+   "why": "no maths. Reason: the parenthesised text is ordinary English or an editorial gloss, not notation."
+  },
+  {
+   "title": "Laurent Schwartz (1915–2002)",
+   "math_spans": [],
+   "why": "no maths. Reason: digits are dates, volume or issue numbers, not notation."
+  },
+  {
+   "title": "A direct proof of the irrationality of tan²(rπ)",
+   "math_spans": [
+    [
+     39,
+     47
+    ]
+   ],
+   "why": "maths: 'tan²(rπ)' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "A game-theoretic version of an optimal stopping problem (in Russian)",
+   "math_spans": [],
+   "why": "no maths. Reason: the parenthesised text is ordinary English or an editorial gloss, not notation."
+  },
+  {
+   "title": "Stochastic target problems with controlled loss in jump diffusion models (slides)",
+   "math_spans": [],
+   "why": "no maths. Reason: the parenthesised text is ordinary English or an editorial gloss, not notation."
+  },
+  {
+   "title": "A mean-field excitatory network for risk modeling (slides)",
+   "math_spans": [],
+   "why": "no maths. Reason: the parenthesised text is ordinary English or an editorial gloss, not notation."
+  },
+  {
+   "title": "Expansion of multiple Stratonovich stochastic integrals of second multiplicity, based on double Fourier–Legendre series summarized by Prinsheim method (in Russian)",
+   "math_spans": [],
+   "why": "no maths. Reason: the parenthesised text is ordinary English or an editorial gloss, not notation; en-dashed capitalised tokens are proper names, not operators."
+  },
+  {
+   "title": "On the geometry of differentiable manifolds (Rome, 23–27 juin 1986)",
+   "math_spans": [],
+   "why": "no maths. Reason: digits are dates, volume or issue numbers, not notation."
+  },
+  {
+   "title": "The ATM implied volatility slope, the (dual) volatility swap, and the (dual) zero vanna implied volatility",
+   "math_spans": [],
+   "why": "no maths. Reason: the parenthesised text is ordinary English or an editorial gloss, not notation; all-caps tokens (ATM) are lexical acronyms - case-protected by the acronym rule, not the maths rule."
+  },
+  {
+   "title": "The science reports of the Tōhoku imperial university, first series (mathematics, physics, chemistry), Sendai, Japan, volume XII, 1923–1924",
+   "math_spans": [],
+   "why": "no maths. Reason: Roman numerals are part/volume numbers, not notation; digits are dates, volume or issue numbers, not notation."
+  },
+  {
+   "title": "From probability to geometry (II), volume in honor of the 60th birthday of Jean-Michel Bismut",
+   "math_spans": [],
+   "why": "no maths. Reason: the parenthesised text is ordinary English or an editorial gloss, not notation; Roman numerals are part/volume numbers, not notation; en-dashed capitalised tokens are proper names, not operators."
+  },
+  {
+   "title": "Viscosity solutions to Hamilton–Jacobi–Bellman equations associated with sublinear Lévy(-type) processes",
+   "math_spans": [],
+   "why": "no maths. Reason: en-dashed capitalised tokens are proper names, not operators."
+  },
+  {
+   "title": "Probabilistic representation of weak solutions of PDEs with polynomial growth coefficients via corresponding backward SDEs (slides)",
+   "math_spans": [],
+   "why": "no maths. Reason: the parenthesised text is ordinary English or an editorial gloss, not notation."
+  },
+  {
+   "title": "Weighted Lᵖ (p≥1) solutions of random time horizon BSDEs with stochastic monotonicity generators",
+   "math_spans": [
+    [
+     9,
+     11
+    ],
+    [
+     13,
+     16
+    ]
+   ],
+   "why": "maths: 'Lᵖ'; 'p≥1' — formula / (in)equality, sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Géométrie différentielle, physique mathématique, mathématiques et société (II), volume en l'honneur de Jean-Pierre Bourguignon",
+   "math_spans": [],
+   "why": "no maths. Reason: the parenthesised text is ordinary English or an editorial gloss, not notation; Roman numerals are part/volume numbers, not notation; en-dashed capitalised tokens are proper names, not operators."
+  },
+  {
+   "title": "The collected mathematical papers of James Joseph Sylvester, volume II (1854–1873) with two plates",
+   "math_spans": [],
+   "why": "no maths. Reason: Roman numerals are part/volume numbers, not notation; digits are dates, volume or issue numbers, not notation."
+  },
+  {
+   "title": "A continuous time GARCH(p, q) process with delay",
+   "math_spans": [
+    [
+     18,
+     29
+    ]
+   ],
+   "why": "maths: 'GARCH(p, q)' — designator with parenthesised argument. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Pricing and hedging of credit risk, replication and mean–variance approaches (II)",
+   "math_spans": [],
+   "why": "no maths. Reason: the parenthesised text is ordinary English or an editorial gloss, not notation; Roman numerals are part/volume numbers, not notation."
+  },
+  {
+   "title": "Étude de mesures de probabilité sur C(ℝ₊^*;ℝ) quasi invariantes sous les translations de D(ℝ₊^*;ℝ)",
+   "math_spans": [
+    [
+     36,
+     45
+    ],
+    [
+     89,
+     98
+    ]
+   ],
+   "why": "maths: 'C(ℝ₊^*;ℝ)'; 'D(ℝ₊^*;ℝ)' — designator with parenthesised argument. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Atti del congresso internazionale dei mathematici, Bologna 3–10 Settembre 1928 (VI), tomo I, rendiconti del congresso conferenze",
+   "math_spans": [],
+   "why": "no maths. Reason: the parenthesised text is ordinary English or an editorial gloss, not notation; Roman numerals are part/volume numbers, not notation; digits are dates, volume or issue numbers, not notation."
+  },
+  {
+   "title": "On generalizations of discrete and integral Cauchy–Bunyakovsky inequalities by the method of mean values. Some applications (in Russian)",
+   "math_spans": [],
+   "why": "no maths. Reason: the parenthesised text is ordinary English or an editorial gloss, not notation; en-dashed capitalised tokens are proper names, not operators."
+  },
+  {
+   "title": "Optimally deceiving a learning leader in Stackelberg games (NeurIPS)",
+   "math_spans": [],
+   "why": "no maths. Reason: the parenthesised text is ordinary English or an editorial gloss, not notation."
+  },
+  {
+   "title": "Neuro-dynamic programming, an overview (slides)",
+   "math_spans": [],
+   "why": "no maths. Reason: the parenthesised text is ordinary English or an editorial gloss, not notation."
+  },
+  {
+   "title": "Fast hybrid schemes for fractional Riccati equations (rough is not so tough)",
+   "math_spans": [],
+   "why": "no maths. Reason: the parenthesised text is ordinary English or an editorial gloss, not notation."
+  },
+  {
+   "title": "Smoothness of the value function for a controlled diffusion process in a domain (in Russian)",
+   "math_spans": [],
+   "why": "no maths. Reason: the parenthesised text is ordinary English or an editorial gloss, not notation."
+  },
+  {
+   "title": "On analytic characterization of convex sets in ℝᵐ (a survey)",
+   "math_spans": [
+    [
+     47,
+     49
+    ]
+   ],
+   "why": "maths: 'ℝᵐ' — sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose. Note: the parenthesised text is ordinary English/editorial and is NOT protected."
+  },
+  {
+   "title": "Rough Heston model as the scaling limit of bivariate heavy-tailed INAR(∞) processes and applications",
+   "math_spans": [
+    [
+     66,
+     73
+    ]
+   ],
+   "why": "maths: 'INAR(∞)' — designator with parenthesised argument. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Regularity for viscosity solutions of fully nonlinear equations F(D²u)=0",
+   "math_spans": [
+    [
+     64,
+     72
+    ]
+   ],
+   "why": "maths: 'F(D²u)=0' — formula / (in)equality. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "The Fourier–Malliavin volatility (FMVol) MATLAB library",
+   "math_spans": [],
+   "why": "no maths. Reason: the parenthesised text is ordinary English or an editorial gloss, not notation; all-caps tokens (MATLAB) are lexical acronyms - case-protected by the acronym rule, not the maths rule; en-dashed capitalised tokens are proper names, not operators."
+  },
+  {
+   "title": "𝕃ᵖ-solutions (1<p<2) for reflected BSDEs with general jumps and stochastic monotone generators",
+   "math_spans": [
+    [
+     0,
+     2
+    ],
+    [
+     14,
+     19
+    ]
+   ],
+   "why": "maths: '𝕃ᵖ'; '1<p<2' — formula / (in)equality, sub/superscripted space or operator name. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Viscosity solutions of fully second-order HJB equations in the Wasserstein space",
+   "math_spans": [],
+   "why": "no maths. Reason: all-caps tokens (HJB) are lexical acronyms - case-protected by the acronym rule, not the maths rule."
+  },
+  {
+   "title": "Limiting behaviors for longest consecutive switches in an IID Bernoulli sequence",
+   "math_spans": [],
+   "why": "no maths. Reason: all-caps tokens (IID) are lexical acronyms - case-protected by the acronym rule, not the maths rule."
+  },
+  {
+   "title": "Convergence of multi-dimensional quantized SDE's",
+   "math_spans": [],
+   "why": "no maths. Reason: all-caps tokens (SDE) are lexical acronyms - case-protected by the acronym rule, not the maths rule."
+  },
+  {
+   "title": "A PDE approach for solving the characteristic function of the generalised signature process",
+   "math_spans": [],
+   "why": "no maths. Reason: all-caps tokens (PDE) are lexical acronyms - case-protected by the acronym rule, not the maths rule."
+  },
+  {
+   "title": "Démonstration probabiliste de certaines inégalités de Littlewood-Paley. Exposé II, l'opérateur carré du champ",
+   "math_spans": [],
+   "why": "no maths. Reason: Roman numerals are part/volume numbers, not notation; en-dashed capitalised tokens are proper names, not operators."
+  },
+  {
+   "title": "The science reports of the Tōhoku imperial university, first series (mathematics, physics, chemistry), Sendai, Japan, volume VII, 1918",
+   "math_spans": [],
+   "why": "no maths. Reason: Roman numerals are part/volume numbers, not notation; digits are dates, volume or issue numbers, not notation."
+  },
+  {
+   "title": "Averaging principle for multiscale controlled jump diffusions and associated nonlocal HJB equations",
+   "math_spans": [],
+   "why": "no maths. Reason: all-caps tokens (HJB) are lexical acronyms - case-protected by the acronym rule, not the maths rule."
+  },
+  {
+   "title": "Messenger of mathematics, volume VII, May, 1877–April, 1878",
+   "math_spans": [],
+   "why": "no maths. Reason: Roman numerals are part/volume numbers, not notation; digits are dates, volume or issue numbers, not notation."
+  },
+  {
+   "title": "Œuvres complètes d'Augustin Cauchy publiées sous la direction scientifique de l'académie des sciences et sous les auspices de M. le ministre de l'instruction publique, 1ère série, tome IV",
+   "math_spans": [],
+   "why": "no maths. Reason: Roman numerals are part/volume numbers, not notation."
+  },
+  {
+   "title": "Lecture on probability theory and statistics, école d'été de probabilités de Saint-Flour XXVIII, 1998",
+   "math_spans": [],
+   "why": "no maths. Reason: Roman numerals are part/volume numbers, not notation; digits are dates, volume or issue numbers, not notation; en-dashed capitalised tokens are proper names, not operators."
+  },
+  {
+   "title": "Quantum probability communications, volume XII",
+   "math_spans": [],
+   "why": "no maths. Reason: Roman numerals are part/volume numbers, not notation."
+  },
+  {
+   "title": "Risk-neutral option pricing under GARCH intensity model",
+   "math_spans": [],
+   "why": "no maths. Reason: all-caps tokens (GARCH) are lexical acronyms - case-protected by the acronym rule, not the maths rule."
+  },
+  {
+   "title": "Representation of BSDE-based dynamic risk measures and dynamic capital allocations",
+   "math_spans": [],
+   "why": "no maths. Reason: all-caps tokens (BSDE) are lexical acronyms - case-protected by the acronym rule, not the maths rule."
+  },
+  {
+   "title": "2017 MATRIX annals",
+   "math_spans": [],
+   "why": "no maths. Reason: all-caps tokens (MATRIX) are lexical acronyms - case-protected by the acronym rule, not the maths rule; digits are dates, volume or issue numbers, not notation."
+  },
+  {
+   "title": "Stochastic differential systems. Proceedings of the 2nd Bad Honnef conference of the SFB 72 of the DFG at the university of Bonn, June 28–July 2, 1982",
+   "math_spans": [],
+   "why": "no maths. Reason: all-caps tokens (DFG, SFB) are lexical acronyms - case-protected by the acronym rule, not the maths rule; digits are dates, volume or issue numbers, not notation."
+  },
+  {
+   "title": "Generalized Snell envelope as a minimal solution of BSDE with lower barriers",
+   "math_spans": [],
+   "why": "no maths. Reason: all-caps tokens (BSDE) are lexical acronyms - case-protected by the acronym rule, not the maths rule."
+  },
+  {
+   "title": "Intégrales stochastiques III",
+   "math_spans": [],
+   "why": "no maths. Reason: Roman numerals are part/volume numbers, not notation."
+  },
+  {
+   "title": "Some aspects of the theory of dynamical systems, a tribute to Jean-Christophe Yoccoz, volume II",
+   "math_spans": [],
+   "why": "no maths. Reason: Roman numerals are part/volume numbers, not notation; en-dashed capitalised tokens are proper names, not operators."
+  },
+  {
+   "title": "A comparison of FX fixing methodologies",
+   "math_spans": [],
+   "why": "no maths. Reason: all-caps tokens (FX) are lexical acronyms - case-protected by the acronym rule, not the maths rule."
+  },
+  {
+   "title": "Messenger of mathematics, volume XLI, May, 1911–April, 1912",
+   "math_spans": [],
+   "why": "no maths. Reason: Roman numerals are part/volume numbers, not notation; digits are dates, volume or issue numbers, not notation."
+  },
+  {
+   "title": "Theory of function spaces III",
+   "math_spans": [],
+   "why": "no maths. Reason: Roman numerals are part/volume numbers, not notation."
+  },
+  {
+   "title": "A stochastic differential equation SIS epidemic model",
+   "math_spans": [],
+   "why": "no maths. Reason: all-caps tokens (SIS) are lexical acronyms - case-protected by the acronym rule, not the maths rule."
+  },
+  {
+   "title": "Optimal control of unbounded functional stochastic evolution systems in Hilbert spaces, second-order path-dependent HJB equation",
+   "math_spans": [],
+   "why": "no maths. Reason: all-caps tokens (HJB) are lexical acronyms - case-protected by the acronym rule, not the maths rule."
+  },
+  {
+   "title": "Œuvres complètes de Laplace, publiées sous les auspices de l'Académie des sciences par MM. les secrétaires perpétuels, tome 09",
+   "math_spans": [],
+   "why": "no maths. Reason: all-caps tokens (MM) are lexical acronyms - case-protected by the acronym rule, not the maths rule; digits are dates, volume or issue numbers, not notation."
+  },
+  {
+   "title": "A note on a PDE approach to option pricing under XVA",
+   "math_spans": [],
+   "why": "no maths. Reason: all-caps tokens (PDE, XVA) are lexical acronyms - case-protected by the acronym rule, not the maths rule."
+  },
+  {
+   "title": "Optimizing expected utility of dividend payments for a Brownian risk process and a peculiar nonlinear ODE",
+   "math_spans": [],
+   "why": "no maths. Reason: all-caps tokens (ODE) are lexical acronyms - case-protected by the acronym rule, not the maths rule."
+  },
+  {
+   "title": "Œuvres complètes de Laplace, publiées sous les auspices de l'Académie des sciences par MM. les secrétaires perpétuels, tome 14",
+   "math_spans": [],
+   "why": "no maths. Reason: all-caps tokens (MM) are lexical acronyms - case-protected by the acronym rule, not the maths rule; digits are dates, volume or issue numbers, not notation."
+  },
+  {
+   "title": "Analyse complexe, systèmes dynamiques, sommabilité des séries divergentes et théories galoisiennes (II), volume en l'honneur de Jean-Pierre Ramis",
+   "math_spans": [],
+   "why": "no maths. Reason: the parenthesised text is ordinary English or an editorial gloss, not notation; Roman numerals are part/volume numbers, not notation; en-dashed capitalised tokens are proper names, not operators."
+  },
+  {
+   "title": "Viscosity solutions of Hamilton–Jacobi equation in RCD(K, ∞) spaces and applications to large deviations",
+   "math_spans": [
+    [
+     51,
+     60
+    ]
+   ],
+   "why": "maths: 'RCD(K, ∞)' — designator with parenthesised argument. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "MATHEON, mathematics for key technologies",
+   "math_spans": [],
+   "why": "no maths. Reason: all-caps tokens (MATHEON) are lexical acronyms - case-protected by the acronym rule, not the maths rule."
+  },
+  {
+   "title": "Random walks on disordered media and their scaling limits, école d'été de probabilités de Saint-Flour XL, 2010",
+   "math_spans": [],
+   "why": "no maths. Reason: Roman numerals are part/volume numbers, not notation; digits are dates, volume or issue numbers, not notation; en-dashed capitalised tokens are proper names, not operators."
+  },
+  {
+   "title": "Extinction and quasi-stationarity for discrete-time, endemic SIS and SIR models",
+   "math_spans": [],
+   "why": "no maths. Reason: all-caps tokens (SIR, SIS) are lexical acronyms - case-protected by the acronym rule, not the maths rule."
+  },
+  {
+   "title": "Heavy traffic analysis for EDF queues with reneging",
+   "math_spans": [],
+   "why": "no maths. Reason: all-caps tokens (EDF) are lexical acronyms - case-protected by the acronym rule, not the maths rule."
+  },
+  {
+   "title": "Global existence for quadratic FBSDE systems and application to stochastic differential games",
+   "math_spans": [],
+   "why": "no maths. Reason: all-caps tokens (FBSDE) are lexical acronyms - case-protected by the acronym rule, not the maths rule."
+  },
+  {
+   "title": "On a positivity preserving numerical scheme for jump-extended CIR process, the α-stable case.",
+   "math_spans": [
+    [
+     79,
+     80
+    ]
+   ],
+   "why": "maths: 'α' — bare Greek symbol. Case- or word-rewriting these characters would be wrong; the rest is prose. Note: bare lexical acronyms (CIR) left unmarked: case-protected by the acronym rule, not the maths rule."
+  },
+  {
+   "title": "Long time asymptotics for fully nonlinear Bellman equations, a backward SDE approach",
+   "math_spans": [],
+   "why": "no maths. Reason: all-caps tokens (SDE) are lexical acronyms - case-protected by the acronym rule, not the maths rule."
+  },
+  {
+   "title": "Mandatory vs. voluntary ESG disclosure, efficiency, and real effects",
+   "math_spans": [],
+   "why": "no maths. Reason: all-caps tokens (ESG) are lexical acronyms - case-protected by the acronym rule, not the maths rule."
+  },
+  {
+   "title": "Stochastic control problems and HJB equations with excluded parameters of random inputs",
+   "math_spans": [],
+   "why": "no maths. Reason: all-caps tokens (HJB) are lexical acronyms - case-protected by the acronym rule, not the maths rule."
+  },
+  {
+   "title": "Pricing and hedging performance on pegged FX markets based on a regime switching model",
+   "math_spans": [],
+   "why": "no maths. Reason: all-caps tokens (FX) are lexical acronyms - case-protected by the acronym rule, not the maths rule."
+  },
+  {
+   "title": "Non linear optimal stopping problem and reflected BSDE in the predictable setting",
+   "math_spans": [],
+   "why": "no maths. Reason: all-caps tokens (BSDE) are lexical acronyms - case-protected by the acronym rule, not the maths rule."
+  },
+  {
+   "title": "Well-posedness of fully coupled McKean–Vlasov FBSDE and application to Stackelberg games",
+   "math_spans": [],
+   "why": "no maths. Reason: all-caps tokens (FBSDE) are lexical acronyms - case-protected by the acronym rule, not the maths rule; en-dashed capitalised tokens are proper names, not operators."
+  },
+  {
+   "title": "Reflected BSDE with superlinear quadratic coefficient",
+   "math_spans": [],
+   "why": "no maths. Reason: all-caps tokens (BSDE) are lexical acronyms - case-protected by the acronym rule, not the maths rule."
+  },
+  {
+   "title": "A unified view of LIBOR models",
+   "math_spans": [],
+   "why": "no maths. Reason: all-caps tokens (LIBOR) are lexical acronyms - case-protected by the acronym rule, not the maths rule."
+  },
+  {
+   "title": "BSDE and generalized Dirichlet forms, the infinite dimensional case",
+   "math_spans": [],
+   "why": "no maths. Reason: all-caps tokens (BSDE) are lexical acronyms - case-protected by the acronym rule, not the maths rule."
+  },
+  {
+   "title": "On the first hitting time of a high-dimensional orthant",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "Dynamic arbitrage-free asset pricing with proportional transaction costs",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "Equivalent models for finite-fuel stochastic control",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "Open-loop and closed-loop solvabilities for zero-sum stochastic linear quadratic differential games of Markovian regime switching system",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "A complete solution to a class of principal–agent problems with an application to the control of a self-managed firm",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "Multistep Bayesian strategy in coin-tossing games and its application to asset trading games in continuous time",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "Optimal switching of one-dimensional reflected BSDEs and associated multidimensional BSDEs with oblique reflection",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "Insights from optimal pandemic shielding in a multi-group SEIR framework",
+   "math_spans": [],
+   "why": "no maths. Reason: all-caps tokens (SEIR) are lexical acronyms - case-protected by the acronym rule, not the maths rule."
+  },
+  {
+   "title": "Périodes p-adiques, séminaire de Bures, 1988 (errata et addenda)",
+   "math_spans": [
+    [
+     9,
+     10
+    ]
+   ],
+   "why": "maths: 'p' — bare Latin variable letter. Case- or word-rewriting these characters would be wrong; the rest is prose. Note: the parenthesised text is ordinary English/editorial and is NOT protected."
+  },
+  {
+   "title": "A short state of the art on multi-leader–follower games",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "Local martingales and the fundamental asset pricing theorems in the discrete-time case",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "Strong existence, uniqueness and non-uniqueness in an equation involving local time",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "Optimal dividends under Markov-modulated bankruptcy level",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "Discrete-time mean-field stochastic control with partial observations",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "High order numerical schemes for second-order FBSDEs with applications to stochastic optimal control",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "Existence, uniqueness and comparison theorem on unbounded solutions of scalar super-linear BSDEs",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "Multi-dimensional optimal trade execution under stochastic resilience",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "Hadamard functions of inverse M-matrices",
+   "math_spans": [
+    [
+     30,
+     31
+    ]
+   ],
+   "why": "maths: 'M' — bare Latin variable letter. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Equilibria for time-inconsistent singular control problems",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "Potential mean-field games and gradient flows",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "Theory and application of random fields, proceedings of the IFIP-WG 7:1 working conference held under the joint auspices of the Indian statistical institute, Bangalore, India, January 1982",
+   "math_spans": [],
+   "why": "no maths. Reason: all-caps tokens (IFIP, WG) are lexical acronyms - case-protected by the acronym rule, not the maths rule; digits are dates, volume or issue numbers, not notation."
+  },
+  {
+   "title": "Options on bonds, implied volatilities from affine short-rate dynamics",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "Strong convergence and stability of stochastic theta method for time-changed stochastic differential equations with local Lipschitz coefficients",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "Equivalence of minimax and viscosity solutions of path-dependent Hamilton–Jacobi equations",
+   "math_spans": [],
+   "why": "no maths. Reason: en-dashed capitalised tokens are proper names, not operators."
+  },
+  {
+   "title": "Cone-constrained continuous-time Markowitz problems",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "Continuous-time asset pricing theory, a martingale-based approach",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "Approximation of backward stochastic partial differential equations by a splitting-up method",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "Effective risk aversion in thin risk-sharing markets",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "Seeking stability for multi-leader Stackelberg game as an incentive mechanism for multi-requester federated learning",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "Non-implementability of Arrow–Debreu equilibria by continuous trading under volatility uncertainty",
+   "math_spans": [],
+   "why": "no maths. Reason: en-dashed capitalised tokens are proper names, not operators."
+  },
+  {
+   "title": "Feasible approximation of matching equilibria for large-scale matching for teams problems",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "On time-consistent solution to time-inconsistent linear–quadratic optimal control of discrete-time stochastic systems",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "BSDEs with jumps and path-dependent parabolic integro-differential equations",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "Semi–G-normal, a hybrid between normal and G-normal",
+   "math_spans": [
+    [
+     5,
+     6
+    ],
+    [
+     43,
+     44
+    ]
+   ],
+   "why": "maths: 'G'; 'G' — bare Latin variable letter. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Quasi-invariance of countable products of Cauchy measures under non-unitary dilations",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "Stochastic calculus for finance II, continuous-time models",
+   "math_spans": [],
+   "why": "no maths. Reason: Roman numerals are part/volume numbers, not notation."
+  },
+  {
+   "title": "Gaining efficiency in deep policy gradient method for continuous-time optimal control problems",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "A mean-field game model for homogeneous flocking",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "Les intervalles de constance de <X, X>",
+   "math_spans": [
+    [
+     33,
+     37
+    ]
+   ],
+   "why": "maths: 'X, X' — other notation. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Markovian lifting and asymptotic log-Harnack inequality for stochastic Volterra integral equations",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "An algorithmic guide for finite-dimensional optimal control problems",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "Comparative prediction of confirmed cases with COVID-19 pandemic by machine learning, deterministic and stochastic SIR models",
+   "math_spans": [],
+   "why": "no maths. Reason: all-caps tokens (COVID, SIR) are lexical acronyms - case-protected by the acronym rule, not the maths rule."
+  },
+  {
+   "title": "The journal of Fourier analysis and applications. Special issue, proceedings of the conference in honor of Jean-Pierre Kahane, Orsay, June 28–July 3, 1993",
+   "math_spans": [],
+   "why": "no maths. Reason: digits are dates, volume or issue numbers, not notation; en-dashed capitalised tokens are proper names, not operators."
+  },
+  {
+   "title": "On two-dimensional extensions of Bougerol's identity in law",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "Pathwise uniqueness of non-uniformly elliptic SDEs with rough coefficients",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "Messenger of mathematics, volume XXVII, May, 1897–April, 1898",
+   "math_spans": [],
+   "why": "no maths. Reason: Roman numerals are part/volume numbers, not notation; digits are dates, volume or issue numbers, not notation."
+  },
+  {
+   "title": "Séminaire de théorie du potentiel Paris, numéro 5",
+   "math_spans": [],
+   "why": "no maths. Reason: digits are dates, volume or issue numbers, not notation."
+  },
+  {
+   "title": "Ending the COVID-19 epidemic in the United Kingdom",
+   "math_spans": [],
+   "why": "no maths. Reason: all-caps tokens (COVID) are lexical acronyms - case-protected by the acronym rule, not the maths rule."
+  },
+  {
+   "title": "Séminaire Bourbaki, volume 2012:2013, exposés 1059–1073",
+   "math_spans": [],
+   "why": "no maths. Reason: digits are dates, volume or issue numbers, not notation."
+  },
+  {
+   "title": "Differential equations driven by Hölder continuous functions of order greater than 1:2",
+   "math_spans": [
+    [
+     83,
+     86
+    ]
+   ],
+   "why": "maths: '1:2' — other notation. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Asymptotics for the distribution of lengths of excursions of a d-dimensional Bessel process (0<d<2)",
+   "math_spans": [
+    [
+     63,
+     64
+    ],
+    [
+     93,
+     98
+    ]
+   ],
+   "why": "maths: 'd'; '0<d<2' — bare Latin variable letter, formula / (in)equality. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "Sharp bounds on p-norms for sums of independent uniform random variables, 0<p<1",
+   "math_spans": [
+    [
+     16,
+     17
+    ],
+    [
+     74,
+     79
+    ]
+   ],
+   "why": "maths: 'p'; '0<p<1' — bare Latin variable letter, formula / (in)equality. Case- or word-rewriting these characters would be wrong; the rest is prose."
+  },
+  {
+   "title": "A mathematically rigorous assessment of the efficiency of quarantining and contact tracing in curbing the COVID-19 epidemic",
+   "math_spans": [],
+   "why": "no maths. Reason: all-caps tokens (COVID) are lexical acronyms - case-protected by the acronym rule, not the maths rule."
+  },
+  {
+   "title": "École d'été de probabilités de Saint-Flour XIX, 1989",
+   "math_spans": [],
+   "why": "no maths. Reason: Roman numerals are part/volume numbers, not notation; digits are dates, volume or issue numbers, not notation; en-dashed capitalised tokens are proper names, not operators."
+  },
+  {
+   "title": "Differential equations driven by rough paths, école d'été de probabilités de Saint-Flour XXXIV, 2004",
+   "math_spans": [],
+   "why": "no maths. Reason: Roman numerals are part/volume numbers, not notation; digits are dates, volume or issue numbers, not notation; en-dashed capitalised tokens are proper names, not operators."
+  },
+  {
+   "title": "From particle systems to partial differential equations. International conference, particle systems and PDEs VI, VII and VIII, 2017–2019",
+   "math_spans": [],
+   "why": "no maths. Reason: Roman numerals are part/volume numbers, not notation; digits are dates, volume or issue numbers, not notation."
+  },
+  {
+   "title": "Symbolic and quantitative approaches to reasoning with uncertainty, 16th European conference, ECSQARU 2021 Prague, Czech Republic, September 21–24, 2021, proceedings",
+   "math_spans": [],
+   "why": "no maths. Reason: all-caps tokens (ECSQARU) are lexical acronyms - case-protected by the acronym rule, not the maths rule; digits are dates, volume or issue numbers, not notation."
+  },
+  {
+   "title": "Counting the costs of COVID-19, why future treatment option values matter",
+   "math_spans": [],
+   "why": "no maths. Reason: all-caps tokens (COVID) are lexical acronyms - case-protected by the acronym rule, not the maths rule."
+  },
+  {
+   "title": "École d'été de probabilités de Saint-Flour VIII, 1978",
+   "math_spans": [],
+   "why": "no maths. Reason: Roman numerals are part/volume numbers, not notation; digits are dates, volume or issue numbers, not notation; en-dashed capitalised tokens are proper names, not operators."
+  },
+  {
+   "title": "Proceedings of the international congress of mathematicians, online 2022, volume VII, sections 15–20",
+   "math_spans": [],
+   "why": "no maths. Reason: Roman numerals are part/volume numbers, not notation; digits are dates, volume or issue numbers, not notation."
+  },
+  {
+   "title": "On numerical modeling of the multidimentional dynamic systems under random perturbations with the 2.5 order of strong convergence.",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "Proceedings of the international congress of mathematicians, August 13–21, 2014, Seoul, volume III, invited lectures",
+   "math_spans": [],
+   "why": "no maths. Reason: Roman numerals are part/volume numbers, not notation; digits are dates, volume or issue numbers, not notation."
+  },
+  {
+   "title": "Bounds for VIX futures given S&P 500 smiles",
+   "math_spans": [],
+   "why": "no maths. Reason: ."
+  },
+  {
+   "title": "Option pricing with extreme events, using Câma and Heston (2008)'s model",
+   "math_spans": [],
+   "why": "no maths. Reason: digits are dates, volume or issue numbers, not notation."
+  },
+  {
+   "title": "Proceedings of the international congress of mathematicians, Berlin 1998, August 18–27, volume III, invited lectures",
+   "math_spans": [],
+   "why": "no maths. Reason: Roman numerals are part/volume numbers, not notation; digits are dates, volume or issue numbers, not notation."
+  },
+  {
+   "title": "University of Toronto mathematics competition (2001–2015)",
+   "math_spans": [],
+   "why": "no maths. Reason: digits are dates, volume or issue numbers, not notation."
+  },
+  {
+   "title": "Exercices de mathématiques oraux x–ens, algèbre 1",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "IIIe rencontre de géométrie de Schnepfenried (mai 1982), vol. I",
+   "math_spans": [],
+   "why": "no maths. Reason: Roman numerals are part/volume numbers, not notation; digits are dates, volume or issue numbers, not notation."
+  },
+  {
+   "title": "Managing COVID-19 pandemic without destructing the economy",
+   "math_spans": [],
+   "why": "no maths. Reason: all-caps tokens (COVID) are lexical acronyms - case-protected by the acronym rule, not the maths rule."
+  },
+  {
+   "title": "Séminaire de probabilités 1967–1980, a selection in martingale theory",
+   "math_spans": [],
+   "why": "no maths. Reason: digits are dates, volume or issue numbers, not notation."
+  },
+  {
+   "title": "Séminaire Bourbaki, volume 1983:1984, exposés 615–632",
+   "math_spans": [],
+   "why": "no maths. Reason: digits are dates, volume or issue numbers, not notation."
+  },
+  {
+   "title": "Uniqueness of distributional solutions to the 2D vorticity Navier–Stokes equation and its associated nonlinear Markov process",
+   "math_spans": [],
+   "why": "no maths. Reason: en-dashed capitalised tokens are proper names, not operators."
+  },
+  {
+   "title": "A test of backward stochastic differential equations solver for solving semilinear parabolic differential equations in 1D and 2D",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "Advances in high performance computing. Results of the international conference on \"High performance computing\", Borovets, Bulgaria, 2019",
+   "math_spans": [],
+   "why": "no maths. Reason: digits are dates, volume or issue numbers, not notation."
+  },
+  {
+   "title": "Green zoning, an effective policy tool to tackle the Covid-19 pandemic",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "Deep learning for constrained utility maximisation",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "Space-grid approximations of hybrid stochastic differential equations and first passage properties",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "Some analytic approximations for backward stochastic differential equations",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "Multidimensional signalling",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "Continuous martingales and Brownian motion",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "Nonlinear Fokker–Planck flows and their probabilistic counterparts",
+   "math_spans": [],
+   "why": "no maths. Reason: en-dashed capitalised tokens are proper names, not operators."
+  },
+  {
+   "title": "Markets with transaction costs",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "Upper envelopes of families of Feller semigroups and viscosity solutions to a class of nonlinear Cauchy problems",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "Existence, uniqueness and comparison results for BSDEs with Lévy jumps in an extended monotonic generator setting",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "Non-discriminatory personalized pricing",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "On optimal strategies for utility maximizers in the arbitrage pricing model",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "The maximum principle in stochastic control and backward equations",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "Optimal portfolio choice for a behavioural investor in continuous-time markets",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "A matrix Burkholder–Davis–Gundy inequality",
+   "math_spans": [],
+   "why": "no maths. Reason: en-dashed capitalised tokens are proper names, not operators."
+  },
+  {
+   "title": "Bases cristallines des groupes quantiques",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "Conditional McKean–Vlasov differential equations with common Poissonian noise, propagation of chaos",
+   "math_spans": [],
+   "why": "no maths. Reason: en-dashed capitalised tokens are proper names, not operators."
+  },
+  {
+   "title": "Théorie des processus stochastiques généraux, applications aux surmartingales",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "Some martingales associated with multivariate Bessel processes",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "Optimal switching in finite horizon under state constraints",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "Exogenous and endogenous price jumps belong to different dynamical classes",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "Sublinear expectations and martingales in discrete time",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "The microstructure of high frequency markets",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "Application du calcul symbolique au calcul de la loi de certains processus",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "Synchronization in a Kuramoto mean field game",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "Robust no arbitrage of the second kind with a continuum of assets and proportional transaction costs",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "Stability from index estimates for periodic solutions of Lagrangian systems",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "On the size of earthworm’s trail",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "A new approach to quantitative propagation of chaos for drift, diffusion and jump processes",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "Theory of integro-differential equations",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "Pinceaux de variétés abéliennes",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "Risk-sensitive Markov decision problems under model uncertainty, finite time horizon case",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "Mean-field limit for stochastic control problems under state constraint",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "Contribution à la théorie des solutions de viscosité des équations de Hamilton–Jacobi du premier ordre et applications à des problèmes de contrôle optimal et de perturbations singulières",
+   "math_spans": [],
+   "why": "no maths. Reason: en-dashed capitalised tokens are proper names, not operators."
+  },
+  {
+   "title": "Optimal regularity for nonlocal elliptic equations and free boundary problems",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  },
+  {
+   "title": "Toward an efficient hybrid method for pricing barrier options on assets with stochastic volatility",
+   "math_spans": [],
+   "why": "no maths. Reason: pure prose: no symbol, no sub/superscript, no formula."
+  }
+ ],
+ "constructs": [
+  {
+   "construct": "sub/superscripted space or operator name",
+   "example": "L^∞:L¹",
+   "count": 100,
+   "is_math": true
+  },
+  {
+   "construct": "bare Greek symbol",
+   "example": "γ",
+   "count": 31,
+   "is_math": true
+  },
+  {
+   "construct": "designator with parenthesised argument",
+   "example": "Lexp(μ*sqrt(2log(1+L)))",
+   "count": 21,
+   "is_math": true
+  },
+  {
+   "construct": "bare Latin variable letter",
+   "example": "N",
+   "count": 19,
+   "is_math": true
+  },
+  {
+   "construct": "formula / (in)equality",
+   "example": "p>1",
+   "count": 15,
+   "is_math": true
+  },
+  {
+   "construct": "other notation",
+   "example": "0, ∞",
+   "count": 9,
+   "is_math": true
+  },
+  {
+   "construct": "symbol expression",
+   "example": "γ(z)",
+   "count": 5,
+   "is_math": true
+  },
+  {
+   "construct": "blackboard-bold set symbol",
+   "example": "ℤ",
+   "count": 1,
+   "is_math": true
+  },
+  {
+   "construct": "parenthesised English or editorial gloss",
+   "example": "(slides)",
+   "count": 30,
+   "is_math": false,
+   "note": "The '(Almost) Everything you always wanted to know' class. 43 sampled titles carry parentheses; only 10 of those contain any maths at all."
+  },
+  {
+   "construct": "lexical acronym (BSDE, PDE, HJB, SIR, VIX, LIBOR, BMO, MATLAB...)",
+   "example": "BSDE",
+   "count": 88,
+   "is_math": false,
+   "note": "Case must be preserved but by the ACRONYM rule, not the maths rule. Deliberately excluded from maths spans - see findings; title_normalize.py already has an acronym/mixed-case branch."
+  },
+  {
+   "construct": "Roman numeral part or volume number",
+   "example": "tome VII",
+   "count": 36,
+   "is_math": false,
+   "note": "Never a maths span."
+  },
+  {
+   "construct": "year, date range, issue or volume number",
+   "example": "1897-1898",
+   "count": 33,
+   "is_math": false,
+   "note": "Bare digits are not notation."
+  },
+  {
+   "construct": "en-dashed proper-name compound",
+   "example": "Hamilton-Jacobi-Bellman",
+   "count": 37,
+   "is_math": false,
+   "note": "A name, not an operator; the en dash is the library's co-equal-entities convention."
+  }
+ ]
+}
