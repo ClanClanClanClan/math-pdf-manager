@@ -116,13 +116,33 @@ def _nfc(s: str) -> str:
 
 
 def _prose_outside_maths(title: str) -> str:
-    """Everything that is NOT mathematics, per an INDEPENDENT detector.
+    """Everything that is NOT mathematics.
 
-    ``core.text_processing.math_detector`` is a different implementation
-    from the converter under test, which is the point: if the prose
-    survives a change untouched, the change was confined to mathematics,
-    and that conclusion does not depend on the converter agreeing with
-    itself.
+    THIS DOCSTRING USED TO CLAIM INDEPENDENCE AND THE CLAIM IS NOW FALSE.
+
+    It read: "``core.text_processing.math_detector`` is a different
+    implementation from the converter under test, which is the point ...
+    that conclusion does not depend on the converter agreeing with
+    itself."  That was true when written.  Commit 20f039c unified the
+    three rival ``find_math_regions`` into ``core.math_regions`` and
+    pointed ``math_detector`` at it -- a good change on its own terms,
+    and it silently converted this check into the converter agreeing
+    with itself.  Nothing failed; the redundancy just stopped existing,
+    which is the quiet way a safety net goes.
+
+    So the honest statement of what this function now buys: it confirms
+    the change is confined to the region the SAME detector calls
+    mathematics.  That still catches a converter that rewrites prose it
+    never claimed -- the failure mode actually seen, where a growth step
+    swallowed ".pdf" -- but it can no longer catch a converter and a
+    detector that are wrong together.
+
+    Restoring real independence needs a second opinion that is not a
+    rival detector (two detectors is the duplication that was just
+    removed).  The shape that would work is a different QUESTION: strip
+    every character that a typeface change could touch and compare the
+    residue.  Not built -- recorded here so the gap is visible rather
+    than implied by a docstring that no longer holds.
     """
     from core.text_processing.math_detector import find_math_regions
     try:

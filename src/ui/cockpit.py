@@ -475,11 +475,21 @@ def render_sidebar() -> None:
         try:
             from ui.cockpit_actions import start_watcher, stop_watcher
             wstatus = _watcher_status_cached()
-            if wstatus.get("running"):
+            if wstatus.get("running") and not wstatus.get("filing"):
+                # The process is up but it is not filing anything.  This
+                # state existed for five days and the badge said ON.
+                st.error(
+                    f"Automatic filing: BROKEN — "
+                    f"{wstatus.get('problem') or 'the daemon is not filing'}. "
+                    f"PDFs you drop are NOT being picked up. Turn it off and "
+                    f"on again to rebuild the folder and restart the watch."
+                )
+            if wstatus.get("filing"):
                 st.success(
                     f"Automatic filing: ON  "
                     f"(running as process {wstatus.get('pid') or '?'})"
                 )
+            if wstatus.get("running"):
                 if st.button("Turn off automatic filing",
                              use_container_width=True,
                              key="sidebar_stop_watcher"):
@@ -489,7 +499,7 @@ def render_sidebar() -> None:
                     # immediately rather than after the 10s TTL.
                     _watcher_status_cached.clear()
                     st.rerun()
-            else:
+            if not wstatus.get("running"):
                 st.warning("Automatic filing: OFF — new PDFs dropped in your "
                            "inbox folder will just sit there")
                 if st.button("Turn on automatic filing",

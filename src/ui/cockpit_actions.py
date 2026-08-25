@@ -111,18 +111,63 @@ def _launchctl(*args: str, capture: bool = True) -> subprocess.CompletedProcess:
     )
 
 
+def _with_inbox(running: bool, pid: Optional[int], raw: str) -> dict:
+    """Attach the inbox reality to a liveness answer.
+
+    Split out so that EVERY return path in ``watcher_status`` gets the
+    folder check.  There are four of them and the first version of this
+    fix patched one.
+    """
+    inbox: Optional[Path] = None
+    try:
+        from watcher.config import WatcherConfig
+        inbox = WatcherConfig.load().inbox_dir
+    except Exception as exc:                       # pragma: no cover - defensive
+        return {"running": running, "filing": False, "pid": pid,
+                "inbox": None, "raw": raw,
+                "problem": f"cannot tell where the inbox is: {exc}"}
+    if not running:
+        return {"running": False, "filing": False, "pid": pid,
+                "inbox": inbox, "raw": raw, "problem": None}
+    if not inbox.is_dir():
+        return {"running": True, "filing": False, "pid": pid,
+                "inbox": inbox, "raw": raw,
+                "problem": (f"the daemon is up, but the folder it watches no "
+                            f"longer exists: {inbox}")}
+    return {"running": True, "filing": True, "pid": pid,
+            "inbox": inbox, "raw": raw, "problem": None}
+
+
 def watcher_status() -> dict:
-    """Return ``{running: bool, pid: int|None, raw: str}``.
+    """Return ``{running, filing, pid, inbox, problem, raw}``.
+
+    ``running`` is only "the process is alive".  ``filing`` is the
+    question the sidebar badge actually asks: are dropped PDFs being
+    picked up?  THEY ARE NOT THE SAME QUESTION, and treating them as
+    the same hid a five-day outage.
+
+    The daemon resolves its inbox once at startup and then watches that
+    directory.  Delete the directory and the process stays up, stays
+    "running", and observes nothing for ever -- macOS does not tear the
+    watch down, it just never fires.  Meanwhile the badge said
+    "Automatic filing: ON (running as process 6282)" and the Settings
+    page told the owner a downloaded PDF "is filed into your library
+    automatically from there".  Both were false for five days.
+
+    So ``filing`` requires the process AND the folder, and ``problem``
+    carries the reason when they disagree.  A status that cannot say
+    "I looked and it is broken" is a status that reports "fine" for
+    every failure it does not model.
 
     Parses ``launchctl print gui/<uid>/<label>`` if available; falls
     back to ``launchctl list`` which is more widely supported but
-    less detailed.  Failures yield ``{running: False, pid: None}`` --
-    a missing launchctl or a missing label both mean "not running".
+    less detailed.  Failures yield ``running: False`` -- a missing
+    launchctl or a missing label both mean "not running".
     """
     try:
         uid = os.getuid()
     except AttributeError:  # Windows -- no daemon anyway
-        return {"running": False, "pid": None, "raw": "unsupported platform"}
+        return _with_inbox(False, None, "unsupported platform")
     proc = _launchctl("print", f"gui/{uid}/{WATCHER_LABEL}")
     raw = (proc.stdout or "") + (proc.stderr or "")
     if proc.returncode != 0:
@@ -136,12 +181,8 @@ def watcher_status() -> dict:
                     pid = int(parts[0])
                 except (IndexError, ValueError):
                     pid = None
-                return {
-                    "running": pid is not None and pid > 0,
-                    "pid": pid,
-                    "raw": line,
-                }
-        return {"running": False, "pid": None, "raw": "not loaded"}
+                return _with_inbox(pid is not None and pid > 0, pid, line)
+        return _with_inbox(False, None, "not loaded")
     # Parse `print` output: look for "pid = NNN" and "state = running".
     # Use a regex match for the pid so trailing tokens (rare but
     # possible across launchctl versions) don't break parsing.
@@ -154,8 +195,13 @@ def watcher_status() -> dict:
             if m:
                 pid = int(m.group())
         if s.startswith("state ="):
-            running = "running" in s
-    return {"running": running, "pid": pid, "raw": raw}
+            # Compare the VALUE, not the line. `"running" in s` is true for
+            # "state = not running", so a loaded-but-stopped service reported
+            # as running -- the same false-positive as the folder check below,
+            # one layer down. launchctl emits "running", "not running" and
+            # "waiting"; only the first is up.
+            running = s.split("=", 1)[1].strip() == "running"
+    return _with_inbox(running, pid, raw)
 
 
 def install_launch_agents() -> tuple[bool, str]:
@@ -197,7 +243,20 @@ def install_launch_agents() -> tuple[bool, str]:
 
 
 def start_watcher() -> tuple[bool, str]:
-    """``launchctl bootstrap`` the watcher plist, installing it if needed."""
+    """``launchctl bootstrap`` the watcher plist, installing it if needed.
+
+    Recreates the inbox folder first.  The daemon resolves its watch
+    target once at startup, so starting it against a folder that does
+    not exist produces a process that is "running" and deaf -- which is
+    exactly the outage this function is most often used to recover
+    from.  The sidebar tells the owner that turning filing off and on
+    rebuilds the folder; this is the line that makes that true.
+    """
+    try:
+        from watcher.config import WatcherConfig
+        WatcherConfig.load().inbox_dir.mkdir(parents=True, exist_ok=True)
+    except Exception as exc:                       # pragma: no cover - defensive
+        return False, f"could not create the inbox folder: {exc}"
     plist = Path.home() / "Library" / "LaunchAgents" / f"{WATCHER_LABEL}.plist"
     if not plist.exists():
         ok, msg = install_launch_agents()
