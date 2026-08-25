@@ -159,3 +159,71 @@ class TestASentenceStartScanMustStopAtContent:
     def test_a_title_with_no_maths_is_unaffected(self):
         assert _cased("The Dirichlet problem. Existence of solutions") == \
             _cased("The Dirichlet problem. Existence of solutions")
+
+
+class TestLeadingPunctuationIsNotDeleted:
+    """Opening punctuation the author typed is not ours to remove.
+
+    THE BUG. A branch meant to strip a leading emoji asked
+    ``ord(first_punct[0]) > 127`` and, when true, DELETED the character.
+    That is not an emoji test, it is a "not ASCII" test.
+
+    MEASURED over the 25,049 in-scope titles: three lost characters.
+
+        “Choose your opponent”, a new knockout design ...
+        “Lion-Man” and the fixed point property
+             the OPENING quote deleted and the closing one left behind,
+             so the title came out unbalanced
+        …And justice for all!
+             the ellipsis deleted
+
+    Unicode already draws the line: emoji and pictographs are category So,
+    quotation marks are Pi/Pf, an ellipsis is Po.
+    """
+
+    @pytest.mark.parametrize("title", [
+        "“Choose your opponent”, a new knockout design for hybrid tournaments",
+        "“Lion-Man” and the fixed point property",
+        "…And justice for all!",
+        "«Le théorème de Fermat»",
+        "‹Something›",
+        "’Tis an equity puzzlement",
+        "'Tis an equity puzzlement",
+    ])
+    def test_the_leading_character_survives(self, title):
+        assert _cased(title)[0] == title[0], _cased(title)
+
+    @pytest.mark.parametrize("title", [
+        "“Choose your opponent”, a new knockout design for hybrid tournaments",
+        "«Le théorème de Fermat»",
+    ])
+    def test_quotes_stay_balanced(self, title):
+        """Deleting only the opening mark is worse than deleting neither."""
+        out = _cased(title)
+        for opener, closer in (("“", "”"), ("«", "»")):
+            assert out.count(opener) == title.count(opener), out
+            assert out.count(closer) == title.count(closer), out
+
+    @pytest.mark.parametrize("title,expected_start", [
+        ("🎉 A celebration of mathematics", "A"),
+        ("🔥 Hot topics in probability", "Hot"),
+        ("★ A starred result", "A"),
+    ])
+    def test_a_real_emoji_is_still_stripped(self, title, expected_start):
+        """The branch must keep doing the job it was written for."""
+        assert _cased(title).startswith(expected_start), _cased(title)
+
+    def test_no_corpus_title_loses_any_character(self):
+        """The population guard. Length may only grow or stay equal."""
+        import json, pathlib, unicodedata
+        fx = (pathlib.Path(__file__).resolve().parents[1]
+              / "fixtures" / "math_regions_ground_truth.json")
+        if not fx.exists():
+            pytest.skip("corpus fixture unavailable — UNKNOWN, not OK")
+        bad = []
+        for row in json.loads(fx.read_text())["labelled"]:
+            t = unicodedata.normalize("NFC", row["title"])
+            r = str(_cased(t))
+            if len(r) < len(t):
+                bad.append((t, r))
+        assert not bad, bad[:5]

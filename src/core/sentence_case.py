@@ -9,6 +9,7 @@ while preserving technical terms, mathematical expressions, and proper nouns.
 """
 
 import os
+import unicodedata
 from typing import Iterable, Tuple, Set, Optional, Dict
 import regex as re
 
@@ -220,6 +221,133 @@ def filter_relevant_whitelist_terms(
     return filtered_cap, filtered_dash, filtered_tech
 
 
+#: The two apostrophes this library's titles actually use: U+0027 and U+2019.
+#: They must be treated identically -- the same construct spelled two ways
+#: cannot be allowed to case differently.
+APOSTROPHES = "'\u2019"
+
+def _apostrophe_base(word):
+    """The part of *word* before its apostrophe, and the rest.
+
+    "BSDE’s" -> ("BSDE", "’s").  A word with no apostrophe gives
+    (word, "").
+
+    WHY THIS EXISTS. Three casing checks -- known acronym, 2-3 letter
+    acronym, mixed-case brand -- must look at the BASE, because "BSDE’s"
+    is the acronym BSDE carrying a possessive, not a new word. The
+    2-3 letter check already did this and only for U+0027, with the comment
+    "For possessives, check the base word without apostrophe". The other two
+    did not do it at all.
+
+    That asymmetry stayed invisible while U+2019 split into three tokens and
+    the acronym was seen on its own. The moment both apostrophes tokenise
+    alike, "BSDE’s" arrives whole and the checks stop recognising it --
+    which is why the obvious one-character class fix measured as a NET
+    REGRESSION: 27 proposals better, 21 worse. It was not the class fix that
+    was wrong, it was this.
+    """
+    for k, ch in enumerate(word):
+        if ch in APOSTROPHES:
+            return word[:k], word[k:]
+    return word, ""
+
+
+def _split_on_apostrophe(word):
+    """("Varadhan", "'", "s") for "Varadhan's"; (word, "", "") if none."""
+    for k, ch in enumerate(word):
+        if ch in APOSTROPHES:
+            return word[:k], ch, word[k + 1:]
+    return word, "", ""
+
+
+def _is_capitalised_name(head):
+    """Xxxx-shaped: one capital, then lower case, at least three letters.
+
+    ALL-CAPS is excluded on purpose -- "BSDE's" is an acronym and belongs to
+    the acronym branch above, which knows about the possessive. All-lower is
+    excluded too, so "don't" and "l'X"'s "l" never reach here.
+    """
+    if len(head) < 3 or not head.isalpha():
+        return False
+    return head[0].isupper() and head[1:].islower()
+
+
+def _is_short_lower_tail(tail):
+    """A possessive or a transliterated soft sign: 's, 'sche, 'ev, 'son."""
+    return 1 <= len(tail) <= 4 and tail.isalpha() and tail.islower()
+
+
+def _proper_noun_after_apostrophe(word, prev_token=None):
+    """The capital after an apostrophe, when it must survive lowercasing.
+
+    MEASURED over the 25,049 in-scope library titles. An apostrophe is
+    followed by a capital in 111 places, and they fall into four kinds --
+    every one of which is a name or a title and must keep its capital:
+
+        d'Azéma, d'Itô, d'Euler, d'Alembert, l'Hôpital   82 + 17
+            French elision. The "d'" or "l'" is a preposition and belongs
+            in lower case; the capital belongs to the MATHEMATICIAN.
+        'Choose your opponent', 'Finem Lauda', 'Tis, 'The, 'Jacques    5
+            an opening quote, and the capital starts the quoted title.
+        l'X (École Polytechnique), d'A. Garsia, 'N                     4
+            a single capital that is still an abbreviation or an initial.
+        d'EDP, d'EDS                                                   3
+            French acronyms.
+
+    Before this guard, 98 of those 108 titles were damaged: "Calcul d'Itô"
+    became "Calcul d'itô", "Deux théorèmes d'Abel" became "d'abel", and
+    "théorie d'Iwasawa" became "d'iwasawa".
+
+    THE ONE EXCEPTION is the English possessive: "THE AUTHOR'S THEOREM"
+    lowercases to "the author's theorem", and preserving that S would give
+    "author'S". A lone S is therefore not treated as a name. Measured: this
+    library contains no "'S" at all and no all-capitals title, so the
+    exception fires nowhere today -- it is here because ingest takes titles
+    from Crossref and arXiv, not because the library needed it.
+
+    Returns the string to emit, or None to fall through to normal casing.
+    """
+    head, sep, tail = _split_on_apostrophe(word)
+
+    # Case 1: the apostrophe is INSIDE this token, and a CAPITAL follows it
+    # -- "d'Itô", "l'Hôpital", "'Tis". The head is an elided article or a
+    # quote mark and belongs in lower case; the capital belongs to the name.
+    if sep and tail[:1].isupper():
+        if tail.upper() == "S":
+            return None                           # English possessive
+        return head.lower() + sep + tail
+
+    # Case 1b: a CAPITALISED head carrying a possessive -- "Varadhan's",
+    # "König's", "Solov’ev". In a mathematics library this construct is an
+    # EPONYM: a possessive attaches to a person, and a common noun would
+    # already be lower case ("the author's"). MEASURED over the 25,049
+    # in-scope titles: 702 occurrences of the shape, of which 547 were
+    # already preserved because the name happens to sit in the
+    # capitalisation whitelist and 154 were being LOWERCASED --
+    # könig's, varadhan's, zvonkin's, gronwall's, yosida's, alekseev's,
+    # tsirel'son, and possamaï's, the owner's own name.
+    #
+    # Of the 122 distinct words this rule preserves, 121 are surnames
+    # (Abel, Cramér, Doeblin, Fermat, Krein, Sanov, Sklar, Zermelo ...).
+    # The single exception measured is "Planner’s advices" in one economics
+    # title, where "planner" is a common noun -- so the rule trades one mild
+    # over-capitalisation for 153 correct names. A dictionary test was
+    # considered and rejected: Abel, Baker, Clark, Engel, Gross, James, Lee,
+    # Root and Tong are all dictionary words AND surnames here, so a
+    # dictionary would lowercase the very names this exists for.
+    if sep and _is_capitalised_name(head) and _is_short_lower_tail(tail):
+        return word
+
+    # Case 2: the apostrophe is its own PUNCT token -- "d’Iwasawa" arrived
+    # split while the tokeniser's WORD pattern listed U+0027 twice and
+    # U+2019 never. Kept after that fix so the rule does not depend on it.
+    if (prev_token is not None and prev_token.kind == 'PUNCT'
+            and prev_token.value in APOSTROPHES):
+        if word[:1].isupper() and word.upper() != "S":
+            return word
+    return None
+
+
 def to_sentence_case_academic(
     title: str,
     capitalization_whitelist: Optional[Iterable[str]] = None,
@@ -308,9 +436,27 @@ def to_sentence_case_academic(
         # If title starts with emoji/punctuation followed by words, strip leading punctuation
         if (len(tokens) > 0 and tokens[0].kind == 'PUNCT' and 
             any(token.kind == 'WORD' for token in tokens)):
-            # Check if first punctuation token is emoji-like (non-ASCII punctuation)
+            # Is the leading token really an EMOJI, or just punctuation that
+            # happens not to be ASCII?
+            #
+            # This used to ask `ord(first_punct[0]) > 127`, and deleted the
+            # character outright when it was true. That is not an emoji test,
+            # it is a "not ASCII" test, and it silently destroyed three real
+            # library titles:
+            #
+            #   “Choose your opponent”, a new knockout design ...
+            #   “Lion-Man” and the fixed point property
+            #        -- the OPENING quote deleted, the closing one left
+            #           behind, so the title came out unbalanced
+            #   …And justice for all!
+            #        -- the ellipsis deleted, which is the whole title
+            #
+            # Unicode already distinguishes these. Emoji and pictographs are
+            # category So (Symbol, other); quotation marks are Pi/Pf and the
+            # ellipsis is Po. Punctuation the author typed on purpose is not
+            # ours to remove.
             first_punct = tokens[0].value
-            if ord(first_punct[0]) > 127:  # Non-ASCII character (likely emoji)
+            if unicodedata.category(first_punct[0]) == 'So':
                 # Strip leading emoji and spaces
                 new_tokens = []
                 skip_leading = True
@@ -438,13 +584,17 @@ def to_sentence_case_academic(
                     continue
                 
                 # Check if it's a known acronym (check before sentence start to preserve acronyms)
+                _base, _suffix = _apostrophe_base(word)
                 if word in config.get('common_acronyms', []):
                     result_parts.append(word)
+                    continue
+                if _suffix and _base in config.get('common_acronyms', []):
+                    result_parts.append(_base + _suffix)   # BSDE’s
                     continue
                 
                 # Check if it's a likely acronym (2-3 letters, all caps, not pronouns or common words)
                 # For possessives, check the base word without apostrophe
-                base_word = word.split("'")[0] if "'" in word else word
+                base_word = _base
                 if (2 <= len(base_word) <= 3 and base_word.isupper() and 
                     base_word not in ['IT', 'HE', 'SHE', 'WE', 'YOU', 'THE', 'AND', 'FOR', 'BUT', 'NOT', 'FOX', 'DOG', 'CAT', 'OF', 'TO', 'IN', 'ON', 'AT', 'BY', 'OR', 'SO', 'UP', 'IF', 'AS', 'MY', 'NO', 'GO', 'DO', 'BE', 'AM', 'IS', 'WAS', 'ARE']):
                     result_parts.append(word)
@@ -453,6 +603,9 @@ def to_sentence_case_academic(
                 # Check if it's a mixed-case brand (before sentence start check)
                 if word in config.get('mixed_case_words', []):
                     result_parts.append(word)
+                    continue
+                if _suffix and _base in config.get('mixed_case_words', []):
+                    result_parts.append(_base + _suffix)   # LinkedIn’s
                     continue
                 
                 # Check if it's a proper adjective (before sentence start check)  
@@ -567,6 +720,18 @@ def to_sentence_case_academic(
                             changed = True
                         continue
                 
+                # A capital after an apostrophe is a name, not a word to
+                # lowercase: "d'Itô", "l'Hôpital", "'Tis". See
+                # _proper_noun_after_apostrophe for the measured population.
+                kept = _proper_noun_after_apostrophe(
+                    word, tokens[i - 1] if i > 0 else None
+                )
+                if kept is not None:
+                    result_parts.append(kept)
+                    if word != kept:
+                        changed = True
+                    continue
+
                 # Default: lowercase
                 new_word = word.lower()
                 result_parts.append(new_word)
@@ -588,6 +753,7 @@ def to_sentence_case_academic(
 # Export all functions
 __all__ = [
     'to_sentence_case_academic',
+    'APOSTROPHES',
     'extract_title_words',
     'filter_relevant_whitelist_terms',
     'DEBUG_SENTENCE_CASE',

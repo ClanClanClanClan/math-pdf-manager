@@ -323,52 +323,41 @@ class TestSegmentRegex:
             assert match.lastgroup == "WORD"
             assert match.group() == word
 
-    def test_word_matching_typographic_apostrophe_splits(self):
-        """REWRITTEN.  The old third case was labelled "Word with smart quote"
-        and used an ASCII apostrophe again — a byte-for-byte duplicate of the
-        case above it.  So the file claimed coverage of a construct it had
-        never once run.
+    def test_word_matching_typographic_apostrophe_holds_together(self):
+        """PINNED THE BUG, NOW PINS THE FIX.
 
-        MEASURED, the real U+2019 form does NOT hold together:
-        ``_SEGMENT_RE.match("don’t")`` matches only ``don``, and the
-        tokeniser emits three tokens.  The pattern's apostrophe class is
-        ``['']`` — two copies of U+0027, no U+2019.  386 of the 25,049 real
-        library titles contain a letter-U+2019-letter form ("Itô’s
-        formula", "A beginner’s guide").
+        The original third case here was labelled "Word with smart quote"
+        and used an ASCII apostrophe again — a byte-for-byte duplicate of
+        the case above it. So the file claimed coverage of a construct it
+        had never once run, which is how ``['']`` (U+0027 twice, U+2019
+        never) survived in the pattern.
 
-        This test PINS the current answer rather than implying a better one.
-        The property that the two apostrophes should agree is stated
-        separately, and expected to fail, immediately below.
+        This test then deliberately PINNED the broken answer, so that "the
+        day the class is fixed this test fails and points at the change".
+        That is exactly what happened. 1,116 of the 25,049 real library
+        titles contain U+0027 and 444 contain U+2019; both now tokenise
+        the same way.
         """
         match = _SEGMENT_RE.match("don’t")
         assert match is not None
         assert match.lastgroup == "WORD"
-        assert match.group() == "don"
+        assert match.group() == "don’t", (
+            "the typographic apostrophe must hold the word together, exactly "
+            "as the ASCII one does"
+        )
 
         text = "Itô’s formula"
         tokens = robust_tokenize_with_math(text)
-        assert kinds(tokens) == ["WORD", "PUNCT", "WORD", "SPACE", "WORD"]
-        assert values(tokens) == ["Itô", "’", "s", " ", "formula"]
+        assert values(tokens) == ["Itô’s", " ", "formula"]
         assert_partition(text, tokens)
 
-    @pytest.mark.xfail(
-        strict=True,
-        reason=(
-            "DECIDED-AND-OPEN: _SEGMENT_RE's apostrophe class contains U+0027 "
-            "twice and U+2019 never, so \"don't\" is one WORD and "
-            "\"don’t\" is three tokens. 920 library titles use U+0027 and "
-            "386 use U+2019, so the two spellings of one construct are "
-            "tokenised differently. Fixing it is a one-character change to the "
-            "class in core/math_tokenization.py and core/tokenization.py; it is "
-            "not made here because this file may not edit the module. Remove "
-            "this xfail when the class is fixed."
-        ),
-    )
     def test_both_apostrophes_should_tokenise_alike(self):
-        """NEW (expected to fail).  The co-variance property, stated.
+        """THE CO-VARIANCE PROPERTY, now holding.
 
         Two spellings of a possessive must not produce different token
         boundaries — the same reason "-" and U+2212 must decompose alike.
+        Was xfail(strict) until the character class was fixed to hold
+        U+0027 once and U+2019 once, instead of U+0027 twice.
         """
         ascii_tokens = robust_tokenize_with_math("Ito's formula")
         smart_tokens = robust_tokenize_with_math("Ito’s formula")

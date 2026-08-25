@@ -100,25 +100,78 @@ across a whole call (`MAX_PARSE_STEPS`) and `MAX_INPUT_CHARS`. Measured now:
 251 bytes is the enforced filename cap. The longest real library title is 229
 characters, so `MAX_INPUT_CHARS` (1,000) is not reachable from a filename.
 
+## The apostrophe bug, fixed properly
+
+The character class in `core/math_tokenization.py` and `core/tokenization.py`
+read `['']` — **U+0027 twice and U+2019 never**. So `don't` was one WORD token
+and `don't` was three. 1,116 in-scope titles use U+0027 and 444 use U+2019.
+
+The obvious one-character fix measured as a **net regression**: 27 filename
+proposals better, 21 worse. It was not the class fix that was wrong. Joining
+the token revealed two bugs that had been hiding behind the split:
+
+1. **The acronym branch looked at the whole token.** `BSDE's` arrived whole
+   and stopped being recognised, so it lowercased to `bsde's`. The 2–3 letter
+   check already had `word.split("'")[0]` with the comment *"For possessives,
+   check the base word without apostrophe"* — but only for U+0027, and the
+   known-acronym and mixed-case checks did not do it at all.
+2. **A capital after an apostrophe was being lowercased.** Measured over the
+   25,049 in-scope titles, the apostrophe is followed by a capital in 111
+   places and **98 were damaged**: `Calcul d'Itô` → `d'itô`, `théorèmes
+   d'Abel` → `d'abel`, `théorie d'Iwasawa` → `d'iwasawa`.
+
+Both are now fixed, and with them a third that the work uncovered: of 702
+capitalised-head possessives, **154 were being lowercased outright** —
+`könig's`, `varadhan's`, `zvonkin's`, `gronwall's`, `yosida's`, `tsirel'son`,
+and `possamaï's`. Of the 122 distinct words the new rule preserves, **121 are
+surnames**; the single exception is `Planner's advices` in one economics
+title. A dictionary test was considered and rejected: Abel, Baker, Clark,
+Engel, Gross, James, Lee, Root and Tong are all dictionary words *and*
+surnames here, so a dictionary would lowercase the very names it is for.
+
+The English possessive is the one place preserving would be wrong —
+`THE AUTHOR'S THEOREM` must lowercase to `the author's theorem`, not
+`author'S`. Measured: this library contains no `'S` and no all-capitals
+title, so the exception fires nowhere today. It is there because ingest takes
+titles from Crossref and arXiv.
+
+**Result over all 25,049 titles: 287 original capitals recovered, 0 lost, 0
+titles destroyed, 0 errors.**
+
+## Leading punctuation was being deleted
+
+Found while fixing the above. A branch meant to strip a leading emoji asked
+`ord(first_punct[0]) > 127` and deleted the character when true. That is not
+an emoji test, it is a "not ASCII" test, and it destroyed three real titles:
+
+* `"Choose your opponent", a new knockout design …` — opening quote deleted,
+  closing quote left behind, so the title came out **unbalanced**
+* `"Lion-Man" and the fixed point property` — same
+* `…And justice for all!` — the ellipsis deleted
+
+Unicode already draws the line: emoji and pictographs are category `So`,
+quotation marks are `Pi`/`Pf`, an ellipsis is `Po`. A real emoji is still
+stripped.
+
 ## Still open, recorded rather than implied
 
-* **The apostrophe class** in `core/math_tokenization.py` and
-  `core/tokenization.py` contains U+0027 twice and U+2019 never, so `don't`
-  and `don’t` tokenise differently — 1,116 and 444 real titles respectively.
-  The obvious one-character fix was **measured and is a net regression**: 27
-  proposals better, 21 worse, 58 characters destroyed through the real
-  consumer. Held deliberately, with a strict `xfail` recording it.
 * **A hyphen/minus residual**: `2J_s-R_s, s≥0` yields two MATH tokens where
   the U+2212 spelling yields one, so the two leave different prose residues
   and `conformance.py` would judge the same edit differently. The subscript
   spelling the library actually uses agrees under both, so no real title is
   affected. Strict `xfail`.
-* **`A(H1N1)` → `a(h1n1)`** on one title. The detector refuses it deliberately:
-  a virus strain designation is a name, not notation. It belongs to the
-  acronym branch, whose rule (2–3 letters, `isupper`) does not cover a
-  four-character mixed alphanumeric token.
-* **`D-modules` → `D-Modules`** on one title, the same class as the `1:H`
-  case above but not fixed by it.
+* **`A(H1N1)` → `a(h1n1)`** on one title. The detector refuses it
+  deliberately: a virus strain designation is a name, not notation. It
+  belongs to the acronym branch, whose rule (2–3 letters, `isupper`) does not
+  cover a four-character mixed alphanumeric token.
+* **`D-modules` → `D-Modules`** on one title: the detector protects the
+  letter and the sentence-case rule then capitalises the following word.
+  The `1:H-variation` class of this was fixed by making the sentence-start
+  scan stop at MATH tokens; this one is not reached by that fix.
+* **Eponyms without a possessive** are still lowercased — `«Le théorème de
+  Fermat»` gives `fermat`. The possessive rule above only sees `Fermat's`.
+  Names carrying no apostrophe depend on the capitalisation whitelist, and
+  that population has not been measured.
 
 ## Mutation
 

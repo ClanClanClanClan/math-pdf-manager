@@ -26,8 +26,8 @@ class Token:
 # Simple segment regex that handles words, spaces, and punctuation
 _SEGMENT_RE = re.compile(r"""
     (?P<SPACE>\s+)
-  | (?P<PUNCT>[^\w\s''])  # Everything that's not word, space, or apostrophes
-  | (?P<WORD>\w+(?:[''][a-zA-Z]+)?)  # Word with optional apostrophe suffix
+  | (?P<PUNCT>[^\w\s'’])  # Everything that's not word, space, or apostrophe (U+0027 or U+2019)
+  | (?P<WORD>\w+(?:['’][^\W\d_]+)?)  # Word with optional apostrophe suffix (either apostrophe; letter tail may be non-ASCII)
 """,
     re.X | re.U,
 )
