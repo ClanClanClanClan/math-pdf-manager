@@ -301,36 +301,15 @@ def should_preserve_digit(text: str, position: int) -> bool:
 
 
 def find_math_regions(text: str) -> List[Tuple[int, int]]:
+    """Delegates to core.math_regions, the single implementation.
+
+    The character scan that used to live here extended through
+    MATHEMATICAL_VARIABLES, which is the entire ASCII alphabet, plus spaces --
+    so one hyphen grew a region across a whole English sentence. It claimed
+    49.6% of a title on average. See core/math_regions.py.
     """
-    Find mathematical regions in text.
-    
-    Args:
-        text: The text to analyze
-    
-    Returns:
-        List of (start, end) tuples for mathematical regions
-    """
-    regions = []
-    
-    # Simple implementation - look for mathematical symbols
-    i = 0
-    while i < len(text):
-        if text[i] in MATHEMATICAL_OPERATORS or text[i] in MATHEMATICAL_GREEK_LETTERS:
-            start = i
-            # Extend the region while we have mathematical content
-            while i < len(text) and (
-                text[i] in MATHEMATICAL_OPERATORS or
-                text[i] in MATHEMATICAL_GREEK_LETTERS or
-                text[i] in MATHEMATICAL_VARIABLES or
-                text[i].isdigit() or
-                text[i] in " \t"
-            ):
-                i += 1
-            regions.append((start, i))
-        else:
-            i += 1
-    
-    return regions
+    from core.math_regions import find_math_regions as _impl
+    return _impl(text)
 
 
 def is_filename_math_token(token: str) -> bool:

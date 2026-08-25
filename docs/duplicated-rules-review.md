@@ -55,7 +55,53 @@ knowing; neither is a reason to keep an unreachable copy.
 
 ## Measured, and deliberately not merged
 
-### `find_math_regions` — three implementations, 38.6% disagreement
+### `find_math_regions` — RESOLVED: one implementation
+
+`src/core/math_regions.py` is now the only one; the three below delegate to
+it. It is not a merge of opinions — **all three were wrong**, and the
+scoping measurement is why the replacement is 170 lines rather than 724.
+
+**What the library actually contains.** Across 25,005 titles: **no `$…$` at
+all**, **no `\mathbb` at all**, 39 titles with an `L^2`-style caret, 25 with
+`X_t`, 8 with `AR(1)`. The whole mathematical surface is about **800
+characters** — 416 Greek, 190 super/subscript, 116 operators, 80 letterlike.
+The 724 lines of LaTeX machinery were built for a library that has none.
+
+| | flags | mean claim | accent spans | English spans |
+|---|--:|--:|--:|--:|
+| `math_detector` | 4,238 | 5.5% | **2,988** | 20 |
+| `math_utils` | 6,954 | **49.6%** | 0 | **3,921** |
+| **`core/math_regions`** | **877** | 9.4% | **0** | **0** |
+
+The detector treated **accented Latin letters** as mathematics — 4,331 hits
+on `é` alone, and 85% of the titles it flagged contain none. Downstream,
+conformance asks it which part of a title is prose and was handed
+`Prcis d'analyse relle` for *Précis d'analyse réelle*: **15% of titles**.
+
+Anchors are now derived from Unicode properties, not a hand list — the same
+lesson as the uppercase class in `core/initials.py`. Blocks turned out to be
+the wrong index too: `U+209C` is *"LATIN SUBSCRIPT SMALL LETTER T"* (the t of
+`Bₜ`) and sits in Superscripts, while `U+1D63` (the r of `lᵣ`) sits in
+Phonetic Extensions. Asking for the **name** catches both.
+
+Three things measurement forced that reading would not have:
+
+- A period is a **decimal point**, not a connector. Letting it through meant
+  an anchor at the end of a stem swallowed `.pdf`, so `lᵣ.pdf` was one span
+  and `l_r` was not — the prose differed and conformance called a pure
+  typeface change a REWRITE, its loudest bucket.
+- The bracket rule first demanded a digit or maths character inside, which
+  **rejected real notation**: `sin(x)`, `GL(n)`, `f(x)`, `GL(N, F)`,
+  `Bes(d)` — 13 in the library. `Gl(n)` would be wrong.
+- LaTeX delimiter support had to stay. The library has none, but the
+  tokeniser's contract is one MATH token per formula, and dropping `\[…\]`
+  returned the Black–Scholes equation as six spans.
+
+Nine mutants, nine killed. The old asymmetry compensation in
+`conformance._prose_outside_maths` is now unnecessary — the new rule returns
+the whole `lᵣ`, not just the modifier — but it is harmless and left alone.
+
+### `find_math_regions` — the three implementations, as they were
 
 | where | used by | on library titles |
 |---|---|---|

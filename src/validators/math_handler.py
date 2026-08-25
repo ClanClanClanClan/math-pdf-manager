@@ -206,8 +206,15 @@ class MathHandler:
 _default_handler = MathHandler()
 
 def find_math_regions(text: str) -> List[Tuple[int, int]]:
-    """Find mathematical regions in text"""
-    return _default_handler.find_math_regions(text)
+    """Delegates to core.math_regions, the single implementation.
+
+    The handler method below understands only $...$, which appears in ZERO of
+    this library's 25,005 titles -- it wrote its maths in Unicode. This
+    module-level name is what validators/__init__ exports, so it is the one
+    that must be right.
+    """
+    from core.math_regions import find_math_regions as _impl
+    return _impl(text)
 
 def is_in_math_region(pos: int, regions: List[Tuple[int, int]]) -> bool:
     """Check if position is in math region"""
