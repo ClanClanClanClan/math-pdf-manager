@@ -3,8 +3,13 @@
 # Drop PDFs in the inbox directory and they will be automatically
 # ingested into the library with proper filenames.
 
-# Where to watch for new PDFs
-inbox_dir: ~/Downloads/MathInbox
+# Where to watch for new PDFs.
+#
+# NOT ~/Downloads — a folder there clutters Downloads, and when it was
+# deleted the daemon watched nothing for five days without noticing.
+# The inbox is plumbing: the cockpit's "Add PDFs" uploader is the
+# supported way in, and this folder sits with the tool's other state.
+inbox_dir: ~/.mathpdf/inbox
 
 # Root of the paper library
 library_root: ~/Library/CloudStorage/Dropbox/Work/Maths

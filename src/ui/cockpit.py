@@ -3661,7 +3661,8 @@ def render_to_download() -> None:
         # Swallowing this meant downloads landed in a GUESSED folder that
         # the watcher may not be watching — the PDF arrives, nothing
         # files it, and no screen ever explains why.
-        inbox = Path.home() / "Downloads" / "MathInbox"
+        from watcher.config import _DEFAULT_INBOX
+        inbox = _DEFAULT_INBOX
         st.warning(
             f"Your watcher settings could not be read ({exc}), so downloads "
             f"will be saved to `{inbox}`.  If they are not filed "
@@ -3669,11 +3670,52 @@ def render_to_download() -> None:
             f"sure the inbox folder there is this one."
         )
 
+    # Whether filing actually works right now decides what we may promise
+    # below. Saying "filed automatically" while the daemon is deaf is the
+    # exact sentence that hid a five-day outage.
+    try:
+        _wf = _watcher_status_cached()
+    except Exception:
+        _wf = {"filing": False, "problem": "could not read the filer's status"}
+
+    def _landing_caption(where: str) -> str:
+        if _wf.get("filing"):
+            return f"{where} is filed into your library automatically."
+        return (f"{where} waits in the inbox — **automatic filing is off, so "
+                f"nothing will be filed until you turn it on** in the sidebar.")
+
+    # --- Add PDFs you already have ---------------------------------
+    with st.container(border=True):
+        st.subheader("Add PDFs")
+        st.caption(
+            "Drop files here. This is the supported way to add a paper you "
+            "already have — you never need to find the inbox folder yourself."
+        )
+        ups = st.file_uploader(
+            "PDFs to add", type=["pdf"], accept_multiple_files=True,
+            key="inbox_uploader", label_visibility="collapsed",
+        )
+        if ups:
+            if st.button(f"Add {len(ups)} PDF{'s' if len(ups) != 1 else ''}",
+                         key="inbox_upload_go", type="primary"):
+                from ui.cockpit_actions import save_uploads_to_inbox
+                saved, failed = save_uploads_to_inbox(ups, inbox)
+                for name, why in failed:
+                    st.error(f"{name}: {why}")
+                if saved:
+                    st.success(
+                        f"Added {len(saved)} PDF"
+                        f"{'s' if len(saved) != 1 else ''}. "
+                        + _landing_caption("Each one")
+                    )
+                    for pth in saved:
+                        _log_activity("inbox.upload", Path(pth).name, str(pth))
+
     # --- DOI download form -----------------------------------------
     with st.container(border=True):
         st.subheader("Download by DOI")
-        st.caption(f"The PDF is saved to `{inbox}` and filed into your "
-                   f"library automatically from there.")
+        st.caption("The PDF is saved to the inbox. "
+                   + _landing_caption("From there it"))
         cols = st.columns([4, 1])
         doi = cols[0].text_input(
             "DOI or https://doi.org/... URL", key="doi_form_input"

@@ -15,13 +15,59 @@ logger = logging.getLogger(__name__)
 
 # Defaults
 from core.config_paths import get_library_root as _get_library_root
-_DEFAULT_INBOX = Path.home() / "Downloads" / "MathInbox"
+#: Where dropped PDFs wait to be filed.
+#:
+#: NOT ~/Downloads/MathInbox, which is where this used to live. The owner
+#: deleted that folder because it cluttered Downloads -- a reasonable thing
+#: to do to a folder nobody told you was load-bearing -- and the daemon then
+#: watched a directory that no longer existed for five days without
+#: noticing. macOS does not tear a watch down when its target goes; it just
+#: never fires again.
+#:
+#: The inbox is plumbing, not a place the owner should have to visit, so it
+#: now sits beside the logs and reports this tool already keeps in
+#: ~/.mathpdf/. Nothing appears in Downloads, Documents or Desktop. The
+#: cockpit's "Add PDFs" uploader is the supported way in; the folder still
+#: works for anyone who wants to drop files directly.
+_DEFAULT_INBOX = Path.home() / ".mathpdf" / "inbox"
+
+#: The pre-2026-08 default, kept ONLY so a config still naming it can be
+#: migrated. Never use this as a destination.
+_LEGACY_INBOX = Path.home() / "Downloads" / "MathInbox"
 _DEFAULT_LIBRARY = _get_library_root()
 _DEFAULT_LOG_DIR = Path.home() / ".mathpdf"
 _CONFIG_PATHS = [
     Path.home() / ".mathpdf" / "watcher.yaml",
     Path(__file__).resolve().parent.parent.parent / "config" / "watcher.yaml",
 ]
+
+
+def _migrate_inbox(configured: Path) -> Path:
+    """Move a config still pointing at ~/Downloads/MathInbox to the new home.
+
+    Only when the stored value is EXACTLY the old shipped default. Someone
+    who deliberately typed a Downloads path has made a choice, and silently
+    overriding a choice is how a tool earns distrust -- so an equal-but-
+    customised path is left alone.
+
+    Migrating a folder that still HAS FILES IN IT would strand them, so that
+    case is refused and left for the cockpit to surface. The only automatic
+    case is the one that actually happened: the old folder is gone or empty.
+    """
+    if configured != _LEGACY_INBOX:
+        return configured
+    try:
+        if configured.is_dir() and any(configured.iterdir()):
+            logger.warning(
+                "Inbox is still the old %s and it is not empty; leaving it "
+                "alone so nothing is stranded. Move those files and the "
+                "inbox will migrate to %s.", configured, _DEFAULT_INBOX,
+            )
+            return configured
+    except OSError:                                  # unreadable -- treat as gone
+        pass
+    logger.info("Migrating inbox from %s to %s", configured, _DEFAULT_INBOX)
+    return _DEFAULT_INBOX
 
 
 @dataclass
@@ -114,7 +160,9 @@ class WatcherConfig:
         raw_year = data.get("default_year")
         is_dynamic = raw_year in (None, "current")
         return cls(
-            inbox_dir=Path(os.path.expanduser(data.get("inbox_dir", str(_DEFAULT_INBOX)))),
+            inbox_dir=_migrate_inbox(
+                Path(os.path.expanduser(data.get("inbox_dir", str(_DEFAULT_INBOX))))
+            ),
             library_root=Path(os.path.expanduser(data.get("library_root", str(_DEFAULT_LIBRARY)))),
             log_dir=Path(os.path.expanduser(data.get("log_dir", str(_DEFAULT_LOG_DIR)))),
             default_status=data.get("default_status", "working"),

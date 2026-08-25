@@ -104,6 +104,15 @@ def _dispatch(name: str, log: list, values: dict):
             return _pick(values, args, kwargs, default)
         if name == "multiselect":
             return _pick(values, args, kwargs, [])
+        if name == "file_uploader":
+            # Real streamlit returns a LIST when accept_multiple_files=True
+            # and None otherwise -- never a generic object. Returning the
+            # catch-all recorder made `len(uploads)` raise TypeError, which
+            # is a defect in the double, not in the page.
+            if kwargs.get("accept_multiple_files") or (
+                    len(args) > 1 and args[1] is True):
+                return _pick(values, args, kwargs, [])
+            return _pick(values, args, kwargs, None)
         return _Rec(log, values)
 
     return _call

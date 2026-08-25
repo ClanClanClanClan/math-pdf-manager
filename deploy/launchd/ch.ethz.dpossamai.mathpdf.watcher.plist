@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!--
-  Watcher daemon — auto-files PDFs dropped into ~/Downloads/MathInbox/.
+  Watcher daemon — auto-files PDFs added via the cockpit, which land in ~/.mathpdf/inbox/. The path comes from the config, not from here.
 
   Install:
       cp deploy/launchd/ch.ethz.dpossamai.mathpdf.watcher.plist ~/Library/LaunchAgents/

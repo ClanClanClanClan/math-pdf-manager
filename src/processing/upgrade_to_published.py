@@ -253,8 +253,8 @@ Confidence: {match.get('confidence', 0):.0%}
 Preprint: {preprint_path}
 URL: https://doi.org/{doi}
 
-Download the published PDF and drop it in ~/Downloads/MathInbox/
-The watcher will auto-file it.
+Download the published PDF, then add it from the cockpit:
+"Papers to download" -> "Add PDFs". It is filed automatically.
 """
     flag_file.write_text(content, encoding="utf-8")
     return flag_file

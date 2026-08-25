@@ -591,3 +591,66 @@ def save_cockpit_config(values: dict, *, require_existing_paths: bool = True) ->
         except OSError as exc:
             extra_msg = f"  (could not save the Unpaywall email: {exc})"
     return True, "config saved" + extra_msg
+
+
+def save_uploads_to_inbox(uploads, inbox: Path) -> tuple[list[Path], list[tuple[str, str]]]:
+    """Write uploaded PDFs into the inbox. Returns (saved, [(name, why)]).
+
+    The owner has no terminal, and until now the ONLY way to get a paper in
+    was to put it in a watched folder by hand. That folder lived in
+    ~/Downloads, cluttered it, and was deleted -- after which the daemon
+    watched nothing for five days. The inbox is plumbing; this is the door.
+
+    NEVER OVERWRITES. A colliding name gets a " (2)" suffix, not a silent
+    replacement -- two different papers can share a filename, and the
+    library's whole discipline is that nothing is destroyed without a way
+    back. Writes to a temp file in the same directory and renames, so the
+    watcher never sees a half-written PDF and tries to file it.
+    """
+    saved: list[Path] = []
+    failed: list[tuple[str, str]] = []
+    try:
+        inbox.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        return [], [(getattr(u, "name", "?"), f"cannot create the inbox: {exc}")
+                    for u in uploads]
+
+    for up in uploads:
+        name = getattr(up, "name", None) or "upload.pdf"
+        # A browser upload's name is attacker-ish input: strip any path
+        # component so "../../x.pdf" cannot escape the inbox.
+        name = os.path.basename(name).lstrip(".") or "upload.pdf"
+        if not name.lower().endswith(".pdf"):
+            name += ".pdf"
+        try:
+            data = up.getvalue() if hasattr(up, "getvalue") else up.read()
+        except Exception as exc:
+            failed.append((name, f"could not read the upload: {exc}"))
+            continue
+        if not data:
+            failed.append((name, "the file is empty"))
+            continue
+        if not data.startswith(b"%PDF"):
+            failed.append((name, "this is not a PDF (no %PDF header)"))
+            continue
+
+        target = inbox / name
+        stem, suffix = target.stem, target.suffix
+        n = 2
+        while target.exists():
+            target = inbox / f"{stem} ({n}){suffix}"
+            n += 1
+
+        tmp = target.with_name(f".{target.name}.part")
+        try:
+            tmp.write_bytes(data)
+            tmp.replace(target)          # atomic within one filesystem
+        except OSError as exc:
+            failed.append((name, f"could not save: {exc}"))
+            try:
+                tmp.unlink()
+            except OSError:
+                pass
+            continue
+        saved.append(target)
+    return saved, failed

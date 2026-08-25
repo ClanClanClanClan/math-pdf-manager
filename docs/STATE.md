@@ -26,22 +26,42 @@ Read `CLAUDE.md` first for the non-negotiables. This document is the state.
 
 ## Needs your decision, now
 
-### 1. The watcher is deaf and every screen says it is fine
+### 1. Automatic filing — FIXED, needs one click from you
 
-`~/Downloads/MathInbox` **does not exist**. The daemon has been running for
-5 days 21 hours (pid 6282, since 19 Aug 14:13) and its log ends at that
-startup line. Two independent tests confirmed watchdog's Observer gets zero
-events after a watched directory is deleted and recreated — recreating the
-folder is not enough.
+**Was:** `~/Downloads/MathInbox` did not exist. The daemon had been running
+5 days 21 hours (pid 6282, since 19 Aug 14:13) with its log ending at the
+startup line, filing nothing, while the sidebar said *"Automatic filing: ON"*.
 
-Meanwhile the cockpit sidebar renders *"Automatic filing: ON"*, and the To
-Download page says a saved PDF "is filed into your library automatically from
-there." It will not be. **Anything downloaded now goes into a folder nothing
-is watching.**
+**Root cause, two layers.** `watcher_status()` answered "is a process alive?"
+and the badge presented it as "are my PDFs being filed?". Underneath, the
+launchd state line was parsed as `"running" in line`, which is also true of
+`state = not running`.
 
-Fix: restart the daemon, then give it a periodic `iterdir` that re-`mkdir`s
-and reschedules when the inode changes, and give `watcher_status()` a second
-predicate so "running" means "has looked recently".
+**Now:**
+
+* The inbox is **`~/.mathpdf/inbox`**, not `~/Downloads`. The owner deleted the
+  Downloads folder because it cluttered Downloads, which is a reasonable thing
+  to do to a folder nobody told you was load-bearing. The inbox is plumbing and
+  now lives with the logs and reports. A config still naming the old default is
+  migrated automatically — unless it still holds files, which is refused rather
+  than stranding them.
+* The cockpit has an **"Add PDFs" uploader** (Papers to download → Add PDFs).
+  That is the supported way in; the folder is no longer something to visit.
+  Uploads never overwrite, reject non-PDFs, strip path components from the
+  supplied name, and write-then-rename so the watcher never sees a partial file.
+* `watcher_status()` returns `filing` (process AND folder) and `problem`. The
+  badge has a third state that says BROKEN and names the missing folder.
+* `start_watcher()` recreates the inbox before bootstrapping, so the recovery
+  the badge recommends actually works.
+* **The daemon self-heals.** It re-checks its watch every 30 s by device+inode,
+  not by path — recreating a folder gives a new inode and the kernel watch stays
+  bound to the old one, so a path check would have missed exactly this outage.
+  On a change it remakes the folder, reschedules the watch and re-scans for
+  anything dropped while it was deaf.
+
+**Still yours to do:** the running daemon (pid 6282) predates all of this.
+Toggle *Automatic filing* off then on in the sidebar to pick up the new code
+and the new inbox path.
 
 ### 2. The Monday sweep has never run under current code
 

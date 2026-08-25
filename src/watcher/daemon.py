@@ -394,6 +394,21 @@ class PDFHandler(FileSystemEventHandler):
                     pass
 
 
+def _current_watch(inbox: Path):
+    """Identify the directory a watch is bound to, or None if it is gone.
+
+    The inode is the identity that matters. Comparing the PATH would miss
+    the case that actually bit: delete the folder, recreate it at the same
+    path, and the kernel watch still points at the old, now-unlinked inode
+    -- the path looks perfect and no event ever arrives again.
+    """
+    try:
+        st = inbox.stat()
+    except OSError:
+        return None
+    return (st.st_dev, st.st_ino)
+
+
 def run_daemon(config: WatcherConfig, *, dry_run: bool = False) -> None:
     """Run the filesystem watcher daemon."""
     config.ensure_dirs()
@@ -435,10 +450,49 @@ def run_daemon(config: WatcherConfig, *, dry_run: bool = False) -> None:
     signal.signal(signal.SIGTERM, _shutdown)
 
     observer.start()
+
+    # SELF-HEAL. A watch does not survive its directory being deleted, and
+    # nothing tells us it died: watchdog keeps the Observer alive and simply
+    # never delivers another event. That is how this daemon ran for five days
+    # and twenty-one hours after ~/Downloads/MathInbox was removed, filing
+    # nothing, while every screen reported it healthy.
+    #
+    # Recreating the folder is NOT enough -- the kernel watch is bound to the
+    # old inode, so a new directory at the same path is invisible to it. The
+    # watch has to be rescheduled. So: notice the inode change, remake the
+    # folder, reschedule, and re-scan for anything dropped in the meantime.
+    watch = _current_watch(config.inbox_dir)
+    last_check = time.monotonic()
+    CHECK_EVERY = 30.0
+
     try:
         while observer.is_alive():
             handler.process_settled()
             time.sleep(config.poll_interval)
+
+            if time.monotonic() - last_check < CHECK_EVERY:
+                continue
+            last_check = time.monotonic()
+            now = _current_watch(config.inbox_dir)
+            if now == watch:
+                continue
+
+            logger.warning(
+                "Inbox %s changed underneath the watch (%s -> %s); "
+                "rescheduling.", config.inbox_dir, watch, now,
+            )
+            try:
+                config.inbox_dir.mkdir(parents=True, exist_ok=True)
+                observer.unschedule_all()
+                observer.schedule(handler, str(config.inbox_dir), recursive=False)
+                watch = _current_watch(config.inbox_dir)
+                found = handler.scan_existing_inbox()
+                logger.info(
+                    "Watch re-established on %s; %d PDF(s) waiting.",
+                    config.inbox_dir, found,
+                )
+            except Exception as exc:                 # keep the daemon alive
+                logger.error("Could not re-establish the watch: %s", exc)
     except KeyboardInterrupt:
         pass
     finally:
