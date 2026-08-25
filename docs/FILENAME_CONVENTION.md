@@ -80,13 +80,20 @@ Dupont, J.-P., Martin, G., Krée, P.A. - Title.pdf
 ### 2.5 "et al." — dynamic truncation
 
 As many authors as possible are listed while keeping the total filename
-within the filesystem byte limit (255 bytes UTF-8).  When not all
-authors fit, the listed authors are followed by `, et al.`.
+within the byte budget.  When not all authors fit, the listed authors
+are followed by `, et al.`.
+
+**The budget is 251 bytes, not 255.**  255 is the filesystem's limit on
+the PDF's own name; every paper also has a sidecar whose name is the
+stem plus `.meta.json`, and that has to fit too.  The margin is not
+theoretical: 11 papers in the library sit in the [252, 255] range and
+3 of them errored during the first real sidecar backfill.  The constant
+is `processing.identity.MAX_BASENAME_BYTES`.
 
 Algorithm:
 1. Try all authors.  If the filename fits → done.
 2. Binary-search for the largest *k* such that
-   `Author1, …, Authork, et al. - Title.pdf` ≤ 255 bytes.
+   `Author1, …, Authork, et al. - Title.pdf` ≤ 251 bytes.
 
 The title is **never** truncated — only the author list compresses.
 
