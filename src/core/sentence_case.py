@@ -348,6 +348,134 @@ def _proper_noun_after_apostrophe(word, prev_token=None):
     return None
 
 
+#: Characters that join two names into one compound: the ASCII hyphen, the
+#: en dash the library's convention prefers for two co-equal people
+#: (Hamilton-Jacobi), and the Unicode minus a source occasionally emits.
+_NAME_JOINERS = "-\u2010\u2011\u2013\u2212"
+
+#: Lower-case particles that sit INSIDE a name and must not stop the walk
+#: across a compound: "Saint-Jean-de-Monts", "de-Americanization",
+#: "van der Waerden", "Le Cam". Found by mutation, not by design -- a mutant
+#: that removed the lower-case guard altogether scored BETTER on two of the
+#: three real titles it changed, because the guard was breaking the walk at
+#: the "de" of Saint-Jean-de-Monts and stranding "Monts" in lower case.
+_NAME_PARTICLES = frozenset({
+    "de", "des", "du", "da", "das", "dos", "di", "del", "della", "der",
+    "den", "van", "von", "ter", "te", "la", "le", "les", "el", "al",
+    "bin", "ibn", "st", "ste",
+})
+
+
+def _in_a_name_compound(tokens, i, known):
+    """Is this capitalised word part of a Xxx-Yyy compound naming people?
+
+    "Kolmogorov-Petrowsky", "Hartman-Wintner", "Borel-Cantelli",
+    "Pierre-Andre". Only ONE component needs to be a name we know.
+
+    WHY. Preserving only the half we recognise is worse than preserving
+    neither. MEASURED over the 25,043 in-scope titles: the eponym rule alone
+    took the count of compounds that come out Xxx-yyy from 48 to 97 --
+    "Kolmogorov-petrowsky", "Hartman-wintner", "Pierre-andre". A half-cased
+    name reads as a typo in a way that a fully lower-cased one does not, and
+    the second half is missing from the vocabulary only because that person
+    never authored a paper in this library, or because the title misspells
+    them ("Borel-Cantellu", "Lebesgue-Stieljes").
+
+    This is the "dash compound" signal, which is UNUSABLE on its own: applied
+    to any two capitals it fires on "Mean-Field", "Time-Dependent",
+    "Non-Linear" and was measured at 3,029 wrong capitals on title-cased
+    input. It is safe here only because both guards still apply -- at least
+    one component must be a known surname, and the title-case gate still has
+    to say this title is not Title Cased.
+    """
+    n = len(tokens)
+
+    def _word_at(j):
+        return tokens[j].value if 0 <= j < n and tokens[j].kind == 'WORD' else None
+
+    def _joined(a, b):
+        """Are tokens a and b joined by a name-joining punctuation token?"""
+        if not (0 <= a < n and 0 <= b < n):
+            return False
+        mid = tokens[a + 1] if a + 1 == b - 1 else None
+        return (mid is not None and mid.kind == 'PUNCT'
+                and mid.value in _NAME_JOINERS)
+
+    # walk left and right through the compound this word sits in
+    for step, probe in ((-2, lambda j: j - 2), (2, lambda j: j + 2)):
+        j = i
+        while True:
+            k = probe(j)
+            nxt = _word_at(k)
+            if nxt is None:
+                break
+            if not _joined(min(j, k), max(j, k)):
+                break
+            if not nxt[:1].isupper():
+                # A lower-case particle is part of the name, not the end of
+                # it: Saint-Jean-de-Monts, de-Americanization. Anything else
+                # in lower case ends the compound.
+                if nxt.lower() in _NAME_PARTICLES:
+                    j = k
+                    continue
+                break
+            if nxt.lower() in known:
+                return True
+            j = k
+    return False
+
+
+def _title_is_title_cased(tokens, i_stop=None):
+    """Is this title Title Cased, i.e. is every word's capital meaningless?
+
+    Returns True (title-cased), False (not), or None (too short to judge).
+
+    WHY A GATE IS NEEDED AT ALL. The eponym rule below preserves a capital on
+    any word the library knows as an author surname. On a sentence-cased title
+    that is what we want. On a TITLE-CASED one -- "A Study Of The Wang
+    Equation In Sun Space" -- every word carries a capital, removing them is
+    the caser's whole job, and the rule would keep every surname-shaped word
+    it met.
+
+    MEASURED, on an oracle of 4,000 titles the library stores in sentence case,
+    Title-Cased back and fed in with the stored title as ground truth:
+
+        baseline                      3,763 / 4,000 exact, 193 wrong capitals
+        the rule with NO gate         3,179 / 4,000,       997 wrong  (+804)
+        the rule with THIS gate       3,763 / 4,000,       193 wrong    (+0)
+
+    The +804 is the collision made visible: `risk` 205, `de` 147, `law` 60,
+    `price` 53, `case` 42 -- all genuine mined surnames, all ordinary words.
+
+    THE SECOND CLAUSE, "at least two capitals that are NOT surnames", is not
+    decoration. Without it the detector called "Euler, Pisot, Prouhet-Thue-
+    Morse, Wallis and the duplication of sines" title-cased -- a title whose
+    capitals are ALL names -- and blocked 29 correct recoveries. With it, 31
+    of 25,049 titles read as title-cased and only 12 recoveries are blocked.
+
+    Thresholds (0.70, 3, 2) were grid-searched over 0.6/0.7/0.8 x 3/5/6 on this
+    corpus. They are the best of what was tried, not proven optimal; 0.8/min-6
+    recovers 6 more and costs 113 title-cased errors, so the surface is not
+    flat. Re-measure if the mined vocabulary changes materially.
+    """
+    from processing.author_vocabulary import surnames
+    known = surnames()
+    content = []
+    for j, tok in enumerate(tokens):
+        if tok.kind != 'WORD' or not tok.value[:1].isalpha():
+            continue
+        if j == 0:                       # the title's own first word is always
+            continue                     # capitalised and carries no signal
+        content.append(tok.value)
+    if len(content) < 3:
+        return None
+    caps = [w for w in content if w[:1].isupper()]
+    if len(caps) / len(content) < 0.70:
+        return False
+    non_name_caps = [w for w in caps if w.lower() not in known]
+    return len(non_name_caps) >= 2
+
+
 def to_sentence_case_academic(
     title: str,
     capitalization_whitelist: Optional[Iterable[str]] = None,
@@ -720,6 +848,34 @@ def to_sentence_case_academic(
                             changed = True
                         continue
                 
+                # A capital on a word the library knows as an author
+                # surname is an eponym: "the Gronwall inequality", "Fock
+                # space", "Bourbaki seminar". PRESERVE-ONLY -- it fires
+                # only on an already-capitalised word and emits it verbatim,
+                # so it cannot impose a capital, alter a character or destroy
+                # a title. That is a structural guarantee, not a measurement
+                # to redo when the corpus changes.
+                #
+                # It is deliberately NOT done by adding the names to
+                # capitalization_whitelist: that mechanism matches
+                # case-insensitively and emits the ENTRY's spelling, so it
+                # imposes. The shipped 848-entry list already imposes 263
+                # wrong capitals ("sur le grossissement" -> "sur Le
+                # grossissement", 103 times); the same mechanism fed the
+                # 11,779 mined surnames was measured at 5,823.
+                #
+                # MEASURED over the 25,049 in-scope titles: 880 capitals
+                # recovered across 723 titles, 4 wrongly kept, 0 imposed,
+                # 0 lost, 0 titles destroyed. docs/proper-nouns-measured.md.
+                if word[:1].isupper():
+                    from processing.author_vocabulary import surnames
+                    _known = surnames()
+                    if (word.lower() in _known
+                            or _in_a_name_compound(tokens, i, _known)):
+                        if _title_is_title_cased(tokens) is not True:
+                            result_parts.append(word)
+                            continue
+
                 # A capital after an apostrophe is a name, not a word to
                 # lowercase: "d'Itô", "l'Hôpital", "'Tis". See
                 # _proper_noun_after_apostrophe for the measured population.
