@@ -132,11 +132,16 @@ def test_the_author_block_is_not_mistaken_for_the_title():
     assert out == "Ash, R.-B., Doleans-Dade, C. - The theory.pdf"
 
 
-def test_a_word_inside_the_author_block_keeps_its_own_case():
-    """The title-initial rule must not fire on an author's surname."""
-    out = replace_preserving_case(
-        "Browniam, A. - A study of motion.pdf", "Browniam", "brownian")
-    assert out.startswith("Brownian, A. -"), out
+def test_a_word_only_in_the_author_block_is_not_rewritten_at_all():
+    """CORRECTED. This test used to assert the author block WAS rewritten.
+
+    That was the behaviour at the time, and it was a bug: a spelling suspect
+    is a TITLE token, so a match in the author block is a coincidence, not a
+    correction. Rewriting an author's surname from a title typo is exactly
+    the corruption the audit found. The name is now left alone.
+    """
+    name = "Browniam, A. - A study of motion.pdf"
+    assert replace_preserving_case(name, "Browniam", "brownian") == name
 
 
 def test_unicode_survives():
@@ -248,3 +253,49 @@ class TestTheBranchesMutationFound:
         out = replace_preserving_case(
             "A, B. - teh markets.pdf", "teh", "the")
         assert out == "A, B. - The markets.pdf", out
+
+
+class TestTheReplacementStaysInTheTitle:
+    """A typo fix must never touch the author block.
+
+    FOUND BY AN AUDIT OF THIS FUNCTION, after it shipped. The first version
+    used a plain ``name.find(word)``, which reaches into the author block and
+    matches inside a longer surname:
+
+        "Makovski, D. - Makov chains for finance.pdf"
+             ^^^^^ matched here
+        ->  "Markovski, D. - Makov chains ..."
+
+    The AUTHOR is corrupted and the typo survives — the worst possible
+    outcome, because the file now has a wrong name AND still shows up as a
+    suspect. The suspect words come from maintenance.typos, which tokenises
+    the TITLE, so the title is the only place a match belongs.
+    """
+
+    def test_a_surname_containing_the_typo_is_untouched(self):
+        out = replace_preserving_case(
+            "Makovski, D. - Makov chains for finance.pdf", "Makov", "markov")
+        assert out == "Makovski, D. - Markov chains for finance.pdf", out
+
+    def test_a_surname_containing_the_suggestion_is_untouched(self):
+        """"Theodore" contains "the"; the author must survive it."""
+        out = replace_preserving_case(
+            "Theodore, A. - teh method.pdf", "teh", "the")
+        assert out == "Theodore, A. - The method.pdf", out
+
+    def test_the_match_is_on_a_word_boundary(self):
+        """A short typo must not match inside a longer title word."""
+        out = replace_preserving_case(
+            "A, B. - Theorems on teh method.pdf", "teh", "the")
+        assert out == "A, B. - Theorems on the method.pdf", out
+        assert "Theorems" in out, "the longer word must be left alone"
+
+    def test_a_word_present_only_in_the_author_block_is_not_replaced(self):
+        """If it is not in the title, there is nothing to fix."""
+        name = "Makov, D. - A study of diffusions.pdf"
+        assert replace_preserving_case(name, "Makov", "markov") == name
+
+    def test_the_first_TITLE_occurrence_is_the_one_replaced(self):
+        out = replace_preserving_case(
+            "Makov, D. - Makov and Makov again.pdf", "Makov", "markov")
+        assert out == "Makov, D. - Markov and Makov again.pdf", out

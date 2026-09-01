@@ -24,6 +24,7 @@ operation log — not in ``~/.mathpdf``, which does not sync.
 from __future__ import annotations
 
 import json
+import re
 import logging
 import unicodedata
 from pathlib import Path
@@ -233,10 +234,27 @@ def replace_preserving_case(name: str, word: str, suggestion: str) -> str:
     convention, so a lower-case original there is itself the error and must
     not be propagated.
     """
-    idx = name.find(word)
-    if idx < 0:
+    start = _title_starts_at(name)
+
+    # Search only the TITLE, and only on a word boundary.
+    #
+    # A plain name.find(word) reaches into the author block and matches
+    # inside a longer surname. Found by an audit of this very function:
+    #
+    #   "Makovski, D. - Makov chains for finance.pdf"
+    #        ^^^^^ matched here
+    #   ->  "Markovski, D. - Makov chains for finance.pdf"
+    #
+    # which corrupts the AUTHOR and leaves the typo in place. The suspect
+    # words come from maintenance.typos, which tokenises the TITLE, so the
+    # title is the only place the match belongs; and the boundary check stops
+    # a short typo matching inside a longer word anywhere.
+    pattern = re.compile(r"(?<![^\W\d_])" + re.escape(word) + r"(?![^\W\d_])")
+    m = pattern.search(name, start)
+    if m is None:
         return name
+    idx = m.start()
     replacement = apply_case_of(word, suggestion)
-    if idx == _title_starts_at(name):
+    if idx == start:
         replacement = replacement[:1].upper() + replacement[1:]
     return name[:idx] + replacement + name[idx + len(word):]

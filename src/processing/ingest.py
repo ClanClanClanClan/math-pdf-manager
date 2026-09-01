@@ -1143,10 +1143,27 @@ def ingest_paper(
     # cases (its whitelist default mangled unseen proper nouns), so this
     # is where titles are cased, with the library's corpus + vocabulary
     # as the oracle.
+    # ... EXCEPT when the caller supplied the name. canonical_override is
+    # documented above as "use this filename verbatim ... to honour user
+    # edits", and re-casing it here made that false: the Sort Queue box
+    # showed one name and the disk got another. MEASURED on 40 real inbox
+    # PDFs, 20 differed -- by case alone -- between what was approved and
+    # what was filed:
+    #
+    #   approved  "Do LLMs Understand Limit Order Book Dynamics?"
+    #   filed     "Do LLMs Understand limit order book dynamics?"
+    #
+    # The default is unchanged: the cockpit now pre-fills the box with the
+    # NORMALISED name, so approving without editing files exactly what the
+    # caser would have produced. Only a name the owner actually typed is
+    # taken verbatim -- which is what "override" has always meant.
     try:
         from processing.move_normalizer import normalize_full_name
-        canonical_name, _, _pending = normalize_full_name(
-            canonical_name, library_root)
+        if canonical_override:
+            _pending = []
+        else:
+            canonical_name, _, _pending = normalize_full_name(
+                canonical_name, library_root)
         if _pending and not dry_run:
             from processing.title_vocab import record_pending
             record_pending(library_root, _pending, example=canonical_name)

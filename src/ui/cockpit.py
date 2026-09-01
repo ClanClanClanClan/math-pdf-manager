@@ -928,10 +928,19 @@ def render_sort_queue() -> None:
 
         st.markdown("---")
         st.markdown("**Proposed canonical filename**")
-        # Allow editing the canonical filename before approval
+        # Pre-fill with the name that will ACTUALLY be filed, not the one
+        # before the caser runs. The two differed on half of a 40-file
+        # sample -- by case alone -- so the box was showing the owner a name
+        # the disk would never receive. Approving unedited now files exactly
+        # what is shown; editing overrides it verbatim.
+        try:
+            from processing.move_normalizer import normalize_full_name
+            _shown_name, _, _ = normalize_full_name(prev.canonical_filename, lib)
+        except Exception:                        # never block the page
+            _shown_name = prev.canonical_filename
         edited_name = st.text_input(
             "Canonical filename",
-            value=prev.canonical_filename,
+            value=_shown_name,
             label_visibility="collapsed",
             key=f"name_{pdf}",
         )
@@ -2231,6 +2240,54 @@ def _render_name_or_word_review() -> None:
             st.caption(f"…and {len(queue) - 60} more, shown once these are done.")
 
 
+def _drop_spelling_row(rel: str) -> None:
+    """Forget ONE file from the cached scan, instead of the whole scan.
+
+    Every action button used to end with
+
+        st.session_state.pop("spelling", None); st.rerun()
+
+    which throws away the scan of all 27,382 filenames to learn about the
+    one file that changed. MEASURED: the work a click actually needs is
+    under 25 ms (rename 0.8 ms, ruling write 0.22 ms, redraw ~22 ms); the
+    rescan that followed was 2,374 ms warm and 36-51 SECONDS end to end in
+    the live cockpit. The "Not now" button never popped, and it was
+    instant -- the same page and the same rerun -- which is the proof by
+    construction that the pop was the whole cost.
+
+    THIS CANNOT SHOW STALE DATA. A suspect is a hapax by construction
+    (maintenance/typos.py requires title_df == 1), so renaming it can only
+    change the document frequencies of words inside that one title; no
+    other row's verdict can move. The one knife-edge is a corrected word
+    crossing MIN_PARTNER_FREQ and becoming a new suggestion partner, which
+    could only ADD rows that were never on screen -- and the Rescan button
+    is still there for that.
+    """
+    data = st.session_state.get("spelling")
+    if not data:
+        return
+
+    # WHEN was this taken? The scan lives in session state, which is
+    # per-connection and nothing outside this tab invalidates. A tab left
+    # open overnight offers buttons for files that were renamed hours ago;
+    # one was found offering 19 of them. Saying the age is cheap and makes
+    # "is this current?" answerable instead of assumed.
+    _taken = st.session_state.get("spelling_taken_at")
+    if _taken:
+        import time as _time
+        _age = int(_time.time() - _taken)
+        if _age > 300:
+            st.caption(
+                f"⚠ This scan is {_age // 60} minutes old. Renames made in "
+                f"another tab, or by the filer, are not reflected — press "
+                f"Rescan if it looks wrong."
+            )
+    for key in ("suspects", "broken"):
+        rows = data.get(key)
+        if rows:
+            data[key] = [r for r in rows if r.get("rel") != rel]
+
+
 def render_spelling() -> None:
     """Suspected misspellings — review only, never automatic.
 
@@ -2254,7 +2311,9 @@ def render_spelling() -> None:
     if st.button("↻ Rescan", key="sp_rescan") or "spelling" not in st.session_state:
         with st.spinner("Reading every filename and asking the dictionary…"):
             try:
+                import time as _time
                 st.session_state["spelling"] = _spelling_scan(lib)
+                st.session_state["spelling_taken_at"] = _time.time()
             except Exception as exc:
                 st.error(
                     f"The spelling oracle is unavailable, so NOTHING was "
@@ -2266,6 +2325,11 @@ def render_spelling() -> None:
 
     rulings = load_rulings(lib)
     deferred = rulings[DEFERRED]
+    # Every ruling hides a row, not just a deferral. Without this, saying
+    # "it's a real word" had to throw the whole scan away to make the row
+    # disappear; load_rulings is already read on every render and costs
+    # 0.18 ms, so the filter is free.
+    ruled_out = deferred | set(rulings[CORRECT]) | set(rulings["typo"])
 
     st.caption(
         f"{data['scanned']:,} filenames · oracle `{data['oracle']}` · "
@@ -2297,14 +2361,14 @@ def render_spelling() -> None:
                     _log_activity("spelling.character", str(lib),
                                   row["name"][:60], res.get("tx_id") or "")
                     st.toast("Renamed — undo it from Activity.")
-                    st.session_state.pop("spelling", None)
+                    _drop_spelling_row(row["rel"])
                     st.rerun()
                 else:
                     st.warning(res.get("error") or f"Not renamed: {res.get('skipped')}")
 
     # ---- the judgement calls --------------------------------------------
     active = [r for r in data["suspects"]
-              if not all(s["lower"] in deferred for s in r["suspects"])]
+              if not all(s["lower"] in ruled_out for s in r["suspects"])]
     st.markdown(f"#### Suspected — {len(active)} file(s)")
     if deferred:
         st.caption(f"{len(deferred)} word(s) set aside. They still count as "
@@ -2320,7 +2384,7 @@ def render_spelling() -> None:
     shown = active[:60]
     for rank, row in enumerate(shown, 1):
         for s in row["suspects"]:
-            if s["lower"] in deferred:
+            if s["lower"] in ruled_out:
                 continue
             key = f"{row['rel']}::{s['lower']}"
             # Show what will ACTUALLY happen. Suggestions arrive in lower
@@ -2354,7 +2418,7 @@ def render_spelling() -> None:
                                       f"{s['word']} → {s['suggestion']}",
                                       res.get("tx_id") or "")
                         st.toast("Renamed — undo it from Activity.")
-                        st.session_state.pop("spelling", None)
+                        _drop_spelling_row(row["rel"])
                         st.rerun()
                     else:
                         st.warning(res.get("error") or f"Not renamed: {res.get('skipped')}")
@@ -2362,8 +2426,7 @@ def render_spelling() -> None:
                                use_container_width=True):
                     rule(lib, s["lower"], CORRECT)
                     st.toast(f"'{s['word']}' will not be raised again.")
-                    st.session_state.pop("spelling", None)
-                    st.rerun()
+                    st.rerun()          # the ruling filter below hides it
                 if b[2].button("Not now", key=f"sp_skip_{key}",
                                use_container_width=True):
                     rule(lib, s["lower"], DEFERRED)
@@ -2387,6 +2450,9 @@ def render_spelling() -> None:
                 if c[1].button("Put it back in the queue", key=f"sp_undo_{w}",
                                use_container_width=True):
                     clear_ruling(lib, w)
+                    # This one DOES need the scan back: the row was filtered
+                    # out and has to be recomputed. It is the rare action,
+                    # and the only one that still pays for a full rescan.
                     st.session_state.pop("spelling", None)
                     st.rerun()
             if not hits:
