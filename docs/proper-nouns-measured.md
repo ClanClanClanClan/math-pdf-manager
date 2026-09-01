@@ -45,6 +45,46 @@ block of every in-scope filename, via `library_scope` + `filename_ground_truth`.
 leaving **11,667**. A new eponym arrives with its first paper rather than with
 a hand-edited config entry.
 
+### Words that are both — asked, not guessed
+
+Of the 11,779 mined surnames, measured over the 25,043 titles:
+
+| | |
+|---|---|
+| never appear in a title at all | 10,925 |
+| appear only capitalised | 731 |
+| appear only in lower case | 84 |
+| **appear BOTH ways** | **39** |
+
+A word is decided automatically only when one side outweighs the other by
+**6:1**. Below that the evidence is genuinely mixed, and the word is **held
+back and queued** rather than guessed — an unanswered question must not act as
+a yes. That leaves a queue of **17**, closest call first:
+
+    si 1/1 · huge 1/1 · brink 1/1 · courant 1/1 · lion 1/1 · north 1/1
+    back 5/6 · green 6/10 · brown 2/1 · hull 3/6 · us 2/1 · street 1/2
+    ou 4/11 · el 1/3 · major 10/36 · bell 4/1 · may 42/10
+
+Holding them costs 47 of 1,033 recoveries — mostly `May` (42) and `Bell` (4) —
+which the owner buys back by answering 17 questions in the cockpit's
+**Spelling** page.
+
+### It learns
+
+Answers live in `config/surname_decisions.json`, separate from the generated
+vocabulary so a re-mine can never erase them, and they beat the evidence in
+both directions.
+
+Each answer records the evidence it was given against. When a later re-mine
+finds the usage has crossed to the **other side of the rule** — a word first
+seen as a noun that later turns up as a mathematician, or the reverse — the
+word returns to the queue marked *changed since you decided*, and is asked
+first. A small drift does not reopen anything, or the queue would never empty.
+
+A decision recorded without evidence never reopens: with nothing to compare
+against, "has this changed?" is UNKNOWN, and reopening on UNKNOWN would nag
+for ever.
+
 ### The census filter
 
 A surname is kept only if the library's titles never use it in lower case
@@ -107,7 +147,7 @@ blocked.
 
 | | |
 |---|---|
-| capitals **recovered** | **1,033** (454 distinct words, 761 titles) |
+| capitals **recovered** | **986** (with 17 words queued for review; 1,033 once they are answered) |
 | capitals imposed | **0** |
 | capitals newly lost | **0** |
 | titles destroyed / characters lost | **0** |
@@ -125,7 +165,7 @@ A mutant that removed the compound walk's lower-case guard scored **better**
 than the real code on two of the three real titles it touched: the guard was
 breaking at the `de` of `Saint-Jean-de-Monts` and stranding `Monts`. Name
 particles (`de`, `van`, `von`, `der`, `la`, `du`, …) are now walked through.
-17 of 17 mutants killed.
+17 of 17 mutants killed on the rule, 16 of 16 on the review queue and its learning.
 
 ## Known wrong, measured
 

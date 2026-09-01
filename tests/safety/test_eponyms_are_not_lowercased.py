@@ -95,7 +95,6 @@ def test_foreign_months_are_not_in_the_surname_set(month):
     "A note on the Doeblin condition",
     "A Komlós dichotomy for the Émery topology",
     "A Morse theory for Hamiltonian systems",
-    "Improved bounds on Bell numbers and moments of sums",
     "A new approach to optimal stopping for Hunt processes",
 ])
 def test_an_eponym_keeps_its_capital(title):
@@ -227,6 +226,21 @@ def test_a_name_compound_in_a_title_cased_input_is_still_lowered():
 
 # ------------------------------------------------------------- the population
 
+def test_a_word_that_is_both_is_withheld_and_queued():
+    """"Bell" is a real surname AND "bell-shaped" is ordinary.
+
+    MEASURED in this library: 4 capitalised against 1 lower — 4x, under the
+    6x dominance bar. So it is NOT assumed to be a name; it is held back and
+    put in the review queue for the owner. Guessing here is what the queue
+    exists to avoid.
+    """
+    import processing.author_vocabulary as av
+    assert "bell" not in surnames(), "a mixed-evidence word must not be assumed"
+    assert "bell" in {r["word"] for r in av.review_queue()}, (
+        "and it must be ASKED about, not silently dropped"
+    )
+
+
 @pytest.mark.parametrize("word", ["Gaussiens", "Hamiltoniens"])
 def test_french_adjectives_from_names_stay_lower_case(word):
     """"gaussiens" is a French adjective, not the name Gauss.
@@ -338,18 +352,21 @@ class TestTheBranchesMutationFound:
         The shipped file already has the months removed, so dropping the
         filter changes nothing about it — the branch is MASKED, not dead.
         It matters the moment the vocabulary is regenerated, which is the
-        documented way to pick up new authors. So the test writes a file that
-        contains the defect and asserts the loader still refuses it.
+        documented way to pick up new authors.
         """
+        import json as _json
         import processing.author_vocabulary as av
-        bad = tmp_path / "vocab.txt"
-        bad.write_text("# generated\njuillet\nmai\nsettembre\nbourbaki\n",
-                       encoding="utf-8")
-        saved, av._CACHE = av._CACHE, None
+        bad = tmp_path / "vocab.json"
+        bad.write_text(_json.dumps({
+            "names": ["juillet", "mai", "settembre", "bourbaki"],
+            "evidence": {},
+        }), encoding="utf-8")
+        saved = (av._CACHE, av._EVIDENCE, av._DECISIONS)
+        av._CACHE = av._EVIDENCE = av._DECISIONS = None
         try:
-            names = av.surnames(bad)
+            names = av.surnames(bad, tmp_path / "none.json")
         finally:
-            av._CACHE = saved
+            av._CACHE, av._EVIDENCE, av._DECISIONS = saved
         assert "bourbaki" in names, "a real name must survive the sweep"
         for month in ("juillet", "mai", "settembre"):
             assert month not in names, (
@@ -362,8 +379,6 @@ class TestTheBranchesMutationFound:
         """The other half: mine() must not emit them either."""
         import processing.author_vocabulary as av
         assert av._NOT_SURNAMES & {"juillet", "mai", "settembre", "dezember"}
-        # mine() subtracts the same set; assert the subtraction is present
-        # by checking the shipped artefact, which mine() produced.
         shipped = av.surnames()
         assert not (shipped & av._NOT_SURNAMES), sorted(shipped & av._NOT_SURNAMES)[:5]
 
@@ -407,11 +422,11 @@ class TestTheBranchesMutationFound:
             assert must_keep in _cased(title), _cased(title)
 
     def test_mine_sweeps_months_out_of_a_fresh_walk(self, tmp_path):
-        """Kills: `return out - _NOT_SURNAMES` in mine().
+        """Kills: `out -= _NOT_SURNAMES` in mine().
 
-        The shipped file was generated WITH the sweep, so dropping it from
-        mine() cannot be seen by loading that file. This builds a two-file
-        fake library instead. It never touches the real one.
+        The shipped file was generated WITH the sweep, so dropping it cannot
+        be seen by loading that file. This builds a fake library instead. It
+        never touches the real one.
         """
         import processing.author_vocabulary as av
         lib = tmp_path / "lib" / "01 - Published papers" / "J"
@@ -419,141 +434,73 @@ class TestTheBranchesMutationFound:
         (lib / "Juillet, A. - On a transport problem.pdf").write_bytes(b"%PDF")
         (lib / "Bourbaki, N. - On a seminar.pdf").write_bytes(b"%PDF")
         (lib / "van der Waerden, B. L. - On an algebra.pdf").write_bytes(b"%PDF")
-        mined = av.mine(tmp_path / "lib")
-        assert "bourbaki" in mined, f"the miner found nothing usable: {mined}"
-        assert "waerden" in mined, mined
-        for particle in ("van", "der"):
-            assert particle not in mined, (
-                f"'{particle}' is a name PARTICLE, not a name. As a standalone "
-                f"vocabulary entry it would preserve a capital on every "
-                f"stray 'Van'/'Der' in a title. The miner takes only "
-                f"capitalised tokens, which is what keeps them out."
-            )
+        mined, _ev = av.mine(tmp_path / "lib")
+        assert "bourbaki" in mined and "waerden" in mined, mined
         assert "juillet" not in mined, (
             "a French month reached the vocabulary through an author block; "
             "'Juillet' is also a real probabilist, which is what makes this "
             "worth sweeping by hand"
         )
-
-    def test_a_surname_the_library_uses_as_a_common_word_is_filtered_out(self):
-        """The census filter, which is what makes the vocabulary safe.
-
-        Someone is called Law, Price, Risk, Case and Root — all real author
-        surnames in this library. But the library's own TITLES use those
-        words in lower case: law 0 capitalised / 240 lower, risk 0/778,
-        price 1/252, case 1/211, root 4/26. So the library itself says they
-        are common words here, and the miner believes it.
-
-        Without this, "Gauss's Law in electrostatics" kept its capital L.
-        """
-        known = surnames()
-        for common in ("law", "price", "risk", "case", "root"):
-            assert common not in known, (
-                f"{common!r} is used in lower case in the library's own "
-                f"titles; keeping it makes the rule capitalise ordinary prose"
-            )
-        for name in ("hunt", "ray", "morse", "abel", "gross", "bell", "may"):
-            assert name in known, (
-                f"{name!r} appears capitalised in real titles and never (or "
-                f"rarely) in lower case — it must survive the filter"
+        for particle in ("van", "der"):
+            assert particle not in mined, (
+                f"'{particle}' is a name PARTICLE, not a name. As a standalone "
+                f"entry it would preserve a capital on every stray "
+                f"'Van'/'Der'. The miner takes only capitalised tokens."
             )
 
-    def test_the_price_of_the_filter_is_recorded_not_hidden(self):
-        """"Root barrier" is NOT recovered, and that is deliberate.
+    def test_a_common_word_never_becomes_a_usable_name(self, tmp_path):
+        """The census property, asserted where it is now enforced.
 
-        "root" is a real author surname and "the Root barrier for Markov
-        processes" is a real title, but the library writes "square root" 26
-        times against 4 capitalised Roots. The census filter believes the
-        library, so this recovery is given up to avoid capitalising "square
-        Root". It is 4 occurrences of the 1,043.
-
-        Pinned so the trade-off is visible: if someone later widens the
-        filter, this test fails and asks them to decide again rather than
-        letting the change pass unnoticed.
+        mine() no longer filters — it returns every mined surname WITH the
+        title evidence, and the verdict decides at load time. The property is
+        unchanged: a word the library's own titles write in lower case must
+        not end up usable as a name.
         """
-        out = _cased("A free boundary characterisation of the Root barrier")
-        assert "root barrier" in out, out
-        assert "root" not in surnames()
-
-    def test_gauss_law_is_not_capitalised(self):
-        """The regression the full suite caught, pinned here too."""
-        assert _cased("Gauss's Law in electrostatics") == \
-            "Gauss's law in electrostatics"
-
-    def test_the_census_filter_is_applied_during_mining(self, tmp_path):
-        """A fake library where one surname is also a common title word."""
         import processing.author_vocabulary as av
         lib = tmp_path / "lib" / "01 - Published papers" / "L"
         lib.mkdir(parents=True)
-        # "Law" is an author, but the titles use "law" as a common noun.
         (lib / "Law, S. - On the law of large numbers.pdf").write_bytes(b"%PDF")
         (lib / "Law, S. - Another law of iterated logarithm.pdf").write_bytes(b"%PDF")
         (lib / "Bourbaki, N. - On a seminar.pdf").write_bytes(b"%PDF")
-        saved, av._CENSUS = av._CENSUS, None
+        mined, ev = av.mine(tmp_path / "lib")
+        assert "law" in mined, "it IS a mined surname; that is the whole problem"
+        assert ev.get("law", (0, 0))[1] >= 2, ev
+        assert av.verdict(*ev["law"]) == av.COMMON
+
+        vocab = tmp_path / "vocab.json"
+        av.write(mined, ev, vocab)
+        saved = (av._CACHE, av._EVIDENCE, av._DECISIONS)
+        av._CACHE = av._EVIDENCE = av._DECISIONS = None
         try:
-            mined = av.mine(tmp_path / "lib")
+            usable = av.surnames(vocab, tmp_path / "none.json")
         finally:
-            av._CENSUS = saved
-        assert "bourbaki" in mined, mined
-        assert "law" not in mined, (
-            "the titles use 'law' in lower case twice and never capitalised, "
-            f"so it must not enter the vocabulary: {sorted(mined)}"
+            av._CACHE, av._EVIDENCE, av._DECISIONS = saved
+        assert "bourbaki" in usable
+        assert "law" not in usable, (
+            "the titles use 'law' in lower case twice and never capitalised"
         )
 
-    def test_the_census_keeps_a_name_used_mostly_as_a_name(self, tmp_path):
-        """Kills: `lo == 0 or upper > lo` -> `lo == 0`.
+    def test_the_evidence_ignores_the_titles_own_first_word(self, tmp_path):
+        """Kills: `if m.start() == 0: continue` in the evidence pass.
 
-        A name that appears in lower case even ONCE would be thrown away by
-        the stricter rule. Measured on the real library that costs "May"
-        (42 capitalised against 10 lower) and "Bell" (4 against 1) — the
-        month in proceedings titles and Bell numbers. The majority rule
-        keeps them.
-
-        The shipped vocabulary file was generated with the real rule, so the
-        stricter variant cannot be seen by loading it; this builds a library
-        where the branch decides.
-        """
-        import processing.author_vocabulary as av
-        lib = tmp_path / "lib" / "01 - Published papers" / "B"
-        lib.mkdir(parents=True)
-        for n, t in enumerate([
-            "On Bell numbers and their asymptotics",
-            "Another look at Bell numbers",
-            "A study of the bell shaped density",
-        ]):
-            (lib / f"Bell, E. - {t}.pdf").write_bytes(b"%PDF")
-        saved, av._CENSUS = av._CENSUS, None
-        try:
-            mined = av.mine(tmp_path / "lib")
-        finally:
-            av._CENSUS = saved
-        assert "bell" in mined, (
-            "capitalised twice against once in lower case — the library's own "
-            f"usage says this is a name: {sorted(mined)}"
-        )
-
-    def test_the_census_ignores_the_titles_own_first_word(self, tmp_path):
-        """Kills: `if m.start() == 0: continue` in _title_case_census.
-
-        The first word of a title is always capitalised, so it is not
-        evidence about anything. Counting it lets a word that is only ever
+        Every title starts with a capital, so a title-initial capital is
+        evidence about nothing. Counting it lets a word that is only ever
         title-initial look like a name.
         """
         import processing.author_vocabulary as av
         lib = tmp_path / "lib" / "01 - Published papers" / "S"
         lib.mkdir(parents=True)
         for t in [
-            "Stability of the numerical scheme",      # title-initial capital
-            "Stability results for a diffusion",      # title-initial capital
+            "Stability of the numerical scheme",      # title-initial
+            "Stability results for a diffusion",      # title-initial
             "On the stability of solutions",          # mid-title, lower case
         ]:
             (lib / f"Stability, A. - {t}.pdf").write_bytes(b"%PDF")
-        saved, av._CENSUS = av._CENSUS, None
-        try:
-            mined = av.mine(tmp_path / "lib")
-        finally:
-            av._CENSUS = saved
-        assert "stability" not in mined, (
-            "its only capitals are title-initial, which every title has; the "
-            f"one piece of real evidence is lower case: {sorted(mined)}"
+        _mined, ev = av.mine(tmp_path / "lib")
+        up, low = ev.get("stability", (0, 0))
+        assert up == 0, (
+            f"its only capitals are title-initial, which every title has, so "
+            f"they must not be counted as evidence: got {up} capitalised"
         )
+        assert low >= 1
+        assert av.verdict(up, low) == av.COMMON

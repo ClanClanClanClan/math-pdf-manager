@@ -2154,6 +2154,70 @@ def _spelling_scan(lib):
             "learned": learned_words_in_play()}
 
 
+def _render_name_or_word_review() -> None:
+    """Words that are BOTH a mathematician and an ordinary word.
+
+    The caser preserves a capital on any word the library knows as an author
+    surname. Most are unambiguous, but a few are also ordinary words --
+    Green, Brown, Bell, May, Courant, Hull -- and for those the library's own
+    usage is genuinely mixed. Guessing either way is wrong often enough to be
+    worth asking about, so those words are HELD BACK until answered rather
+    than quietly treated as names. An unanswered question must not act as a
+    yes.
+
+    Answers are written to config/surname_decisions.json immediately, survive
+    a re-mine of the vocabulary, and beat the evidence.
+    """
+    import processing.author_vocabulary as av
+
+    try:
+        queue = av.review_queue()
+    except Exception as exc:                      # never take the page down
+        st.warning(f"The name vocabulary could not be read ({exc}), so no "
+                   f"words are being held for review — this is not the same "
+                   f"as there being none.")
+        return
+    if not queue:
+        return
+
+    changed = [r for r in queue if r["changed_since_you_decided"]]
+    with st.expander(
+        f"Name or ordinary word? {len(queue)} to settle"
+        + (f" · {len(changed)} changed since you decided" if changed else ""),
+        expanded=bool(changed),
+    ):
+        st.caption(
+            "Each of these is a real author surname in your library AND an "
+            "ordinary word in your titles. Until you decide, the capital is "
+            "left alone rather than guessed at. Closest calls first."
+        )
+        for row in queue[:40]:
+            word, up, low = row["word"], row["capitalised"], row["lower"]
+            cols = st.columns([3, 4, 1.2, 1.2])
+            label = f"**{word}**"
+            if row["changed_since_you_decided"]:
+                label += "  ⟳"
+            cols[0].markdown(label)
+            note = (f"{up} capitalised · {low} lower case in your titles")
+            if row["decided"]:
+                note += f" — you said *{row['decided']}*"
+                if row["changed_since_you_decided"]:
+                    note += ", and the usage has since moved"
+            cols[1].caption(note)
+            if cols[2].button("Name", key=f"nm_{word}",
+                              help=f"Keep the capital: “{word.title()}”"):
+                av.save_decision(word, av.NAME, evidence=(up, low))
+                _log_activity("vocab.name", word, f"{up}/{low}")
+                st.rerun()
+            if cols[3].button("Word", key=f"wd_{word}",
+                              help=f"Lower-case it: “{word}”"):
+                av.save_decision(word, av.COMMON, evidence=(up, low))
+                _log_activity("vocab.common", word, f"{up}/{low}")
+                st.rerun()
+        if len(queue) > 40:
+            st.caption(f"…and {len(queue) - 40} more, shown once these are done.")
+
+
 def render_spelling() -> None:
     """Suspected misspellings — review only, never automatic.
 
@@ -2170,6 +2234,8 @@ def render_spelling() -> None:
     lib = _library()
     _page_header("🔤", "Spelling",
                  "Words that look wrong. Nothing is corrected automatically.")
+
+    _render_name_or_word_review()
 
     if st.button("↻ Rescan", key="sp_rescan") or "spelling" not in st.session_state:
         with st.spinner("Reading every filename and asking the dictionary…"):
