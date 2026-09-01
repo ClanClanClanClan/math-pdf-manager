@@ -458,8 +458,8 @@ def _title_is_title_cased(tokens, i_stop=None):
     recovers 6 more and costs 113 title-cased errors, so the surface is not
     flat. Re-measure if the mined vocabulary changes materially.
     """
-    from processing.author_vocabulary import surnames
-    known = surnames()
+    from processing.casing_vocabulary import preserved
+    known = preserved()
     content = []
     for j, tok in enumerate(tokens):
         if tok.kind != 'WORD' or not tok.value[:1].isalpha():
@@ -633,6 +633,30 @@ def to_sentence_case_academic(
                         matched_via_dash_norm = True
                         break
 
+                # A whitelist entry does not preserve a capital, it IMPOSES
+                # one: matching is case-insensitive and the entry's own
+                # spelling is emitted. That is useful for "Ito" -> "Itô" and
+                # wrong for a word this library writes in lower case.
+                #
+                # MEASURED on the shipped 848-entry list: five bare entries
+                # impose 267 wrong capitals between them. "Le" turns "sur le
+                # grossissement" into "sur Le grossissement" 131 times (the
+                # entry is presumably meant for Le Cam and Le Gall);
+                # "posedness" turns "well-posedness" into "well-Posedness"
+                # 86 times; then White 23, Bank 18, Hold 9.
+                #
+                # So an entry may not overrule the library's own usage. This
+                # only ever blocks an entry from RAISING a lower-case word --
+                # a phrase that is already capitalised is untouched, and no
+                # entry loses its ability to fix spelling or dashes.
+                if exact_match and phrase[:1].islower():
+                    try:
+                        from processing.casing_vocabulary import is_common
+                        if is_common(phrase.split()[0]):
+                            exact_match = None
+                    except Exception:            # never take the page down
+                        pass
+
                 if exact_match:
                     if matched_via_dash_norm:
                         # Apply the whitelist's EXACT form: both the
@@ -704,6 +728,17 @@ def to_sentence_case_academic(
                     if word_base.lower() == term.lower():
                         exact_match = term
                         break
+
+                # Same guard as in the phrase branch above: a whitelist entry
+                # may not IMPOSE a capital on a word this library writes in
+                # lower case. "Le" alone accounts for 131 of the 267.
+                if exact_match and word[:1].islower():
+                    try:
+                        from processing.casing_vocabulary import is_common
+                        if is_common(word):
+                            exact_match = None
+                    except Exception:            # never take the page down
+                        pass
 
                 if exact_match:
                     result_parts.append(exact_match + possessive_suffix)
@@ -868,8 +903,8 @@ def to_sentence_case_academic(
                 # recovered across 723 titles, 4 wrongly kept, 0 imposed,
                 # 0 lost, 0 titles destroyed. docs/proper-nouns-measured.md.
                 if word[:1].isupper():
-                    from processing.author_vocabulary import surnames
-                    _known = surnames()
+                    from processing.casing_vocabulary import preserved
+                    _known = preserved()
                     if (word.lower() in _known
                             or _in_a_name_compound(tokens, i, _known)):
                         if _title_is_title_cased(tokens) is not True:

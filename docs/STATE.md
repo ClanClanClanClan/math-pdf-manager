@@ -26,6 +26,26 @@ Read `CLAUDE.md` first for the non-negotiables. This document is the state.
 
 ## Needs your decision, now
 
+### 0. 148 words are waiting for you to say name-or-word
+
+The caser now learns which words this library capitalises from the library
+itself -- a census over every mid-title word, which covers mathematicians,
+places, months and Roman numerals with no lists at all (2,388 capitals
+recovered, 0 imposed, 0 lost, 0 titles damaged).
+
+Where the evidence is genuinely mixed it does NOT guess: **124 words are held
+back** until you decide, and 24 more are **flagged** -- French adjectives built
+from a name, where the library is unanimous but French may disagree. They are
+on the cockpit's **Spelling** page, closest call first, with the counts, a note
+saying whether the word is an author in your library, and a Name / Word button
+each.
+
+Your answers go to `config/casing_decisions.json`, survive a re-mine, and beat
+the evidence. When the library's usage later crosses the rule, the word comes
+back marked *changed since you decided*. See `docs/proper-nouns-measured.md`.
+
+
+
 ### 1. Automatic filing — FIXED, needs one click from you
 
 **Was:** `~/Downloads/MathInbox` did not exist. The daemon had been running

@@ -8,7 +8,7 @@ Paley 12, Doeblin 9, Gronwall 8, plus Saint-Flour, Paris, Tōhoku and the
 months.
 
 THE SOURCE. The library already knows these names: every filename carries an
-author block. ``processing.author_vocabulary`` mines 11,779 surnames from
+author block. ``processing.casing_vocabulary`` mines 11,779 surnames from
 them read-only, so a new eponym arrives with its first paper rather than with
 a hand-edited config entry.
 
@@ -33,7 +33,7 @@ import unicodedata
 import pytest
 
 from core.sentence_case import to_sentence_case_academic
-from processing.author_vocabulary import surnames, _NOT_SURNAMES, VOCAB_PATH
+from processing.casing_vocabulary import preserved, _NOT_SURNAMES, VOCAB_PATH
 
 
 def _cased(title):
@@ -45,7 +45,7 @@ def _cased(title):
 
 def test_the_vocabulary_exists_and_is_substantial():
     """A silently empty vocabulary would make every test below vacuous."""
-    names = surnames()
+    names = preserved()
     assert len(names) > 8000, len(names)
     assert all(n == n.lower() for n in names), "entries must be lowercase"
 
@@ -57,10 +57,10 @@ def test_a_missing_vocabulary_degrades_and_does_not_raise():
     behaviour before the rule existed — not a traceback that takes the
     cockpit down.
     """
-    import processing.author_vocabulary as av
+    import processing.casing_vocabulary as av
     saved, av._CACHE = av._CACHE, None          # bypass the module cache
     try:
-        assert av.surnames(pathlib.Path("/nonexistent/nope.txt")) == set()
+        assert av.preserved(pathlib.Path("/nonexistent/nope.txt")) == set()
     finally:
         av._CACHE = saved
 
@@ -78,14 +78,22 @@ def test_a_missing_vocabulary_degrades_and_does_not_raise():
 
 @pytest.mark.parametrize("month", ["juillet", "mai", "août", "settembre",
                                    "dezember", "octubre"])
-def test_foreign_months_are_not_in_the_surname_set(month):
+def test_foreign_months_never_enter_the_AUTHOR_set(month):
     """"Juillet" is a real probabilist AND French for July.
 
-    It produced 3 of the 4 measured errors of an earlier draft. An English
-    dictionary cannot find these, which is why they are listed by hand.
+    The hand list guards the AUTHOR set only. It must not touch the census:
+    the census gets months right by itself and PER LANGUAGE, which a single
+    list cannot. Measured — April 38/0 and September 13/0, because English
+    capitalises months; mai 0/7, juin 0/10 and septembre 0/2, because French
+    does not; Dezember 1/0, because German capitalises every noun; and
+    juillet 3/1 and May 42/10 in the review band, where they belong.
+
+    Filtering the census with this list removed the English months from the
+    vocabulary and cost real recoveries.
     """
+    import processing.casing_vocabulary as av
     assert month in _NOT_SURNAMES
-    assert month not in surnames()
+    assert month not in av.authors()
 
 
 # ------------------------------------------------------------------ the rule
@@ -131,7 +139,7 @@ def test_the_rule_cannot_impose_a_capital_on_a_name_it_knows():
     docs/proper-nouns-measured.md, and it is NOT this rule's doing --
     asserting over it here would make this test fail for someone else's bug.
     """
-    known = surnames()
+    known = preserved()
     probes = [w for w in ("hunt", "root", "bell", "may", "ray", "price",
                           "gross", "abel", "lee", "morse") if w in known]
     assert len(probes) >= 5, f"vocabulary too thin to test: {probes}"
@@ -234,8 +242,8 @@ def test_a_word_that_is_both_is_withheld_and_queued():
     put in the review queue for the owner. Guessing here is what the queue
     exists to avoid.
     """
-    import processing.author_vocabulary as av
-    assert "bell" not in surnames(), "a mixed-evidence word must not be assumed"
+    import processing.casing_vocabulary as av
+    assert "bell" not in preserved(), "a mixed-evidence word must not be assumed"
     assert "bell" in {r["word"] for r in av.review_queue()}, (
         "and it must be ASKED about, not silently dropped"
     )
@@ -275,7 +283,7 @@ def test_this_rule_imposes_no_capital_anywhere_in_the_corpus():
           / "fixtures" / "math_regions_ground_truth.json")
     if not fx.exists():
         pytest.skip("corpus fixture unavailable — UNKNOWN, not OK")
-    import processing.author_vocabulary as av
+    import processing.casing_vocabulary as av
     bad = []
     for row in json.loads(fx.read_text())["labelled"]:
         t = unicodedata.normalize("NFC", row["title"])
@@ -321,7 +329,7 @@ class TestTheBranchesMutationFound:
         caps = [x.value for x in toks
                 if x.kind == "WORD" and x.value[:1].isupper()]
         assert len(caps) >= 3, caps
-        assert all(c.lower() in surnames() for c in caps[1:]), caps
+        assert all(c.lower() in preserved() for c in caps[1:]), caps
         assert _title_is_title_cased(toks) is False, (
             "every capital here is a name, so this is a sentence-cased title "
             "that happens to be dense with names — not Title Case"
@@ -346,7 +354,7 @@ class TestTheBranchesMutationFound:
         out = _cased("A study of Hunt-Processes and their Semigroups")
         assert "Semigroups" not in out, out
 
-    def test_a_regenerated_vocabulary_is_still_swept_for_months(self, tmp_path):
+    def test_the_census_is_not_swept_by_the_author_month_list(self, tmp_path):
         """Kills BOTH month-filter mutants.
 
         The shipped file already has the months removed, so dropping the
@@ -355,32 +363,33 @@ class TestTheBranchesMutationFound:
         documented way to pick up new authors.
         """
         import json as _json
-        import processing.author_vocabulary as av
+        import processing.casing_vocabulary as av
         bad = tmp_path / "vocab.json"
         bad.write_text(_json.dumps({
-            "names": ["juillet", "mai", "settembre", "bourbaki"],
-            "evidence": {},
+            "authors": ["juillet", "mai", "settembre", "bourbaki"],
+            "evidence": {"juillet": [3, 0], "mai": [2, 0],
+                         "settembre": [6, 0], "bourbaki": [64, 0]},
         }), encoding="utf-8")
-        saved = (av._CACHE, av._EVIDENCE, av._DECISIONS)
-        av._CACHE = av._EVIDENCE = av._DECISIONS = None
+        saved = (av._CACHE, av._EVIDENCE, av._AUTHORS, av._DECISIONS)
+        av._CACHE = av._EVIDENCE = av._AUTHORS = av._DECISIONS = None
         try:
-            names = av.surnames(bad, tmp_path / "none.json")
+            names = av.preserved(bad, tmp_path / "none.json")
         finally:
-            av._CACHE, av._EVIDENCE, av._DECISIONS = saved
-        assert "bourbaki" in names, "a real name must survive the sweep"
+            av._CACHE, av._EVIDENCE, av._AUTHORS, av._DECISIONS = saved
+        assert "bourbaki" in names
         for month in ("juillet", "mai", "settembre"):
-            assert month not in names, (
-                f"{month} is a month in some language the library uses; "
-                f"'Juillet' is also a real probabilist, which is exactly why "
-                f"an English dictionary cannot settle it"
+            assert month in names, (
+                f"the census, not a hand list, decides {month!r} in a TITLE. "
+                f"Here the fixture says it is only ever capitalised, so it is "
+                f"kept; on the real library mai is 0/7 and correctly dropped."
             )
 
-    def test_the_mine_step_sweeps_months_too(self):
-        """The other half: mine() must not emit them either."""
-        import processing.author_vocabulary as av
+    def test_the_mine_step_keeps_months_out_of_the_authors(self):
+        """The other half: mine() must not put them in the author hint."""
+        import processing.casing_vocabulary as av
         assert av._NOT_SURNAMES & {"juillet", "mai", "settembre", "dezember"}
-        shipped = av.surnames()
-        assert not (shipped & av._NOT_SURNAMES), sorted(shipped & av._NOT_SURNAMES)[:5]
+        assert not (av.authors() & av._NOT_SURNAMES), \
+            sorted(av.authors() & av._NOT_SURNAMES)[:5]
 
     @pytest.mark.parametrize("title", [
         "Équations aux dérivées partielles, proceedings, Saint-Jean-de-Monts, 1977",
@@ -428,13 +437,13 @@ class TestTheBranchesMutationFound:
         be seen by loading that file. This builds a fake library instead. It
         never touches the real one.
         """
-        import processing.author_vocabulary as av
+        import processing.casing_vocabulary as av
         lib = tmp_path / "lib" / "01 - Published papers" / "J"
         lib.mkdir(parents=True)
         (lib / "Juillet, A. - On a transport problem.pdf").write_bytes(b"%PDF")
         (lib / "Bourbaki, N. - On a seminar.pdf").write_bytes(b"%PDF")
         (lib / "van der Waerden, B. L. - On an algebra.pdf").write_bytes(b"%PDF")
-        mined, _ev = av.mine(tmp_path / "lib")
+        _ev, mined = av.mine(tmp_path / "lib")
         assert "bourbaki" in mined and "waerden" in mined, mined
         assert "juillet" not in mined, (
             "a French month reached the vocabulary through an author block; "
@@ -456,25 +465,25 @@ class TestTheBranchesMutationFound:
         unchanged: a word the library's own titles write in lower case must
         not end up usable as a name.
         """
-        import processing.author_vocabulary as av
+        import processing.casing_vocabulary as av
         lib = tmp_path / "lib" / "01 - Published papers" / "L"
         lib.mkdir(parents=True)
         (lib / "Law, S. - On the law of large numbers.pdf").write_bytes(b"%PDF")
         (lib / "Law, S. - Another law of iterated logarithm.pdf").write_bytes(b"%PDF")
         (lib / "Bourbaki, N. - On a seminar.pdf").write_bytes(b"%PDF")
-        mined, ev = av.mine(tmp_path / "lib")
+        ev, mined = av.mine(tmp_path / "lib")
         assert "law" in mined, "it IS a mined surname; that is the whole problem"
         assert ev.get("law", (0, 0))[1] >= 2, ev
         assert av.verdict(*ev["law"]) == av.COMMON
 
         vocab = tmp_path / "vocab.json"
-        av.write(mined, ev, vocab)
-        saved = (av._CACHE, av._EVIDENCE, av._DECISIONS)
-        av._CACHE = av._EVIDENCE = av._DECISIONS = None
+        av.write(ev, mined, vocab)
+        saved = (av._CACHE, av._EVIDENCE, av._AUTHORS, av._DECISIONS)
+        av._CACHE = av._EVIDENCE = av._AUTHORS = av._DECISIONS = None
         try:
-            usable = av.surnames(vocab, tmp_path / "none.json")
+            usable = av.preserved(vocab, tmp_path / "none.json")
         finally:
-            av._CACHE, av._EVIDENCE, av._DECISIONS = saved
+            av._CACHE, av._EVIDENCE, av._AUTHORS, av._DECISIONS = saved
         assert "bourbaki" in usable
         assert "law" not in usable, (
             "the titles use 'law' in lower case twice and never capitalised"
@@ -487,7 +496,7 @@ class TestTheBranchesMutationFound:
         evidence about nothing. Counting it lets a word that is only ever
         title-initial look like a name.
         """
-        import processing.author_vocabulary as av
+        import processing.casing_vocabulary as av
         lib = tmp_path / "lib" / "01 - Published papers" / "S"
         lib.mkdir(parents=True)
         for t in [
@@ -496,7 +505,7 @@ class TestTheBranchesMutationFound:
             "On the stability of solutions",          # mid-title, lower case
         ]:
             (lib / f"Stability, A. - {t}.pdf").write_bytes(b"%PDF")
-        _mined, ev = av.mine(tmp_path / "lib")
+        ev, _mined = av.mine(tmp_path / "lib")
         up, low = ev.get("stability", (0, 0))
         assert up == 0, (
             f"its only capitals are title-initial, which every title has, so "

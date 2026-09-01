@@ -2155,25 +2155,29 @@ def _spelling_scan(lib):
 
 
 def _render_name_or_word_review() -> None:
-    """Words that are BOTH a mathematician and an ordinary word.
+    """Words this library writes BOTH ways, for the owner to settle.
 
-    The caser preserves a capital on any word the library knows as an author
-    surname. Most are unambiguous, but a few are also ordinary words --
-    Green, Brown, Bell, May, Courant, Hull -- and for those the library's own
-    usage is genuinely mixed. Guessing either way is wrong often enough to be
-    worth asking about, so those words are HELD BACK until answered rather
-    than quietly treated as names. An unanswered question must not act as a
-    yes.
+    The caser preserves a capital on any word the library's own titles
+    usually capitalise. Most words are unanimous. A few are not -- Green,
+    Brown, Bell, May, Courant, Hull -- and for those, guessing either way is
+    wrong often enough to be worth asking. Those are HELD BACK until
+    answered rather than quietly treated as names: an unanswered question
+    must not act as a yes.
 
-    Answers are written to config/surname_decisions.json immediately, survive
+    A second, smaller list is FLAGGED rather than held: French adjectives
+    built from a name ("gaussiennes", "laplacien"), where the library is
+    unanimous but French orthography might disagree with it. Those are
+    applied, and shown, because the owner is the one who knows.
+
+    Answers are written to config/casing_decisions.json immediately, survive
     a re-mine of the vocabulary, and beat the evidence.
     """
-    import processing.author_vocabulary as av
+    import processing.casing_vocabulary as av
 
     try:
         queue = av.review_queue()
     except Exception as exc:                      # never take the page down
-        st.warning(f"The name vocabulary could not be read ({exc}), so no "
+        st.warning(f"The casing vocabulary could not be read ({exc}), so no "
                    f"words are being held for review — this is not the same "
                    f"as there being none.")
         return
@@ -2181,28 +2185,37 @@ def _render_name_or_word_review() -> None:
         return
 
     changed = [r for r in queue if r["changed_since_you_decided"]]
-    with st.expander(
-        f"Name or ordinary word? {len(queue)} to settle"
-        + (f" · {len(changed)} changed since you decided" if changed else ""),
-        expanded=bool(changed),
-    ):
+    held = [r for r in queue if r["kind"] == "held"]
+    flagged = [r for r in queue if r["kind"] == "flagged"]
+
+    bits = []
+    if changed:
+        bits.append(f"{len(changed)} changed since you decided")
+    if held:
+        bits.append(f"{len(held)} held back")
+    if flagged:
+        bits.append(f"{len(flagged)} worth a look")
+    with st.expander("Name or ordinary word?  " + " · ".join(bits),
+                     expanded=bool(changed)):
         st.caption(
-            "Each of these is a real author surname in your library AND an "
-            "ordinary word in your titles. Until you decide, the capital is "
-            "left alone rather than guessed at. Closest calls first."
+            "Your titles write each of these both ways. Held-back words are "
+            "not being capitalised until you decide; flagged ones are, but "
+            "may be wrong. Closest call first."
         )
-        for row in queue[:40]:
+        for row in queue[:60]:
             word, up, low = row["word"], row["capitalised"], row["lower"]
-            cols = st.columns([3, 4, 1.2, 1.2])
-            label = f"**{word}**"
-            if row["changed_since_you_decided"]:
-                label += "  ⟳"
-            cols[0].markdown(label)
-            note = (f"{up} capitalised · {low} lower case in your titles")
+            cols = st.columns([3, 4.5, 1.1, 1.1])
+            mark = {"changed": "⟳ ", "held": "", "flagged": "◇ "}[row["kind"]]
+            cols[0].markdown(f"{mark}**{word}**")
+            note = f"{up} capitalised · {low} lower case"
+            if row["is_author"]:
+                note += " · an author in your library"
             if row["decided"]:
                 note += f" — you said *{row['decided']}*"
                 if row["changed_since_you_decided"]:
                     note += ", and the usage has since moved"
+            elif row["kind"] == "flagged":
+                note += " · applied, but French would lower-case it"
             cols[1].caption(note)
             if cols[2].button("Name", key=f"nm_{word}",
                               help=f"Keep the capital: “{word.title()}”"):
@@ -2214,8 +2227,8 @@ def _render_name_or_word_review() -> None:
                 av.save_decision(word, av.COMMON, evidence=(up, low))
                 _log_activity("vocab.common", word, f"{up}/{low}")
                 st.rerun()
-        if len(queue) > 40:
-            st.caption(f"…and {len(queue) - 40} more, shown once these are done.")
+        if len(queue) > 60:
+            st.caption(f"…and {len(queue) - 60} more, shown once these are done.")
 
 
 def render_spelling() -> None:
