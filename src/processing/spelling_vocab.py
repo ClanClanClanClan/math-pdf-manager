@@ -155,3 +155,88 @@ def accepted_words(library_root: Path) -> frozenset:
     saying so.
     """
     return frozenset(load_rulings(library_root)[CORRECT])
+
+
+def apply_case_of(original: str, replacement: str) -> str:
+    """Give *replacement* the capitalisation of the word it replaces.
+
+    THE BUG THIS FIXES DAMAGED A REAL TITLE. Suggestions come from
+    ``maintenance.typos.nearest_frequent``, which looks them up in a corpus
+    keyed on LOWER-CASE words, so every suggestion arrives lower case. The
+    Spelling page substituted it verbatim:
+
+        "Browniam motion"        ->  "brownian motion"     (want Brownian)
+        "Makov chains revisited" ->  "markov chains ..."   (want Markov)
+        "On BROWNIAM motion"     ->  "On brownian motion"  (want BROWNIAN)
+
+    The owner hit the third-worst version of this -- the misspelled word
+    STARTED the title, so the fix silently lower-cased the first letter of
+    the filename, and he had to find the file again and put it back.
+
+    Three shapes, and nothing else is inferred:
+
+        Xxxxx  -> capitalise    a name or a title-initial word
+        XXXXX  -> upper         an acronym
+        xxxxx  -> leave alone   ordinary prose
+
+    A mixed shape like "McDonald" is left as the suggestion gives it, because
+    guessing an interior capital is how "MacKean" becomes "Mckean".
+    """
+    if not original or not replacement:
+        return replacement
+    if original.isupper() and len(original) > 1:
+        return replacement.upper()
+    if original[:1].isupper():
+        return replacement[:1].upper() + replacement[1:]
+    return replacement
+
+
+def _title_starts_at(name: str) -> int:
+    """Index in *name* where the title begins.
+
+    Asks ``processing.filename_ground_truth.decompose``, which is this
+    project's single answer to where the author block ends. Rolling a second
+    rule here would be a rival implementation, and the obvious guess is
+    WRONG: the title starts after the FIRST " - ", not the last, because a
+    title may itself contain one --
+
+        "Bouchard, B. - An introduction ... - Lecture 2 - Price models"
+                        ^ the title starts here
+
+    An earlier draft used rfind and would have forced a capital in the middle
+    of that title. Mutation testing flagged the difference and the decomposer
+    settled it.
+
+    Falls back to the first " - " if the name cannot be decomposed reliably;
+    that is the same rule for the ordinary case and simply less careful about
+    the exotic ones.
+    """
+    try:
+        from processing.filename_ground_truth import decompose
+        d = decompose(name[:-4] if name.lower().endswith(".pdf") else name)
+        title = getattr(d, "title", None)
+        if title:
+            idx = name.find(str(title))
+            if idx >= 0:
+                return idx
+    except Exception:                            # pragma: no cover - defensive
+        pass
+    sep = name.find(" - ")
+    return sep + 3 if sep >= 0 else 0
+
+
+def replace_preserving_case(name: str, word: str, suggestion: str) -> str:
+    """Swap *word* for *suggestion* in *name*, keeping the original's case.
+
+    Also forces a capital when the replaced word STARTS THE TITLE, whatever
+    case the original carried -- a title's first word is capitalised by
+    convention, so a lower-case original there is itself the error and must
+    not be propagated.
+    """
+    idx = name.find(word)
+    if idx < 0:
+        return name
+    replacement = apply_case_of(word, suggestion)
+    if idx == _title_starts_at(name):
+        replacement = replacement[:1].upper() + replacement[1:]
+    return name[:idx] + replacement + name[idx + len(word):]

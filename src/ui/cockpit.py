@@ -2242,7 +2242,8 @@ def render_spelling() -> None:
     """
     from processing.library_normalize import apply_renames
     from processing.spelling_vocab import (CORRECT, DEFERRED, clear_ruling,
-                                           load_rulings, rule)
+                                           load_rulings, replace_preserving_case,
+                                           rule)
 
     lib = _library()
     _page_header("🔤", "Spelling",
@@ -2322,21 +2323,30 @@ def render_spelling() -> None:
             if s["lower"] in deferred:
                 continue
             key = f"{row['rel']}::{s['lower']}"
+            # Show what will ACTUALLY happen. Suggestions arrive in lower
+            # case from a corpus keyed that way, and the rename now carries
+            # the original's capitalisation onto them -- so displaying the
+            # raw suggestion would promise "brownian" and deliver
+            # "Brownian". The button and the label must agree with the file.
+            new_name = replace_preserving_case(
+                row["name"], s["word"], s["suggestion"])
+            _at = row["name"].find(s["word"])
+            shown = (new_name[_at:_at + len(s["suggestion"])]
+                     if _at >= 0 else s["suggestion"])
             with st.container(border=True):
                 st.markdown(
-                    f"**{rank}. {s['word']}** → *{s['suggestion']}* "
+                    f"**{rank}. {s['word']}** → *{shown}* "
                     f"<span style='opacity:.6'>({s['distance']} edit"
                     f"{'s' if s['distance'] > 1 else ''}, the suggestion "
                     f"appears in {s['suggestion_freq']:,} files)</span>",
                     unsafe_allow_html=True)
                 st.caption(f"`{row['rel']}`")
                 b = st.columns(3)
-                if b[0].button(f"Rename to “{s['suggestion']}”",
+                if b[0].button(f"Rename to “{shown}”",
                                key=f"sp_fix_{key}", use_container_width=True):
-                    new = row["name"].replace(s["word"], s["suggestion"], 1)
                     res = apply_renames(
                         lib, [{"old": row["rel"],
-                               "new": str(Path(row["rel"]).parent / new)}],
+                               "new": str(Path(row["rel"]).parent / new_name)}],
                         dry_run=False)
                     if res.get("renamed"):
                         rule(lib, s["lower"], "typo", s["suggestion"])
