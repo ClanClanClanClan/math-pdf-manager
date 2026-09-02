@@ -322,7 +322,21 @@ nothing — they prevent damage rather than repair it. Twelve titles do
 hold a lower-case institution name and would only be corrected by phrase
 rulings, which are the owner's call.
 
-Tests: `tests/safety/test_institution_names_keep_their_capitals.py`.
+**Where the owner does this.** Settings → **Name phrases** lists every
+multi-word name already in the whitelist that is not yet ruled, with a
+measured count of how many filenames spell it differently today, and
+rules or revokes one with a click. Ruling changes only what the namer
+*would* do; Maintenance → *Normalize existing filenames* is where the
+resulting renames are reviewed and applied reversibly. The two are
+deliberately separate steps.
+
+Measured 2026-09-02 over 29,512 filenames: 16 phrases would fix 28 files
+between them, and for every one of those phrases the count shown and the
+number the renamer actually changes agree exactly.
+
+Tests: `tests/safety/test_institution_names_keep_their_capitals.py`,
+`tests/test_processing/test_phrase_impact.py`,
+`tests/ui/test_phrase_rulings_section.py`.
 
 ### 3.15 German sharp-s and special letters
 

@@ -4110,6 +4110,162 @@ def _render_title_vocabulary(lib: Path) -> None:
             st.caption(f"…and {len(pending) - 50} more (highest-count 50 shown).")
 
 
+def _render_phrase_rulings(lib: Path) -> None:
+    """Owner rulings on multi-word names — the one RETROACTIVE decision.
+
+    A word ruling only ever PRESERVES a capital that is already in the
+    filename; it cannot put one there.  A phrase ruling is different: it
+    matches case- and dash-blind and rewrites the span to the spelling
+    ruled here, so it can repair names already in the library.  That is
+    the whole reason institution names have to be phrases — "Rutgers
+    University" is a name, "a university course" is a description, and
+    no per-word rule can tell them apart (measured: a mechanical version
+    got 3 of this library's 6 universities right and fired on "Lvov
+    school", which is a movement, not a place).
+
+    Nothing here renames anything.  A ruling changes what the namer
+    WOULD do; Maintenance → "Normalize existing filenames" is where the
+    owner sees the resulting renames and applies them reversibly.  The
+    two are deliberately separate: a checkbox that silently renamed
+    files across the library is exactly the shape of the mistakes this
+    project has already paid for.
+    """
+    from processing.phrase_impact import already_correct, impact
+    from processing.title_vocab import decide_phrase, phrase_rulings
+
+    ruled = phrase_rulings(lib)
+    ruled_folded = {r.casefold() for r in ruled}
+
+    # Suggestions are DERIVED, not a second hand-kept list: every
+    # multi-word entry the owner has already endorsed in the
+    # capitalisation whitelist is a candidate to also be imposed.
+    # Measured: 27 such entries, none yet ruled.
+    try:
+        from processing.title_normalize import _whitelists
+        suggestions = sorted(
+            w for w in _whitelists()
+            if len(w.split()) > 1 and w.casefold() not in ruled_folded
+        )
+    except Exception:  # a broken config must not take the page down
+        logger.debug("whitelist load failed", exc_info=True)
+        suggestions = []
+
+    with st.expander(
+        f"🏛 Name phrases — {len(ruled)} ruled, {len(suggestions)} suggested",
+        expanded=False,
+    ):
+        st.caption(
+            "A **phrase** is a name that only makes sense whole — *Rutgers "
+            "University*, *New York*, *Euclid's Elements*.  Ruling one fixes "
+            "its spelling everywhere: unlike a single-word ruling, it can "
+            "correct files already in your library.  It never renames "
+            "anything by itself — after ruling, go to **Maintenance → "
+            "Normalize existing filenames** to see and apply the renames."
+        )
+
+        # ---- what would this actually fix? -----------------------------
+        # Deliberately behind a button.  The name index is a ~9s library
+        # walk (cached 30 min); pages in this cockpit must not scan on
+        # render, which is the rule the sidebar badge exists to obey.
+        if st.button("🔍 Check what these would fix", key="phr_check",
+                     help="Reads your filenames once (~9s) and counts, for "
+                          "each phrase, how many spell it differently today"):
+            try:
+                names = [r[0] for r in _search_index_cached(str(lib))]
+            except Exception as exc:
+                logger.exception("phrase impact index failed")
+                st.error(f"Could not read your filenames: {exc}")
+                names = None
+            if names is not None:
+                st.session_state["phr_impact"] = {
+                    ph: (len(impact(names, ph)), already_correct(names, ph))
+                    for ph in list(suggestions) + list(ruled)
+                }
+                st.session_state["phr_examples"] = {
+                    ph: impact(names, ph)[:5] for ph in suggestions
+                }
+
+        counts = st.session_state.get("phr_impact") or {}
+        examples = st.session_state.get("phr_examples") or {}
+
+        def _impact_note(ph: str) -> str:
+            if ph not in counts:
+                return ""
+            differ, same = counts[ph]
+            if differ:
+                return f"  ·  **{differ}** spelled differently, {same} already right"
+            return f"  ·  nothing to fix ({same} already right)"
+
+        # ---- suggestions ------------------------------------------------
+        if suggestions:
+            st.markdown("**Suggested** — names you already told the namer to "
+                        "keep capitalised, which it could also *fix*:")
+            for ph in suggestions:
+                c = st.columns([5, 2])
+                c[0].markdown(f"**{ph}**{_impact_note(ph)}")
+                for ex in examples.get(ph, []):
+                    c[0].caption(f"↳ {ex[:96]}")
+                if c[1].button("Rule it", key=f"phr_add_{ph}",
+                               use_container_width=True,
+                               help=f"Always spell it “{ph}”"):
+                    try:
+                        changed = decide_phrase(lib, ph, keep=True)
+                    except ValueError as exc:
+                        st.error(str(exc))
+                    else:
+                        st.toast(f"“{ph}” is now ruled."
+                                 if changed else f"“{ph}” was already ruled.")
+                        st.rerun()
+        else:
+            st.caption("No unruled multi-word names in your whitelist.")
+
+        # ---- add your own ------------------------------------------------
+        st.divider()
+        typed = st.text_input(
+            "Rule another name", key="phr_new",
+            placeholder="e.g.  Institut Henri Poincaré",
+            help="Two or more words.  Spell it exactly as you want it to "
+                 "appear in every filename.",
+        )
+        if st.button("Rule this spelling", key="phr_add_typed"):
+            try:
+                changed = decide_phrase(lib, typed, keep=True)
+            except ValueError as exc:
+                # decide_phrase's own message says WHICH rule was broken
+                # (empty / single word / contains the author separator).
+                # Surfacing it verbatim beats inventing a second wording
+                # that could drift from the one the store enforces.
+                st.error(str(exc))
+            else:
+                if changed:
+                    st.toast(f"“{typed.strip()}” is now ruled.")
+                    st.rerun()
+                else:
+                    st.info("That spelling was already ruled — nothing changed.")
+
+        # ---- revoke -------------------------------------------------------
+        if ruled:
+            st.divider()
+            st.markdown(f"**In force ({len(ruled)})**")
+            q = st.text_input("Find a ruled name", key="phr_find",
+                              placeholder="type part of the name")
+            hits = [r for r in ruled if not q or q.casefold() in r.casefold()]
+            if not hits:
+                st.caption("No ruling matches that.")
+            for ph in hits[:40]:
+                c = st.columns([5, 2])
+                c[0].markdown(f"**{ph}**{_impact_note(ph)}")
+                if c[1].button("Revoke", key=f"phr_del_{ph}",
+                               use_container_width=True,
+                               help="Stop imposing this spelling; the words "
+                                    "go back to being judged one at a time"):
+                    if decide_phrase(lib, ph, keep=False):
+                        st.toast(f"“{ph}” is no longer ruled.")
+                    st.rerun()
+            if len(hits) > 40:
+                st.caption(f"…and {len(hits) - 40} more.")
+
+
 def render_settings() -> None:
     """Form-driven editor for the watcher config + Unpaywall email."""
     from ui.cockpit_actions import (
@@ -4123,8 +4279,11 @@ def render_settings() -> None:
         "How the cockpit names your files, watches your inbox, and signs in "
         "for paywalled downloads.",
         how_it_works=(
-            "Four independent sections: **Title vocabulary** teaches the "
-            "namer which capitalised words are real names; **Watcher "
+            "Five independent sections: **Title vocabulary** teaches the "
+            "namer which capitalised words are real names and **Name "
+            "phrases** does the same for multi-word names like "
+            "*Rutgers University* (the only ruling that can also fix "
+            "files you already have); **Watcher "
             "settings** control the folder watched for new PDFs; the two "
             "sign-in sections store the access used to fetch paywalled "
             "papers; **Identity sidecars** are the small metadata files kept "
@@ -4132,6 +4291,7 @@ def render_settings() -> None:
         ),
     )
     _render_title_vocabulary(_library())
+    _render_phrase_rulings(_library())
     st.divider()
     st.subheader("Watcher settings")
     st.caption(
