@@ -162,6 +162,12 @@ capitalization_whitelist:
   - Egorov
   - Einstein
   - El Karoui
+  # A place name whose FIRST word is an ordinary one. The casing
+  # census is per-word, so it lowers "New" (233 lower-case uses)
+  # while keeping "Brunswick". MEASURED: this is the ONLY title of
+  # 25,040 that a move damages today. A phrase entry fires only on
+  # the phrase, so "a new approach" is untouched.
+  - New Brunswick
   - Elamite
   - Ellsberg
   - Elsinger

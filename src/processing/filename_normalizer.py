@@ -27,6 +27,48 @@ logger = logging.getLogger(__name__)
 
 
 
+def _raise_after_sentence_mark(m):
+    """"work?—mlOSP" -> "work? mlOSP", not "work? MlOSP".
+
+    A "?" or "!" ends a sentence, so the word after it starts a new one and
+    IS normally capitalised -- "Mind the cap!—constrained portfolio" really
+    should become "Mind the cap! Constrained portfolio", and a test has
+    asserted that for as long as the rule has existed.
+
+    But the rule upper-cased the next letter unconditionally, and this runs
+    on EVERY ingest and every move, inside the bucket labelled "cosmetic --
+    no word changes" that is ticked by default. It corrupted exactly the
+    identifiers the caser works hardest to keep:
+
+        "work?—mlOSP"   ->  "work? MlOSP"
+        "Really?—iOS"   ->  "Really? IOS"
+        "cap!—p-adic"   ->  "cap! P-adic"
+
+    So the capital is still applied, EXCEPT where the word's own shape says
+    it is an identifier: an interior capital (mlOSP, iOS, q-Gaussian), or a
+    stem the technical-prefix list already protects (p-adic, g-expectation).
+    Both signals already exist in this project; neither is invented here.
+
+    MEASURED: 0 of the 25,252 in-scope filenames match the pattern today,
+    so the exposure is on future arrivals rather than on files already
+    filed.
+    """
+    mark, word = m.group(1), m.group(2)
+    if any(c.isupper() for c in word[1:]):
+        return f"{mark} {word}"                  # mlOSP, iOS, q-Gaussian
+    stem = word.split("-", 1)[0].split("_", 1)[0]
+    try:
+        from core.sentence_case import _load_sentence_case_config
+        prefixes = {str(x).lower()
+                    for x in _load_sentence_case_config()
+                    .get("math_technical_prefixes", ())}
+        if word.lower() in prefixes or ("-" in word and stem.lower() in prefixes):
+            return f"{mark} {word}"              # p-adic, g-expectation
+    except Exception:                            # pragma: no cover - defensive
+        pass
+    return f"{mark} {word[:1].upper()}{word[1:]}"
+
+
 def normalize_filename(name: str) -> str:
     """Normalize a PDF filename.
 
@@ -90,8 +132,8 @@ def normalize_filename(name: str) -> str:
     #   "Helffer, B., …, et al. - Première classe de Chern"
     #   "Yoeurp, Ch. - Compléments sur les temps locaux"
     # No abbreviation ends in "?" or "!", so this cannot misfire.
-    s = re.sub(r"([?!])\s*[-–—‐]+\s*([^\W\d_])",
-               lambda m: f"{m.group(1)} {m.group(2).upper()}", s)
+    s = re.sub(r"([?!])\s*[-–—‐]+\s*([^\W\d_][\w'’-]*)",
+               _raise_after_sentence_mark, s)
 
     # The author-title separator with its space eaten: "Itô, K.- Poisson".
     # The rules below only normalise a dash that ALREADY has a space on

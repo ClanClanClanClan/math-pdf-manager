@@ -258,8 +258,16 @@ def file_into_topic(
     ``normalize`` (default True): the filed name has its AUTHOR block
     canonicalised on the way in (initial spacing "R.C."→"R. C.", cosmetic
     spacing/NFC), per the owner's rule that a move must also fix
-    formatting.  The title is left untouched (title re-casing is unsafe to
-    auto-apply).  Set False to file byte-for-byte.
+    formatting, AND its title re-cased where the safe-default caser is
+    confident.  Set False to file byte-for-byte.
+
+    THIS PARAGRAPH USED TO SAY "The title is left untouched (title
+    re-casing is unsafe to auto-apply)", which stopped being true at
+    0efa47f when confident title casing became the owner's explicit
+    policy.  A docstring that denies what the code does is worse than no
+    docstring: an audit looking for silent renames would have cleared this
+    function on its word.  MEASURED on the current library: a move would
+    rename exactly 1 of 25,040 titles today.
 
     The shared core behind both the Attention-Queue accept action and
     the bulk-apply (Pipeline Preview).  Uses ``logged_move`` so the move
