@@ -168,6 +168,45 @@ capitalization_whitelist:
   # 25,040 that a move damages today. A phrase entry fires only on
   # the phrase, so "a new approach" is untouched.
   - New Brunswick
+  # ---- Institution names ------------------------------------------
+  #
+  # A generic like "University" or "Society" is CAPITALISED when it is
+  # part of an institution's official name, and lower case when it is
+  # a description. That is the ordinary English rule (Chicago 8.68):
+  #
+  #     "Rutgers University"          the institution's name
+  #     "the university of Durham"    -> University, also a name
+  #     "a university course"         a description
+  #     "the Lvov school of maths"    a school of THOUGHT, not a place
+  #     "CIMPA summer school"         an event, not an institution
+  #
+  # THESE ARE ENTRIES AND NOT A RULE BECAUSE THE RULE NEEDS WORLD
+  # KNOWLEDGE. A mechanical version was written and MEASURED --
+  # "capitalise the generic when the preceding word is a proper name" --
+  # and it got 3 of the 6 universities in this library right while
+  # firing on "French school" and "Lvov school", which are movements in
+  # mathematics. It misses "Brown University" because "brown" is a
+  # colour, and fires on "Lvov school" because Lvov is a city. Nothing
+  # in the text separates those; only knowing which institutions exist
+  # does. So the knowledge is written down instead of guessed at.
+  #
+  # An entry here can only PRESERVE a capital that is already correct;
+  # it cannot impose one on "rutgers university". MEASURED over all
+  # 25,252 in-scope PDFs: these entries rename nothing. Imposing a
+  # spelling is the separate power of an owner phrase ruling
+  # (title_vocab.decide_phrase). See docs/FILENAME_CONVENTION.md 3.14.
+  - Rutgers University
+  - Brown University
+  - New York University
+  - Ajou University
+  - Cornell University
+  - Aarhus University
+  - Tōhoku Imperial University
+  - Shevchenko National University
+  - London Mathematical Society
+  - American Mathematical Society
+  - Indian Statistical Institute
+  - University of Durham
   - Elamite
   - Ellsberg
   - Elsinger

@@ -649,10 +649,19 @@ def to_sentence_case_academic(
                 # only ever blocks an entry from RAISING a lower-case word --
                 # a phrase that is already capitalised is untouched, and no
                 # entry loses its ability to fix spelling or dashes.
-                if exact_match and phrase[:1].islower():
+                # ... but ONLY for a single-word entry. A MULTI-WORD phrase is
+                # specific enough that it cannot collide with ordinary prose --
+                # that is the whole reason institution names are written as
+                # phrases. Guarding them too blocked "the university of
+                # Durham" and "national university of Kyiv" from ever being
+                # raised, because "university" is a common word on its own
+                # (2 capitalised against 32) and the guard only looked at the
+                # first token.
+                if (exact_match and phrase[:1].islower()
+                        and len(phrase.split()) == 1):
                     try:
                         from processing.casing_vocabulary import is_common
-                        if is_common(phrase.split()[0]):
+                        if is_common(phrase):
                             exact_match = None
                     except Exception:            # never take the page down
                         pass

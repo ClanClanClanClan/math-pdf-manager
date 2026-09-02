@@ -287,7 +287,44 @@ U+2019 (RIGHT SINGLE QUOTATION MARK), never the straight ASCII
 apostrophe U+0027.  This applies to contractions (`it's`, `don't`),
 possessives (`Itô's`), and French elisions (`d'après`, `l'équation`).
 
-### 3.14 German sharp-s and special letters
+### 3.14 Institution names vs. descriptions
+
+A generic word — *University*, *Society*, *Institute* — is **capitalised
+when it is part of an institution's official name** and **lower-case when
+it is merely descriptive** (Chicago 8.68):
+
+| Capitalised — a name | Lower-case — a description |
+|---|---|
+| `Rutgers University` | `a university course` |
+| `the University of Durham` | `the Lvov school of mathematics` |
+| `London Mathematical Society` | `CIMPA summer school` |
+| `Indian Statistical Institute` | `the French school of probability` |
+
+The distinction is not recoverable from the text. A mechanical rule
+—"capitalise the generic when the preceding word is a proper name"— was
+written and **measured**: it got 3 of the 6 universities in this library
+right, missed `Brown University` (because *brown* is a colour) and fired
+on `Lvov school` and `French school`, which are movements rather than
+places. Only knowing which institutions exist separates them, so the
+knowledge is **written down** in `config/config.yaml`
+(`capitalization_whitelist`) rather than guessed at.
+
+**A config entry can only preserve, never impose.** It stops the caser
+lowering a capital that is already correct; it cannot add one to
+`rutgers university`. That limit is structural and deliberate — it is
+what keeps a one-line config edit from becoming a bulk rename of the
+library. Imposing a spelling on already-lower-case text is the separate
+power of an owner *phrase ruling* (`title_vocab.decide_phrase`), which
+matches case-insensitively and rewrites the span.
+
+Measured 2026-09-02 over all 25,252 in-scope PDFs: the entries rename
+nothing — they prevent damage rather than repair it. Twelve titles do
+hold a lower-case institution name and would only be corrected by phrase
+rulings, which are the owner's call.
+
+Tests: `tests/safety/test_institution_names_keep_their_capitals.py`.
+
+### 3.15 German sharp-s and special letters
 
 German `ß` is preserved as-is, never converted to `ss`.  Spanish
 inverted punctuation (`¿`, `¡`) is preserved.  All diacritics and

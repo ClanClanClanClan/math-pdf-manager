@@ -404,10 +404,16 @@ def _accepts_lowercase(word: str, langs) -> bool:
     """Strict membership: the exact lowercase form only.
 
     Capitalising makes every checker permissive, because a capitalised
-    unknown word reads as a proper noun -- "Stochastic" is accepted by
-    the German AND French dictionaries while "stochastic" is accepted by
-    neither. Asking "is this a word of language L" therefore has to use
-    the uncapitalised form, or the answer is yes for almost anything.
+    unknown word reads as a proper noun -- "Measure" is accepted by the
+    German, French, Italian AND Spanish dictionaries while "measure" is
+    accepted by none of them. Asking "is this a word of language L"
+    therefore has to use the uncapitalised form, or the answer is yes for
+    almost anything.
+
+    The bias is one-directional: MEASURED on macOS 26.6, no word is
+    accepted lower-case and rejected capitalised, so lowering is strictly
+    the safer question and introduces no false accepts of its own.
+    Which individual words show the trap varies by macOS release.
 
     Load-bearing for the SUGGESTION test and, measured, nowhere else.
     """

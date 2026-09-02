@@ -423,16 +423,121 @@ class TestCapitalisingMakesEveryCheckerPermissive:
     """The trap that made the first version of the language gate useless.
 
     A capitalised unknown word reads as a proper noun, so the checker
-    accepts it: "Stochastic" passes the GERMAN and FRENCH dictionaries
-    while "stochastic" passes neither. Asking "is this a word of language
-    L" with a capitalised form therefore answers yes for almost anything,
-    and the cross-language rule silently never fired.
+    accepts it: "Measure" passes the GERMAN, FRENCH, ITALIAN and SPANISH
+    dictionaries while "measure" passes none of them. Asking "is this a
+    word of language L" with a capitalised form therefore answers yes for
+    almost anything, and the cross-language rule silently never fired.
+
+    WHICH words show it is the OS's business and changes between macOS
+    releases -- "Stochastic" demonstrated it when this was written and no
+    longer does on 26.6 -- so the tests below assert the property and
+    merely report the examples.
     """
 
-    def test_the_capitalised_form_is_accepted_by_languages_that_lack_it(self):
+    # The population the trap is measured on. Ordinary English maths
+    # vocabulary -- the words that actually appear in these titles.
+    PROBE = ("Stochastic", "Ergodic", "Martingale", "Diffusion", "Filtering",
+             "Random", "Brownian", "Optimal", "Portfolio", "Hedging",
+             "Viscosity", "Backward", "Convex", "Measure", "Process",
+             "Kernel", "Lattice", "Sampling")
+    FOREIGN = ("de", "fr", "it", "es")
+
+    def test_the_trap_still_exists(self):
+        """At least one word is accepted capitalised and rejected lower.
+
+        This used to assert ``accepts("Stochastic", "de") is True``, and
+        macOS 26.6 now rejects that one word -- so a REAL property was
+        pinned to an example the OS was free to change its mind about,
+        and the suite went red without anything in this repository
+        moving. The property is what matters, so the property is what is
+        asserted; the examples are reported, not required.
+
+        MEASURED 2026-09-02, macOS 26.6, over the 18 words in PROBE:
+            de: Diffusion, Filtering, Measure, Process, Sampling
+            fr: Measure
+            it: Optimal, Measure
+            es: Optimal, Measure
+        """
         oracle = T._oracle()
-        assert oracle.accepts("Stochastic", "de") is True
-        assert oracle.accepts("stochastic", "de") is False
+        found = {
+            lang: [w for w in self.PROBE
+                   if oracle.accepts(w, lang)
+                   and not oracle.accepts(w.lower(), lang)]
+            for lang in self.FOREIGN
+        }
+        assert any(found.values()), (
+            "no word is accepted capitalised but rejected lower-case, in any "
+            f"of {self.FOREIGN}. Either the trap is gone -- in which case "
+            "_accepts_lowercase's reason for existing needs rewriting, not "
+            f"deleting -- or the oracle is not answering. Found: {found}"
+        )
+
+    def test_capitalising_never_makes_the_checker_STRICTER(self):
+        """The trap is one-directional, which is why lowering is the fix.
+
+        If some word were accepted lower-case but rejected capitalised,
+        then lowering would introduce false accepts of its own and
+        _accepts_lowercase would be trading one bias for another.
+        MEASURED: zero such words, in all four languages.
+        """
+        oracle = T._oracle()
+        backwards = {
+            lang: [w for w in self.PROBE
+                   if oracle.accepts(w.lower(), lang)
+                   and not oracle.accepts(w, lang)]
+            for lang in self.FOREIGN
+        }
+        assert not any(backwards.values()), (
+            "a word is accepted lower-case but rejected capitalised, so "
+            "lowering is not a strictly-safer question to ask: "
+            f"{backwards}"
+        )
+
+    def test_the_code_never_asks_the_checker_about_a_capitalised_form(self,
+                                                                      monkeypatch):
+        """The defence itself, pinned WITHOUT depending on the OS.
+
+        The two tests above describe the world; this one describes our
+        code, so it keeps testing the thing that matters on a machine
+        whose dictionaries answer differently.
+        """
+        asked: list = []
+
+        class _Spy:
+            def accepts(self, word, lang):
+                asked.append(word)
+                return False
+
+        monkeypatch.setattr(T, "_ORACLE", _Spy())
+        T._accepts_lowercase("Stochastic", ("de", "fr"))
+        T._accepts_lowercase("MARTINGALE", ("de",))
+        T._accepts_lowercase("Brownian", T.ENGLISH)
+        assert asked, "the spy was never consulted; the test proves nothing"
+        assert all(w == w.lower() for w in asked), (
+            f"the checker was asked about a capitalised form: {asked}"
+        )
+
+    @pytest.mark.parametrize("word", [
+        "behavior", "behaviour", "modeling", "modelling", "color", "colour",
+        "analyse",
+    ])
+    def test_a_word_in_ONE_english_variant_counts_as_english(self, word):
+        """ENGLISH is ('en', 'en_GB'), so the quantifier over it matters.
+
+        Found by mutating _accepts_lowercase: changing ``any`` to ``all``
+        survived the whole suite. It is not a dead branch -- MEASURED,
+        macOS 26.6, every transatlantic pair splits across the two
+        dictionaries:
+
+            behavior   en=True  en_GB=False
+            behaviour  en=False en_GB=True
+
+        so under ``all`` NEITHER spelling is English, and
+        suggestion_is_cross_language stops firing for precisely the words
+        _SENTINELS_CLEAN was built from. The rule would go quiet rather
+        than go wrong, which is the failure mode this suite exists for.
+        """
+        assert T._accepts_lowercase(word, T.ENGLISH) is True
 
     def test_membership_uses_the_lowercase_form_only(self):
         assert T._accepts_lowercase("stochastic", ("de",)) is False
