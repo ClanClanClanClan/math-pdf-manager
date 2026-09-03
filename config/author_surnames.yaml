@@ -1,0 +1,167 @@
+# Author surname authority — capitalisation of name particles.
+#
+# THE RULE: capitalise the particle when it is PART OF THE SURNAME, keep it
+# lower case when it is a PREPOSITION. The test is whether it can be dropped:
+# Alexis de Tocqueville is "Tocqueville" (preposition, lower case), but
+# Jean-François Le Gall is never "Gall" (article, capital).
+#
+# So this file does NOT list every particle name — only the ones that take a
+# capital. French "de/d'", German "von", Netherlands Dutch "van/de", and
+# Portuguese/Spanish "de/da/dos" are prepositions and are already correct in
+# lower case; they are deliberately absent. Chicago 14.21 keeps a lower-case
+# particle lower case in an inverted entry (its own example: "du Maurier,
+# Daphne."), and the Library of Congress files those names under the root.
+#
+# Researched 2026-09-03 against the LC name authority file, RDA/LC-PCC,
+# Chicago 8.5/8.7-8.11/14.21/16.71, the Imprimerie nationale via Lacroux,
+# the Accademia della Crusca, Taalunie/Onze Taal, zbMATH and arXiv.
+# Every entry below was checked per person, not derived from its particle:
+# nationality is NOT recoverable from the particle ("da Prato" is Italian and
+# takes a capital; "da Silva" is Portuguese and does not).
+#
+# Two proposed changes were REFUTED by adversarial re-checking and are
+# deliberately absent — in both the researcher had found the wrong person:
+#   de Feo   — all 10 files are Filippo de Feo, who publishes lower case
+#   de Vries — the claim was about Gustav de Vries (of KdV); the files are
+#              Casper and Martijn de Vries
+#
+# Keys are case-folded; matching is case-insensitive and NFC-normalised.
+# Applies to the AUTHOR BLOCK ONLY — never to a title.
+
+author_surnames:
+
+  # --- Modern Italian / Flemish — the particle is a registered part of the surname
+  #     52 names, 261 files
+  "de angelis": "De Angelis"   # 38 files, Italian, high
+  "di nunno": "Di Nunno"   # 37 files, Italian, high
+  "di persio": "Di Persio"   # 21 files, Italian, high
+  "de marco": "De Marco"   # 17 files, Italian, high
+  "di tella": "Di Tella"   # 16 files, Italian, high
+  "di girolami": "Di Girolami"   # 13 files, Italian, high
+  "da lio": "Da Lio"   # 11 files, Italian, high
+  "da prato": "Da Prato"   # 10 files, Italian, high
+  "de vecchi": "De Vecchi"   # 7 files, Italian, high
+  "del moral": "Del Moral"   # 7 files, French (surname of Spanish origin), high
+  "de lara": "De Lara"   # 6 files, French (of Spanish origin), medium
+  "de march": "De March"   # 6 files, Italian/French, high
+  "de bock": "De Bock"   # 5 files, Dutch (Belgian/Flemish), high
+  "da fonseca": "Da Fonseca"   # 5 files, Portuguese, but borne by a France/New-Zealand-based author who capitalizes, medium
+  "de meyer": "De Meyer"   # 4 files, Dutch (Belgian/Flemish), working in France, high
+  "de franco": "De Franco"   # 4 files, Italian, medium
+  "de schepper": "De Schepper"   # 4 files, Dutch (Belgian/Flemish), high
+  "di francesco": "Di Francesco"   # 4 files, Italian, high
+  "de crescenzo": "De Crescenzo"   # 3 files, Italian, medium
+  "de vallière": "De Vallière"   # 3 files, French (Swiss/Vaudois origin), medium
+  "de bondt": "De Bondt"   # 2 files, Dutch, medium
+  "de donno": "De Donno"   # 2 files, Italian, medium
+  "de pauw": "De Pauw"   # 2 files, Dutch (Belgian/Flemish), high
+  "de vylder": "De Vylder"   # 2 files, Dutch (Belgian/Flemish), high
+  "di fazio": "Di Fazio"   # 2 files, Italian, high
+  "di masi": "Di Masi"   # 2 files, Italian, high
+  "di giacinto": "Di Giacinto"   # 2 files, Italian, high
+  "di graziano": "Di Graziano"   # 2 files, Italian, medium
+  "de donder": "De Donder"   # 1 files, Belgian Dutch (Flemish surname, francophone scholar), medium
+  "de giuli": "De Giuli"   # 1 files, Italian (surname of an Italian-descended physicist working in English), high
+  "de pascale": "De Pascale"   # 1 files, Italian, high
+  "de lellis": "De Lellis"   # 1 files, Italian, high
+  "de gregorio": "De Gregorio"   # 1 files, Italian, high
+  "de paola": "De Paola"   # 1 files, Italian, medium
+  "de nadai": "De Nadai"   # 1 files, Italian, medium
+  "de maio": "De Maio"   # 1 files, Italian, high
+  "de santis": "De Santis"   # 1 files, Italian, high
+  "de bie": "De Bie"   # 1 files, Dutch (Flemish/Belgian), high
+  "de blasis": "De Blasis"   # 1 files, Italian, medium
+  "de waegenaere": "De Waegenaere"   # 1 files, Dutch (Flemish/Belgian), high
+  "de scheemaekere": "De Scheemaekere"   # 1 files, Dutch (Flemish/Belgian), medium
+  "del sarto": "Del Sarto"   # 1 files, Italian, high
+  "della corte": "Della Corte"   # 1 files, Italian, high
+  "dello schiavo": "Dello Schiavo"   # 1 files, Italian, high
+  "del vigna": "Del Vigna"   # 1 files, Italian, medium
+  "del vescovo": "Del Vescovo"   # 1 files, Italian, medium
+  "di nardo": "Di Nardo"   # 1 files, Italian, high
+  "di gaspero": "Di Gaspero"   # 1 files, Italian, high
+  "di nezza": "Di Nezza"   # 1 files, Italian, high
+  "di lauro": "Di Lauro"   # 1 files, Italian, high
+  "di martino": "Di Martino"   # 1 files, Italian, high
+  "di bucchianico": "Di Bucchianico"   # 1 files, Italian, high
+
+  # --- Arabic / Hebrew in Latin script — modern authors publish capitalised
+  #     33 names, 221 files
+  "el karoui": "El Karoui"   # 124 files, Arabic (Latin transliteration; French/Tunisian usage), high
+  "el asri": "El Asri"   # 17 files, Arabic (Latin transliteration; Moroccan usage), high
+  "el otmani": "El Otmani"   # 16 files, Arabic (Latin transliteration; Moroccan usage), high
+  "el euch": "El Euch"   # 9 files, Arabic (Latin transliteration; Tunisian usage), high
+  "ben alaya": "Ben Alaya"   # 6 files, Arabic (Tunisian), French transliteration, high
+  "ben tahar": "Ben Tahar"   # 6 files, Arabic (Tunisian), French transliteration, high
+  "el khatib": "El Khatib"   # 4 files, Arabic (Latin transliteration; Lebanese/Levantine usage), medium
+  "al gerbi": "Al Gerbi"   # 4 files, Arabic (Tunisian), French transliteration, high
+  "el mansour": "El Mansour"   # 3 files, Arabic (Latin transliteration; Maghrebi usage), high
+  "ben arous": "Ben Arous"   # 3 files, French (Arabic-origin surname), high
+  "el haddad": "El Haddad"   # 2 files, Arabic (Latin transliteration; Lebanese usage), high
+  "el nmeir": "El Nmeir"   # 2 files, Arabic (Latin transliteration; Lebanese usage), high
+  "el jamali": "El Jamali"   # 2 files, Arabic (Latin transliteration; Moroccan usage), high
+  "ben hammouda": "Ben Hammouda"   # 2 files, Arabic (Tunisian), French transliteration, high
+  "ben gherbal": "Ben Gherbal"   # 2 files, Arabic (Algerian), French transliteration, medium
+  "ben zineb": "Ben Zineb"   # 2 files, Arabic (Tunisian), French transliteration, high
+  "el amrani": "El Amrani"   # 1 files, Arabic (Latin transliteration; Moroccan usage), high
+  "el moudni": "El Moudni"   # 1 files, Arabic (Latin transliteration; Moroccan usage), medium
+  "el machkouri": "El Machkouri"   # 1 files, Arabic (Latin transliteration; Moroccan-French usage), high
+  "el barrimi": "El Barrimi"   # 1 files, Arabic (Latin transliteration; Moroccan usage), high
+  "el ouardighi": "El Ouardighi"   # 1 files, Arabic (Latin transliteration; Moroccan usage), medium
+  "el fatini": "El Fatini"   # 1 files, Arabic (Latin transliteration; Moroccan usage), high
+  "el aoud": "El Aoud"   # 1 files, Arabic (Latin transliteration; Tunisian usage), high
+  "ben latifa": "Ben Latifa"   # 1 files, Arabic (Tunisian), French transliteration, high
+  "al ghanim": "Al Ghanim"   # 1 files, Arabic (Kuwaiti/Gulf), English transliteration, high
+  "ben derouich": "Ben Derouich"   # 1 files, Arabic (Tunisian), French transliteration, high
+  "ben aziza": "Ben Aziza"   # 1 files, Arabic (Tunisian), French transliteration, medium
+  "ben ajmia": "Ben Ajmia"   # 1 files, Arabic (Tunisian), French transliteration, high
+  "ben abdelaziz": "Ben Abdelaziz"   # 1 files, Arabic (Tunisian), French transliteration, high
+  "ben lasmar": "Ben Lasmar"   # 1 files, Arabic (Tunisian), French transliteration, high
+  "ben dhia": "Ben Dhia"   # 1 files, Arabic (Tunisian), French transliteration, high
+  "al oqeili": "Al Oqeili"   # 1 files, Arabic (Jordanian), French/English transliteration, medium
+  "al dayri": "Al Dayri"   # 1 files, Arabic (Lebanese), French transliteration, high
+
+  # --- French articles — an article is part of the surname and cannot be dropped
+  #     24 names, 105 files
+  "le bris": "Le Bris"   # 30 files, French, high
+  "le gall": "Le Gall"   # 20 files, French, high
+  "le floc'h": "Le Floc'h"   # 14 files, French (Breton), high
+  "le jan": "Le Jan"   # 8 files, French, high
+  "le ny": "Le Ny"   # 4 files, French, high
+  "le coz": "Le Coz"   # 4 files, French (Breton), high
+  "le cadre": "Le Cadre"   # 3 files, French (Breton), high
+  "le cavil": "Le Cavil"   # 3 files, French, high
+  "le flem": "Le Flem"   # 2 files, French (Breton), high
+  "la torre": "La Torre"   # 2 files, Italian, high
+  "le cam": "Le Cam"   # 2 files, French, high
+  "le page": "Le Page"   # 1 files, French, high
+  "le borne": "Le Borne"   # 1 files, French (Breton), high
+  "le doussal": "Le Doussal"   # 1 files, French, high
+  "le bihan": "Le Bihan"   # 1 files, French (Breton), high
+  "la scala": "La Scala"   # 1 files, Italian, high
+  "le peutrec": "Le Peutrec"   # 1 files, French (Breton), high
+  "le balc'h": "Le Balc'h"   # 1 files, French (Breton), high
+  "le marchand": "Le Marchand"   # 1 files, French, high
+  "le borgne": "Le Borgne"   # 1 files, French (Breton), high
+  "le breton": "Le Breton"   # 1 files, French (Breton), high
+  "le gland": "Le Gland"   # 1 files, French (Breton), high
+  "la nauze": "La Nauze"   # 1 files, English (Australian; of French/Huguenot origin), high
+  "le guével": "Le Guével"   # 1 files, French (Breton), high
+
+  # --- Flemish, Afrikaans and American Dutch — capital fixed by registration
+  #     6 names, 7 files
+  "van mieghem": "Van Mieghem"   # 2 files, Flemish / Belgian Dutch, high
+  "van oosten": "Van Oosten"   # 1 files, Dutch-origin surname, Canadian bearer (U. Waterloo), high
+  "van belle": "Van Belle"   # 1 files, Flemish / Belgian Dutch, high
+  "van vleck": "Van Vleck"   # 1 files, English (American family of Dutch descent), high
+  "van den bergh": "Van den Bergh"   # 1 files, Dutch (Belgian/Flemish convention), high
+  "van casteren": "Van Casteren"   # 1 files, Dutch name, Belgian (Antwerp) usage, medium
+
+  # --- Misspellings, not particles
+  #     2 names, 3 files
+  "mc kean": "McKean"   # 2 files, Scottish/Irish (English-language), high
+  "mc isaac": "McIsaac"   # 1 files, Scottish/Irish (English-language), high
+
+  # --- Other
+  #     1 names, 1 files
+  "de la pradelle": "de La Pradelle"   # 1 files, French, medium

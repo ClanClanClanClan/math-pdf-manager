@@ -20,10 +20,39 @@ class TestNormalizeName:
         assert new.startswith("Dalang, R. C., Dozzi, M., Russo, F. - ")
 
     def test_preserves_hyphenated_and_particles(self):
+        """Hyphenated initials survive; particles follow the authority.
+
+        UPDATED 2026-09-03. This asserted "le Bris" stayed lower case,
+        which encoded the assumption that every particle is preserved
+        verbatim. Researched: "Le" is a French definite ARTICLE and part
+        of the surname (Claude Le Bris is never "Bris"), so the capital
+        is correct — see docs/FILENAME_CONVENTION.md 2.6. The hyphenated
+        initials "P.-L." are what this test was really guarding and they
+        are asserted below exactly as before, plus the prepositions that
+        must NOT be touched, which the old fixture never covered.
+        """
         from processing.move_normalizer import normalize_authors_in_name
         new, _ = normalize_authors_in_name(
             "le Bris, C.L., Lions, P.-L. - Existence and uniqueness.pdf")
-        assert new.startswith("le Bris, C. L., Lions, P.-L. - ")
+        assert new.startswith("Le Bris, C. L., Lions, P.-L. - "), new
+
+    @pytest.mark.parametrize("author", [
+        "von Neumann, J.",        # German — always lower case
+        "van der Vaart, A. W.",   # Netherlands Dutch — lower in this position
+        "dos Reis, G.",           # Portuguese
+        "de la Peña, V. H.",      # Spanish
+        "de Finetti, B.",         # Italian noble predicate
+    ])
+    def test_a_preposition_particle_is_still_preserved(self, author):
+        """The other half of the rule, and the half that is 'preserve'.
+
+        A particle that is a preposition rather than an article must
+        survive untouched. Without this, the authority could grow an
+        entry that capitalises every particle and no test would object.
+        """
+        from processing.move_normalizer import normalize_authors_in_name
+        name = f"{author} - Some paper about things.pdf"
+        assert normalize_authors_in_name(name)[0] == name
 
     def test_title_is_preserved_verbatim(self):
         # The danger case: title re-casing would lowercase proper nouns.

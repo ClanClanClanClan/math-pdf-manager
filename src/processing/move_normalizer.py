@@ -81,9 +81,25 @@ def normalize_authors_in_name(name: str) -> tuple[str, bool]:
     falls back to the cosmetically-normalised name so a move never fails
     because of formatting.
     """
+    from processing.author_surnames import canonicalise_filename
     from processing.filename_normalizer import normalize_filename
 
     cosmetic = normalize_filename(name)
+
+    # Surname authority: "le Gall" -> "Le Gall".  Applied HERE, before the
+    # two early returns below, because the commonest shape in this library
+    # is an author block that is already correctly spaced -- which takes
+    # the "_has_unspaced_initials" shortcut and never reaches the checker.
+    # Hanging this off the checker would have fixed only the names that
+    # happened to also have a spacing defect.
+    #
+    # It rewrites the AUTHOR BLOCK ONLY.  A title rule that reached into
+    # the author block once turned the mathematician "Makovski" into
+    # "Markovski"; the same mistake in the other direction would rewrite
+    # French and Dutch prose in titles, where "de", "le" and "van" are
+    # ordinary words.
+    cosmetic, _surnames_fixed = canonicalise_filename(cosmetic)
+
     if " - " not in cosmetic:
         # No author/title separator — nothing to canonicalise; cosmetic only.
         return cosmetic, cosmetic != name

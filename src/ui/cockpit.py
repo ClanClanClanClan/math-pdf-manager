@@ -4266,6 +4266,128 @@ def _render_phrase_rulings(lib: Path) -> None:
                 st.caption(f"…and {len(hits) - 40} more.")
 
 
+def _render_author_surnames(lib: Path) -> None:
+    """The researched authority for particles in AUTHOR names.
+
+    A particle is capitalised when it is part of the surname and lower
+    case when it is a preposition: "Le Gall" is never "Gall", but Alexis
+    de Tocqueville is "Tocqueville".  The list cannot be derived from the
+    particle -- "da Prato" is Italian and takes a capital, "da Silva" is
+    Portuguese and does not -- so it is a researched, per-person list
+    kept in config/author_surnames.yaml and versioned with the code.
+
+    What belongs to the OWNER rather than to the list is disagreement:
+    the veto below switches an entry off and is stored in the library
+    beside his vocabulary decisions, so it survives a checkout.
+    """
+    from processing.author_surnames import (
+        active_map, load_map, load_vetoes, set_veto,
+    )
+
+    table, vetoes = load_map(), load_vetoes()
+    if not table:
+        st.warning(
+            "The author-surname list could not be read, so no surname is "
+            "being corrected.  Nothing is broken and no file has changed."
+        )
+        return
+
+    with st.expander(
+        f"👤 Author surnames — {len(table)} rulings"
+        + (f", {len(vetoes)} switched off" if vetoes else ""),
+        expanded=False,
+    ):
+        st.caption(
+            "A particle is capitalised when it is **part of the surname** and "
+            "lower case when it is a **preposition** — the test is whether it "
+            "can be dropped.  *Le Gall* is never *Gall*, so the L is a "
+            "capital; Alexis *de* Tocqueville is *Tocqueville*, so the d "
+            "stays low.  That is why French `de`, German `von`, Dutch `van` "
+            "and Portuguese `dos` are **not** in this list — they are already "
+            "right.  Applying happens in **Maintenance → Normalize existing "
+            "filenames**, never here."
+        )
+
+        if st.button("🔍 Check what these would fix", key="asur_check",
+                     help="Reads your filenames once (~9s) and counts, for "
+                          "each ruling, how many files it would correct"):
+            try:
+                from processing.author_surnames import canonicalise_filename
+                names = [r[0] for r in _search_index_cached(str(lib))]
+            except Exception as exc:
+                logger.exception("author surname impact failed")
+                st.error(f"Could not read your filenames: {exc}")
+                names = None
+            if names is not None:
+                hits: dict = {}
+                ex: dict = {}
+                for n in names:
+                    out, ch = canonicalise_filename(n)
+                    if not ch:
+                        continue
+                    block = n.split(" - ", 1)[0]
+                    for k in table:
+                        if k in block.casefold():
+                            hits[k] = hits.get(k, 0) + 1
+                            ex.setdefault(k, []).append(n)
+                st.session_state["asur_hits"] = hits
+                st.session_state["asur_ex"] = {k: v[:3] for k, v in ex.items()}
+
+        hits = st.session_state.get("asur_hits") or {}
+        ex = st.session_state.get("asur_ex") or {}
+        if hits:
+            st.caption(f"**{sum(hits.values())} files** would be corrected by "
+                       f"{len(hits)} of these rulings.")
+
+        # Grouped by the leading word of the RULED form, which is also the
+        # language family: Le/La/Du are French articles, De/Di/Da/Del are
+        # modern Italian or Flemish, El/Al/Ben are Latin-script Arabic and
+        # Hebrew, Van is Flemish/Afrikaans/American.
+        _GROUP = {
+            "Le": "French articles", "La": "French articles",
+            "Du": "French articles", "Des": "French articles",
+            "De": "Italian / Flemish", "Di": "Italian / Flemish",
+            "Da": "Italian / Flemish", "Del": "Italian / Flemish",
+            "Della": "Italian / Flemish", "Dello": "Italian / Flemish",
+            "El": "Arabic / Hebrew", "Al": "Arabic / Hebrew",
+            "Ben": "Arabic / Hebrew", "Van": "Flemish / American Dutch",
+        }
+        buckets: dict = {}
+        for k, v in sorted(table.items(), key=lambda kv: -hits.get(kv[0], 0)):
+            g = _GROUP.get(v.split()[0], "Other")
+            buckets.setdefault(g, []).append((k, v))
+
+        for g in sorted(buckets, key=lambda g: -sum(hits.get(k, 0)
+                                                    for k, _ in buckets[g])):
+            rows = buckets[g]
+            n_files = sum(hits.get(k, 0) for k, _ in rows)
+            st.markdown(f"**{g}** — {len(rows)} names"
+                        + (f", {n_files} files" if hits else ""))
+            for k, v in rows:
+                c = st.columns([5, 2])
+                note = f"  ·  **{hits[k]}** files" if k in hits else (
+                    "  ·  nothing to fix" if hits else "")
+                struck = "~~" if k in vetoes else ""
+                c[0].markdown(f"{struck}`{k}` → **{v}**{struck}{note}")
+                for e in ex.get(k, []):
+                    c[0].caption(f"↳ {e[:92]}")
+                off = c[1].checkbox(
+                    "don't apply", value=k in vetoes, key=f"asur_veto_{k}",
+                    help="Switch this ruling off. Kept with your library, so "
+                         "it survives an update of the list.")
+                if off != (k in vetoes):
+                    if set_veto(k, off):
+                        st.toast(("Switched off: " if off else "Switched on: ")
+                                 + v)
+                        st.rerun()
+
+        st.caption(
+            f"{len(active_map())} of {len(table)} rulings are in force.  The "
+            "list itself lives in `config/author_surnames.yaml` and records "
+            "the source for every name."
+        )
+
+
 def render_settings() -> None:
     """Form-driven editor for the watcher config + Unpaywall email."""
     from ui.cockpit_actions import (
@@ -4292,6 +4414,7 @@ def render_settings() -> None:
     )
     _render_title_vocabulary(_library())
     _render_phrase_rulings(_library())
+    _render_author_surnames(_library())
     st.divider()
     st.subheader("Watcher settings")
     st.caption(

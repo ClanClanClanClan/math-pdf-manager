@@ -287,6 +287,58 @@ U+2019 (RIGHT SINGLE QUOTATION MARK), never the straight ASCII
 apostrophe U+0027.  This applies to contractions (`it's`, `don't`),
 possessives (`Itô's`), and French elisions (`d'après`, `l'équation`).
 
+### 2.6 Name particles (de, van, Le, Di, El, …)
+
+**A particle takes a capital when it is part of the surname, and stays
+lower case when it is a preposition.** The test is whether it can be
+dropped: Alexis *de* Tocqueville is "Tocqueville", so `de` is a link
+word; Jean-François Le Gall is never "Gall", so `Le` is part of the name.
+
+| stays lower case — preposition | takes a capital — part of the name |
+|---|---|
+| French `de`, `d'` | French articles `Le`, `La`, `Du`, `Des` (`Du`/`Des` = *de+le*, *de+les*) |
+| German `von`, `zu` | Modern Italian `De`, `Di`, `Da`, `Del`, `Della` |
+| Netherlands Dutch `van`, `van der`, `de`, `den`, `ter` | Flemish, Afrikaans and American Dutch `Van`, `De` (fixed by registration) |
+| Portuguese/Spanish `de`, `da`, `dos`, `das` | Latin-script Arabic/Hebrew `El`, `Al`, `Ben` |
+
+Exceptions that are real, not sloppiness: Italian *falsi cognomi*
+(`da Vinci`, `de' Medici`) are epithets rather than surnames and stay
+lower case, as do Italian noble predicates — which is why **`de Finetti`
+is correctly lower case**. Lower-case `al-`/`el-` is right only for
+*transliterated medieval* figures, and then it carries a hyphen
+(`al-Khwārizmī`); every living author has a Latin-script legal name and
+publishes capitalised.
+
+**The bearer's own usage overrides the rule** (`du Bois-Reymond` keeps a
+lower-case *du* against the French rule, because the family fixed it).
+
+**This is a per-person list, not a rule keyed on the particle**, because
+nationality is not recoverable from the particle: `da Prato` is Italian
+and takes a capital, `da Silva` is Portuguese and does not. The list is
+`config/author_surnames.yaml`; the owner can switch any entry off from
+Settings → Author surnames, and that veto is stored with the library.
+
+**Scope: the author block only.** In a title the same letters are
+ordinary words — French and Dutch prose, *le Monde*. A rule that crossed
+the separator once turned the mathematician "Makovski" into "Markovski".
+
+Researched 2026-09-03 against the LC name authority file, RDA/LC-PCC,
+Chicago 8.5 / 8.7–8.11 / 14.21 / 16.71, the Imprimerie nationale via
+Lacroux, the Accademia della Crusca, Taalunie/Onze Taal, zbMATH and
+arXiv. Note that `Surname, I. I.` is the *inverted bibliographic entry*,
+not Chicago's "surname used alone": CMOS 14.21 keeps a lower-case
+particle lower case there (its own example, `du Maurier, Daphne.`), which
+is why Dutch `van` and German `von` do **not** take a capital here even
+though a bare surname in prose would.
+
+Measured over the library: 118 rulings, 594 files. Two proposed changes
+were refuted on re-checking and are deliberately absent — `de Feo` and
+`de Vries`, where the research had found the wrong person.
+
+Tests: `tests/safety/test_author_surname_authority.py`.
+
+---
+
 ### 3.14 Institution names vs. descriptions
 
 A generic word — *University*, *Society*, *Institute* — is **capitalised

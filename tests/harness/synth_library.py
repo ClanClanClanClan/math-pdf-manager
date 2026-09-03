@@ -132,7 +132,12 @@ STANDARD_SPECS: list[SynthPdfSpec] = [
         pdf_author="Nicole el Karoui",
         expect_destination_letter="K",
         expect_destination_folder="03 - Working papers",
-        expect_filename_contains=["el Karoui"],
+        # "El Karoui" since 2026-09-03: the author-surname authority
+        # capitalises the Arabic article in a Latin-script modern name
+        # (LC heading "El Karoui, Nicole"). The point of THIS spec is the
+        # alpha-subdir below -- it must still file under K, not E -- and
+        # that assertion is untouched.
+        expect_filename_contains=["El Karoui"],
         notes="el Karoui files under K, not E",
     ),
     # 5. fake author + no title (the SoWise case)
