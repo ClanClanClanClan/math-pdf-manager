@@ -30,8 +30,15 @@ MAX_EXPORT_SIDECAR_READS = 500
 
 
 def _fold(s: str) -> str:
-    """Casefold + strip accents for match keys ("Möbius" matches "mobius")."""
-    nfkd = unicodedata.normalize("NFD", s)
+    """Casefold, strip accents, and fold apostrophe-like marks.
+
+    The apostrophe fold matters because NO Unicode normalisation form
+    equates U+0027 and U+2019 -- unlike accents, where NFD/NFC does the
+    work. Without it, searching "d'Amato" with the keyboard apostrophe
+    finds one of that author's two files and misses the other.
+    """
+    from processing.apostrophes import fold_marks
+    nfkd = unicodedata.normalize("NFD", fold_marks(s))
     return "".join(c for c in nfkd if not unicodedata.combining(c)).casefold()
 
 

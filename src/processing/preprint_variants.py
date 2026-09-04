@@ -231,7 +231,14 @@ class VariantPair:
 
 
 def _fold(s: str) -> str:
-    nfkd = unicodedata.normalize("NFD", s)
+    """Casefold, strip accents, and fold apostrophe-like marks.
+
+    Same fold as the Search index (processing.apostrophes): two files
+    for the same paper that differ only by ' vs ’ are a duplicate
+    pair, and no normalisation form would have equated them.
+    """
+    from processing.apostrophes import fold_marks
+    nfkd = unicodedata.normalize("NFD", fold_marks(s))
     return "".join(c for c in nfkd if not unicodedata.combining(c)).casefold()
 
 

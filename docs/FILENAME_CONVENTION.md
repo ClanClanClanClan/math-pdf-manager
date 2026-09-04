@@ -280,12 +280,87 @@ Ordinals in compound adjectives are preserved as digits: `2nd-order`,
 `1st-kind`.  The number spelling rule (§3.7) does not apply to
 ordinals because the digit is not isolated.
 
-### 3.13 Apostrophes
+### 3.13 Apostrophes and the marks that look like them
 
-All apostrophes and right single quotes use the typographic form
-U+2019 (RIGHT SINGLE QUOTATION MARK), never the straight ASCII
-apostrophe U+0027.  This applies to contractions (`it's`, `don't`),
-possessives (`Itô's`), and French elisions (`d'après`, `l'équation`).
+**The rule is keyed on what the mark DOES, not on the language.**
+
+The obvious guess is that this works like quotation marks, which are
+famously per-language (« » French, „ " German, " " English). Checked, and
+it does not: CLDR gives every locale its own `quotationStart` /
+`quotationEnd` and defines **no apostrophe element in any locale, ever**,
+and every national authority prescribes the same 9-shaped raised comma
+for elision — Imprimerie nationale (Lacroux), Accademia della Crusca,
+Duden, Onze Taal, IEC, RAE, Chicago 6.117. Nobody flips it.
+
+The real axis is **punctuation versus letter**, which Unicode encodes as
+different characters (core spec §6.2.7): U+2019 where the mark is a
+punctuation apostrophe, U+02BC where it is a modifier *letter*. Which
+side a name falls on **is** language-dependent, and CLDR settles it in
+`exemplarCharacters`: Ukrainian's and Breton's alphabets contain U+02BC,
+Hawaiian's contains U+02BB (turned the other way), while French, Italian,
+Irish and Dutch contain no apostrophe at all — theirs is punctuation.
+
+| function | example | character |
+|---|---|---|
+| Elision (a dropped letter or article) | `d'Auria`, `dell'Antonio`, `in 't Hout`, `l'équation` | punctuation apostrophe |
+| Possessive / English contraction | `Itô's formula`, `don't` | punctuation apostrophe |
+| Anglicised Irish/Scottish prefix | `O'Connell`, `O'Neill` | punctuation apostrophe |
+| German derivational `-'sch` (Duden §62) | `Green'schen`, `Gibbs'sche` | punctuation apostrophe |
+| Flemish fused prefix (capital, no space) | `T'Joens` | punctuation apostrophe |
+| **Transliterated Cyrillic soft sign ь** | `Kolokol'tsov`, `Ural'tseva` | **not an apostrophe** — a letter (U+02B9 by ISO 9 / ALA-LC) |
+| **Breton `c'h` trigraph** | `Le Floc'h`, `Le Balc'h` | **not an apostrophe** — part of a letter (U+02BC officially) |
+| **Mathematical prime** | `f'`, `X'_t`, `L'(θ)` | **not an apostrophe** — U+2032 |
+
+#### What this library writes
+
+**Author block: U+0027 APOSTROPHE.** The author block is a *key*, not
+prose — Search, the sort order, the duplicate detector and every
+comparison against zbMATH, arXiv, ORCID and Crossref run on it, and
+uniformity beats typography there. Measured: those authorities are
+**99.95% U+0027** across 1,909 name records, and Unicode's own
+identifier-comparison data (UTS #39 `confusables.txt`) maps U+2019 *to*
+U+0027, not the reverse. Its U+2019 preference is explicitly scoped to
+"when text is set".
+
+**Title: U+2019** for a punctuation apostrophe, because a title is set
+prose and that is what every authority above prescribes. A title U+0027
+is *not automatically wrong*: an unmeasured share of the 1,343 in the
+corpus are mathematical primes (`f'`, `X'`), and converting those to
+U+2019 would silently change their meaning. **The title rule therefore
+applies to new files only; there is no retroactive sweep.**
+
+That the two fields carry different characters is deliberate. They have
+different jobs — the author block is matched by machines, the title is
+read by a person.
+
+#### Matching folds them; naming does not
+
+No normalisation form equates these marks: NFC, NFD, NFKC, NFKD and
+casefold all leave U+0027 and U+2019 distinct. That is categorically
+unlike the NFD/NFC accent trap (§6), where normalising repairs the match.
+So `processing.apostrophes.fold_marks` maps every apostrophe-like mark to
+one key for **Search and duplicate detection only** — including the ones
+that are *not* apostrophes, because the goal is to make them match, not
+to claim they are the same thing. A test asserts no naming path imports
+it.
+
+#### Known defects in the corpus (measured, not swept)
+
+- `in t'Hout` — the mark is on the wrong side; the physicist is Karel
+  **in 't Hout** (elided *het*). One file.
+- `dell'utilit`a` — LaTeX accent residue for `utilità`. One file.
+- Seven titles open a quotation with `'` and close it with `'`, two of
+  them doubled (`''…''`) where a double quotation mark belongs. These are
+  unbalanced *pairs*, not stray apostrophes, and must be repaired as
+  pairs — a blanket rule would destroy legitimate opening quotes.
+- `Gal'Čuk` — the interior capital is title-casing damage: Python's
+  `str.title()` capitalises after every apostrophe-like character, so
+  `le floc'h`.title() gives `Le Floc'H`. Fix the caser, not just the file.
+- ~90 files in the Cyrillic soft-sign class use U+0027. The standards
+  genuinely conflict here (ISO 9 / ALA-LC / AMS say prime; BGN/PCGN says
+  U+2019), so this is a policy decision and **not** a sweep. Note also
+  that U+02B9 is a *fatal* error under pdflatex and unencodable in
+  cp1252, which the BibTeX and CSV exports rely on.
 
 ### 2.6 Name particles (de, van, Le, Di, El, …)
 
