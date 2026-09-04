@@ -224,3 +224,26 @@ author_surnames:
   #     zbMATH, LC and GND all agree.
   "in t'hout": "in 't Hout"   # 1 file
 
+  # --- Transliterated Cyrillic soft sign: decided PER PERSON, not by standard
+  #
+  #     The mark here is not an apostrophe -- it romanises the letter ь --
+  #     and ALA-LC/ISO 9/AMS (prime U+02B9) conflict with BGN/PCGN and
+  #     zbMATH (U+2019). That conflict is a red herring: the house rule
+  #     already says the BEARER'S OWN ATTESTED USAGE OUTRANKS ANY
+  #     STANDARD, and for most of these people there is a settled Latin
+  #     byline that ends the question. Researched per person, each
+  #     adversarially re-checked. 16 names looked at: 7 change, 9 stay.
+  #
+  #     STAYING (verified, no entry needed): Krasnosel'skii, Gol'dshtein,
+  #     Arkhangel'skii, Tret'yakov, Nikol'skii, Gal'chuk, Dil'man,
+  #     Ural'tseva, Vas'kovskii -- their own title pages, arXiv bylines or
+  #     (where they have no Latin self-spelling) the standard all keep the
+  #     mark. Gol'dshtein is 25/25 marked on arXiv; Krasnosel'skii's mark
+  #     was read off this library's own PDF dedication page.
+  "kolokol'tsov": "Kolokoltsov"   # 53 files; his own Warwick CV has 0 apostrophe forms and ~130 bare
+  "tsirel'son": "Tsirelson"   # 5 files; he ruled on it himself, in writing, on his own FAQ page
+  "mel'nikov": "Melnikov"   # 5 files; arXiv self-submissions + his own CRC monograph title pages
+  "venttsel'": "Wentzell"   # 1 file; his own family spelling, and LC files him under it
+  "prats'ovytyĭ": "Pratsiovytyi"   # 18 files; ORCID 0000-0001-6130-9413 + his own arXiv title page
+  "prats'ovytyi": "Pratsiovytyi"   # 1 file; same man, the library's other spelling of him
+  "telʹksnis": "Telksnys"   # 1 file; Lithuanian, round-tripped through Cyrillic; LC's own note gives "t.p. (L. Telksnys)"

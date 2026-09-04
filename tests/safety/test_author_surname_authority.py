@@ -208,6 +208,20 @@ RESPELLINGS = {
     # "het" belongs before the t. Karel in 't Hout, Antwerp -- confirmed
     # against his homepage, ORCID, arXiv, zbMATH, LC and GND.
     "in t'hout": "in 't Hout",
+    # Transliterated Cyrillic soft sign. These drop or change letters
+    # because the person's own Latin byline is not a transliteration of
+    # the Russian at all -- it is the name they publish under. Each was
+    # adversarially re-checked; the ones whose own usage KEEPS the mark
+    # (Krasnosel'skii, Gol'dshtein, Arkhangel'skii, Tret'yakov,
+    # Nikol'skii, Gal'chuk, Dil'man, Ural'tseva, Vas'kovskii) are
+    # deliberately absent from the authority list entirely.
+    "kolokol'tsov": "Kolokoltsov",
+    "tsirel'son": "Tsirelson",
+    "mel'nikov": "Melnikov",
+    "venttsel'": "Wentzell",
+    "prats'ovytyĭ": "Pratsiovytyi",
+    "prats'ovytyi": "Pratsiovytyi",
+    "telʹksnis": "Telksnys",
 }
 
 
