@@ -2227,7 +2227,23 @@ def _render_name_or_word_review() -> None:
                 note += " · applied, but French would lower-case it"
             cols[1].caption(note)
             if cols[2].button("Name", key=f"nm_{word}",
-                              help=f"Keep the capital: “{word.title()}”"):
+                              # NOT word.title(): it capitalises after
+                              # EVERY apostrophe-like character, so
+                              # "floc'h" was offered as "Floc'H" -- a
+                              # word that does not exist, shown to the
+                              # owner as the thing he is ruling on.
+                              # Raising only the first letter is not a
+                              # universal fix either (it would render
+                              # "o'connell" as "O'connell"); it is the
+                              # right call for THIS queue, which holds
+                              # ordinary title words, and the surname
+                              # cases are settled by the author-surname
+                              # authority instead. A word that already
+                              # carries a capital is shown untouched.
+                              help="Keep the capital: “"
+                                   + (word if any(c.isupper() for c in word)
+                                      else word[:1].upper() + word[1:])
+                                   + "”"):
                 av.save_decision(word, av.NAME, evidence=(up, low))
                 _log_activity("vocab.name", word, f"{up}/{low}")
                 st.rerun()

@@ -165,3 +165,62 @@ author_surnames:
   # --- Other
   #     1 names, 1 files
   "de la pradelle": "de La Pradelle"   # 1 files, French, medium
+
+  # --- Italian elision D' — the particle is part of a registered surname
+  #     Researched per person 2026-09-03 with co-authors, adversarially
+  #     verified: 10 proposed, 10 upheld, 0 refuted.
+  "d'auria": "D'Auria"   # 5 files, Bernardo D'Auria, Padova
+  "d'ovidio": "D'Ovidio"   # 4 files, Mirko D'Ovidio, Sapienza
+  "d'onofrio": "D'Onofrio"   # 3 files, Giuseppe D'Onofrio, Politecnico di Torino
+  "d'agostini": "D'Agostini"   # 2 files, Giulio D'Agostini, Sapienza/INFN (LC nr97025381)
+  "d'ambrosio": "D'Ambrosio"   # 1 file, Claudia D'Ambrosio, LIX/CNRS, born Rimini
+  "d'amico": "D'Amico"   # 1 file, Guglielmo D'Amico, Chieti-Pescara
+  "d'angelo": "D'Angelo"   # 1 file, Yves D'Angelo — Italian surname, French national
+  "d'amato": "D'Amato"   # 1 file, Egidio D'Amato, Parthenope
+  "d’amato": "D'Amato"   # 1 file, SAME PERSON with U+2019; also normalises the mark
+
+  # NOT changed, and deliberately absent: d'Aspremont (2 files) and
+  # d'Halluin (2 files) are FRENCH toponymics — de Aspremont, de Halluin
+  # (a commune in the Nord) — so the particle is the elided preposition
+  # and stays lower case. Alexandre d'Aspremont's own ENS page and zbMATH
+  # both write it lower case.
+
+  # --- A publisher's misspelling, inherited
+  #     "Onoforio" is a metathesis of "Onofrio" and is not a surname. The
+  #     error comes from Elsevier's own Crossref record for this exact DOI
+  #     (10.1016/0362-546x(90)90131-y); the same metadata batch also
+  #     mangled the co-authors to "Dellantonio" and "Donofrrio". The person
+  #     is Biancamaria D'Onofrio (Sapienza), a DIFFERENT person from
+  #     Giuseppe above who genuinely shares the surname.
+  "d'onoforio": "D'Onofrio"   # 1 file
+
+  # --- Author-block apostrophe normalisation (docs 3.13)
+  #     The author block is a KEY and uses U+0027; these five carry U+2019.
+  #     Measured: the authorities this library matches against are 99.95%
+  #     U+0027 across 1,909 name records. Nothing else about these names
+  #     changes -- in particular the transliteration of the two Slavic
+  #     ones is NOT touched (Prats'ovytyi keeps its own final letter).
+  "o’donoghue": "O'Donoghue"   # 1 file
+  "o’connell": "O'Connell"   # 1 file
+  "nikol’skii": "Nikol'skii"   # 1 file
+  "prats’ovytyi": "Prats'ovytyi"   # 1 file
+
+  # --- Italian elided article fused into the surname (Dell', Dall')
+  #     Same class as Del/Di/Da. Verified per person, adversarially upheld.
+  "dell'antonio": "Dell'Antonio"   # 2 files, Gian Fausto Dell'Antonio, Sapienza/SISSA (LC n78034052)
+  "dall'acqua": "Dall'Acqua"   # 1 file, Enrico Dall'Acqua, Politecnico di Milano (NOT Anna Dall'Acqua, Ulm)
+
+  # --- A transliteration artefact, and a Dutch mark on the wrong side
+  #     Gal'Cuk: the interior capital C-caron is correct in no system.
+  #     MathSciNet prints \cprime chuk (= Gal'chuk) on his Russian-journal
+  #     records. ASCII "ch" matches this library's other Russian names
+  #     (Kolokol'tsov, Mel'nikov, Tsirel'son). NOTE: "Galtchouk, L. I."
+  #     elsewhere in the library is the SAME MAN under his own French
+  #     spelling, used in Seminaire de Probabilites -- deliberately NOT
+  #     merged, because it is what he published under.
+  "gal'čuk": "Gal'chuk"   # 4 files
+  #     in 't Hout: the elided "het" is before the t, and the t joins the
+  #     surname. Karel in 't Hout, Antwerp -- his homepage, ORCID, arXiv,
+  #     zbMATH, LC and GND all agree.
+  "in t'hout": "in 't Hout"   # 1 file
+

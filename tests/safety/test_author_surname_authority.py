@@ -189,17 +189,63 @@ def test_the_list_never_maps_a_name_to_itself():
     assert not bad, f"entries that change nothing: {bad}"
 
 
+#: Entries that deliberately RESPELL rather than only re-case. Each one
+#: needs a reason here, because the default must stay "a capitalisation
+#: authority does not silently respell people".
+RESPELLINGS = {
+    # "Onoforio" is a metathesis of "Onofrio" and is not a surname in any
+    # authority file. The error is inherited from Elsevier's own Crossref
+    # record for this exact DOI (10.1016/0362-546x(90)90131-y); the same
+    # metadata batch mangled the co-authors to "Dellantonio" and
+    # "Donofrrio". Person: Biancamaria D'Onofrio, Sapienza.
+    "d'onoforio": "D'Onofrio",
+    # The interior capital C-caron is correct in no romanisation system.
+    # MathSciNet prints "Gal\\cprime chuk" (= Gal'chuk) on his
+    # Russian-journal records; ASCII "ch" also matches the library's other
+    # Russian names. Person: Leonid I. Gal'chuk, Moscow State / Strasbourg.
+    "gal'čuk": "Gal'chuk",
+    # Not a respelling of the letters but of their ARRANGEMENT: the elided
+    # "het" belongs before the t. Karel in 't Hout, Antwerp -- confirmed
+    # against his homepage, ORCID, arXiv, zbMATH, LC and GND.
+    "in t'hout": "in 't Hout",
+}
+
+
 def test_every_entry_only_changes_case_or_joining_not_letters():
     """A capitalisation authority must not silently respell anyone.
 
     Guards against a research error becoming a spelling change: the
-    letters, ignoring case and spaces, must survive.
+    letters, ignoring case, spaces and hyphens, must survive. A genuine
+    correction of a misspelling is allowed, but only by being written
+    down in RESPELLINGS with its evidence -- so a NEW one still fails
+    here rather than slipping in behind this one.
+
+    The apostrophe is normalised away before comparing, because U+2019 to
+    U+0027 is a character-policy change (docs 3.13) and not a respelling.
     """
+    from processing.apostrophes import fold_marks
     table = load_map()
     for k, v in table.items():
-        a = k.replace(" ", "").replace("-", "")
-        b = v.casefold().replace(" ", "").replace("-", "")
-        assert a == b, f"entry rewrites letters, not just case: {k!r} -> {v!r}"
+        if RESPELLINGS.get(k) == v:
+            continue
+        a = fold_marks(k).replace(" ", "").replace("-", "")
+        b = fold_marks(v.casefold()).replace(" ", "").replace("-", "")
+        assert a == b, (
+            f"entry rewrites letters, not just case: {k!r} -> {v!r}. "
+            f"If that is deliberate, add it to RESPELLINGS with the evidence.")
+
+
+def test_every_declared_respelling_is_actually_in_the_list():
+    """The allowlist must not outlive the entry it excuses.
+
+    Without this, removing an entry from the YAML leaves a permanent
+    licence in the test for a name that is no longer ruled.
+    """
+    table = load_map()
+    for k, v in RESPELLINGS.items():
+        assert table.get(k) == v, (
+            f"RESPELLINGS excuses {k!r} -> {v!r}, which is not in the "
+            f"shipped list any more (found {table.get(k)!r})")
 
 
 # ---------------------------------------------------------------------------
