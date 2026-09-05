@@ -27,10 +27,33 @@ def test_identity_is_the_inode_not_the_path(tmp_path):
     assert before is not None
 
     box.rmdir()
-    box.mkdir()                      # same path, brand new inode
+    box.mkdir()                      # same path, brand new directory
     after = _current_watch(box)
-
     assert after is not None
+
+    if after == before:
+        # NOT a silent pass. This filesystem handed back the inode number
+        # it had just freed and exposes no creation time, so stat() cannot
+        # tell two genuinely different directories apart. ext4 does this
+        # routinely; APFS, which the owner runs, does not -- which is why
+        # the first version of this test passed on his machine and failed
+        # the first time CI could import watchdog and actually run it.
+        st = box.stat()
+        assert not hasattr(st, "st_birthtime"), (
+            "this platform DOES expose st_birthtime, so a recreated "
+            "directory must be distinguishable from the original -- "
+            "an identical identity here is a real regression in "
+            "_current_watch, not a filesystem limitation"
+        )
+        pytest.skip(
+            "this filesystem recycles inode numbers and exposes no "
+            "st_birthtime, so stat() cannot distinguish a recreated "
+            "directory from the original. The outage itself stays covered "
+            "by test_the_daemon_reschedules_and_rescans, which drives the "
+            "real loop; this particular signal is blind here, and saying "
+            "so is not the same as saying it is fine."
+        )
+
     assert after != before, (
         "recreating the folder produced an identical identity, so the daemon "
         "would never reschedule -- which is exactly the five-day outage"
@@ -226,3 +249,93 @@ def test_recovery_failure_is_logged_and_the_daemon_keeps_running(
         f"the loop exited early after the failure (ticks={observer_state['ticks']}); "
         f"one failed reschedule must not end the daemon"
     )
+
+
+# ---------------------------------------------------------------------------
+# The two cases above can only be reproduced on the owner's own machine by
+# faking stat(), because APFS never recycles an inode number and always
+# reports st_birthtime. Both of these failed for real on Linux the first
+# time CI could import this module -- CI had been installing a manifest
+# without watchdog, so the whole tests/safety tier aborted at collection
+# and these assertions had never once executed off a Mac.
+# ---------------------------------------------------------------------------
+
+import stat as _stat
+
+
+class _Stat:
+    """A stat_result stand-in. Omitting st_birthtime is the point: that is
+    what Linux/ext4 under CPython 3.12 actually looks like."""
+
+    def __init__(self, dev, ino, mode, birthtime=None):
+        self.st_dev, self.st_ino, self.st_mode = dev, ino, mode
+        if birthtime is not None:
+            self.st_birthtime = birthtime
+
+    def __getattr__(self, name):          # no st_birthtime unless given
+        raise AttributeError(name)
+
+
+_DIR = _stat.S_IFDIR | 0o755
+_FILE = _stat.S_IFREG | 0o644
+
+
+def _with_stats(monkeypatch, *results):
+    """Serve `results` in order, then repeat the last one for ever.
+
+    Deliberately NOT `iter()` + `next()`. A mutant that calls stat() a
+    different number of times then raises StopIteration out of a lambda,
+    which pytest reports as INTERNALERROR and which ABORTS THE WHOLE
+    SESSION -- so the mutant is "caught" by taking down every other test
+    in the tier, including the ones it did not break. That is the same
+    shape as the collection abort that hid these failures in the first
+    place, and it is not an acceptable way for a test to fail.
+    """
+    box = {"i": 0}
+
+    def _stat(self, **kw):
+        i = min(box["i"], len(results) - 1)
+        box["i"] += 1
+        return results[i]
+
+    monkeypatch.setattr(Path, "stat", _stat)
+
+
+def test_a_regular_file_reads_as_gone_even_when_stat_succeeds(monkeypatch):
+    """THE DEFECT. stat() succeeds on a file, so the original returned an
+    identity for it and a file sitting where the inbox used to be reported
+    as a healthy watch -- the same shape as the outage itself."""
+    _with_stats(monkeypatch, _Stat(2049, 111, _FILE))
+    assert _current_watch(Path("/anywhere")) is None
+
+
+def test_a_recycled_inode_alone_is_not_an_identity(monkeypatch):
+    """ext4 hands back the inode number it has just freed. With only
+    (dev, ino) the recreated directory was indistinguishable from the
+    original, so the daemon would never have rescheduled -- on Linux the
+    five-day outage was undetectable. st_birthtime separates them."""
+    _with_stats(monkeypatch,
+                _Stat(2049, 111, _DIR, birthtime=100.0),
+                _Stat(2049, 111, _DIR, birthtime=200.0))
+    before = _current_watch(Path("/inbox"))
+    after = _current_watch(Path("/inbox"))
+    assert before != after, (
+        "same device, same recycled inode number, different creation time — "
+        "these are two different directories and the identity must say so"
+    )
+
+
+def test_identity_does_not_move_when_only_the_contents_change(monkeypatch):
+    """The mirror-image failure: an identity that changes on every write
+    makes the daemon reschedule its watch forever."""
+    _with_stats(monkeypatch,
+                _Stat(2049, 111, _DIR, birthtime=100.0),
+                _Stat(2049, 111, _DIR, birthtime=100.0))
+    assert _current_watch(Path("/inbox")) == _current_watch(Path("/inbox"))
+
+
+def test_the_identity_still_answers_gone_when_stat_raises(monkeypatch):
+    def _boom(self, **kw):
+        raise OSError("vanished")
+    monkeypatch.setattr(Path, "stat", _boom)
+    assert _current_watch(Path("/inbox")) is None

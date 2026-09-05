@@ -23,6 +23,7 @@ import argparse
 import logging
 import os
 import signal
+import stat
 import sys
 import time
 from pathlib import Path
@@ -401,12 +402,40 @@ def _current_watch(inbox: Path):
     the case that actually bit: delete the folder, recreate it at the same
     path, and the kernel watch still points at the old, now-unlinked inode
     -- the path looks perfect and no event ever arrives again.
+
+    Two things the first version got wrong, both found by running the
+    safety tier on Linux for the first time (CI had been installing a
+    manifest without watchdog, so this module never imported there):
+
+    * ``stat()`` SUCCEEDS on a regular file. A file where the folder was
+      is not a usable watch, and returning an identity for it reports the
+      outage as health -- the exact failure this function exists to catch.
+      It now reads as gone.
+
+    * ``(st_dev, st_ino)`` alone is not an identity on a filesystem that
+      recycles inode numbers. ext4 hands back the number it has just
+      freed, so rmdir + mkdir at the same path produced a byte-identical
+      identity and the daemon would never have rescheduled. APFS, which
+      the owner runs, does not recycle, which is why this held on his
+      machine. ``st_birthtime`` separates them where the platform exposes
+      it (macOS always; Linux only with statx support in CPython).
+
+    Where birthtime is unavailable AND inode numbers are recycled, a
+    delete-and-recreate landing entirely between two 30s polls is
+    invisible to this signal. That residue is covered at the daemon level
+    rather than here: the poll sees the folder missing at some point in
+    almost every real sequence, and reschedules on that.
     """
     try:
         st = inbox.stat()
     except OSError:
         return None
-    return (st.st_dev, st.st_ino)
+    if not stat.S_ISDIR(st.st_mode):
+        return None
+    birth = getattr(st, "st_birthtime_ns", None)
+    if birth is None:
+        birth = getattr(st, "st_birthtime", None)
+    return (st.st_dev, st.st_ino, birth)
 
 
 def run_daemon(config: WatcherConfig, *, dry_run: bool = False) -> None:
