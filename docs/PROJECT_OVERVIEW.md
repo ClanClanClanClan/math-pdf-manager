@@ -167,7 +167,7 @@ Eliminate the tedious manual work of managing academic papers by providing intel
 ### **Quick Start**
 ```bash
 # Install system
-pip install -r config/requirements.txt
+pip install -r requirements.txt
 
 # Download a paper
 python pdfmgr.py download "10.1109/JPROC.2018.2820126"

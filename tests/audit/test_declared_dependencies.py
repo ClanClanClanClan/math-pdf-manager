@@ -199,3 +199,146 @@ def test_the_optional_list_is_not_a_dumping_ground():
     assert not unguarded_optional, (
         "on the optional list but imported unguarded — either wrap it in "
         f"try/except or declare it: {unguarded_optional}")
+
+
+# ---------------------------------------------------------------------------
+# The gap that let a broken CI look green.
+#
+# `_declared()` above accepts a dependency declared in ANY of three
+# manifests. CI installed exactly ONE of them -- and the stale one. So
+# `watchdog` counted as declared (requirements.txt and pyproject.toml both
+# name it) while the runner never installed it, and the disagreement was
+# invisible to every test.
+#
+# It surfaced the loud way: tests/safety/test_watcher_survives_a_deleted_inbox.py
+# imports `watcher.daemon` at module level, that module imports watchdog
+# unguarded, and pytest aborted COLLECTION of the whole tests/safety tier --
+# the conservation-laws tier, the one that caught the re-armed inbox
+# hard-delete. Six other packages were missing the same way and had been
+# skipping quietly, streamlit among them: the cockpit is the owner's entire
+# interface and CI could not import it.
+#
+# The rule below is therefore not "is it declared somewhere" but "does the
+# environment CI actually builds satisfy the code".
+# ---------------------------------------------------------------------------
+
+CI_WORKFLOW = ROOT / ".github" / "workflows" / "ci.yml"
+
+
+def _ci_install_set() -> tuple:
+    """(distributions CI installs, manifest paths it reads).
+
+    Parsed from the workflow rather than hard-coded: hard-coding the
+    answer here would recreate the very split this test exists to close.
+    """
+    dists: set = set()
+    manifests: list = []
+    if not CI_WORKFLOW.exists():                     # pragma: no cover
+        return dists, manifests
+    # Join shell line-continuations FIRST. The workflow spreads one
+    # `pip install` over two lines with a trailing backslash, and a
+    # parser that reads lines independently silently loses everything
+    # after the break -- which would make this check under-report
+    # exactly like the bug it is here to catch.
+    joined: list = []
+    pending = ""
+    for raw in CI_WORKFLOW.read_text(encoding="utf-8").splitlines():
+        stripped = raw.strip()
+        if pending:
+            stripped = pending + " " + stripped
+            pending = ""
+        if stripped.endswith("\\"):
+            pending = stripped[:-1].strip()
+            continue
+        joined.append(stripped)
+    if pending:
+        joined.append(pending)
+
+    for line in joined:
+        if line.startswith("#") or "pip install" not in line:
+            continue
+        tokens = line.split("pip install", 1)[1].strip().split()
+        i = 0
+        while i < len(tokens):
+            tok = tokens[i]
+            if tok in ("-r", "--requirement"):
+                if i + 1 < len(tokens):
+                    rel = tokens[i + 1]
+                    manifests.append(rel)
+                    p = ROOT / rel
+                    if p.exists():
+                        for ln in p.read_text(encoding="utf-8").splitlines():
+                            ln = ln.split("#")[0].strip()
+                            if not ln:
+                                continue
+                            m = re.match(r"^([A-Za-z0-9][A-Za-z0-9._-]*)", ln)
+                            if m:
+                                dists.add(m.group(1).lower().replace("_", "-"))
+                i += 2
+                continue
+            if tok.startswith("-") or tok in ("pip", "python", "-m"):
+                i += 1
+                continue
+            m = re.match(r"^([A-Za-z0-9][A-Za-z0-9._-]*)", tok)
+            if m:
+                dists.add(m.group(1).lower().replace("_", "-"))
+            i += 1
+    return dists, manifests
+
+
+def test_the_ci_workflow_actually_reads_a_manifest():
+    """Pathology guard: if the parser silently found nothing, the checks
+    below would pass over an empty set and prove nothing. An assertion
+    that cannot fail is the exact failure mode this file exists to
+    prevent."""
+    dists, manifests = _ci_install_set()
+    assert manifests, (
+        "parsed no `pip install -r <file>` out of .github/workflows/ci.yml — "
+        "either the workflow stopped installing a manifest, or this parser "
+        "no longer understands it. Either way the checks below are vacuous.")
+    assert len(dists) > 10, (
+        f"CI's install set parsed to only {len(dists)} distributions "
+        f"{sorted(dists)} — implausible, so the parse is wrong.")
+
+
+def test_ci_installs_everything_src_imports_unguarded():
+    """What CI installs must satisfy what the code imports.
+
+    This is the check `test_every_unguarded_third_party_import_is_declared`
+    cannot make: that one asks whether a human wrote the name down
+    somewhere, this one asks whether the runner will actually have it.
+    """
+    local = _local_top_levels()
+    installed, manifests = _ci_install_set()
+    missing = {}
+    for name, guarded, site in _imports():
+        if guarded or not _third_party(name, local):
+            continue
+        dist = _PROVIDED_BY.get(name, name).lower().replace("_", "-")
+        if dist in installed or name.lower().replace("_", "-") in installed:
+            continue
+        missing.setdefault(name, []).append(site)
+    assert not missing, (
+        "imported unguarded by src/ but NOT installed by CI "
+        f"(CI reads {manifests}) — these modules cannot be imported on the "
+        "runner, and a test touching one aborts collection for its whole "
+        "tier:\n" + "\n".join(
+            f"  {n} (provided by {_PROVIDED_BY.get(n, n)}) at {s[0]}"
+            f"{f' +{len(s) - 1} more' if len(s) > 1 else ''}"
+            for n, s in sorted(missing.items())))
+
+
+def test_ci_installs_the_manifest_this_file_validates():
+    """`_declared()` validates a union of manifests; CI installs a subset.
+    Whenever those diverge a dependency can be 'declared' and still be
+    absent on the runner — which is what happened."""
+    _, manifests = _ci_install_set()
+    validated = {"requirements.txt", "config/requirements.txt", "pyproject.toml"}
+    assert set(manifests) & validated, (
+        f"CI installs {manifests}, none of which _declared() validates — "
+        "the manifest check and the runner have drifted apart again.")
+    assert "requirements.txt" in manifests, (
+        f"CI installs {manifests}. requirements.txt is the curated manifest "
+        "(it names streamlit, watchdog, keyring, langdetect, radon, "
+        "typing_extensions and psutil); config/requirements.txt is a stale "
+        "superset-of-the-wrong-things that omits all seven.")

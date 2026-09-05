@@ -11,7 +11,7 @@ This guide is the starting point for contributors and operators of the Academic 
 ## Getting Started
 
 1. **Set up Python**: use 3.12+ and create a virtual environment.
-2. **Install dependencies**: `pip install -r config/requirements.txt`.
+2. **Install dependencies**: `pip install -r requirements.txt`.
 3. **Prepare credentials**: run the secure credential manager to create the encrypted store before attempting publisher automation.
 4. **Run a smoke test**: `pytest tests/unit --maxfail=1` confirms the baseline environment.
 5. **Process sample PDFs**: `python -m src.main ~/Papers --dry-run --strict` to exercise the validation pipeline without making changes.

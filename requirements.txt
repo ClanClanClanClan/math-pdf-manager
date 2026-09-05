@@ -32,6 +32,11 @@ playwright>=1.40
 # HTML parsing (used by publisher downloaders)
 beautifulsoup4>=4.12
 
+# Process/memory metrics for core/optimization/performance_profiler.py,
+# imported unguarded at module level. Declared only in the stale
+# config/requirements.txt until CI stopped reading that file.
+psutil>=5.9
+
 # Security
 cryptography>=41.0
 certifi
