@@ -11,6 +11,7 @@ import pytest
 
 from maintenance import conformance as C
 from maintenance.typos import build_corpus_stats
+from tests.oracle_support import needs_oracle
 
 
 @pytest.fixture
@@ -34,6 +35,8 @@ class TestTheBucket:
                       C.VIOLATION: 0, C.OWNER_QUEUE: 0, C.MECHANICAL: 0}
         assert rep.is_all_clear()
 
+    @needs_oracle
+
     def test_a_full_run_counts_a_typo_without_dying(self, tmp_path):
         """Two failures in one test, both real.
 
@@ -56,6 +59,8 @@ class TestTheBucket:
         assert [f for f in rep.findings if f.bucket == C.TYPO], \
             "the finding must reach the report, not just the counter"
 
+    @needs_oracle
+
     def test_a_run_records_which_oracle_produced_it(self, tmp_path):
         """macOS's dictionaries are mutable — words the owner taught it,
         plus a counts file the OS rewrites as it goes. Two sweeps of an
@@ -68,12 +73,16 @@ class TestTheBucket:
 
 class TestExamine:
 
+    @needs_oracle
+
     def test_a_misspelling_is_reported_as_one(self, corpus, tmp_path):
         bucket, reason, detail = C.examine(
             "B. - stochstic control theory.pdf", tmp_path, corpus)
         assert bucket == C.TYPO
         assert reason == "suspected-typo"
         assert "stochstic" in detail and "stochastic" in detail
+
+    @needs_oracle
 
     def test_the_detail_carries_the_evidence_not_a_verdict(self, corpus,
                                                            tmp_path):
@@ -127,6 +136,8 @@ class TestExamine:
 
 class TestPrecedence:
     """A typo outranks a rename proposal, and is outranked by a bug."""
+
+    @needs_oracle
 
     def test_the_typo_wins_over_a_proposed_rename(self, tmp_path):
         """The rename proposed for the real Mortini line was "Amererican

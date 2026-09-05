@@ -401,3 +401,47 @@ def _never_touch_the_real_library(tmp_path_factory, monkeypatch):
     monkeypatch.setenv("MATH_LIBRARY", str(root))
     monkeypatch.setenv("HOME", str(SESSION_HOME))
     yield root
+
+
+# ---------------------------------------------------------------------------
+# The typo oracle is macOS NSSpellChecker, bound through ctypes. There is no
+# equivalent on the Linux CI runner, where every call raises
+# TypoOracleUnavailable("libobjc/AppKit not found").
+#
+# This surfaced only on 2026-09-05, and the reason is worth writing down: the
+# "Conservation laws" step failed at COLLECTION (a manifest without watchdog),
+# the workflow's steps run in order, so the "Full test suite" step had not
+# executed on CI in a long time. 68 tests were failing there unseen.
+#
+# The rule this obeys: a test that CANNOT run here must say so with its
+# reason, and must never be confused with a test that ran and passed. So the
+# platform is probed ONCE, and only a TypoOracleUnavailable raised on a
+# platform genuinely lacking the oracle becomes a skip. On the owner's Mac
+# the same exception still FAILS the test -- there it means the bridge broke,
+# which is the failure this module was written to catch.
+# ---------------------------------------------------------------------------
+
+from tests.oracle_support import ORACLE_REASON as _ORACLE_REASON, SKIP_TEXT
+
+
+
+
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_call(item):
+    """Turn "this platform has no spell checker" into a skip with a reason.
+
+    Deliberately narrow. It fires only when the one-time probe above found
+    the oracle genuinely missing, and only for that exact exception type.
+    Every other error, and every error at all on a machine where the oracle
+    works, is reported unchanged.
+    """
+    outcome = yield
+    if _ORACLE_REASON is None:
+        return
+    exc = outcome.excinfo[1] if outcome.excinfo else None
+    if exc is None or type(exc).__name__ != "TypoOracleUnavailable":
+        return
+    outcome.force_exception(
+        pytest.skip.Exception(SKIP_TEXT)
+    )
