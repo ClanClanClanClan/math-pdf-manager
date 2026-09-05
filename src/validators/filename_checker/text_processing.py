@@ -37,6 +37,28 @@ QUOTE_CONVERSIONS = {
     },
 }
 
+#: The CLOSING double quote for each language above.
+#:
+#: The table beside this one gives only OPENERS, and
+#: ``convert_straight_quotes_to_proper`` used to emit that opener for
+#: EVERY straight double quote in the string -- so a quoted paper title
+#: came out of the ingest namer as "Commentary on <<Longest increasing
+#: subsequences<< by Aldous", never once closing. Verified live before
+#: the fix, in all three languages, on the real function.
+#:
+#: This is the ingest path (arxivbot CMO.get_canonical_filename ->
+#: _validate_filename -> check_filename -> fix_and_flag_quotes), so it
+#: named every new paper. The MOVE path was never affected:
+#: processing/move_normalizer takes the corrected author block and keeps
+#: the title verbatim, which is why only one such filename reached disk.
+QUOTE_CLOSERS = {
+    "en": "\u201d",   # ” right double quotation mark
+    "fr": "\u00bb",   # » right-pointing double angle
+    "de": "\u201c",   # “ German closes with the LEFT double mark
+    "es": "\u00bb",   # »
+    "it": "\u00bb",   # »
+}
+
 # Number word mappings
 NUMBERS = {
     "0": "zero",
@@ -566,6 +588,8 @@ def convert_straight_quotes_to_proper(text: str, lang: str, regions: List[Tuple[
     # ``.replace(straight, proper)`` approach can't tell apostrophes from
     # closing single-quotes — context matters for "don't" vs "'word'".
     result_chars = list(text)
+    # True while the next straight double quote should OPEN a quotation.
+    want_open = True
 
     for i, char in enumerate(text):
         # Skip if in math region or exception span
@@ -573,9 +597,16 @@ def convert_straight_quotes_to_proper(text: str, lang: str, regions: List[Tuple[
             continue
 
         if char == '"':
-            # Always convert straight double quotes
-            result_chars[i] = conversions['"']
-            debug_print(f"Converted straight double quote at position {i}")
+            # Alternate: the first straight double OPENS, the next CLOSES.
+            # This used to be `conversions['"']` unconditionally, which
+            # emitted an opener every time and could never produce a
+            # closing mark in any language.
+            result_chars[i] = (conversions['"'] if want_open
+                               else QUOTE_CLOSERS.get(lang, conversions['"']))
+            debug_print(
+                f"Converted straight double quote at position {i} "
+                f"({'opening' if want_open else 'closing'})")
+            want_open = not want_open
 
         elif char == "'":
             # Only convert if it's NOT a contraction apostrophe
