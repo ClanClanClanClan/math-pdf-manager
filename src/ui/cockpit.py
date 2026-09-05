@@ -5440,9 +5440,11 @@ def render_duplicates() -> None:
     # ALSO written to disk: a browser reload used to discard it and make
     # the user pay the whole scan again before they could carry on.
     if st.button("🔍 Scan for duplicates", key="dup_scan"):
+        skipped: dict = {}
         with st.spinner("Hashing duplicate candidates…"):
-            groups = find_exact_duplicates(lib)
+            groups = find_exact_duplicates(lib, skipped=skipped)
         st.session_state["dup_groups"] = [g.to_dict() for g in groups]
+        st.session_state["dup_skipped"] = skipped
         _save_scan("duplicates", st.session_state["dup_groups"])
         st.session_state.pop("dup_excluded", None)
 
@@ -5476,6 +5478,22 @@ def render_duplicates() -> None:
     c1.metric("Duplicate groups", len(groups))
     c2.metric("Auto-safe copies", auto_copies)
     c3.metric("Need review", len(review))
+
+    # What the scan did NOT look at. Until 2026-09-05 this page asked the
+    # owner to rule on 32 groups drawn from collections he had twice said
+    # to leave alone -- 30 of them entirely inside the academy folders --
+    # which was more than half the review pile. Now they are excluded, and
+    # saying so is the point: a number that shrank for an unstated reason
+    # is worse than the number that was wrong.
+    _sk = st.session_state.get("dup_skipped") or {}
+    if _sk:
+        st.caption(
+            "Not examined: "
+            + ", ".join(f"**{n:,}** files — {why}"
+                        for why, n in sorted(_sk.items(), key=lambda kv: -kv[1]))
+            + ".  These collections are excluded on your standing "
+              "instruction; nothing in them is compared or moved."
+        )
     if _kept_all:
         with st.expander(f"✓ {len(_kept_all)} group(s) you ruled "
                          f"'keep all' — bring one back"):

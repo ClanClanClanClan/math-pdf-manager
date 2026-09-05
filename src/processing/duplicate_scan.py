@@ -72,6 +72,10 @@ TOPIC_PREFIX = "07"
 # by leading token / name.
 SPECIAL_PREFIXES = ("08", "09", "10", "archive")
 # Directories under the library root that are not the paper library.
+# Superseded by processing.library_scope, which is the single answer to
+# "may tooling touch this?" and knows about the archival collections this
+# set never did. Kept only because _class_of() still ranks by top-level
+# folder name; it is no longer a scope decision.
 NON_LIBRARY_TOP = {"Scripts", "gmnap", "unicode_utils"}
 
 # Location-class ranking for choosing which copy to KEEP (lower = keep).
@@ -269,28 +273,71 @@ def _is_under(p: Path, root: Path) -> bool:
         return False
 
 
-def _scannable(root: Path):
-    """Yield library PDFs, skipping code dirs, dotdirs and ``.trash``."""
+def _scannable(root: Path, skipped: Optional[dict] = None):
+    """Yield the library PDFs tooling is allowed to touch.
+
+    Scope comes from ``processing.library_scope``, not from a list kept
+    here. This module carried its own ``NON_LIBRARY_TOP`` naming three of
+    the eight directories the project excludes, and knowing nothing at
+    all about the archival collections the owner has twice asked to be
+    left alone.
+
+    MEASURED on the real library, 2026-09-05: of the 55 duplicate groups
+    queued for his review, **30 had every copy inside
+    "00 - Histoire de l'academie royale des sciences" or
+    "02 - Memoires presentes par divers savants"**, and 2 more paired a
+    filed paper against its copy inside JEHPS. Those 32 are decisions he
+    had already said he did not want to be asked to make, and they were
+    more than half the pile.
+
+    Staging is deliberately kept IN scope (``include_staging=True``): a
+    file in "12 - To be sorted" that is byte-identical to one already
+    filed is precisely the redundancy this scan should surface, and the
+    keeper ranking already prefers the filed copy over the staging one.
+
+    ``skipped`` is filled with ``{reason: count}`` when given, so the
+    caller can say what it did not look at. A scan that quietly drops
+    2,000 files and reports "no duplicates" is the shape of bug this
+    project keeps paying for.
+    """
     from processing.identity import iter_pdfs
+    from processing.library_scope import exclusion_reason
     for pdf in iter_pdfs(root):
-        top = _toplevel(pdf, root)
-        if top in NON_LIBRARY_TOP or top.startswith("."):
+        try:
+            rel = str(pdf.relative_to(root))
+        except ValueError:                            # not under root
+            continue
+        # No normalise() here on purpose. library_scope._norm already does
+        # NFC, and a second copy of the rule is a second thing to keep in
+        # sync -- a mutation run proved this one redundant: deleting it
+        # failed no test, because the module that owns the rule was doing
+        # the work. The NFD case stays covered end-to-end by
+        # test_an_accented_collection_name_still_matches_after_macos_decomposes_it.
+        reason = exclusion_reason(rel, include_staging=True)
+        if reason is not None:
+            if skipped is not None:
+                skipped[reason] = skipped.get(reason, 0) + 1
             continue
         yield pdf
 
 
-def find_exact_duplicates(root: Path) -> list[DuplicateGroup]:
+def find_exact_duplicates(root: Path,
+                          skipped: Optional[dict] = None) -> list[DuplicateGroup]:
     """Return byte-identical duplicate groups across the whole library.
 
     Algorithm: bucket by ``st_size`` (cheap metadata, no content read),
     then for every size shared by 2+ files confirm with a full-file
     SHA-256 and emit a group per hash shared by 2+ files.
+
+    Out-of-scope collections are not considered -- see ``_scannable``.
+    Pass a dict as ``skipped`` to receive ``{reason: count}`` for what was
+    left out.
     """
     if not root.exists():
         return []
 
     size_buckets: dict[int, list[Path]] = {}
-    for pdf in _scannable(root):
+    for pdf in _scannable(root, skipped):
         try:
             size = pdf.stat().st_size
         except OSError:

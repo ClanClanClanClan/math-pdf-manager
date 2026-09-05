@@ -252,3 +252,126 @@ class TestResolution:
         res = apply_duplicate_resolutions(lib, dry_run=False, exclude={str(topic)})
         assert res["removed"] == 0
         assert status.exists() and topic.exists()
+
+
+class TestScopeIsAskedNotGuessed:
+    """The duplicate scan must use processing.library_scope.
+
+    MEASURED before this was wired, on the real 29.5k library: 55 groups
+    were queued for the owner's manual review and **32 of them came from
+    collections he has twice asked to be left alone** -- 30 with every
+    copy inside the academy folders, 2 pairing a filed paper against its
+    JEHPS copy. He was being asked to make decisions he had already made.
+    After wiring: 23 groups, and 1,908 archival files reported as skipped
+    rather than silently dropped.
+
+    The archival prefixes come from the constant, not from literals here.
+    They carry accents ("00 - Histoire de l'academie" is NOT the real
+    name) and the owner may add a collection; a copy in this file would
+    drift and the test would pass while the scan leaked again.
+    """
+
+    def _lib(self, tmp_path, rel_paths, payload=b"%PDF-1.4 identical"):
+        lib = tmp_path / "lib"
+        for rel in rel_paths:
+            q = lib / rel
+            q.parent.mkdir(parents=True, exist_ok=True)
+            q.write_bytes(payload)
+        return lib
+
+    def test_the_archival_list_is_not_empty(self):
+        """Pathology guard: every test below draws its fixtures from this
+        constant, so an empty one would make them all vacuously pass."""
+        from processing.library_scope import ARCHIVAL_COLLECTIONS
+        assert len(ARCHIVAL_COLLECTIONS) >= 4
+
+    def test_two_copies_inside_archival_collections_are_not_offered(self, tmp_path):
+        from processing.duplicate_scan import find_exact_duplicates
+        from processing.library_scope import ARCHIVAL_COLLECTIONS
+        a, b = ARCHIVAL_COLLECTIONS[1], ARCHIVAL_COLLECTIONS[3]
+        lib = self._lib(tmp_path, [f"{a}/a.pdf", f"{b}/a.pdf"])
+        assert find_exact_duplicates(lib) == [], (
+            "both copies sit in collections the owner asked to leave alone, "
+            "so there is no decision to put in front of him"
+        )
+
+    def test_a_filed_paper_paired_only_with_an_archival_copy_is_not_offered(self, tmp_path):
+        """The mixed case. The archival copy must never move, so the pair
+        is not a choice -- and this is the JEHPS shape that reached him."""
+        from processing.duplicate_scan import find_exact_duplicates
+        from processing.library_scope import ARCHIVAL_COLLECTIONS
+        jehps = ARCHIVAL_COLLECTIONS[0]
+        lib = self._lib(tmp_path, [
+            "01 - Published papers/M/Mansuy, R. - A paper.pdf",
+            f"{jehps}/Volume 05/Mansuy, R. - A paper.pdf",
+        ])
+        assert find_exact_duplicates(lib) == []
+
+    def test_an_accented_collection_name_still_matches_after_macos_decomposes_it(self, tmp_path):
+        """macOS hands filenames back NFD-decomposed. Every archival name
+        here carries an accent, so a scope check that compares raw strings
+        matches nothing at all on this filesystem -- the trap this project
+        has hit four separate times."""
+        import unicodedata
+        from processing.duplicate_scan import find_exact_duplicates
+        from processing.library_scope import ARCHIVAL_COLLECTIONS
+        accented = [c for c in ARCHIVAL_COLLECTIONS if any(ord(ch) > 127 for ch in c)]
+        assert accented, "no accented archival name left to exercise the NFD path"
+        name = unicodedata.normalize("NFD", accented[0])
+        lib = self._lib(tmp_path, [f"{name}/x.pdf", f"{name}/sub/x.pdf"])
+        assert find_exact_duplicates(lib) == []
+
+    def test_a_staging_leftover_is_STILL_found(self, tmp_path):
+        """Staging is out of scope by library_scope's default and is
+        deliberately re-included here: a copy in "12 - To be sorted" that
+        is already filed is exactly the redundancy this page exists to
+        clear. If this starts returning [], the call lost include_staging."""
+        from processing.duplicate_scan import find_exact_duplicates
+        lib = self._lib(tmp_path, [
+            "03 - Working papers/B/2021/Bender, C. - Model-free finance.pdf",
+            "12 - To be sorted/03 - Working papers/2105.10623v1.pdf",
+        ])
+        groups = find_exact_duplicates(lib)
+        assert len(groups) == 1, "the staging leftover must still be offered"
+        assert "12 - To be sorted" in str(groups[0].remove[0])
+        assert "12 - To be sorted" not in str(groups[0].keep), (
+            "the filed copy is the keeper, not the staging one"
+        )
+
+    def test_two_ordinary_copies_are_still_found(self, tmp_path):
+        """The scope filter must not have swallowed the ordinary case."""
+        from processing.duplicate_scan import find_exact_duplicates
+        lib = self._lib(tmp_path, [
+            "01 - Published papers/A/Author, A. - Paper.pdf",
+            "07a - BSDEs/01 - Published papers/A/Author, A. - Paper.pdf",
+        ])
+        assert len(find_exact_duplicates(lib)) == 1
+
+    def test_what_was_skipped_is_reported_not_silently_dropped(self, tmp_path):
+        """"I did not look" and "there was nothing" must not be the same
+        answer."""
+        from processing.duplicate_scan import find_exact_duplicates
+        from processing.library_scope import ARCHIVAL_COLLECTIONS
+        a = ARCHIVAL_COLLECTIONS[1]
+        lib = self._lib(tmp_path, [
+            f"{a}/a.pdf", f"{a}/b.pdf",
+            "01 - Published papers/A/Author, A. - Paper.pdf",
+        ])
+        skipped: dict = {}
+        find_exact_duplicates(lib, skipped=skipped)
+        assert skipped, "the scan dropped files and said nothing"
+        assert sum(skipped.values()) == 2
+        assert any("archival" in reason for reason in skipped), (
+            f"the reason must name the rule that excluded them: {skipped}"
+        )
+
+    def test_the_skip_tally_stays_empty_when_nothing_is_skipped(self, tmp_path):
+        """Pathology: a tally that is always populated says nothing."""
+        from processing.duplicate_scan import find_exact_duplicates
+        lib = self._lib(tmp_path, [
+            "01 - Published papers/A/Author, A. - Paper.pdf",
+            "01 - Published papers/B/Author, A. - Paper.pdf",
+        ])
+        skipped: dict = {}
+        find_exact_duplicates(lib, skipped=skipped)
+        assert skipped == {}
