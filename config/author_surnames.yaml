@@ -86,7 +86,7 @@ author_surnames:
   "di bucchianico": "Di Bucchianico"   # 1 files, Italian, high
 
   # --- Arabic / Hebrew in Latin script — modern authors publish capitalised
-  #     33 names, 221 files
+  #     33 names, 221 files (the bound-particle and Turkish entries below are counted separately)
   "el karoui": "El Karoui"   # 124 files, Arabic (Latin transliteration; French/Tunisian usage), high
   "el asri": "El Asri"   # 17 files, Arabic (Latin transliteration; Moroccan usage), high
   "el otmani": "El Otmani"   # 16 files, Arabic (Latin transliteration; Moroccan usage), high
@@ -120,6 +120,38 @@ author_surnames:
   "ben dhia": "Ben Dhia"   # 1 files, Arabic (Tunisian), French transliteration, high
   "al oqeili": "Al Oqeili"   # 1 files, Arabic (Jordanian), French/English transliteration, medium
   "al dayri": "Al Dayri"   # 1 files, Arabic (Lebanese), French transliteration, high
+
+  # --- Arabic / Hebrew bound particles — hyphen OR space, by each bearer's own byline
+  #     Added 2026-10-07. The library held these lower-case ("al Aradi"),
+  #     which is right for a preposition and wrong for a particle that is
+  #     never dropped. Hyphen versus space is NOT a style choice: it is
+  #     what each person prints. The result is a deliberately mixed shelf
+  #     -- "Al Saleh" spaced beside "Al-Zahrani" hyphenated -- and that is
+  #     per-bearer usage doing its job, not an inconsistency to tidy.
+  #     The first five were researched on 2026-09-03; the next four were
+  #     researched again with two adversarial skeptics each (2026-09-05),
+  #     and one of them overturned the proposal: Al Saleh is SPACED.
+  #     NOT covered, on purpose: "al Romian", "al Rachid", "al Hadad"
+  #     (1 file each) -- unresearched, so no rule here may sweep them.
+  "al aradi": "Al-Aradi"   # 5 files; Ali Al-Aradi, Toronto -- his own arXiv submissions
+  "al hussein": "Al-Hussein"   # 2 files; AbdulRahman Al-Hussein, Qassim -- arXiv 1202.4006, Wiley 2013
+  "al homidan": "Al-Homidan"   # 1 file; Suliman Al-Homidan, KFUPM -- publisher deposits (Crossref)
+  "al najjar": "Al-Najjar"   # 1 file; Nabil I. Al-Najjar, Kellogg -- publisher deposits (Crossref)
+  "ben ari": "Ben-Ari"   # 1 file; Iddo Ben-Ari, UConn -- his own homepage and faculty page
+  "al zahrani": "Al-Zahrani"   # 2 files; Ali Y. Al-Zahrani, Carleton/KAU, ORCID 0000-0002-5029-3265 -- both PDFs. Keep "A. Y.": dblp holds FIVE Ali Al-Zahranis
+  "al saleh": "Al Saleh"   # 2 files; Fatimah Al Saleh, King Faisal/KAUST -- SPACED on both of her own bylines (NOT M. F. Al-Saleh of Yarmouk, a different person)
+  "al mofleh": "Al-Mofleh"   # 1 file; Hazem Al-Mofleh, Tafila -- the PDF byline, arXiv 2402.14377
+  "al dweik": "Al-Dweik"   # 1 file; Ahmad Y. Al-Dweik, Birzeit -- both forms in the PDF hyphenate
+
+  # --- Turkish letters restored
+  #     Mine Çağlar, Koç University. Her published paper (Stochastic
+  #     Processes and their Applications 150 (2022), doi
+  #     10.1016/j.spa.2021.06.010) prints Ç and the breve of ğ; the arXiv
+  #     preprint prints "CAGLAR" -- on a page that also writes "Koc
+  #     University", i.e. an ASCII-only typesetting, not a choice of
+  #     spelling. Both of the library's files are hers.
+  "caglar": "Çağlar"   # 1 file (Kaj & Caglar, arXiv preprint)
+  "çaglar": "Çağlar"   # 1 file (the SPA paper, cedilla kept but breve lost)
 
   # --- French articles — an article is part of the surname and cannot be dropped
   #     24 names, 105 files

@@ -222,6 +222,13 @@ RESPELLINGS = {
     "prats'ovytyĭ": "Pratsiovytyi",
     "prats'ovytyi": "Pratsiovytyi",
     "telʹksnis": "Telksnys",
+    # Turkish ğ and Ç restored, not invented. Mine Çağlar, Koç University:
+    # the publisher of record prints both letters (SPA 150 (2022), doi
+    # 10.1016/j.spa.2021.06.010, read off the library's own PDF). "Caglar"
+    # is her arXiv preprint, typeset ASCII-only -- the same page writes
+    # "Koc University". Both library files are hers.
+    "caglar": "Çağlar",
+    "çaglar": "Çağlar",
 }
 
 
