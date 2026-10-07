@@ -18,13 +18,15 @@ answer to *that* is the Maintenance sweep, which runs the real
 ``normalize_full_name`` over the library.  Confusing the two is how a
 count becomes a promise.
 
-VALIDATED against the real library on 2026-09-02: for all 16 phrases
-that report a non-zero count, the number shown here and the number
-``normalize_full_name`` actually renames agree EXACTLY (28 files in
-total, zero disagreements).  That agreement is a measurement, not a
-guarantee -- the caser can decline a file for reasons this module cannot
-see -- which is why the wording stays "spelled differently" and the
-Maintenance sweep remains the authority.
+ONE MATCHER. ``title_normalize.propose_title_case`` finds the spans it
+rewrites by calling :func:`occurrences` -- the same function this
+module's counts use -- so the two cannot disagree about WHICH spans a
+ruling governs. (On 2026-09-02 they were two implementations that
+happened to agree on the 28 files measured; they differed on dashes and
+on hand-lowercasing, and a fix to one would not have reached the other.)
+The caser can still decline a whole file for reasons outside phrase
+matching, which is why the wording stays "spelled differently" and the
+Maintenance sweep remains the authority on renames.
 
 Read-only: nothing here opens a file.
 """
@@ -35,8 +37,15 @@ import unicodedata
 
 #: Every dash the library has ever used for the same name.  Matching is
 #: dash-blind because typewriter habits scatter a name across "-", "–"
-#: and "—"; ``propose_title_case`` folds the same way.
-_DASHES = str.maketrans({"–": "-", "—": "-", "−": "-"})
+#: and "—".
+#:
+#: This is the ONE definition. ``title_normalize`` imports it rather than
+#: keeping its own. Until 2026-10 it did keep its own -- eight marks there,
+#: three here -- so a ruled phrase spelled with U+2010 HYPHEN, U+2011
+#: NON-BREAKING HYPHEN, U+2012 FIGURE DASH or U+2015 HORIZONTAL BAR was
+#: rewritten by the renamer and missing from this module's count.
+DASH_FOLD_SET = "-\u2013\u2014\u2010\u2011\u2012\u2015\u2212"
+_DASHES = str.maketrans({c: "-" for c in DASH_FOLD_SET if c != "-"})
 
 _SEP = " - "
 
@@ -70,7 +79,11 @@ def _nfc(s: str) -> str:
 
 
 def occurrences(title: str, phrase: str) -> list:
-    """Word-bounded, case- and dash-blind spans of ``phrase`` in ``title``.
+    """The spans of ``title`` that the ruling ``phrase`` governs.
+
+    Word-bounded, case- and dash-blind -- except that a ruling spelled
+    with a lower-case first letter does not govern a span that opens the
+    title (see :func:`_sentence_initial`).
 
     Returns ``[(start, end)]`` indexing the NFC-normalised ``title``
     (which is what :func:`title_of` hands back, so callers inside this
@@ -93,14 +106,39 @@ def occurrences(title: str, phrase: str) -> list:
     # Dash folding IS 1:1 (str.translate of single chars), so it is safe
     # to do by hand — it is only the CASE fold that had to move.
     pattern = re.compile(re.escape(ph.translate(_DASHES)), re.IGNORECASE)
+    lowercase_ruling = ph[:1].islower()
     out = []
     for m in pattern.finditer(t.translate(_DASHES)):
         a, b = m.start(), m.end()
         before_ok = a == 0 or not t[a - 1].isalpha()
         after_ok = b >= len(t) or not t[b].isalpha()
-        if before_ok and after_ok:
-            out.append((a, b))
+        if not (before_ok and after_ok):
+            continue
+        if lowercase_ruling and _sentence_initial(t, a):
+            continue
+        out.append((a, b))
     return out
+
+
+def _sentence_initial(title: str, at: int) -> bool:
+    """Does the span at ``at`` open the title's first sentence?
+
+    True when no letter or digit comes before it, so an opening quote or
+    bracket in front ("“De Rham” revisited") still counts as the start.
+
+    WHY THIS EXISTS. A ruling whose spelling begins in lower case --
+    "de Rham", "van der Waerden", "in 't Hout" -- is right mid-title and
+    WRONG as the first word of a title, where sentence case demands the
+    capital. Without this, ruling "de Rham" would have rewritten
+
+        De Rham–Hodge–Kodaira's decomposition on an abstract Wiener space
+
+    to "de Rham–Hodge–…", making a correct filename incorrect. That was
+    the only file the ruling would have touched, measured on 2026-09-05.
+    The span is not governed by the ruling at all there: it is neither
+    rewritten, nor counted as needing a fix, nor counted as correct.
+    """
+    return not any(ch.isalnum() for ch in title[:at])
 
 
 def would_change(name: str, phrase: str) -> bool:

@@ -48,11 +48,9 @@ _SCRIPT_GLYPHS = (
 # Every dash a keyboard, a publisher or a PDF extractor might emit, folded
 # to one mark so a name is recognised however it was typed.  Same length in
 # equals same length out, so string offsets survive the fold.
-_DASH_FOLD_SET = "-–—‐‑‒―−"
-
-
-def _dash_fold(s: str) -> str:
-    return "".join("-" if ch in _DASH_FOLD_SET else ch for ch in s).lower()
+# One definition, shared with the phrase matcher (processing.phrase_impact).
+from processing.phrase_impact import DASH_FOLD_SET as _DASH_FOLD_SET  # noqa: E402
+from processing.phrase_impact import occurrences as _ruling_spans  # noqa: E402
 
 
 # "?—", ".—", "!…—": a sentence ending mid-token.  Anchored with .match()
@@ -312,18 +310,17 @@ def propose_title_case(
     # whitelist entry can never silently repunctuate 29k filenames.
     _ruled = [p for p in vocab.get("phrases", ()) if len(_WORD_RE.findall(p)) > 1]
     if _ruled:
-        _folded = _dash_fold(title)
+        # ONE matcher, shared with the cockpit's preview count
+        # (processing.phrase_impact.occurrences). This block used to carry
+        # its own copy, which lowercased by hand -- not length-preserving
+        # ("İ".lower() is two code points, shifting every index after it)
+        # -- and folded eight dashes where the preview folded three. It also
+        # had no sentence-initial guard, so ruling "de Rham" would have
+        # turned a correct title-initial "De Rham" into "de Rham".
         _hits: list = []
         for _ph in sorted(_ruled, key=lambda p: (-len(p), p)):
-            _fph, _start = _dash_fold(_ph), 0
-            while True:
-                _at = _folded.find(_fph, _start)
-                if _at < 0:
-                    break
-                _start, _end = _at + 1, _at + len(_fph)
-                if (_at == 0 or not title[_at - 1].isalpha()) and (
-                        _end >= len(title) or not title[_end].isalpha()) and not any(
-                        _a < _end and _at < _b for _a, _b, _ in _hits):
+            for _at, _end in _ruling_spans(title, _ph):
+                if not any(_a < _end and _at < _b for _a, _b, _ in _hits):
                     _hits.append((_at, _end, _ph))
         if _hits:
             _hits.sort()
