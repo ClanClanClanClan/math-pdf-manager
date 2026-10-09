@@ -91,6 +91,8 @@ class PreviewSummary:
     # Proposed work for un-topiced papers:
     proposed_moves: int = 0     # confident new filings
     proposed_suggestions: int = 0
+    # Papers no tool may propose to change, by reason (never a silent drop).
+    left_alone: dict = field(default_factory=dict)
     doctype_mismatches: int = 0     # books/theses sitting in article folders
     subtopic_suggestions: int = 0   # topic-root papers a sub-subtopic fits
 
@@ -119,6 +121,7 @@ class PreviewSummary:
             "proposed_suggestions": self.proposed_suggestions,
             "doctype_mismatches": self.doctype_mismatches,
             "subtopic_suggestions": self.subtopic_suggestions,
+            "left_alone": dict(self.left_alone),
             "agreement_rate": round(self.agreement_rate, 4),
             "topic_recall": round(self.topic_recall, 4),
         }
@@ -355,6 +358,13 @@ def preview_topic_filing(
                 progress(walked, total, pdf.name)
             except Exception:  # progress reporting must never abort a scan
                 logger.debug("progress callback raised", exc_info=True)
+        # Before the routability filter, and even with an explicit scope:
+        # a caller handing in an archival folder must not get proposals.
+        from processing.library_scope import why_not_proposable
+        _why = why_not_proposable(library_root, pdf)
+        if _why is not None:
+            summary.left_alone[_why] = summary.left_alone.get(_why, 0) + 1
+            continue
         if filter_routable and not is_routable(pdf, library_root):
             continue
         if limit is not None and summary.scanned >= limit:

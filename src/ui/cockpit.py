@@ -2664,28 +2664,38 @@ def _spelling_scan(lib):
     from processing.identity import iter_pdfs
     from processing.spelling_vocab import accepted_words
 
+    from processing.library_scope import why_not_proposable
+
     self_check()          # raises rather than returning a mute oracle
     names, broken = [], []
+    left_alone = 0
     for pdf in iter_pdfs(lib):
         rel = pdf.relative_to(lib)
         if rel.parts and rel.parts[0].startswith("12 - "):
             continue
         name = U.normalize("NFC", pdf.name)
-        names.append((name, str(rel)))
-        faults = broken_characters(name)
+        # Archival titles still count as evidence of how words are spelt;
+        # they are never OFFERED a fix (owner's instruction, 2026-10-09).
+        proposable = why_not_proposable(lib, pdf) is None
+        names.append((name, str(rel), proposable))
+        left_alone += not proposable
+        faults = broken_characters(name) if proposable else None
         if faults:
             broken.append({"name": name, "rel": str(rel), "faults": faults})
-    stats = build_corpus_stats((n for n, _ in names),
+    stats = build_corpus_stats((n for n, _, _ in names),
                                ruled_correct=accepted_words(lib))
     suspects = []
-    for name, rel in names:
+    for name, rel, proposable in names:
+        if not proposable:
+            continue
         rep = examine_title(name, stats)
         if rep.verdict is Verdict.TYPO:
             suspects.append({"name": name, "rel": str(rel),
                              "suspects": [s.__dict__ for s in rep.suspects]})
     suspects.sort(key=lambda r: -max(s["suggestion_freq"] for s in r["suspects"]))
     return {"suspects": suspects, "broken": broken,
-            "scanned": len(names), "oracle": oracle_fingerprint(),
+            "scanned": len(names) - left_alone, "left_alone": left_alone,
+            "oracle": oracle_fingerprint(),
             "learned": learned_words_in_play()}
 
 
@@ -2876,7 +2886,10 @@ def render_spelling() -> None:
     st.caption(
         f"{data['scanned']:,} filenames · oracle `{data['oracle']}` · "
         f"{data['learned']:,} words you have taught macOS are treated as "
-        "correct without appearing here.")
+        "correct without appearing here."
+        + (f" {data['left_alone']:,} titles in the archival collections are "
+           "counted as evidence of spelling but never offered a fix."
+           if data.get("left_alone") else ""))
 
     # ---- the certain ones first: no dictionary, no threshold ------------
     if data["broken"]:
@@ -3547,6 +3560,13 @@ def render_pipeline_preview() -> None:
     m3[1].metric("Sub-subtopic fits", s.get("subtopic_suggestions", 0),
                  help="Papers a finer sub-subtopic (e.g. 07a Numerical methods) fits.")
 
+    _alone = s.get("left_alone") or {}
+    if _alone:
+        st.caption(
+            f"Left alone: {sum(_alone.values()):,} file(s) — "
+            + "; ".join(f"{n:,} {why}" for why, n in sorted(
+                _alone.items(), key=lambda kv: -kv[1]))
+            + ". Never proposed for a move.")
     st.caption(
         f"Agreement {s['agreement_rate']:.0%} on {s['agree'] + s['disagree']} "
         f"confident hand-filed papers. The higher this is, the safer a "

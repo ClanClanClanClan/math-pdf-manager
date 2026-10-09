@@ -229,7 +229,10 @@ def list_topic_suggestions(library_root: Path) -> list[dict]:
     out: list[dict] = []
     if not library_root.exists():
         return out
+    from processing.library_scope import why_not_proposable
     for pdf in iter_pdfs(library_root):
+        if why_not_proposable(library_root, pdf) is not None:
+            continue
         identity = PaperIdentity.load(pdf)
         if identity.is_new() or not identity.topic_suggestion:
             continue

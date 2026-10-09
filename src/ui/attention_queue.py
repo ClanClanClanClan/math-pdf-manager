@@ -385,8 +385,11 @@ def collect_conflict_copies(library_root: Path) -> list[AttentionItem]:
     items: list[AttentionItem] = []
     if not library_root.exists():
         return items
+    from processing.library_scope import why_not_proposable
     for pdf in iter_pdfs(library_root):
         if not _CONFLICT_RE.search(pdf.name):
+            continue
+        if why_not_proposable(library_root, pdf) is not None:
             continue
         key = f"conflict::{pdf.relative_to(library_root)}"
         items.append(

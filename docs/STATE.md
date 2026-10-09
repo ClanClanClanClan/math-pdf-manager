@@ -131,6 +131,34 @@ PDFs. Order matters — fix first, fold second.
 
 ---
 
+## Standing rulings, 2026-10-09
+
+The owner's answers to four open questions. Each is enforced in code, so
+treat them as rules, not suggestions.
+
+- **Year ranges take an en dash, in every filename; anything else is an
+  error.** `filename_normalizer._en_dash_year_ranges`, run by every
+  naming path. This covers the Finder colon ("2002/2003" on screen is
+  `2002:2003` on disk) and hyphens. 45 files were renamed (tx
+  `91180f9880fc`).
+- **Ruled surnames are found behind a prefix**: an exposé number
+  (`103-le Gall`) or a series volume (`Astérisque 281 - …`). 34 files
+  were renamed (tx `7ba3fdb68891`).
+- **Archival collections: records yes, proposals never.** They may keep
+  saved records (all 1,908 have one), but no tool may propose to move,
+  rename, retire or re-file anything in them.
+  `library_scope.why_not_proposable` is the one check, used by the topic
+  pipeline, its text step, Spelling, Conflicts, variants, Home topic
+  suggestions and both publication-state lists.
+- **Two records for one paper are merged, never chosen between.** Fields
+  missing from the kept record are filled from the other; arrival fields
+  take the older copy's value; real conflicts keep the app's value and
+  are reported. 8 pairs were merged (tx `a7051bcc41e7`), and
+  `PaperIdentity.load/save` now use `record_location` so no new pairs
+  form.
+
+---
+
 ## Fixed in the last two days
 
 | what | evidence |

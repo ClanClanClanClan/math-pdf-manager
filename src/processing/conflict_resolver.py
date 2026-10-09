@@ -388,8 +388,11 @@ def scan_conflicts(library_root: Path) -> list[ConflictComparison]:
     out: list[ConflictComparison] = []
     if not library_root.exists():
         return out
+    from processing.library_scope import why_not_proposable
     for pdf in iter_pdfs(library_root):
         if not _CONFLICT_RE.search(pdf.name):
+            continue
+        if why_not_proposable(library_root, pdf) is not None:
             continue
         out.append(compare(pdf))
     return out

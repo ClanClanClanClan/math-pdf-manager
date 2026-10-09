@@ -271,11 +271,15 @@ def _surnames(authors_part: str) -> set:
 
 def _collect_records(library_root: Path) -> list:
     from processing.identity import PaperIdentity, iter_pdfs
+    from processing.library_scope import why_not_proposable
     records = []
     for pdf in iter_pdfs(library_root):
         try:
             rel = str(pdf.relative_to(library_root))
         except ValueError:
+            continue
+        # A pair is a proposal to retire one side; no side may be archival.
+        if why_not_proposable(library_root, pdf) is not None:
             continue
         stem = unicodedata.normalize("NFC", pdf.stem)
         authors, title = "", stem

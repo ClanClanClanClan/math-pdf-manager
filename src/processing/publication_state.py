@@ -207,7 +207,10 @@ def list_borderline_matches(
     out: list[dict] = []
     if not library_root.exists():
         return out
+    from processing.library_scope import why_not_proposable
     for pdf in iter_pdfs(library_root):
+        if why_not_proposable(library_root, pdf) is not None:
+            continue
         identity = PaperIdentity.load(pdf)
         if identity.is_new() or not identity.publication_checks:
             continue
@@ -247,7 +250,10 @@ def list_permanently_unpublished(library_root: Path) -> list[Path]:
     out: list[Path] = []
     if not library_root.exists():
         return out
+    from processing.library_scope import why_not_proposable
     for pdf in iter_pdfs(library_root):
+        if why_not_proposable(library_root, pdf) is not None:
+            continue
         identity = PaperIdentity.load(pdf)
         if identity.is_new():
             continue

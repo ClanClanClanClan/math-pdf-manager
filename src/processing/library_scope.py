@@ -128,6 +128,25 @@ def in_scope(rel_path: str, **kwargs) -> bool:
     return exclusion_reason(rel_path, **kwargs) is None
 
 
+def why_not_proposable(library_root, path) -> Optional[str]:
+    """Why no tool may PROPOSE to move, rename, retire or re-file ``path``
+    -- or ``None`` when it may.
+
+    The owner's standing instruction, restated 2026-10-09: the archival
+    collections keep their saved records (those are fine) but no tool may
+    ever propose changes to them. Staging is allowed here -- these tools
+    already handle the inbox on purpose. Measured that day: the topic
+    pipeline treated 1,689 archival volumes as candidates for topic moves,
+    and five other proposers walked them too; each now asks this.
+    """
+    from pathlib import Path as _P
+    try:
+        rel = str(_P(path).relative_to(library_root))
+    except ValueError:
+        return None
+    return exclusion_reason(rel, include_staging=True)
+
+
 def filter_in_scope(rel_paths: Iterable[str], **kwargs):
     """``(kept, {reason: count})`` -- never a silent drop."""
     kept, dropped = [], {}

@@ -101,7 +101,11 @@ def backfill_classifier_text(
     try:
         root = scope or library_root
         filter_routable = scope is None
+        from processing.library_scope import why_not_proposable
         for pdf in iter_pdfs(root):
+            if why_not_proposable(library_root, pdf) is not None:
+                stats["left_alone"] = stats.get("left_alone", 0) + 1
+                continue
             if filter_routable and not is_routable(pdf, library_root):
                 continue
             if limit is not None and stats["scanned"] >= limit:
