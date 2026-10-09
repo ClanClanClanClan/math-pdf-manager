@@ -33,6 +33,7 @@ Design constraints
 from __future__ import annotations
 
 import hashlib
+import unicodedata
 import json
 import logging
 import os
@@ -753,6 +754,10 @@ def rename_with_sidecar(
     logged_rename(old_path, new_path, undo_log=undo_log)
 
 
+def _nfc_str(s: str) -> str:
+    return unicodedata.normalize("NFC", s)
+
+
 def repath_topic_copies(
     sidecar_pdf_path: Path,
     *,
@@ -789,19 +794,31 @@ def repath_topic_copies(
     renamed = 0
     new_locations: list[str] = []
     new_path_str = str(new_path)
+    # Compared in NFC: a stored location can be decomposed in one part and
+    # not another ("Séminaires" NFD, the filename NFC), and an exact string
+    # match then mistook the paper itself for a topic copy -- seven records
+    # kept a stale entry under the old name on 2026-10-09.
     for loc in identity.copy_locations:
         p = Path(loc)
         # Canonical entry is updated separately by repath_copy_locations.
+        # (Exact comparison is enough here: a canonical entry in another
+        # form still carries the NEW basename, so the check below keeps it.)
         if p == new_path or loc == new_path_str:
             new_locations.append(loc)
             continue
         # Only consider locations whose basename matches the OLD
         # canonical -- anything else is something we didn't create.
-        if p.name != old_name:
+        if _nfc_str(p.name) != _nfc_str(old_name):
             new_locations.append(loc)
             continue
         new_loc = p.parent / new_name
-        if new_loc.exists():
+        # APFS folds case: for "le Gall" -> "Le Gall" the "existing" target
+        # IS this copy (non-negotiable 7). Ask the filesystem.
+        try:
+            _is_self = new_loc.exists() and new_loc.samefile(p)
+        except OSError:
+            _is_self = False
+        if new_loc.exists() and not _is_self:
             # Collision: keep the old entry, log a warning.  The user
             # will see two distinct entries (which is honest -- there
             # ARE two distinct files at that point).
@@ -924,20 +941,27 @@ def repath_copy_locations(
         return False
     old_str = str(old_path)
     new_str = str(new_path)
-    if old_str not in identity.copy_locations and new_str in identity.copy_locations:
+    # NFC on both sides (non-negotiable 8): macOS hands back decomposed
+    # names, and a caller may pass composed ones. Compared exactly, the old
+    # entry was not found, survived beside the new one, and the record
+    # listed the paper twice -- once under a name it no longer has.
+    old_key, new_key = _nfc_str(old_str), _nfc_str(new_str)
+    keys = {_nfc_str(loc) for loc in identity.copy_locations}
+    if old_key not in keys and new_key in keys:
         return False
     changed = False
     out: list[str] = []
     seen: set[str] = set()
     for loc in identity.copy_locations:
-        repl = new_str if loc == old_str else loc
-        if repl in seen:
+        repl = new_str if _nfc_str(loc) == old_key else loc
+        if _nfc_str(repl) in seen:
+            changed = True
             continue  # dedup
         out.append(repl)
-        seen.add(repl)
+        seen.add(_nfc_str(repl))
         if repl != loc:
             changed = True
-    if new_str not in seen:
+    if new_key not in seen:
         out.append(new_str)
         changed = True
     if not changed:
