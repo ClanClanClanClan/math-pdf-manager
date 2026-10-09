@@ -494,6 +494,19 @@ def run_daemon(config: WatcherConfig, *, dry_run: bool = False) -> None:
     last_check = time.monotonic()
     CHECK_EVERY = 30.0
 
+    # Say what we are watching. The cockpit's badge reads this instead of
+    # re-deriving the inbox from the config, which can disagree with what
+    # this process was started on (see watcher/state.py for the outage
+    # that cost).
+    from watcher.state import write_state, started_at_now
+    _started = started_at_now()
+
+    def _report(watching: bool, note: str = "") -> None:
+        write_state(config.log_dir, pid=os.getpid(), inbox=config.inbox_dir,
+                    watching=watching, started_at=_started, note=note)
+
+    _report(watch is not None)
+
     try:
         while observer.is_alive():
             handler.process_settled()
@@ -504,6 +517,7 @@ def run_daemon(config: WatcherConfig, *, dry_run: bool = False) -> None:
             last_check = time.monotonic()
             now = _current_watch(config.inbox_dir)
             if now == watch:
+                _report(watch is not None)
                 continue
 
             logger.warning(
@@ -520,13 +534,16 @@ def run_daemon(config: WatcherConfig, *, dry_run: bool = False) -> None:
                     "Watch re-established on %s; %d PDF(s) waiting.",
                     config.inbox_dir, found,
                 )
+                _report(watch is not None, "watch re-established")
             except Exception as exc:                 # keep the daemon alive
                 logger.error("Could not re-establish the watch: %s", exc)
+                _report(False, f"could not re-establish the watch: {exc}")
     except KeyboardInterrupt:
         pass
     finally:
         observer.stop()
         observer.join()
+        _report(False, "stopped")
         logger.info("Watcher stopped.")
 
 

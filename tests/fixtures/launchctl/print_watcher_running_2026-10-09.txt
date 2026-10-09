@@ -1,0 +1,70 @@
+gui/501/ch.ethz.dpossamai.mathpdf.watcher = {
+	active count = 1
+	path = /Users/OWNER/Library/LaunchAgents/ch.ethz.dpossamai.mathpdf.watcher.plist
+	type = LaunchAgent
+	state = running
+
+	program = /usr/bin/env
+	arguments = {
+		/usr/bin/env
+		/Library/Frameworks/Python.framework/Versions/3.12/bin/python3.12
+		-m
+		watcher.daemon
+	}
+
+	working directory = /Users/OWNER/Library/CloudStorage/Dropbox/Work/Maths/Scripts
+
+	stdout path = /Users/OWNER/.mathpdf/watcher.stdout
+	stderr path = /Users/OWNER/.mathpdf/watcher.stderr
+	inherited environment = {
+		SSH_AUTH_SOCK => /var/run/com.apple.launchd.X/Listeners
+	}
+
+	default environment = {
+		PATH => /usr/bin:/bin:/usr/sbin:/sbin
+	}
+
+	environment = {
+		OSLogRateLimit => 64
+		PYTHONPATH => /Users/OWNER/Library/CloudStorage/Dropbox/Work/Maths/Scripts/src
+		XPC_SERVICE_NAME => ch.ethz.dpossamai.mathpdf.watcher
+	}
+
+	domain = gui/501 [100002]
+	asid = 100002
+	minimum runtime = 60
+	exit timeout = 5
+	runs = 1
+	pid = 1531
+	immediate reason = speculative
+	forks = 1
+	execs = 3
+	initialized = 1
+	trampolined = 1
+	started suspended = 0
+	proxy started suspended = 0
+	checked allocations = 0 (queried = 1)
+	checked allocations reason = no host
+	checked allocations flags = 0x0
+	last exit code = (never exited)
+
+	resource coalition = {
+		ID = 1201
+		type = resource
+		state = active
+		active count = 1
+		name = ch.ethz.dpossamai.mathpdf.watcher
+	}
+
+	jetsam coalition = {
+		ID = 1202
+		type = jetsam
+		state = active
+		active count = 1
+		name = ch.ethz.dpossamai.mathpdf.watcher
+	}
+
+	spawn type = background (5)
+	jetsam priority = 40
+	jetsam memory limit (active) = (unlimited)
+	jetsam memory limit (inactive) = (unlimited)

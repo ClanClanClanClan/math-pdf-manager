@@ -112,34 +112,107 @@ def _launchctl(*args: str, capture: bool = True) -> subprocess.CompletedProcess:
 
 
 def _with_inbox(running: bool, pid: Optional[int], raw: str) -> dict:
-    """Attach the inbox reality to a liveness answer.
+    """Decide whether dropped PDFs are being filed, from the daemon's OWN report.
 
-    Split out so that EVERY return path in ``watcher_status`` gets the
-    folder check.  There are four of them and the first version of this
-    fix patched one.
+    ``filing`` is THREE-valued: True, False, or None ("cannot confirm"), and
+    ``problem`` carries the reason whenever it is not True. Every return path
+    of ``watcher_status`` comes through here.
+
+    It used to answer from ``WatcherConfig.load().inbox_dir.is_dir()`` -- the
+    folder the COCKPIT resolves now. The daemon resolves its inbox once at
+    start-up (or takes ``--inbox``), so the two can name different folders.
+    MEASURED 2026-09-05: the configured ``~/.mathpdf/inbox`` existed, the
+    daemon's real watch ``~/Downloads/MathInbox`` had been deleted, and the
+    badge was green -- the five-day outage, reproducible on demand. Now the
+    daemon writes what it watches (watcher/state.py) and this reads it.
     """
-    inbox: Optional[Path] = None
     try:
         from watcher.config import WatcherConfig
-        inbox = WatcherConfig.load().inbox_dir
+        cfg = WatcherConfig.load()
     except Exception as exc:                       # pragma: no cover - defensive
-        return {"running": running, "filing": False, "pid": pid,
-                "inbox": None, "raw": raw,
-                "problem": f"cannot tell where the inbox is: {exc}"}
+        return {"running": running, "filing": None if running else False,
+                "pid": pid, "inbox": None, "raw": raw, "note": "",
+                "problem": f"cannot read the filer's settings: {exc}"}
+    configured = cfg.inbox_dir
+    base = {"running": running, "pid": pid, "raw": raw, "note": ""}
     if not running:
-        return {"running": False, "filing": False, "pid": pid,
-                "inbox": inbox, "raw": raw, "problem": None}
-    if not inbox.is_dir():
-        return {"running": True, "filing": False, "pid": pid,
-                "inbox": inbox, "raw": raw,
-                "problem": (f"the daemon is up, but the folder it watches no "
-                            f"longer exists: {inbox}")}
-    return {"running": True, "filing": True, "pid": pid,
-            "inbox": inbox, "raw": raw, "problem": None}
+        return {**base, "filing": False, "inbox": configured, "problem": None}
+
+    from watcher.state import STALE_AFTER_SECONDS, read_state, report_age_seconds
+    report = read_state(cfg.log_dir)
+    if report is None:
+        return {**base, "filing": None, "inbox": configured, "problem": (
+            "the running filer has not reported which folder it watches -- "
+            "it was started before this check existed, or cannot write its "
+            "report. Restart automatic filing once to find out.")}
+    if pid is not None and report.get("pid") != pid:
+        return {**base, "filing": None, "inbox": configured, "problem": (
+            f"the last report came from an earlier run (process "
+            f"{report.get('pid')}); the filer now running (process {pid}) "
+            f"has not reported yet.")}
+    age = report_age_seconds(report)
+    if age is None or age > STALE_AFTER_SECONDS:
+        mins = "an unknown time" if age is None else f"{int(age // 60)} min"
+        return {**base, "filing": None, "inbox": configured, "problem": (
+            f"the filer has not reported for {mins} -- it may be stuck.")}
+    watched = Path(report.get("inbox") or "")
+    if not report.get("watching"):
+        return {**base, "filing": False, "inbox": watched, "problem": (
+            f"the filer is running, but the folder it watches is gone or "
+            f"unusable: {watched}")}
+    note = ""
+    if not _same_folder(watched, configured):
+        note = (f"It is watching {watched}, but your settings now name "
+                f"{configured}. Restart automatic filing to switch.")
+    return {**base, "filing": True, "inbox": watched, "problem": None,
+            "note": note}
+
+
+def _same_folder(a: Path, b: Path) -> bool:
+    """Path equality that survives APFS case-folding and NFD names."""
+    try:
+        if a.exists() and b.exists():
+            return a.samefile(b)
+    except OSError:
+        pass
+    import unicodedata
+    norm = lambda p: unicodedata.normalize("NFC", str(p.expanduser())).rstrip("/")
+    return norm(a) == norm(b)
+
+
+def _service_field(raw: str, key: str) -> Optional[str]:
+    """The SERVICE's own ``key = value`` from ``launchctl print``, never a nested one.
+
+    ``launchctl print`` nests blocks -- ``resource coalition = { state =
+    active }`` and ``jetsam coalition = { state = active }`` sit below the
+    service's own ``state = running``. The first parser kept the LAST
+    ``state =`` line it saw, so the nested "active" overwrote "running" and
+    the badge said OFF for a live daemon (verified 2026-10-09: pid 1531
+    reported as not running). Take the value from the SHALLOWEST block it
+    occurs in, first occurrence there.
+    """
+    best: Optional[tuple] = None
+    depth = 0
+    for line in raw.splitlines():
+        s = line.strip()
+        if s.startswith("}"):
+            depth = max(0, depth - 1)
+            continue
+        if s.endswith("{"):
+            depth += 1
+            continue
+        if s.startswith(key + " =") or s.startswith(key + "="):
+            value = s.split("=", 1)[1].strip()
+            if best is None or depth < best[0]:
+                best = (depth, value)
+    return best[1] if best else None
 
 
 def watcher_status() -> dict:
-    """Return ``{running, filing, pid, inbox, problem, raw}``.
+    """Return ``{running, filing, pid, inbox, problem, note, raw}``.
+
+    ``filing`` is True, False, or None meaning "cannot confirm" -- see
+    ``_with_inbox``.
 
     ``running`` is only "the process is alive".  ``filing`` is the
     question the sidebar badge actually asks: are dropped PDFs being
@@ -183,24 +256,17 @@ def watcher_status() -> dict:
                     pid = None
                 return _with_inbox(pid is not None and pid > 0, pid, line)
         return _with_inbox(False, None, "not loaded")
-    # Parse `print` output: look for "pid = NNN" and "state = running".
-    # Use a regex match for the pid so trailing tokens (rare but
-    # possible across launchctl versions) don't break parsing.
+    # The service's OWN fields only -- see _service_field for the nested
+    # "state = active" that used to overwrite "state = running".
     pid: Optional[int] = None
-    running = False
-    for line in raw.splitlines():
-        s = line.strip()
-        if s.startswith("pid ="):
-            m = re.search(r"\d+", s)
-            if m:
-                pid = int(m.group())
-        if s.startswith("state ="):
-            # Compare the VALUE, not the line. `"running" in s` is true for
-            # "state = not running", so a loaded-but-stopped service reported
-            # as running -- the same false-positive as the folder check below,
-            # one layer down. launchctl emits "running", "not running" and
-            # "waiting"; only the first is up.
-            running = s.split("=", 1)[1].strip() == "running"
+    pid_text = _service_field(raw, "pid")
+    if pid_text:
+        m = re.search(r"\d+", pid_text)
+        if m:
+            pid = int(m.group())
+    # Compare the VALUE: "not running" contains "running". launchctl emits
+    # "running", "not running" and "waiting"; only the first is up.
+    running = (_service_field(raw, "state") or "") == "running"
     return _with_inbox(running, pid, raw)
 
 

@@ -475,20 +475,40 @@ def render_sidebar() -> None:
         try:
             from ui.cockpit_actions import start_watcher, stop_watcher
             wstatus = _watcher_status_cached()
-            if wstatus.get("running") and not wstatus.get("filing"):
+            _filing = wstatus.get("filing")          # True / False / None
+            if wstatus.get("running") and _filing is False:
                 # The process is up but it is not filing anything.  This
                 # state existed for five days and the badge said ON.
                 st.error(
                     f"Automatic filing: BROKEN — "
                     f"{wstatus.get('problem') or 'the daemon is not filing'}. "
-                    f"PDFs you drop are NOT being picked up. Turn it off and "
-                    f"on again to rebuild the folder and restart the watch."
+                    f"PDFs you drop are NOT being picked up."
                 )
-            if wstatus.get("filing"):
+            if wstatus.get("running") and _filing is None:
+                # "I could not confirm it" must never look like "it works".
+                st.warning(
+                    f"Automatic filing: CAN'T CONFIRM — "
+                    f"{wstatus.get('problem') or 'no report from the filer'}"
+                )
+            if _filing is True:
                 st.success(
                     f"Automatic filing: ON  "
                     f"(running as process {wstatus.get('pid') or '?'})"
                 )
+                if wstatus.get("note"):
+                    st.caption(wstatus["note"])
+            if wstatus.get("running") and _filing is not True:
+                if st.button("Restart automatic filing",
+                             use_container_width=True,
+                             key="sidebar_restart_watcher",
+                             help="Stops and starts the filer. It rebuilds "
+                                  "its folder, re-checks it, and files "
+                                  "anything that arrived meanwhile."):
+                    stop_watcher()
+                    ok, msg = start_watcher()
+                    st.toast(msg if ok else f"Could not restart: {msg}")
+                    _watcher_status_cached.clear()
+                    st.rerun()
             if wstatus.get("running"):
                 if st.button("Turn off automatic filing",
                              use_container_width=True,
@@ -3850,8 +3870,11 @@ def render_to_download() -> None:
         _wf = {"filing": False, "problem": "could not read the filer's status"}
 
     def _landing_caption(where: str) -> str:
-        if _wf.get("filing"):
+        if _wf.get("filing") is True:
             return f"{where} is filed into your library automatically."
+        if _wf.get("filing") is None and _wf.get("running"):
+            return (f"{where} should be filed automatically, but **the filer's "
+                    f"status cannot be confirmed right now** — see the sidebar.")
         return (f"{where} waits in the inbox — **automatic filing is off, so "
                 f"nothing will be filed until you turn it on** in the sidebar.")
 

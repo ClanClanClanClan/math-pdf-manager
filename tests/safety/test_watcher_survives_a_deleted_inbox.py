@@ -339,3 +339,186 @@ def test_the_identity_still_answers_gone_when_stat_raises(monkeypatch):
         raise OSError("vanished")
     monkeypatch.setattr(Path, "stat", _boom)
     assert _current_watch(Path("/inbox")) is None
+
+
+# ---------------------------------------------------------------------------
+# The daemon now REPORTS what it watches (watcher/state.py), because the
+# cockpit's badge used to re-derive the inbox from the config and could name
+# a different folder from the one this process was started on.
+# ---------------------------------------------------------------------------
+
+def test_the_daemon_reports_its_watch_through_loss_and_recovery(tmp_path, monkeypatch):
+    """Drive the real loop: start, lose the inbox, recover, stop. Every
+    report must name this process and this folder, and say truthfully
+    whether the watch is live at that moment."""
+    import os as _os
+    import watcher.daemon as d
+    import watcher.state as wstate
+
+    box = tmp_path / "inbox"
+    box.mkdir()
+    reports = []
+    real_write = wstate.write_state
+
+    def _capture(log_dir, **kw):
+        reports.append(kw)
+        real_write(log_dir, **kw)
+
+    monkeypatch.setattr(wstate, "write_state", _capture)
+
+    class _Obs:
+        def __init__(self):
+            self.t = 0
+        def schedule(self, *a, **k): pass
+        def unschedule_all(self): pass
+        def start(self): pass
+        def is_alive(self):
+            self.t += 1
+            return self.t < 8
+        def stop(self): pass
+        def join(self): pass
+
+    class _Handler:
+        def __init__(self, *a, **k):
+            self.scans = 0
+        def scan_existing_inbox(self):
+            self.scans += 1
+            return 0
+        def process_settled(self):
+            if box.exists() and self.scans == 1:
+                box.rmdir()                     # lose it once
+
+    monkeypatch.setattr(d, "Observer", _Obs)
+    monkeypatch.setattr(d, "PDFHandler", _Handler)
+    monkeypatch.setattr(d, "notify", lambda *a, **k: None)
+    clock = {"t": 0.0}
+    monkeypatch.setattr(d.time, "monotonic",
+                        lambda: clock.__setitem__("t", clock["t"] + 60.0) or clock["t"])
+    monkeypatch.setattr(d.time, "sleep", lambda _s: None)
+
+    from watcher.config import WatcherConfig
+    logs = tmp_path / "logs"
+    cfg = WatcherConfig(inbox_dir=box, library_root=tmp_path / "lib",
+                        log_dir=logs, notifications=False)
+    (tmp_path / "lib").mkdir()
+    d.run_daemon(cfg)
+
+    assert len(reports) >= 3, reports
+    assert all(r["pid"] == _os.getpid() for r in reports)
+    assert all(Path(r["inbox"]) == box for r in reports)
+    assert reports[0]["watching"] is True, "it starts on a live folder"
+    assert any(r.get("note") == "watch re-established" and r["watching"]
+               for r in reports), "the recovery must be reported"
+    assert reports[-1]["watching"] is False and reports[-1]["note"] == "stopped"
+    on_disk = wstate.read_state(logs)
+    assert on_disk and on_disk["watching"] is False, "the file is the last word"
+
+
+def test_a_failed_recovery_is_reported_as_not_watching(tmp_path, monkeypatch):
+    """When re-scheduling fails, the report must say so -- otherwise the
+    badge shows the last good report until it goes stale."""
+    import watcher.daemon as d
+    import watcher.state as wstate
+
+    box = tmp_path / "inbox"
+    box.mkdir()
+    reports = []
+    monkeypatch.setattr(wstate, "write_state", lambda log_dir, **kw: reports.append(kw))
+
+    class _Obs:
+        def __init__(self):
+            self.t = 0
+        def schedule(self, *a, **k):
+            if self.t > 1:
+                raise OSError("kernel said no")
+        def unschedule_all(self): pass
+        def start(self): pass
+        def is_alive(self):
+            self.t += 1
+            return self.t < 6
+        def stop(self): pass
+        def join(self): pass
+
+    class _Handler:
+        def __init__(self, *a, **k): pass
+        def scan_existing_inbox(self): return 0
+        def process_settled(self):
+            if box.exists():
+                box.rmdir()
+
+    monkeypatch.setattr(d, "Observer", _Obs)
+    monkeypatch.setattr(d, "PDFHandler", _Handler)
+    monkeypatch.setattr(d, "notify", lambda *a, **k: None)
+    clock = {"t": 0.0}
+    monkeypatch.setattr(d.time, "monotonic",
+                        lambda: clock.__setitem__("t", clock["t"] + 60.0) or clock["t"])
+    monkeypatch.setattr(d.time, "sleep", lambda _s: None)
+    from watcher.config import WatcherConfig
+    cfg = WatcherConfig(inbox_dir=box, library_root=tmp_path / "lib",
+                        log_dir=tmp_path / "logs", notifications=False)
+    (tmp_path / "lib").mkdir()
+    d.run_daemon(cfg)
+
+    failed = [r for r in reports if "could not re-establish" in r.get("note", "")]
+    assert failed and all(r["watching"] is False for r in failed), reports
+
+
+def test_the_report_never_raises_and_garbage_reads_as_no_report(tmp_path):
+    """Reporting must never take the filer down, and an unreadable report
+    must read as absent (UNKNOWN), never as a good one."""
+    from watcher.state import read_state, write_state, state_path
+    blocker = tmp_path / "not_a_dir"
+    blocker.write_text("x")
+    write_state(blocker, pid=1, inbox=tmp_path, watching=True, started_at="t")  # no raise
+    logs = tmp_path / "logs"
+    logs.mkdir()
+    state_path(logs).write_text("{ not json")
+    assert read_state(logs) is None
+    state_path(logs).write_text("[1, 2]")
+    assert read_state(logs) is None
+
+
+def test_a_healthy_daemon_keeps_reporting_on_every_check(tmp_path, monkeypatch):
+    """The badge treats a report older than 3 minutes as UNKNOWN, so a
+    daemon that only reported on start-up would decay from ON to "can't
+    confirm" while filing perfectly. Every 30 s check must report."""
+    import watcher.daemon as d
+    import watcher.state as wstate
+
+    box = tmp_path / "inbox"
+    box.mkdir()
+    reports = []
+    monkeypatch.setattr(wstate, "write_state", lambda log_dir, **kw: reports.append(kw))
+    ticks = {"n": 0}
+
+    class _Obs:
+        def schedule(self, *a, **k): pass
+        def unschedule_all(self): pass
+        def start(self): pass
+        def is_alive(self):
+            ticks["n"] += 1
+            return ticks["n"] < 6
+        def stop(self): pass
+        def join(self): pass
+
+    class _Handler:
+        def __init__(self, *a, **k): pass
+        def scan_existing_inbox(self): return 0
+        def process_settled(self): pass          # the folder is never lost
+
+    monkeypatch.setattr(d, "Observer", _Obs)
+    monkeypatch.setattr(d, "PDFHandler", _Handler)
+    monkeypatch.setattr(d, "notify", lambda *a, **k: None)
+    clock = {"t": 0.0}
+    monkeypatch.setattr(d.time, "monotonic",
+                        lambda: clock.__setitem__("t", clock["t"] + 60.0) or clock["t"])
+    monkeypatch.setattr(d.time, "sleep", lambda _s: None)
+    from watcher.config import WatcherConfig
+    cfg = WatcherConfig(inbox_dir=box, library_root=tmp_path / "lib",
+                        log_dir=tmp_path / "logs", notifications=False)
+    (tmp_path / "lib").mkdir()
+    d.run_daemon(cfg)
+
+    live = [r for r in reports if r["watching"]]
+    # start-up + one per loop pass that crossed the 30 s check
+    assert len(live) >= 4, f"only {len(live)} live reports in {ticks['n']} passes"
