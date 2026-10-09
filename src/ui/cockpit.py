@@ -468,6 +468,12 @@ def _locked_call(lib: Path, action: str, fn, *args, **kwargs):
 _BUSY = (False, "the library was busy, so nothing was changed")
 
 
+def _without_dup_group(groups: list, sha256: str) -> list:
+    """The saved duplicate groups minus the one just resolved."""
+    return [g for g in groups if (g.get("sha256") if isinstance(g, dict)
+                                  else getattr(g, "sha256", None)) != sha256]
+
+
 def _reversible_note(detail: str = "") -> None:
     """The single reversibility affordance, used under every writing control.
 
@@ -2292,55 +2298,139 @@ def _watcher_status_cached() -> dict:
 
 
 _ATTENTION_TTL_SECONDS = 1800
+#: How old a saved sweep may be and still be SHOWN (with its age) on Home.
+_ATTENTION_SNAPSHOT_MAX_H = 24 * 7
 
 
-def _gather_attention_cached(library_str: str, include_dismissed: bool,
-                             _progress=None) -> list:
-    """Cache the FULL attention list for 30 minutes, WITH live progress.
+def _attention_items_from_snapshot(payload: dict) -> list:
+    from ui.attention_queue import AttentionItem
+    out = []
+    for d in payload.get("items") or []:
+        d = dict(d)
+        d["actions"] = [tuple(a) for a in d.get("actions") or []]
+        out.append(AttentionItem(**d))
+    return out
 
-    The TTL used to be 60s — but this scan MEASURES 45-113s on a 29k
-    library (three collectors each walk every PDF and load every
-    sidecar).  A TTL shorter than the computation means the cache can
-    never be warm: every human-paced click paid a full library scan,
-    which is what made the whole cockpit feel broken.  The underlying
-    facts change on the timescale of a watcher run, not a click, so
-    30 minutes is honest; the Home page offers an explicit "Rescan".
 
-    Cached in session_state rather than with ``@st.cache_data``: a
-    cached function may NOT draw Streamlit elements, so the decorator
-    and the progress bar are mutually exclusive — with both, the whole
-    landing page failed with "a streamlit element is called on some
-    layout block created outside the function".  On a scan this long a
-    progress bar is the difference between "working" and "frozen", so
-    the cache is the part that moves.
+def _attention_save(library_str: str, entry: dict) -> None:
+    _save_scan("attention", {"library": library_str,
+                             "items": [it.to_dict() for it in entry["items"]],
+                             "outdated": entry["outdated"],
+                             "scanned_at": entry["at"]})
+
+
+def _attention_entry(library_str: str) -> Optional[dict]:
+    """This session's copy of the sweep, else the one saved on disk."""
+    store = st.session_state.setdefault("_attn_cache", {})
+    entry = store.get(library_str)
+    if entry is None:
+        snap, _age_h = _load_scan("attention", max_age_h=_ATTENTION_SNAPSHOT_MAX_H)
+        if snap and snap.get("library") == library_str:
+            try:
+                entry = {"at": float(snap.get("scanned_at") or 0.0),
+                         "items": _attention_items_from_snapshot(snap),
+                         "outdated": bool(snap.get("outdated"))}
+            except (TypeError, ValueError):
+                entry = None
+            if entry is not None:
+                store[library_str] = entry
+    return entry
+
+
+def _gather_attention_cached(library_str: str, include_dismissed: bool = False,
+                             _progress=None, *, scan: bool = True) -> Optional[list]:
+    """The attention list -- from memory, from disk, or (only if ``scan``) fresh.
+
+    THE COST. A full sweep walks every PDF and loads every record: 22-27 s
+    warm on the 29.5k library (measured 2026-09-05), more cold. Two things
+    made the owner pay it again and again (cockpit audit, findings 12/13):
+      * it lived only in st.session_state, so every browser reload, second
+        tab or server restart re-ran it -- and Home, the landing page,
+        started it unconditionally on arrival;
+      * every action, even one on a single Home row, threw the whole list
+        away, and the rerun immediately paid for a new sweep.
+    Now the sweep is also saved to disk (shown with its age, for up to a
+    week), Home never scans just because it was opened -- it asks -- and
+    acting on a row removes that row (_attention_resolved) instead of
+    discarding the list. Changes made elsewhere mark the list "may be out
+    of date" (_attention_mark_outdated) rather than deleting it.
+
+    The FULL list is cached; dismissals are applied on the way out. They
+    are a filter over the collected items (gather_attention_items does
+    exactly this), so dismissing or bringing back a row never needs a
+    rescan.
+
+    Cached in session_state rather than with ``@st.cache_data``: a cached
+    function may NOT draw Streamlit elements, so the decorator and the
+    progress bar are mutually exclusive.
     """
     import time
-    store = st.session_state.setdefault("_attn_cache", {})
-    key = (library_str, include_dismissed)
-    hit = store.get(key)
-    if hit is not None and (time.time() - hit[0]) < _ATTENTION_TTL_SECONDS:
-        return hit[1]
-    from ui.attention_queue import gather_attention_items
-    items = gather_attention_items(
-        Path(library_str), include_dismissed=include_dismissed,
-        progress=_progress,
-    )
-    store[key] = (time.time(), items)
+    entry = _attention_entry(library_str)
+    if entry is None:
+        if not scan:
+            return None
+        from ui.attention_queue import gather_attention_items
+        items = gather_attention_items(Path(library_str), include_dismissed=True,
+                                       progress=_progress)
+        entry = {"at": time.time(), "items": items, "outdated": False}
+        st.session_state.setdefault("_attn_cache", {})[library_str] = entry
+        _attention_save(library_str, entry)
+    items = entry["items"]
+    if not include_dismissed:
+        from ui.attention_queue import _filter_dismissed, _load_dismissals
+        items = _filter_dismissed(items, _load_dismissals())
     return items
 
 
+def _attention_meta(library_str: str) -> Optional[dict]:
+    entry = _attention_entry(library_str)
+    return None if entry is None else {"at": entry["at"], "outdated": entry["outdated"]}
+
+
 def _clear_attention_cache() -> None:
-    """Drop the cached scan — same contract as ``.clear()`` had."""
+    """Forget the sweep entirely -- memory AND disk. Only ↻ Rescan does this."""
     st.session_state.pop("_attn_cache", None)
+    _save_scan("attention", None)
 
 
-# Callers (and the post-mutation invalidator) still say `.clear()`.
+# The Rescan button still says `.clear()`.
 _gather_attention_cached.clear = _clear_attention_cache  # type: ignore[attr-defined]
 
 
+def _attention_mark_outdated() -> None:
+    """Something changed elsewhere: keep the list, but say it may be stale."""
+    for lib_str, entry in (st.session_state.get("_attn_cache") or {}).items():
+        if not entry["outdated"]:
+            entry["outdated"] = True
+            _attention_save(lib_str, entry)
+    if not st.session_state.get("_attn_cache"):
+        snap, _ = _load_scan("attention", max_age_h=_ATTENTION_SNAPSHOT_MAX_H)
+        if snap and not snap.get("outdated"):
+            snap["outdated"] = True
+            _save_scan("attention", snap)
+
+
+def _attention_resolved(key: str, *, files_moved: bool) -> None:
+    """A Home row was acted on: drop THAT row, keep the rest of the list.
+
+    It used to throw the whole 22-27 s sweep away and re-run it on the
+    very next render (cockpit audit, finding 12). ``files_moved`` also
+    invalidates the scans a moved PDF can change (the conflict list and
+    the search index); an action that only touched a record leaves them.
+    """
+    for lib_str, entry in (st.session_state.get("_attn_cache") or {}).items():
+        kept = [it for it in entry["items"] if it.key != key]
+        if len(kept) != len(entry["items"]):
+            entry["items"] = kept
+            _attention_save(lib_str, entry)
+    if files_moved:
+        _conflicts_cached.clear()
+        _search_index_cached.clear()
+
+
 def _attention_count_cached(library_str: str) -> int:
-    """Thin wrapper that returns the length of the cached attention list."""
-    return len(_gather_attention_cached(library_str, False))
+    """Length of the attention list, never scanning (0 if not checked yet)."""
+    return len(_gather_attention_cached(library_str, False, scan=False) or [])
 
 
 def _attention_badge() -> str:
@@ -2355,19 +2445,17 @@ def _attention_badge() -> str:
 
 
 # Expose ``.clear()`` for action handlers that want to invalidate the
-# cache after a destructive op (so the sidebar badge updates instantly
-# rather than waiting for the TTL).
+# caches after an operation that may have changed files.
 def _clear_scan_caches() -> None:
-    """Invalidate EVERY whole-library scan cache after a mutation.
+    """After a change made anywhere but a Home row.
 
-    Any action that changes files on disk can change the attention
-    queue, the conflict list AND the search index at once, so all three
-    are invalidated together.  ``_conflicts_cached`` and
-    ``_search_index_cached`` are defined further down the module; the
-    names resolve at call time, so this can live here, next to the
-    handle that ~20 existing action handlers already call.
+    Marks the attention list as possibly out of date -- it no longer
+    DELETES it (finding 15: that silently re-charged the whole sweep on
+    the next visit) -- and drops the two scans a moved file can change.
+    Bound to ``_attention_count_cached.clear``, the handle ~20 action
+    handlers already call.
     """
-    _gather_attention_cached.clear()
+    _attention_mark_outdated()
     _conflicts_cached.clear()
     _search_index_cached.clear()
 
@@ -3617,6 +3705,7 @@ def render_attention() -> None:
         # timer the owner cannot see.
         if st.button("↻ Rescan", use_container_width=True, key="attn_rescan"):
             _gather_attention_cached.clear()
+            st.session_state["attn_scan_now"] = True
             st.rerun()
 
     lib = _library()
@@ -3655,11 +3744,16 @@ def render_attention() -> None:
         "permanently_unpublished": "papers marked never-to-be-published (slow)",
         "unsorted_backlog": "papers waiting in the inbox",
     }
+    # Never scan just because the page was opened (cockpit audit, finding
+    # 13): a saved check is shown with its age; a fresh one runs only when
+    # asked, here or with ↻ Rescan.
+    _scan_now = st.session_state.pop("attn_scan_now", False)
     _tick, _done = _progress_ui("Check", show_eta=False)
     try:
         items = _gather_attention_cached(
             str(lib), show_dismissed,
             lambda i, n, name: _tick(i, n, _attn_labels.get(name, name.replace("_", " "))),
+            scan=_scan_now,
         )
     except Exception as exc:
         # This is the landing page and the scan walks every PDF; a raw
@@ -3675,6 +3769,23 @@ def render_attention() -> None:
         )
         return
     _done()
+    if items is None:
+        st.info("Your library has not been checked yet — or not in the last "
+                "week. The check reads every paper and takes about half a "
+                "minute; nothing is changed by it.")
+        if st.button("🔍 Check the library now", type="primary",
+                     key="attn_first_check"):
+            st.session_state["attn_scan_now"] = True
+            st.rerun()
+        return
+    _meta = _attention_meta(str(lib)) or {}
+    if _meta.get("at"):
+        _mins = max(0, int((time.time() - _meta["at"]) // 60))
+        _ago = (f"{_mins} min ago" if _mins < 120 else
+                f"{_mins // 60} h ago" if _mins < 48 * 60 else f"{_mins // 1440} days ago")
+        st.caption(f"Checked {_ago}." + (
+            "  **Your library has changed since** — press ↻ Rescan for "
+            "fresh numbers." if _meta.get("outdated") else ""))
     # Publish the count for the sidebar badge.  The sidebar must never
     # run this scan itself — that made every page pay for it.
     st.session_state["attn_count_last"] = len(items)
@@ -3769,8 +3880,7 @@ def render_attention() -> None:
             _dismiss(k, days=7)
         st.toast(f"Dismissed {len(attn_selected)} for 7 days")
         st.session_state[attn_sel_key] = set()
-        _attention_count_cached.clear()
-        st.rerun()
+        st.rerun()        # dismissals filter the cached list: no rescan
     if bar[3].button(
         f"Dismiss {len(attn_selected)} for 30 days",
         key="attn_bulk_dismiss_30d",
@@ -3782,8 +3892,7 @@ def render_attention() -> None:
             _dismiss(k, days=30)
         st.toast(f"Dismissed {len(attn_selected)} for 30 days")
         st.session_state[attn_sel_key] = set()
-        _attention_count_cached.clear()
-        st.rerun()
+        st.rerun()        # dismissals filter the cached list: no rescan
     st.divider()
 
     # ---- Summary first: what needs you, at a glance -------------------
@@ -3910,7 +4019,7 @@ def render_attention() -> None:
                                     # Invalidate cached count so the
                                     # sidebar badge updates immediately
                                     # rather than after the 60s TTL.
-                                    _attention_count_cached.clear()
+                                    _attention_resolved(it.key, files_moved=False)
                             elif action_id == "reveal_in_finder":
                                 p = it.payload.get("path", "")
                                 if p:
@@ -3943,7 +4052,7 @@ def render_attention() -> None:
                                             str(dest.relative_to(lib)), _tx)
                                         st.toast("Moved conflict copy to .trash/ "
                                                  "— undo from the Activity tab")
-                                        _attention_count_cached.clear()
+                                        _attention_resolved(it.key, files_moved=True)
                                     except Exception as exc:
                                         _log.discard()
                                         st.warning(
@@ -3990,7 +4099,7 @@ def render_attention() -> None:
                                             r.get("destination", ""), _tx)
                                         st.toast(f"Filed {src.name}",
                                                  icon="✅")
-                                        _attention_count_cached.clear()
+                                        _attention_resolved(it.key, files_moved=True)
                                     elif r.get("duplicate_of"):
                                         _flash(
                                             "info",
@@ -4040,7 +4149,7 @@ def render_attention() -> None:
                                         f"({status}) — undo it from the "
                                         f"Activity page."
                                     )
-                                    _attention_count_cached.clear()
+                                    _attention_resolved(it.key, files_moved=True)
                             elif action_id == "reset_recheck":
                                 # Restore a paper the state machine
                                 # gave up on.  Backs the Phase 2
@@ -4057,7 +4166,7 @@ def render_attention() -> None:
                                         _log_activity("attention.reset_recheck",
                                                       str(p.relative_to(lib)))
                                         st.toast(f"Recheck state reset for {p.name}")
-                                        _attention_count_cached.clear()
+                                        _attention_resolved(it.key, files_moved=False)
                             elif action_id == "accept_topic":
                                 # Move the paper into its suggested
                                 # topic folder via the undo log
@@ -4077,7 +4186,7 @@ def render_attention() -> None:
                                     _log_activity("topic.accept",
                                                   str(p), msg, tx)
                                     st.toast(msg)
-                                    _attention_count_cached.clear()
+                                    _attention_resolved(it.key, files_moved=True)
                                 else:
                                     ulog.discard()
                                     _flash("warning", msg)
@@ -4099,7 +4208,7 @@ def render_attention() -> None:
                                     _log_activity("topic.reject",
                                                   str(p), "suggestion cleared", tx)
                                     st.toast(f"Cleared topic suggestion for {p.name}")
-                                    _attention_count_cached.clear()
+                                    _attention_resolved(it.key, files_moved=False)
                             else:
                                 st.warning(f"Unknown action: {action_id}")
                         except Exception as exc:
@@ -4138,8 +4247,7 @@ def render_attention() -> None:
                 if c[1].button("Bring back", key=f"undismiss_{k}",
                                use_container_width=True):
                     undismiss(k)
-                    _attention_count_cached.clear()
-                    st.rerun()
+                    st.rerun()    # the row is still in the cached list
 
 
 # ---------------------------------------------------------------------------
@@ -6019,15 +6127,29 @@ def render_duplicates() -> None:
                                                  resolve_group, manual, lib,
                                                  undo_log=log)
                     results = results if _ran else []
-                    log.commit()
+                    if log.has_operations():
+                        log.commit()
+                    else:
+                        log.discard()
                     ok = sum(1 for r, _ in results if r)
-                    _log_activity("duplicates.manual_trash", "",
-                                  f"removed={ok}", tx)
-                    st.toast(f"Trashed {ok} copy/copies (reversible)")
-                    st.session_state["dup_groups"] = [
-                        gg.to_dict() for gg in find_exact_duplicates(lib)
-                    ]
-                    _attention_count_cached.clear()
+                    if ok:
+                        _log_activity("duplicates.manual_trash", "",
+                                      f"removed={ok}", tx)
+                        st.toast(f"Trashed {ok} copy/copies (reversible)")
+                        # Drop THIS group from the list and save it. It used
+                        # to re-run the whole-library duplicate scan here
+                        # (~10 s per click, 55 groups pending) and never
+                        # saved the result, so a reload brought the trashed
+                        # group back (cockpit audit, finding 14). Groups are
+                        # independent by content hash, so removing one is
+                        # exactly what a rescan would find.
+                        st.session_state["dup_groups"] = _without_dup_group(
+                            st.session_state.get("dup_groups") or [], g.sha256)
+                        _save_scan("duplicates", st.session_state["dup_groups"])
+                        _attention_count_cached.clear()
+                    elif _ran:
+                        _flash("error", "Nothing was trashed — the copies may "
+                               "have moved since the scan. Press Scan again.")
                     st.rerun()
 
 

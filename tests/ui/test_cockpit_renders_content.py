@@ -788,6 +788,9 @@ def test_attention_shows_a_named_pile_with_its_size(cockpit, lib):
         _pdf(lib / f"{stem}.pdf", b"%PDF canonical")
         _pdf(lib / f"{stem} (host's conflicted copy 2024-05-13).pdf",
              b"%PDF conflicted")
+    # Home no longer scans just because it was opened (cockpit audit,
+    # finding 13); this is the owner pressing "Check the library now".
+    cockpit.st.session_state["attn_scan_now"] = True
     cockpit.render_attention()
     text = rendered_text(cockpit.st)
     assert_shows(text, "What needs you", "the summary heading")
@@ -801,12 +804,28 @@ def test_attention_opened_pile_lists_the_actual_items(cockpit, lib):
     _pdf(lib / "Alpha.pdf", b"%PDF canonical")
     _pdf(lib / "Alpha (host's conflicted copy 2024-05-13).pdf", b"%PDF other")
     cockpit.st.session_state["attn_open_group"] = "conflict_copy"
+    cockpit.st.session_state["attn_scan_now"] = True      # "Check the library now"
     cockpit.render_attention()
     text = rendered_text(cockpit.st)
     assert_shows(text, "Alpha (host's conflicted copy 2024-05-13).pdf",
                  "the item in the opened pile")
     assert_shows(text, "Move conflict copy to trash", "its action")
     assert "Pick a pile above to review it" not in text
+
+
+def test_attention_unchecked_asks_instead_of_scanning_on_arrival(cockpit, lib, monkeypatch):
+    """The landing page used to start a 22-27 s sweep the moment it opened,
+    and re-run it on every reload (cockpit audit, finding 13)."""
+    import ui.attention_queue as aq
+    ran = []
+    monkeypatch.setattr(aq, "gather_attention_items",
+                        lambda *a, **k: ran.append(1) or [])
+    cockpit.render_attention()
+    text = rendered_text(cockpit.st)
+    assert ran == [], "Home scanned the library without being asked"
+    assert_shows(text, "Check the library now", "the button that starts it")
+    assert "Nothing needs your attention right now" not in text, (
+        "'not checked' must never read as 'nothing to do'")
 
 
 def test_attention_empty_library_is_not_a_clean_bill_of_health(cockpit, lib,
