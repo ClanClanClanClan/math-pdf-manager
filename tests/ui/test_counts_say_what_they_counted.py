@@ -232,3 +232,16 @@ def test_a_home_row_that_cannot_be_built_is_shown_as_such(tmp_path, monkeypatch)
 def test_the_collector_is_registered():
     from ui.attention_queue import COLLECTORS, collect_casing_rulings
     assert ("casing_rulings", collect_casing_rulings) in COLLECTORS
+
+
+def test_a_long_title_cut_at_a_space_still_renders_bold(cockpit, lib):
+    """Seen live on the real library: a name cut at 95 characters right
+    after a space printed its markdown asterisks literally."""
+    name = "Matoussi, A., Possamaï, D., Zhou, C. - Robust utility maximization in nondominated models with random endowment.pdf"
+    assert name[:95].endswith(" "), "precondition: the live case"
+    _pdf(lib / "01 - Published papers" / "M" / name)
+    cockpit.st.values["search_query"] = "matoussi"
+    cockpit.render_search()
+    shown = [a[0] for n, a, k in cockpit.st.calls
+             if n == "markdown" and a and str(a[0]).startswith("**Matoussi")]
+    assert shown and not shown[0].endswith(" **") and shown[0].endswith("…**"), shown

@@ -6055,7 +6055,10 @@ def render_search() -> None:
     _shown = st.session_state.get("search_shown", 25)
     _editing = st.session_state.get("edit_paper")
     for i, (name, rel) in enumerate(hits[:_shown]):
-        st.markdown(f"**{name[:95]}**")
+        # Cut where it ends in a space and the closing ** no longer bolds:
+        # the page showed "**Matoussi, ... models with **" literally.
+        _title = name if len(name) <= 95 else name[:94].rstrip() + "…"
+        st.markdown(f"**{_title}**")
         st.caption(str(Path(rel).parent))
         if _editing == rel:
             _render_paper_editor(lib, rel, index)
