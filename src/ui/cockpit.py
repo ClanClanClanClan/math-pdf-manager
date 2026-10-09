@@ -3241,6 +3241,9 @@ def render_conformance() -> None:
         f"{rep.globals_.get('coverage_pct', 0)}%")
 
     st.markdown("##### Why, grouped")
+    st.caption("To rename or move one of these yourself, find it on the "
+               "**Search** page and press **✏️ Rename or move** — its saved "
+               "details go with it. (A rename in Finder leaves them behind.)")
     for key, n in rep.reasons.items():
         bucket, _, reason = key.partition(":")
         icon = "🔴" if bucket in C.RED else "•"
@@ -5882,6 +5885,101 @@ def _search_index_cached(lib_str: str) -> list:
     return build_index(Path(lib_str))
 
 
+def _library_folders(index: list) -> list:
+    """Every folder that holds a paper, from the search index (no walk).
+    Archival collections are left out: nothing may be moved into them."""
+    from processing.library_scope import exclusion_reason
+    folders = {str(Path(rel).parent) for _name, rel, _key in index}
+    return sorted(f for f in folders
+                  if exclusion_reason(f + "/x.pdf", include_staging=True) is None)
+
+
+def _render_paper_editor(lib: Path, rel: str, index: list) -> None:
+    """Rename or move ONE paper, by name and folder he chooses.
+
+    Cockpit audit finding 17: every rename in the cockpit was one the
+    machine proposed; a filed paper could be renamed or moved only in
+    Finder, which strands its saved record (DOI, first-page text) under
+    the old name. This goes through apply_renames -- the record travels
+    with the paper, the lock is taken, Activity can undo it -- after
+    check_owner_rename has said why not, if not.
+    """
+    from processing.library_normalize import apply_renames
+    from processing.owner_rename import check_owner_rename, target_rel
+
+    cur = Path(rel)
+    with st.container(border=True):
+        st.markdown("**✏️ Rename or move this paper**")
+        name_key = f"edit_name::{rel}"
+        # A widget's state may only be set BEFORE it is drawn: "Use that
+        # name" parks the value here and reruns.
+        _pending = st.session_state.pop(f"edit_name_pending::{rel}", None)
+        if _pending is not None:
+            st.session_state[name_key] = _pending
+        st.session_state.setdefault(name_key, cur.stem)
+        stem = st.text_input("Name (without .pdf)", key=name_key)
+        folders = _library_folders(index)
+        here = str(cur.parent)
+        if here not in folders:
+            folders = [here] + folders
+        folder = st.selectbox(
+            "Folder", folders, index=folders.index(here),
+            key=f"edit_folder::{rel}",
+            help="Type to search, e.g. “01 - Published papers/S”.")
+        new_rel = target_rel(folder, stem or "")
+
+        # What the library's naming rules would make of the typed name --
+        # offered, never imposed: this is his rename.
+        try:
+            from processing.move_normalizer import normalize_full_name
+            canon, changed, _pend = normalize_full_name(Path(new_rel).name, lib)
+        except Exception:
+            canon, changed = None, False
+        if changed and canon and canon != Path(new_rel).name:
+            st.info(f"The library's naming rules would write this as "
+                    f"**{canon[:-4] if canon.endswith('.pdf') else canon}**.")
+            if st.button("Use that name", key=f"edit_canon::{rel}"):
+                st.session_state[f"edit_name_pending::{rel}"] = (
+                    canon[:-4] if canon.endswith(".pdf") else canon)
+                st.rerun()
+
+        problems, warnings = check_owner_rename(lib, rel, new_rel)
+        for w in warnings:
+            st.warning(w)
+        for prob in problems:
+            st.error(prob)
+        if not problems:
+            st.caption(f"Will become `{new_rel}`. Its saved details move with "
+                       "it, and Activity can undo it.")
+        cols = st.columns(2)
+        if cols[0].button("Rename", type="primary", disabled=bool(problems),
+                          key=f"edit_apply::{rel}",
+                          use_container_width=True) and not problems:
+            # apply_renames takes the library lock itself (it is not
+            # re-entrant, so this call is NOT wrapped in _locked_call).
+            res = apply_renames(
+                lib, [{"old": rel, "new": new_rel}], dry_run=False,
+                description=f"Rename one paper: {cur.name} → {new_rel}")
+            if res.get("renamed"):
+                _flash("success", f"Renamed to `{new_rel}`. Undo it from "
+                                  "Activity.")
+                _log_activity("search.rename", rel, new_rel,
+                              res.get("tx_id") or "")
+                st.session_state.pop("edit_paper", None)
+                _clear_scan_caches()
+            else:
+                why = (res.get("error")
+                       or "; ".join(x.get("reason", "?")
+                                    for x in res.get("skipped", []))
+                       or "no reason given")
+                _flash("error", f"Nothing was renamed: {why}.")
+            st.rerun()
+        if cols[1].button("Cancel", key=f"edit_cancel::{rel}",
+                          use_container_width=True):
+            st.session_state.pop("edit_paper", None)
+            st.rerun()
+
+
 @st.cache_data(ttl=1800, show_spinner="Preparing the downloads…")
 def _search_export_cached(lib_str: str, hits: tuple) -> tuple:
     """CSV and BibTeX for EVERY match, built once per result set.
@@ -5955,13 +6053,22 @@ def render_search() -> None:
         st.session_state["search_shown_q"] = query
         st.session_state["search_shown"] = 25
     _shown = st.session_state.get("search_shown", 25)
+    _editing = st.session_state.get("edit_paper")
     for i, (name, rel) in enumerate(hits[:_shown]):
         st.markdown(f"**{name[:95]}**")
         st.caption(str(Path(rel).parent))
-        if st.button("📁 Reveal in Finder", key=f"search_open_{i}",
-                     use_container_width=True):
+        if _editing == rel:
+            _render_paper_editor(lib, rel, index)
+            continue
+        _bc = st.columns(2)
+        if _bc[0].button("📁 Reveal in Finder", key=f"search_open_{i}",
+                         use_container_width=True):
             import subprocess
             subprocess.run(["open", "-R", str(lib / rel)], check=False)
+        if _bc[1].button("✏️ Rename or move", key=f"search_edit_{i}",
+                         use_container_width=True):
+            st.session_state["edit_paper"] = rel
+            st.rerun()
     if len(hits) > _shown:
         if st.button(f"Show 25 more  ({len(hits) - _shown} more)",
                      key="search_more", use_container_width=True):

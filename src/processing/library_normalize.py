@@ -252,8 +252,14 @@ def apply_renames(
     pending_words: Optional[Iterable[str]] = None,
     undo_log=None,  # type: ignore[no-untyped-def]
     lock_held: bool = False,
+    description: str = "",
 ) -> dict:
     """Rename the given ``proposals`` in one reversible transaction.
+
+    ``description`` names the transaction in Activity; the default is the
+    filename tidy-up's. A proposal's ``new`` may be in another folder: the
+    single-paper editor uses this function for moves too, so it inherits
+    every check below rather than growing a second set.
 
     ``proposals`` is the exact subset the owner chose to apply (each item
     as produced by :func:`propose_renames`).  Collisions and vanished
@@ -307,7 +313,7 @@ def apply_renames(
     tx_id = None
     if own:
         tx_id = log.begin_transaction(
-            f"normalize existing filenames: {len(items)} file(s)"
+            description or f"normalize existing filenames: {len(items)} file(s)"
         )
 
     renamed = 0
