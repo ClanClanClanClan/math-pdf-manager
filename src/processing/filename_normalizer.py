@@ -69,6 +69,36 @@ def _raise_after_sentence_mark(m):
     return f"{mark} {word[:1].upper()}{word[1:]}"
 
 
+#: Two years joined by something other than an en dash. The colon is how
+#: macOS stores a "/" typed in Finder ("volume 2002/2003" is "2002:2003" on
+#: disk). Not preceded by a word character, a dot or another separator --
+#: "rose-2025-2029" is a DOI fragment -- and not followed by more digits
+#: or a further "-DD" -- "2023-01-26" is a date.
+_YEAR_RANGE = re.compile(
+    r"(?<![\w.\-–—:/])(1[5-9]\d\d|20\d\d)(?:--|[-:‐‑−—])(\d{4}|\d{2})"
+    r"(?!\w)(?![-–—:/.]\d)")
+
+
+def _en_dash_year_ranges(s: str) -> str:
+    """``1988-1990``, ``2002:2003``, ``1906-98`` -> ``1988–1990``, ...
+
+    Only an INCREASING pair is a range: a four-digit end later than the
+    start (within 1500-2099), or a two-digit end later than the start's
+    last two digits ("1906-98"; the abbreviation itself is kept). Measured
+    2026-10-09: 45 names in scope had another mark -- the 34 Astérisque
+    Bourbaki volumes and one Strasbourg exposé with the Finder colon, ten
+    with a hyphen -- against 61 already with the en dash.
+    """
+    def _fix(m: re.Match) -> str:
+        start, end = m.group(1), m.group(2)
+        if len(end) == 4:
+            ok = start < end <= "2099"
+        else:
+            ok = int(end) > int(start[2:])
+        return f"{start}–{end}" if ok else m.group(0)
+    return _YEAR_RANGE.sub(_fix, s)
+
+
 def normalize_filename(name: str) -> str:
     """Normalize a PDF filename.
 
@@ -180,6 +210,10 @@ def normalize_filename(name: str) -> str:
     # are not.  Measured: exactly one "--" in 29,336 filenames.
     s = re.sub(r"(?<=\d)--(?=\d)", "–", s)
     s = re.sub(r"\s+--\s+", ", ", s)
+
+    # A year range takes an en dash, always -- anything else is an error
+    # (the owner's ruling, 2026-10-09). See _en_dash_year_ranges.
+    s = _en_dash_year_ranges(s)
 
     # A title that opens with the separator's own punctuation: "J. - ,
     # Propagation of chaos".  The comma is a leftover from whatever wrote

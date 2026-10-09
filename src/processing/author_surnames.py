@@ -37,7 +37,12 @@ _CACHE: dict = {}
 
 #: A surname is the run before ", Initial." — the same shape the library
 #: uses everywhere: "Surname, I. I., Other, J. - Title.pdf".
-_SURNAME = re.compile(r"(?:^|,\s)([^,]+?),\s*(?=[A-ZÀ-Þ]\.)")
+#: A surname: at the start of the block -- possibly behind an exposé number
+#: glued on with a hyphen, the Strasbourg séminaires' "103-le Gall, J.-F."
+#: -- or after ", ". Without the number clause "103-le Gall" was read as one
+#: surname that no ruling matches, and 16 files kept "le Gall"/"le Jan"
+#: while 29 others had the approved "Le" (measured 2026-10-09).
+_SURNAME = re.compile(r"(?:^(?:\d+-)?|,\s)([^,]+?),\s*(?=[A-ZÀ-Þ]\.)")
 
 _SEP = " - "
 
@@ -177,6 +182,16 @@ def canonicalise_filename(name: str, table: Optional[dict] = None) -> tuple[str,
         return name, False
     author, rest = name.split(_SEP, 1)
     new_author, changed = canonicalise_authors(author, table)
-    if not changed:
-        return name, False
-    return new_author + _SEP + rest, True
+    if changed:
+        return new_author + _SEP + rest, True
+    # "PREFIX - AUTHORS - TITLE": a series and number before the authors
+    # ("Astérisque 281 - Duquesne, T., le Gall, J.-F. - Random trees").
+    # The first segment holds no surname at all, so the real author block
+    # is the second one. Only then -- a first segment that IS an author
+    # block is never looked past.
+    if _SEP in rest and not _SURNAME.search(_nfc(author)):
+        second, title = rest.split(_SEP, 1)
+        new_second, changed = canonicalise_authors(second, table)
+        if changed:
+            return author + _SEP + new_second + _SEP + title, True
+    return name, False
