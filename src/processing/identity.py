@@ -309,6 +309,26 @@ def sidecar_candidates(pdf_path: Path) -> list[Path]:
     return unique
 
 
+def record_location(pdf_path: Path) -> Path:
+    """Where this paper's record IS -- else where a new one goes.
+
+    ``PaperIdentity.load`` and ``save`` used ``sidecar_path`` alone. For a
+    name whose record sits at its older full-name location (record names
+    of 252-255 bytes, beyond sidecar_path's 251-byte limit), load returned
+    a blank identity and the next save wrote a SECOND record beside the
+    first: the eight "two sidecar records" Conformance reported, found
+    2026-10-09. The common case costs what it did -- one exists() --
+    because the primary location is tried first.
+    """
+    primary = sidecar_path(pdf_path)
+    try:
+        if primary.exists():
+            return primary
+    except OSError:
+        pass
+    return find_sidecar(pdf_path) or primary
+
+
 def find_sidecar(pdf_path: Path) -> Optional[Path]:
     """Where this PDF's sidecar actually is, or ``None``.
 
@@ -525,7 +545,7 @@ class PaperIdentity:
     @classmethod
     def _load_uncached(cls, pdf_path: Path) -> "PaperIdentity":
         """Read and parse one sidecar from disk (no memoisation)."""
-        path = sidecar_path(pdf_path)
+        path = record_location(pdf_path)
         if not path.exists():
             return cls()
         try:
@@ -571,7 +591,7 @@ class PaperIdentity:
         values are recorded, so undo restores them.
         """
         if undo_log is not None:
-            path_now = sidecar_path(pdf_path)
+            path_now = record_location(pdf_path)
             existed = path_now.exists()
             readable = True
             if existed:
@@ -621,7 +641,7 @@ class PaperIdentity:
         if not self.original_filename:
             self.original_filename = pdf_path.name
 
-        path = sidecar_path(pdf_path)
+        path = record_location(pdf_path)
         # Live-trial finding: when ``sidecar_path`` falls back to
         # ``.sidecars/<hash>.meta.json``, the parent directory doesn't
         # exist yet.  ``mkdir(parents=True)`` is safe either way --

@@ -229,3 +229,110 @@ def apply_reconnect(library_root: Path, plan: dict, *, dry_run: bool = True,
                 tx_id = None
     return {"dry_run": False, "reconnected": moved, "skipped": skipped,
             "tx_id": tx_id}
+
+
+# ---------------------------------------------------------------------------
+# Papers with TWO records (the older full-name one and the coded one)
+# ---------------------------------------------------------------------------
+
+#: Fields that describe the paper's ARRIVAL: when they disagree, the older
+#: record is the truer witness (a later blank-then-save wrote the name the
+#: paper had by then, not the one it arrived with).
+ARRIVAL_FIELDS = ("original_filename", "first_ingested_at")
+
+
+def plan_record_merges(library_root: Path) -> list:
+    """For every paper with two records, what merging them would do.
+
+    Touches nothing. Each item: ``{"pdf", "keep", "retire", "fill": {field:
+    value}, "arrival": {field: value}, "conflicts": [field], "refused":
+    reason-or-None}``. ``keep`` is the record the app reads (the primary,
+    coded location); ``retire`` the older full-name copy. A pair whose
+    content fingerprints differ is refused: that is not the same paper.
+    """
+    from processing.identity import (MIRROR_DIR_NAME, iter_pdfs,
+                                     sidecar_path)
+    out = []
+    mirror = library_root / MIRROR_DIR_NAME
+    for pdf in iter_pdfs(library_root):
+        keep = sidecar_path(pdf)
+        retire = mirror / pdf.relative_to(library_root).parent / (pdf.stem + ".meta.json")
+        a, b = _file_id(keep), _file_id(retire)
+        if not (a and b) or a == b:
+            continue
+        item = {"pdf": pdf, "keep": keep, "retire": retire, "fill": {},
+                "arrival": {}, "conflicts": [], "refused": None}
+        try:
+            k = json.loads(keep.read_text(encoding="utf-8"))
+            r = json.loads(retire.read_text(encoding="utf-8"))
+        except (OSError, ValueError) as exc:
+            item["refused"] = f"a record could not be read: {exc}"
+            out.append(item)
+            continue
+        if (k.get("content_sha256") and r.get("content_sha256")
+                and k["content_sha256"] != r["content_sha256"]):
+            item["refused"] = "the two records describe different contents"
+            out.append(item)
+            continue
+        older_is_retire = retire.stat().st_mtime <= keep.stat().st_mtime
+        for field, value in r.items():
+            if field == "schema_version" or value in (None, "", [], {}, 0, False):
+                continue
+            mine = k.get(field)
+            if mine in (None, "", [], {}, 0, False):
+                item["fill"][field] = value
+            elif mine != value:
+                if field in ARRIVAL_FIELDS and older_is_retire:
+                    item["arrival"][field] = value
+                elif field not in ARRIVAL_FIELDS:
+                    item["conflicts"].append(field)
+        out.append(item)
+    return out
+
+
+def apply_record_merges(library_root: Path, plan: list, *, undo_log=None) -> dict:
+    """Merge each planned pair into the record the app reads, then retire
+    the older copy to ``.trash/duplicate_records/`` -- one undoable
+    transaction. Conflicting fields keep the app's value and are reported.
+    """
+    from processing.identity import PaperIdentity
+    from processing.undo_log import UndoLog, logged_move
+
+    own = undo_log is None
+    log = undo_log or UndoLog(log_dir=library_root / ".operation_log")
+    tx_id = log.begin_transaction(
+        f"Merge {len(plan)} papers' two saved records into one") if own else None
+    merged, skipped = [], []
+    try:
+        for item in plan:
+            pdf = Path(item["pdf"])
+            if item.get("refused"):
+                skipped.append({"pdf": pdf.name, "reason": item["refused"]})
+                continue
+            if _file_id(Path(item["retire"])) is None or _file_id(Path(item["keep"])) is None:
+                skipped.append({"pdf": pdf.name, "reason": "the records changed since the plan"})
+                continue
+            ident = PaperIdentity.load(pdf)
+            for field, value in {**item["fill"], **item["arrival"]}.items():
+                if hasattr(ident, field):
+                    setattr(ident, field, value)
+            ident.save(pdf, recompute_hash=False, undo_log=log)
+            retire = Path(item["retire"])
+            dest = (library_root / ".trash" / "duplicate_records"
+                    / retire.relative_to(library_root / ".mathpdf-sidecars"))
+            n = 2
+            while dest.exists():
+                dest = dest.with_name(f"{dest.stem} ({n}){dest.suffix}")
+                n += 1
+            logged_move(retire, dest, undo_log=log)
+            merged.append({"pdf": pdf.name, "filled": sorted(item["fill"]),
+                           "arrival": sorted(item["arrival"]),
+                           "conflicts": item["conflicts"]})
+    finally:
+        if own:
+            if log.has_operations():
+                log.commit()
+            else:
+                log.discard()
+                tx_id = None
+    return {"merged": merged, "skipped": skipped, "tx_id": tx_id}
