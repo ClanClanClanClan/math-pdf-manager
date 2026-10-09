@@ -2722,8 +2722,11 @@ def render_conformance() -> None:
             "Runs the naming pipeline over every filename and checks that "
             "it is a **fixpoint** — that the rules would change nothing. "
             "A file the pipeline cannot even reach a verdict on is a bug, "
-            "not a backlog item, and shows up red. Takes about a minute; "
-            "nothing is written to your library."
+            "not a backlog item, and shows up red. Takes about a minute. No "
+            "paper is renamed or moved; it may refresh the word-statistics "
+            "file the namer keeps in the library's settings folder. It judges "
+            "the same files the filename tidy-up may change — the archival "
+            "collections and the staging folders are left out, and counted."
         ),
     )
 
@@ -2757,8 +2760,10 @@ def render_conformance() -> None:
                   "This can be any size; it is not a fault.")
     b.metric("Mechanical, not yet applied", f"{rep.counts[C.MECHANICAL]:,}",
              delta=delta.get(C.MECHANICAL), delta_color="off",
-             help="Unambiguous changes waiting for an Apply. Should fall "
-                  "to zero after one; if it doesn't, the apply path is broken.")
+             help="Unambiguous changes waiting for an Apply. This check "
+                  "judges exactly the files the Apply may touch, so after a "
+                  "full Apply this should be zero; if it isn't, something in "
+                  "the apply path is wrong.")
 
     st.markdown("#### The code is wrong")
     c, d, e = st.columns(3)
@@ -2771,6 +2776,16 @@ def render_conformance() -> None:
              help="A postcondition failed. Always a bug.")
     e.metric("Canonical", f"{rep.counts[C.CANONICAL]:,}",
              delta=delta.get(C.CANONICAL), delta_color="off")
+    _lw = rep.globals_.get("library_wide_by_reason") or {}
+    _lw_n = rep.globals_.get("library_wide_findings", 0)
+    if _lw_n:
+        # Not files, so not in the counts above -- which then read
+        # "Invariant violations 0" over a red list of these (audit, 3).
+        st.warning(
+            f"**Plus {_lw_n:,} library-wide finding(s)** that are not single "
+            "files: " + "; ".join(f"{n:,} × {r.replace('-', ' ')}"
+                                  for r, n in sorted(_lw.items(), key=lambda kv: -kv[1]))
+            + ". Listed under *Why, grouped* below.")
 
     if rep.scanned == 0:
         # "Nothing was examined" is not "everything is fine".  An empty
@@ -2782,15 +2797,26 @@ def render_conformance() -> None:
     elif rep.is_all_clear():
         st.success("Every file reached a verdict and every invariant holds. ✓")
     else:
+        _red_files = sum(rep.counts.get(b, 0) for b in C.RED)
         st.warning(
-            f"{rep.red_count():,} file(s) the code cannot account for. "
-            "These are not waiting on you.")
+            f"{_red_files:,} file(s) the code cannot account for"
+            + (f", and {_lw_n:,} library-wide finding(s)" if _lw_n else "")
+            + ". These are not waiting on you.")
 
+    _skips = rep.globals_.get("skipped_by_reason") or {}
+    if _skips:
+        st.caption(
+            f"Not judged: {sum(_skips.values()):,} file(s) — "
+            + ", ".join(f"**{n:,}** {why}" for why, n in _skips.items())
+            + ". The Apply leaves these alone too, so judging them would "
+              "only report work that can never be done.")
     oos = rep.globals_.get("documents_out_of_scope", 0)
     if oos:
+        # Not "out of scope" -- that phrase now means the excluded
+        # collections above. These are files this check cannot READ.
         st.info(
-            f"{oos:,} document(s) are OUT OF SCOPE — .djvu, .epub and "
-            "extension-less files. This check globs *.pdf, so it cannot "
+            f"{oos:,} document(s) are not PDFs — .djvu, .epub and "
+            "extension-less files. This check reads PDFs only, so it cannot "
             "speak for them either way.")
     _fp = rep.globals_.get("typo_oracle")
     if _fp:
@@ -2801,9 +2827,7 @@ def render_conformance() -> None:
             "produced by different oracles and a change in the spelling "
             "count between them is not by itself evidence about the library.")
     st.caption(
-        f"{rep.scanned:,} scanned in {rep.duration_s}s · "
-        f"{rep.globals_.get('inbox_skipped', 0):,} inbox papers not judged "
-        "(they are not named yet by design) · sidecar coverage "
+        f"{rep.scanned:,} scanned in {rep.duration_s}s · sidecar coverage "
         f"{rep.globals_.get('coverage_pct', 0)}%")
 
     st.markdown("##### Why, grouped")

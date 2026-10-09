@@ -498,15 +498,25 @@ def check_sidecars(library_root: Path, pdfs: list, all_pdfs: list = None) -> tup
 def run(
     library_root: Path,
     *,
-    skip_dirs: tuple = ("12 - To be sorted",),
+    skip_dirs: Optional[tuple] = None,
     progress: Optional[Callable[[int, int], None]] = None,
     limit: Optional[int] = None,
 ) -> ConformanceReport:
-    """Classify the whole library.  Read-only; never touches a file.
+    """Classify the whole library.  Never renames or moves a paper.
 
-    ``skip_dirs`` defaults to the inbox: those papers have deliberately
-    not been named yet, so reporting them as non-conforming would drown
-    the signal. They are counted separately in ``globals_``.
+    (Not strictly read-only: the caser that ``examine`` calls may refresh
+    ``.mathpdf-config/title_corpus_stats.json`` when it is stale.)
+
+    SCOPE comes from ``processing.library_scope`` -- the same answer the
+    Apply uses -- unless ``skip_dirs`` names top-level folders explicitly.
+    It used to keep a private ``("12 - To be sorted",)``, so it judged
+    2,130 files the Apply will never touch: 1,908 in the archival
+    collections the owner asked to be left alone, and 222 in "04 - Papers
+    to be downloaded". Measured 2026-09-05, 728 of the 795 files in its
+    red "Never examined" bucket were archival, and "Mechanical, not yet
+    applied" had a floor of 11 that no Apply could clear (cockpit audit,
+    findings 3 and 5). What is excluded is counted BY REASON in
+    ``globals_["skipped_by_reason"]`` and shown, never silently dropped.
     """
     from processing.identity import iter_pdfs
 
@@ -518,14 +528,23 @@ def run(
     reasons: dict = {}
     findings: list = []
 
-    pdfs, all_pdfs, skipped = [], [], 0
+    from processing.library_scope import exclusion_reason
+
+    pdfs, all_pdfs = [], []
+    skipped_by_reason: dict = {}
     for pdf in iter_pdfs(library_root):
         all_pdfs.append(pdf)
         rel = pdf.relative_to(library_root)
-        if rel.parts and rel.parts[0] in skip_dirs:
-            skipped += 1
+        if skip_dirs is not None:
+            why = (f"skipped folder ({rel.parts[0]})"
+                   if rel.parts and rel.parts[0] in skip_dirs else None)
+        else:
+            why = exclusion_reason(str(rel))
+        if why:
+            skipped_by_reason[why] = skipped_by_reason.get(why, 0) + 1
             continue
         pdfs.append(pdf)
+    skipped = sum(skipped_by_reason.values())
 
     total = len(pdfs) if limit is None else min(limit, len(pdfs))
 
@@ -576,10 +595,12 @@ def run(
                                            all_pdfs=all_pdfs)
     cfg_findings = check_config_reachability(library_root)
     library_wide = 0
+    library_wide_by_reason: dict = {}
     for f in list(sc_findings) + list(cfg_findings):
         library_wide += 1
         key = f"{f.bucket}:{f.reason}"
         reasons[key] = reasons.get(key, 0) + 1
+        library_wide_by_reason[f.reason] = library_wide_by_reason.get(f.reason, 0) + 1
         findings.append(f)
 
     rep.generated_at = time.strftime("%Y-%m-%dT%H:%M:%S")
@@ -589,8 +610,17 @@ def run(
     rep.reasons = dict(sorted(reasons.items(), key=lambda kv: -kv[1]))
     rep.findings = findings
     rep.globals_ = {"typo_oracle": oracle_fp,
-                    "inbox_skipped": skipped,
+                    # Kept for older readers: the "12 - To be sorted" share.
+                    "inbox_skipped": sum(n for why, n in skipped_by_reason.items()
+                                         if "12 - To be sorted" in why),
+                    "skipped_total": skipped,
+                    "skipped_by_reason": dict(sorted(skipped_by_reason.items(),
+                                                     key=lambda kv: -kv[1])),
                     "library_wide_findings": library_wide,
+                    # Not files, so not in `counts`; shown on their own line
+                    # (the page read "Invariant violations 0" above a red
+                    # list of 10 of these).
+                    "library_wide_by_reason": library_wide_by_reason,
                     "documents_out_of_scope": _out_of_scope(library_root),
                     **sc_stats}
     return rep
