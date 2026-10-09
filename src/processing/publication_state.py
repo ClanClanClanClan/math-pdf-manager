@@ -48,10 +48,12 @@ class StateUpdateSummary:
     skipped: list[str] = field(default_factory=list)      # sidecar said skip
     newly_permanent: list[str] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
+    unchecked: list[str] = field(default_factory=list)    # Crossref did not answer
 
     def to_dict(self) -> dict:
         return {
             "checked": list(self.checked),
+            "unchecked": list(self.unchecked),
             "hits": list(self.hits),
             "skipped": list(self.skipped),
             "newly_permanent": list(self.newly_permanent),
@@ -64,6 +66,7 @@ def update_publication_state(
     *,
     max_rechecks: int = DEFAULT_MAX_RECHECKS,
     hit_threshold: float = 0.75,
+    undo_log=None,  # type: ignore[no-untyped-def]
 ) -> StateUpdateSummary:
     """Apply scan_directory results to each paper's identity sidecar.
 
@@ -95,6 +98,12 @@ def update_publication_state(
         if not path_str:
             continue
         pdf = Path(path_str)
+        if entry.get("published") is None:
+            # The lookup did not happen. Recording it as a miss would
+            # advance the recheck counter on no evidence; three outages
+            # used to latch a paper permanently_unpublished this way.
+            summary.unchecked.append(str(pdf))
+            continue
         try:
             identity = PaperIdentity.load(pdf)
         except Exception as exc:
@@ -155,7 +164,11 @@ def update_publication_state(
                 identity.permanently_unpublished = True
                 became_permanent = True
 
-            identity.save(pdf, recompute_hash=False)
+            # Through the undo log when the caller has one open: these
+            # rewrites of the owner's records were irreversible, and the
+            # Maintenance page that triggers them claimed it "changes
+            # nothing" (cockpit audit, finding 2).
+            identity.save(pdf, recompute_hash=False, undo_log=undo_log)
         except Exception as exc:
             summary.errors.append(f"{pdf}: save failed: {exc}")
             continue

@@ -395,6 +395,29 @@ def _activity_row_label(tx: dict) -> str:
     return label
 
 
+def _normalize_scope_note(data: dict) -> None:
+    """Say what the filename scan did NOT examine, and why.
+
+    ``scan()`` has always returned ``skipped`` / ``skipped_total``; the
+    page read neither, then could print "Every existing filename is
+    already canonical ✓" over a library where 4,275 of 29,527 PDFs were
+    never looked at (measured 2026-09-05: staging folders awaiting
+    renaming, and the archival collections excluded on the owner's
+    instruction). All of those skips are correct; leaving them unsaid is
+    what was wrong.
+    """
+    skipped = data.get("skipped") or {}
+    total = data.get("skipped_total") or sum(skipped.values())
+    if not total:
+        return
+    parts = ", ".join(f"**{n:,}** — {why}"
+                      for why, n in sorted(skipped.items(), key=lambda kv: -kv[1]))
+    st.caption(f"Not examined by this scan: {total:,} file(s) ({parts}). "
+               f"This is deliberate — staging folders are renamed when they "
+               f"are filed, and the archival collections are left alone on "
+               f"your instruction.")
+
+
 def _reversible_note(detail: str = "") -> None:
     """The single reversibility affordance, used under every writing control.
 
@@ -1801,8 +1824,17 @@ def _render_normalize_section(lib: Path) -> None:
         if not data:
             st.info("Click **Scan existing filenames** to see what would change.")
             return
+        _normalize_scope_note(data)
         if data["total"] == 0:
-            st.success("Every existing filename is already canonical. ✓")
+            # Never a bare "everything is canonical": the scan measured what
+            # it did NOT look at, and the page used to throw that away
+            # (cockpit audit, finding 6).
+            if data.get("skipped_total"):
+                st.success(
+                    f"Every filename this scan examined is already canonical. ✓  "
+                    f"({data['skipped_total']:,} were not examined — see above.)")
+            else:
+                st.success("Every existing filename is already canonical. ✓")
             return
 
         bk = data["by_kind"]
@@ -1887,10 +1919,15 @@ def _render_normalize_section(lib: Path) -> None:
 def render_maintenance() -> None:
     st.header("🧹 Maintenance")
     st.caption(
-        "**Run checks** at the bottom only looks and reports — it changes "
-        "nothing.  Two things on this page DO write: the filename tidy-up "
-        "just below, and the full weekly run *if* you tick “also file the "
-        "safe ones for me”.  Both are reversible from the Activity page."
+        "**Run checks** at the bottom never moves or renames a paper.  With "
+        "**Publications** ticked it does write one thing: each paper's "
+        "record notes what Crossref answered, and a paper Crossref has "
+        "missed three times is no longer re-checked — that is reversible "
+        "from the Activity page.  It also keeps a lookup cache file in "
+        "“02” and “03” so a repeat run does not re-ask Crossref.  The other "
+        "things on this page that write — the filename tidy-up just below, "
+        "and the full weekly run *if* you tick “also file the safe ones for "
+        "me” — are reversible from Activity too."
     )
 
     lib = _library()
@@ -1991,10 +2028,29 @@ def render_maintenance() -> None:
                 box.update(label="Asking Crossref about up to 100 papers — "
                                  "this is the slow one, expect minutes…")
                 st.write("… Crossref lookups running (one network call per paper)")
+                # Open a transaction: the check rewrites papers' records
+                # (recheck counter, and the permanently_unpublished latch).
+                # Those writes bypassed the undo log, on a page that said
+                # it "changes nothing" (cockpit audit, finding 2).
+                from processing.undo_log import UndoLog
+                _pub_log = UndoLog(log_dir=lib / ".operation_log")
+                _pub_tx = _pub_log.begin_transaction(
+                    "publication check: Crossref answers recorded in papers' records")
                 try:
-                    results["publications"] = check_publications(
-                        lib, limit=100, verbose=False)
-                    st.write("✓ publication check done")
+                    _pubs_res = check_publications(
+                        lib, limit=100, verbose=False, undo_log=_pub_log)
+                    results["publications"] = _pubs_res
+                    _unk = len(_pubs_res.get("unchecked") or [])
+                    _errs = (_pubs_res.get("_errors") or []) + [
+                        {"error": x} for x in (_pubs_res.get("_not_checked") or [])]
+                    if _unk or _errs:
+                        # "I didn't look" is not "it's fine". A Crossref
+                        # outage used to read "✓ done, 0 found".
+                        st.write(f"⚠ publication check INCOMPLETE — {_unk} paper(s) "
+                                 f"could not be checked"
+                                 + (f", {len(_errs)} problem(s)" if _errs else ""))
+                    else:
+                        st.write("✓ publication check done")
                 except Exception as exc:
                     # The only check that needs the network.  Losing the
                     # other three to a dropped connection — and showing a
@@ -2006,6 +2062,16 @@ def render_maintenance() -> None:
                         "Check your internet connection and run it again. "
                         "The other results below are unaffected."
                     )
+                    results["publications"] = {"_errors": [{"error": str(exc)}],
+                                               "unchecked": [], "unpublished": [],
+                                               "working": []}
+                finally:
+                    if _pub_log.has_operations():
+                        _pub_log.commit()
+                        _log_activity("maintenance.publication_check", str(lib),
+                                      "records updated", _pub_tx)
+                    else:
+                        _pub_log.discard()
             box.update(label="All selected checks finished", state="complete")
 
         # The Crossref pass costs minutes and finds real upgrade
@@ -2032,7 +2098,12 @@ def render_maintenance() -> None:
             except (OSError, TypeError) as exc:
                 st.warning("Could not save these results for the Upgrade "
                            f"Queue: {exc}")
-        st.success("Done.")
+        _p = results.get("publications") or {}
+        if _p.get("unchecked") or _p.get("_errors") or _p.get("_not_checked"):
+            st.warning("Finished — but the publication check is incomplete. "
+                       "See **Results** below for what could not be checked.")
+        else:
+            st.success("Done.")
         st.session_state.maintenance_results = results
 
     # Display previous results if any
@@ -2040,8 +2111,9 @@ def render_maintenance() -> None:
     if not res:
         st.info(
             "No checks have been run yet.  Tick the ones you want above and "
-            "press **▶ Run checks** — they only look and report; nothing "
-            "in your library is changed."
+            "press **▶ Run checks**.  No paper is moved or renamed; with "
+            "**Publications** ticked, each paper's record notes what Crossref "
+            "answered (reversible from Activity)."
         )
         return
 
@@ -2067,7 +2139,28 @@ def render_maintenance() -> None:
     if "publications" in res:
         pubs = res["publications"]
         total = len(pubs.get("unpublished", [])) + len(pubs.get("working", []))
-        st.markdown(f"**Newly-published papers found**: {total}")
+        unk = pubs.get("unchecked") or []
+        problems = ([e.get("error", "?") for e in pubs.get("_errors") or []]
+                    + list(pubs.get("_not_checked") or []))
+        if unk or problems:
+            # Three-valued: found / not found / NOT CHECKED. The old line
+            # printed "0 found" when Crossref never answered at all.
+            st.markdown(f"**Newly-published papers found**: {total} "
+                        f"— *not a full answer*")
+            if unk:
+                st.warning(
+                    f"**{len(unk)} paper(s) could not be checked** — Crossref "
+                    f"did not answer (no connection, or the service was "
+                    f"erroring). They were NOT counted as unpublished and "
+                    f"their records were left exactly as they were. Run the "
+                    f"check again later.")
+                with st.expander(f"Not checked ({len(unk)})"):
+                    for f in unk[:200]:
+                        st.caption(Path(f).name)
+            for msg in problems:
+                st.error(f"Publication check problem: {msg}")
+        else:
+            st.markdown(f"**Newly-published papers found**: {total}")
 
 
 # ---------------------------------------------------------------------------

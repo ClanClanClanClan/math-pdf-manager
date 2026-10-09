@@ -104,6 +104,12 @@ class CrossrefChecker:
         self._last_request_time = 0.0
         self._cache: dict = {}
         self._cache_path = cache_path
+        # "No match" and "could not ask" both come back as None from
+        # check_title. They are different facts: the first is evidence the
+        # paper is unpublished, the second is no evidence at all. Callers
+        # read this flag right after each call to tell them apart.
+        self.last_lookup_failed = False
+        self.failed_lookups = 0
         if cache_path and cache_path.exists():
             try:
                 raw = json.loads(cache_path.read_text())
@@ -192,6 +198,7 @@ class CrossrefChecker:
         Returns a dict with DOI, journal, year, matched_title, confidence
         if a match is found, or None otherwise.
         """
+        self.last_lookup_failed = False
         cache_key = self._cache_key(title)
         if cache_key in self._cache:
             cached = self._cache[cache_key]
@@ -233,6 +240,14 @@ class CrossrefChecker:
         # Now we differentiate: real "no items" (HTTP 200, empty
         # results) caches; transient errors propagate as None
         # WITHOUT touching the cache so the next run retries.
+        # The except clauses below name requests.exceptions.*, and this
+        # module only imported requests inside __init__ -- so the moment
+        # any network error happened, evaluating the first except clause
+        # raised NameError, which escaped the scan and dropped the whole
+        # folder's result. The retriable-error handling below had never
+        # run. Proven on the committed code, 2026-10-09.
+        import requests
+
         retriable = False
         try:
             resp = self.session.get(
@@ -272,8 +287,20 @@ class CrossrefChecker:
                 # Make sure we DON'T poison the cache with a None for
                 # this title -- the next scan should retry.
                 self._cache.pop(cache_key, None)
+                self.last_lookup_failed = True
+                self.failed_lookups += 1
 
-        items = resp.json().get("message", {}).get("items", [])
+        try:
+            items = resp.json().get("message", {}).get("items", [])
+        except ValueError as exc:
+            # A 200 with a non-JSON body: a captive portal or a proxy page.
+            # This used to raise straight out of the scan; it is a lookup
+            # that did not happen, exactly like a timeout.
+            logger.warning("Crossref returned a non-JSON page for '%s': %s",
+                           title[:50], exc)
+            self.last_lookup_failed = True
+            self.failed_lookups += 1
+            return None
         if not items:
             self._cache[cache_key] = None
             return None
@@ -436,7 +463,6 @@ def scan_directory(
                 print(f"  [{i + 1}/{len(pdfs)}] SKIP (can't parse): {pdf.name[:60]}")
             continue
 
-        checked_count += 1
         match = checker.check_title(title, lastnames)
 
         entry = {
@@ -446,6 +472,17 @@ def scan_directory(
             "parsed_authors": lastnames,
         }
 
+        if getattr(checker, "last_lookup_failed", False):
+            # NOT "unpublished". Crossref did not answer, so this paper was
+            # not checked at all. Recording it as a miss advanced its
+            # recheck counter, and three outages latched a never-checked
+            # paper as permanently_unpublished.
+            entry["published"] = None
+            entry["lookup_failed"] = True
+            results.append(entry)
+            continue
+
+        checked_count += 1
         if match:
             entry["published"] = True
             entry["match"] = match

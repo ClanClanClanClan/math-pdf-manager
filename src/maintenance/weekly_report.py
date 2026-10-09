@@ -44,6 +44,7 @@ def check_publications(
     *,
     limit: Optional[int] = None,
     verbose: bool = False,
+    undo_log=None,  # type: ignore[no-untyped-def]
 ) -> dict:
     """Check if unpublished/working papers have been published.
 
@@ -66,6 +67,10 @@ def check_publications(
         "unpublished": [],
         "working": [],
         "newly_permanent": [],
+        # Papers Crossref did not answer for. NOT unpublished: unknown.
+        "unchecked": [],
+        # Folders that were not looked at, and why.
+        "_not_checked": [],
         "_errors": [],
     }
 
@@ -75,6 +80,7 @@ def check_publications(
     ]:
         folder = library_root / folder_name
         if not folder.exists():
+            results["_not_checked"].append(f"{folder_name}: folder not found")
             continue
 
         if verbose:
@@ -82,11 +88,13 @@ def check_publications(
 
         try:
             found = scan_directory(folder, limit=limit, verbose=verbose)
+            results["unchecked"].extend(
+                r["file"] for r in found if r.get("published") is None)
             # Advance the per-paper state machine over every entry in
             # ``found`` (hits and misses both).  Errors here don't
             # abort the report -- they're a soft, optional layer.
             try:
-                state = update_publication_state(found)
+                state = update_publication_state(found, undo_log=undo_log)
                 results["newly_permanent"].extend(state.newly_permanent)
                 if verbose and state.newly_permanent:
                     print(

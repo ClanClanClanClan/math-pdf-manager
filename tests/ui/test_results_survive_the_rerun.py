@@ -235,3 +235,41 @@ def test_undo_does_not_fire_until_the_box_is_ticked(C, st_stub, monkeypatch):
     ticked["v"] = True
     C.render_activity()
     assert fired == ["tx9"], "with the box ticked, Undo must work"
+
+
+# ------------------------------------------- finding 6: say what was skipped
+
+_SKIPS = {"staging, not renamed yet (12 - To be sorted)": 2145,
+          "archival collection the owner asked to leave alone (JEHPS)": 219}
+
+
+def _scan(total, skipped=_SKIPS):
+    return {"total": total, "by_kind": {"author": 0, "title": 0, "both": 0},
+            "pending_words": [], "proposals": [], "skipped": dict(skipped),
+            "skipped_total": sum(skipped.values())}
+
+
+def test_the_scan_says_how_many_files_it_did_not_examine(C):
+    C._shown.clear()
+    C._normalize_scope_note(_scan(0))
+    text = " ".join(m for _, m in C._shown)
+    assert "2,364" in text, "the total skipped must be stated"
+    assert "12 - To be sorted" in text and "JEHPS" in text, "and why"
+
+
+def test_nothing_is_said_when_nothing_was_skipped(C):
+    C._shown.clear()
+    C._normalize_scope_note(_scan(0, skipped={}))
+    assert C._shown == []
+
+
+def test_zero_proposals_no_longer_claims_the_whole_library_is_canonical(C, st_stub, tmp_path):
+    """The page printed "Every existing filename is already canonical ✓"
+    over a library where 4,275 of 29,527 PDFs were never examined."""
+    st_stub.session_state["libnorm_scan_res"] = _scan(0)
+    C._shown.clear()
+    C._render_normalize_section(tmp_path)
+    successes = [m for k, m in C._shown if k == "success"]
+    assert successes, "the zero-proposal branch did not render"
+    assert "not examined" in successes[0]
+    assert "Every existing filename is already canonical" not in successes[0]

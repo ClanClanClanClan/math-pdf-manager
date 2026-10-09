@@ -167,6 +167,8 @@ class TestRobustness:
         assert s.to_dict() == {
             "checked": [], "hits": [], "skipped": [],
             "newly_permanent": [], "errors": [],
+            # Papers Crossref did not answer for -- unknown, not misses.
+            "unchecked": [],
         }
 
     def test_result_without_file_is_skipped(self, tmp_path):
