@@ -403,22 +403,34 @@ def _auto_apply_safe_transitions_locked(
                   + (" (dry run)" if dry_run else ""))
         if not dry_run:
             try:
-                from processing.upgrade_to_published import upgrade_paper
+                from processing.upgrade_to_published import upgrade_entries
             except ImportError as exc:
                 summary["errors"].append(f"upgrade module unavailable: {exc}")
                 return summary
-            for entry in safe_upgrades:
-                try:
-                    r = upgrade_paper(entry, library_root, dry_run=False)
-                    if r.get("success"):
-                        summary["upgraded"].append(entry["file"])
-                    else:
-                        summary["skipped_borderline"].append({
-                            "file": entry["file"],
-                            "reason": r.get("error", "upgrade returned no success"),
-                        })
-                except Exception as exc:
-                    summary["errors"].append(f"{entry.get('file')}: {exc}")
+            # The one batch upgrader: a download folder, one undo
+            # transaction, a per-paper catch. This used to call
+            # upgrade_paper without its required download_dir -- a
+            # TypeError per paper -- and with no undo log.
+            out = upgrade_entries(
+                safe_upgrades, library_root, dry_run=False,
+                description=(f"Monday sweep: upgrade {len(safe_upgrades)} "
+                             "paper(s) to their published version"))
+            summary["upgrade_tx_id"] = out.get("tx_id")
+            for entry, r in zip(safe_upgrades, out["results"]):
+                action = r.get("action", "")
+                # "DOWNLOADED but error during filing" also says DOWNLOADED:
+                # only a successful FILE is an upgrade.
+                if r.get("success") and "FILED" in action:
+                    summary["upgraded"].append(entry["file"])
+                    if "error" in action.lower():      # filed, preprint stuck
+                        summary["errors"].append(f"{entry.get('file')}: {action}")
+                elif r.get("success") or action.startswith("SKIP"):
+                    summary["skipped_borderline"].append({
+                        "file": entry["file"],
+                        "reason": action or "the upgrade gave no answer"})
+                else:
+                    summary["errors"].append(
+                        f"{entry.get('file')}: {action or 'the upgrade gave no answer'}")
         else:
             # In dry-run mode we still report what *would* upgrade.
             for entry in safe_upgrades:
@@ -496,9 +508,8 @@ def run_maintenance(
             print("=" * 60)
             print("PUBLICATION CHECKS")
             print("=" * 60)
-        results["publications"] = check_publications(
-            library_root, limit=limit, verbose=verbose
-        )
+        results["publications"] = _check_publications_logged(
+            library_root, limit=limit, verbose=verbose)
     else:
         results["publications"] = {"unpublished": [], "working": []}
 
@@ -541,8 +552,73 @@ def run_maintenance(
 
     elapsed = time.time() - t0
     results["elapsed_seconds"] = round(elapsed, 1)
+    results["problems"] = run_problems(results)
 
     return results
+
+
+#: How long the sweep waits for the library lock before it skips the
+#: publication check (and says so). The auto-filer holds it for seconds.
+SWEEP_LOCK_WAIT_SECONDS = 600
+
+
+def _check_publications_logged(library_root: Path, *, limit=None,
+                               verbose: bool = False) -> dict:
+    """``check_publications`` as an unattended run must do it.
+
+    It rewrites each paper's record (what Crossref answered, the recheck
+    counter, the "stop asking" latch). From the cockpit that has run in a
+    transaction under the library lock since finding 2; the Monday sweep
+    called it bare -- unlocked, and with nothing in Activity to undo.
+    """
+    from processing.locking import LibraryLock
+    from processing.undo_log import UndoLog
+    lock = LibraryLock(library_root)
+    if not lock.acquire(blocking=True, timeout=SWEEP_LOCK_WAIT_SECONDS):
+        return {"unpublished": [], "working": [], "newly_permanent": [],
+                "unchecked": [], "_errors": [],
+                "_not_checked": [
+                    "publications: another process held the library lock "
+                    f"for {SWEEP_LOCK_WAIT_SECONDS // 60} minutes"]}
+    try:
+        log = UndoLog(log_dir=library_root / ".operation_log")
+        log.begin_transaction(
+            "Monday sweep: publication check (what Crossref answered)")
+        try:
+            return check_publications(library_root, limit=limit,
+                                      verbose=verbose, undo_log=log)
+        finally:
+            if log.has_operations():
+                log.commit()
+            else:
+                log.discard()
+    finally:
+        lock.release()
+
+
+def run_problems(results: dict) -> list:
+    """Everything that makes this run INCOMPLETE, in words.
+
+    The printed summary, the notification and the cockpit's status line
+    used to report counts only: a sweep whose every upgrade raised, whose
+    publication check could not take the lock, or whose Crossref lookups
+    all failed read as an ordinary, successful run.
+    """
+    out = []
+    pubs = results.get("publications") or {}
+    for why in pubs.get("_not_checked") or []:
+        out.append(f"not checked — {why}")
+    for err in pubs.get("_errors") or []:
+        out.append(f"{err.get('step', 'publication check')}: {err.get('error')}")
+    if pubs.get("unchecked"):
+        out.append(f"{len(pubs['unchecked'])} paper(s) could not be looked up "
+                   "(Crossref did not answer) — unknown, not unpublished")
+    auto = results.get("auto_applied") or {}
+    if auto.get("skipped"):
+        out.append(f"nothing was filed automatically — {auto['skipped']}")
+    for err in auto.get("errors") or []:
+        out.append(f"auto-apply: {err}")
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -617,7 +693,12 @@ def main(argv: list[str] | None = None) -> None:
             f", auto-upgraded {len(auto['upgraded'])}, "
             f"auto-aged {len(auto['aged_moved'])}"
         )
+    problems = results.get("problems") or []
+    if problems:
+        summary = f"INCOMPLETE ({len(problems)} problem(s)) — " + summary
     print(f"\nSummary: {summary}")
+    for line in problems:
+        print(f"  problem: {line}")
     print(f"Elapsed: {results.get('elapsed_seconds', 0)}s")
 
     # macOS notification

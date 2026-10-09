@@ -135,7 +135,10 @@ class TestUndoTxIds:
         # test below, since the real path needs network downloads).
         import inspect
         import processing.upgrade_to_published as up
-        src = inspect.getsource(up.process_report)
+        # The batch body now lives in upgrade_entries, which process_report
+        # and the Monday sweep both call (cockpit audit, finding 16).
+        assert "upgrade_entries(" in inspect.getsource(up.process_report)
+        src = inspect.getsource(up.upgrade_entries)
         assert "finally:" in src
         fin = src.index("finally:")
         assert src.index("undo_log.commit()") > fin

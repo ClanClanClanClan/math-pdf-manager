@@ -99,6 +99,18 @@ job would die before writing anything. Pin `.venv/bin/python` first. Treat
 Consequence already paid: the Upgrade Queue has been serving April data, and
 Crossref decisions were taken on it in August.
 
+**Update 2026-10-09 (cockpit audit, finding 16).** Maintenance now has a
+*Monday sweep* section (on/off, last run, its problems, the last report) and
+the sidebar a one-line status. Turning it on installs ONLY the weekly agent,
+pinned to the cockpit's interpreter, **without** `--auto-apply-safe` unless he
+ticks "also file the safe ones". The filer's switch no longer installs it as a
+side effect. Before it was offered: its auto-apply called `upgrade_paper`
+without `download_dir` (TypeError per paper, never reported) and without an
+undo log — now through `upgrade_entries`, one transaction per run; its
+publication check now runs under the library lock in a transaction; a run
+that falls short says INCOMPLETE and why. Still not switched on — his call.
+Newest report on this Mac: 2026-04-03.
+
 ### 3. A second, invisible undo log — and one paper that survived by accident
 
 `Scripts/.operation_log/` holds 6 transactions the cockpit cannot see. One of

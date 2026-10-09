@@ -104,8 +104,8 @@ class TestSafeUpgradeSelection:
                                     "working": []}}
         # Patch upgrade_paper so we observe selection without doing
         # network calls.
-        with patch("processing.upgrade_to_published.upgrade_paper") as up:
-            up.return_value = {"success": True}
+        with patch("processing.upgrade_to_published.upgrade_paper", autospec=True) as up:
+            up.return_value = {"success": True, "action": "DOWNLOADED + FILED + DELETED preprint"}
             summary = auto_apply_safe_transitions(results, lib, dry_run=False)
         assert summary["upgraded"] == [str(pdf)]
         up.assert_called_once()
@@ -114,7 +114,7 @@ class TestSafeUpgradeSelection:
         pdf = _make_pdf(lib / "02 - Unpublished papers" / "p.pdf")
         results = {"publications": {"unpublished": [_hit(pdf, confidence=0.99, authors=3)],
                                     "working": []}}
-        with patch("processing.upgrade_to_published.upgrade_paper") as up:
+        with patch("processing.upgrade_to_published.upgrade_paper", autospec=True) as up:
             summary = auto_apply_safe_transitions(results, lib, dry_run=False)
         assert summary["upgraded"] == []
         assert any(b["file"] == str(pdf) for b in summary["skipped_borderline"])
@@ -124,7 +124,7 @@ class TestSafeUpgradeSelection:
         pdf = _make_pdf(lib / "02 - Unpublished papers" / "p.pdf")
         results = {"publications": {"unpublished": [_hit(pdf, confidence=0.85, authors=1)],
                                     "working": []}}
-        with patch("processing.upgrade_to_published.upgrade_paper") as up:
+        with patch("processing.upgrade_to_published.upgrade_paper", autospec=True) as up:
             summary = auto_apply_safe_transitions(results, lib, dry_run=False)
         assert summary["upgraded"] == []
         up.assert_not_called()
@@ -137,7 +137,7 @@ class TestSafeUpgradeSelection:
         results = {"publications": {"unpublished": [
             _hit(pdf, confidence=0.99, authors=1, cr_author_count=5),
         ], "working": []}}
-        with patch("processing.upgrade_to_published.upgrade_paper") as up:
+        with patch("processing.upgrade_to_published.upgrade_paper", autospec=True) as up:
             summary = auto_apply_safe_transitions(results, lib, dry_run=False)
         assert summary["upgraded"] == []
         up.assert_not_called()
@@ -151,8 +151,8 @@ class TestSafeUpgradeSelection:
         entry = _hit(pdf, confidence=0.99, authors=1)
         del entry["match"]["author_count"]
         results = {"publications": {"unpublished": [entry], "working": []}}
-        with patch("processing.upgrade_to_published.upgrade_paper") as up:
-            up.return_value = {"success": True}
+        with patch("processing.upgrade_to_published.upgrade_paper", autospec=True) as up:
+            up.return_value = {"success": True, "action": "DOWNLOADED + FILED + DELETED preprint"}
             summary = auto_apply_safe_transitions(results, lib, dry_run=False)
         assert summary["upgraded"] == [str(pdf)]
 
@@ -161,8 +161,8 @@ class TestSafeUpgradeSelection:
         results = {"publications": {"unpublished": [
             _hit(pdf, confidence=SAFE_UPGRADE_CONFIDENCE, authors=1)
         ], "working": []}}
-        with patch("processing.upgrade_to_published.upgrade_paper") as up:
-            up.return_value = {"success": True}
+        with patch("processing.upgrade_to_published.upgrade_paper", autospec=True) as up:
+            up.return_value = {"success": True, "action": "DOWNLOADED + FILED + DELETED preprint"}
             summary = auto_apply_safe_transitions(results, lib, dry_run=False)
         assert summary["upgraded"] == [str(pdf)]
 
@@ -173,8 +173,14 @@ class TestSafeUpgradeSelection:
             _hit(good, confidence=0.97, authors=1),
             _hit(bad, confidence=0.97, authors=1),
         ], "working": []}}
-        def fake_upgrade(entry, root, *, dry_run=False):
-            return {"success": True} if "good" in entry["file"] else {"success": False, "error": "network"}
+        # Same signature as the real one: a stub that accepts anything is
+        # how a call missing download_dir passed this suite for months.
+        def fake_upgrade(entry, library_root, download_dir, *, dry_run=False,
+                         manual_only=False, undo_log=None):
+            assert download_dir.is_dir()
+            if "good" in entry["file"]:
+                return {"success": True, "action": "DOWNLOADED + FILED + DELETED preprint"}
+            return {"success": False, "action": "SKIP: network unreachable"}
         with patch("processing.upgrade_to_published.upgrade_paper", side_effect=fake_upgrade):
             summary = auto_apply_safe_transitions(results, lib, dry_run=False)
         assert summary["upgraded"] == [str(good)]
@@ -185,7 +191,7 @@ class TestSafeUpgradeSelection:
         pdf = _make_pdf(lib / "p.pdf")
         results = {"publications": {"unpublished": [_hit(pdf, confidence=0.99, authors=1)],
                                     "working": []}}
-        with patch("processing.upgrade_to_published.upgrade_paper") as up:
+        with patch("processing.upgrade_to_published.upgrade_paper", autospec=True) as up:
             summary = auto_apply_safe_transitions(results, lib, dry_run=True)
         up.assert_not_called()
         assert any("WOULD" in u for u in summary["upgraded"])

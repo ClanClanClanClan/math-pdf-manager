@@ -504,12 +504,40 @@ def process_report(
     if verbose:
         print(f"Processing {len(candidates)} papers (from {len(published)} published, confidence ≥ {min_confidence:.0%})")
 
-    # Set up undo log and temp download directory
+    return upgrade_entries(candidates, library_root, dry_run=dry_run,
+                           manual_only=manual_only, verbose=verbose)
+
+
+def upgrade_entries(
+    candidates: list,
+    library_root: Path = LIBRARY_ROOT,
+    *,
+    dry_run: bool = False,
+    manual_only: bool = False,
+    verbose: bool = False,
+    description: str = "",
+) -> dict:
+    """Upgrade these entries, as ONE reversible transaction.
+
+    The only batch upgrader. The Monday sweep's "file the safe ones" used
+    to call ``upgrade_paper`` itself -- without the ``download_dir`` it
+    requires, so every paper raised TypeError into a list nobody printed,
+    and without an undo log, so had it worked, the preprints it trashed
+    could not have been put back (cockpit audit, finding 16). Its tests
+    replaced ``upgrade_paper`` with a mock that accepts any arguments.
+
+    Returns ``{"total_candidates", "downloaded", "flagged", "skipped",
+    "results", "tx_id"}``; each result keeps upgrade_paper's ``action``.
+    """
+    # Set up undo log and temp download directory. The log lives with
+    # the library it describes -- the default followed $MATH_LIBRARY
+    # instead, wherever library_root pointed.
     undo_log = None
     tx_id = None
     if not dry_run:
-        undo_log = UndoLog()
-        tx_id = undo_log.begin_transaction(f"Upgrade {len(candidates)} papers to published")
+        undo_log = UndoLog(log_dir=Path(library_root) / ".operation_log")
+        tx_id = undo_log.begin_transaction(
+            description or f"Upgrade {len(candidates)} papers to published")
 
     download_dir = Path(tempfile.mkdtemp(prefix="mathpdf_downloads_"))
 
@@ -554,7 +582,7 @@ def process_report(
                 print(f"→ {r['action'][:60]}")
     finally:
         if undo_log is not None:
-            if downloaded > 0 or flagged > 0:
+            if undo_log.has_operations():
                 log_file = undo_log.commit()
                 if verbose:
                     print(f"\nUndo log: {log_file}")
@@ -562,6 +590,7 @@ def process_report(
                 # Nothing recorded — drop the empty transaction rather than
                 # committing a 0-op entry into the log / Activity tab.
                 undo_log.discard()
+                tx_id = None
         # Always remove the temp download dir, even if a paper raised.
         shutil.rmtree(download_dir, ignore_errors=True)
 
@@ -571,6 +600,7 @@ def process_report(
         "flagged": flagged,
         "skipped": skipped,
         "results": results,
+        "tx_id": tx_id,
     }
 
     if verbose:

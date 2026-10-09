@@ -25,6 +25,7 @@ import shutil
 import subprocess
 import sys
 from dataclasses import asdict, dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
 
@@ -270,8 +271,13 @@ def watcher_status() -> dict:
     return _with_inbox(running, pid, raw)
 
 
-def install_launch_agents() -> tuple[bool, str]:
-    """Write the launchd plists into ``~/Library/LaunchAgents``.
+#: The flag that makes the Monday sweep move files on its own.
+AUTO_APPLY_FLAG = "--auto-apply-safe"
+
+
+def install_launch_agents(labels=None, *,
+                          weekly_auto_apply: bool = False) -> tuple[bool, str]:
+    """Write launchd plists into ``~/Library/LaunchAgents``.
 
     This is what ``deploy/launchd/install.sh`` does -- a script the
     cockpit user cannot run, which meant ``start_watcher`` could only
@@ -279,6 +285,14 @@ def install_launch_agents() -> tuple[bool, str]:
     switched on from the UI at all.  The interpreter is pinned to the
     one running the cockpit rather than whatever ``python3`` happens to
     be first on PATH, so the daemon gets the same dependencies.
+
+    ``labels`` restricts it to those services. It used to install EVERY
+    template: turning on automatic filing (whenever its plist was
+    missing) also planted the Monday sweep, with ``--auto-apply-safe``,
+    and launchd starts LaunchAgents at login -- unattended upgrades,
+    trashing and 03->02 moves that nobody had switched on (cockpit audit,
+    finding 16). The sweep's auto-apply is now off unless
+    ``weekly_auto_apply`` asks for it.
     """
     project_root = Path(__file__).resolve().parents[2]
     templates = project_root / "deploy" / "launchd"
@@ -291,7 +305,10 @@ def install_launch_agents() -> tuple[bool, str]:
     except OSError as exc:
         return False, f"cannot create {dest_dir}: {exc}"
     written = []
+    wanted = None if labels is None else set(labels)
     for tpl in sorted(templates.glob("ch.ethz.dpossamai.mathpdf.*.plist")):
+        if wanted is not None and tpl.stem not in wanted:
+            continue
         try:
             body = tpl.read_text(encoding="utf-8")
             body = (body
@@ -299,6 +316,12 @@ def install_launch_agents() -> tuple[bool, str]:
                     .replace("HOME/", str(Path.home()) + "/")
                     .replace("<string>python3</string>",
                              f"<string>{sys.executable}</string>"))
+            if tpl.stem == WEEKLY_LABEL and not weekly_auto_apply:
+                body = re.sub(r"[ \t]*<string>" + re.escape(AUTO_APPLY_FLAG)
+                              + r"</string>[ \t]*\n?", "", body)
+                if AUTO_APPLY_FLAG in body:
+                    return False, ("could not leave automatic filing out of "
+                                   "the Monday sweep, so it was not installed")
             (dest_dir / tpl.name).write_text(body, encoding="utf-8")
         except OSError as exc:
             return False, f"cannot install {tpl.name}: {exc}"
@@ -325,7 +348,7 @@ def start_watcher() -> tuple[bool, str]:
         return False, f"could not create the inbox folder: {exc}"
     plist = Path.home() / "Library" / "LaunchAgents" / f"{WATCHER_LABEL}.plist"
     if not plist.exists():
-        ok, msg = install_launch_agents()
+        ok, msg = install_launch_agents([WATCHER_LABEL])
         if not ok or not plist.exists():
             return False, f"could not set up the auto-filer: {msg}"
     uid = os.getuid()
@@ -349,6 +372,127 @@ def stop_watcher() -> tuple[bool, str]:
             return True, "watcher was not running"
         return False, msg or f"launchctl exit {proc.returncode}"
     return True, "watcher stopped"
+
+
+# ---------------------------------------------------------------------------
+# The Monday sweep as a service
+# ---------------------------------------------------------------------------
+
+def _weekly_plist() -> Path:
+    return Path.home() / "Library" / "LaunchAgents" / f"{WEEKLY_LABEL}.plist"
+
+
+def weekly_reports_dir() -> Path:
+    return Path.home() / ".mathpdf" / "reports"
+
+
+def weekly_status() -> dict:
+    """What the Monday sweep is set to do, and what it last did.
+
+    ``on``  -- True when launchd has it loaded, False when it is not
+    installed or not loaded, None when launchctl could not be asked.
+    ``auto_apply`` -- whether it files the safe ones by itself (None if
+    the installed file could not be read).
+    ``last_run`` -- the newest maintenance report's time, or None: a
+    sweep that has never run must not look like one that ran clean.
+    ``problems`` -- what that run said made it incomplete; None for a
+    report written before runs recorded it ("not recorded" is not "none").
+    ``last_error`` -- the tail of the sweep's error output when it is
+    newer than the last report: a run that crashed writes no report.
+
+    There was no such function: the Monday sweep had no switch, no status
+    and no last-run anywhere in the cockpit (cockpit audit, finding 16).
+    """
+    import time as _time
+    plist = _weekly_plist()
+    out: dict = {"installed": plist.exists(), "on": False, "auto_apply": None,
+                 "last_run": None, "last_report": None, "age_days": None,
+                 "problems": None, "last_error": None,
+                 "schedule": "every Monday at 09:00"}
+    if out["installed"]:
+        try:
+            out["auto_apply"] = AUTO_APPLY_FLAG in plist.read_text(encoding="utf-8")
+        except OSError:
+            out["auto_apply"] = None
+        try:
+            proc = _launchctl("print", f"gui/{os.getuid()}/{WEEKLY_LABEL}")
+            text = ((proc.stdout or "") + (proc.stderr or "")).lower()
+            if proc.returncode == 0:
+                out["on"] = True
+            elif "could not find" in text or "no such" in text:
+                out["on"] = False
+            else:
+                out["on"] = None
+        except Exception:
+            out["on"] = None
+    reports = sorted(weekly_reports_dir().glob("maintenance_*.json"),
+                     key=lambda q: q.stat().st_mtime, reverse=True) \
+        if weekly_reports_dir().is_dir() else []
+    last_mtime = 0.0
+    if reports:
+        newest = reports[0]
+        last_mtime = newest.stat().st_mtime
+        out["last_report"] = str(newest)
+        out["last_run"] = datetime.fromtimestamp(last_mtime).isoformat(
+            timespec="minutes")
+        out["age_days"] = round((_time.time() - last_mtime) / 86400, 1)
+        try:
+            data = json.loads(newest.read_text(encoding="utf-8"))
+            if "problems" in data:
+                out["problems"] = list(data["problems"])
+        except (OSError, ValueError):
+            out["problems"] = ["the report could not be read"]
+    err = Path.home() / ".mathpdf" / "weekly.stderr"
+    try:
+        st_ = err.stat()
+        if st_.st_size and st_.st_mtime > last_mtime:
+            out["last_error"] = err.read_text(encoding="utf-8",
+                                              errors="replace")[-800:]
+    except OSError:
+        pass
+    return out
+
+
+def start_weekly(*, auto_apply_safe: bool = False) -> tuple[bool, str]:
+    """Install and load the Monday sweep -- with auto-apply only if asked.
+
+    Re-installing replaces the file, so the choice can be changed; a
+    loaded service is unloaded first so launchd reads the new one.
+    """
+    ok, msg = install_launch_agents([WEEKLY_LABEL],
+                                    weekly_auto_apply=auto_apply_safe)
+    if not ok:
+        return False, msg
+    uid = os.getuid()
+    _launchctl("bootout", f"gui/{uid}/{WEEKLY_LABEL}")
+    proc = _launchctl("bootstrap", f"gui/{uid}", str(_weekly_plist()))
+    if proc.returncode != 0:
+        return False, ((proc.stderr or proc.stdout or "").strip()
+                       or f"launchctl exit {proc.returncode}")
+    return True, ("The Monday sweep is on — every Monday at 09:00"
+                  + (", and it files the safe ones by itself."
+                     if auto_apply_safe else ", looking and reporting only."))
+
+
+def stop_weekly() -> tuple[bool, str]:
+    """Unload the Monday sweep and set its file aside, so a login does not
+    bring it back. Set aside, not deleted: it lands in
+    ``~/.mathpdf/services_off/``."""
+    uid = os.getuid()
+    proc = _launchctl("bootout", f"gui/{uid}/{WEEKLY_LABEL}")
+    if proc.returncode != 0:
+        msg = (proc.stderr or proc.stdout or "").strip()
+        if not ("could not find" in msg.lower() or "no such" in msg.lower()):
+            return False, msg or f"launchctl exit {proc.returncode}"
+    plist = _weekly_plist()
+    if plist.exists():
+        off = Path.home() / ".mathpdf" / "services_off"
+        try:
+            off.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(plist), str(off / plist.name))
+        except OSError as exc:
+            return False, f"stopped, but its file could not be set aside: {exc}"
+    return True, "The Monday sweep is off."
 
 
 # ---------------------------------------------------------------------------

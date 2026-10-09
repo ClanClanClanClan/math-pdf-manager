@@ -707,6 +707,12 @@ def render_sidebar() -> None:
                     st.error(st.session_state["watcher_start_error"])
         except Exception as exc:  # pragma: no cover -- never break the sidebar
             st.caption(f"Watcher status unavailable: {exc}")
+        try:
+            _weekly_line = _weekly_summary(_weekly_status_cached())
+        except Exception as exc:  # never break the sidebar
+            _weekly_line = ("warning", f"Monday sweep: status unavailable ({exc})")
+        {"warning": st.warning, "error": st.error}.get(
+            _weekly_line[0], st.caption)(_weekly_line[1])
 
         st.divider()
         st.caption(
@@ -1404,6 +1410,18 @@ def render_upgrade_queue() -> None:
 
     rp = Path(report_path)
     try:
+        _age = (time.time() - rp.stat().st_mtime) / 86400
+    except OSError:
+        _age = None
+    if _age is not None and _age > WEEKLY_STALE_DAYS:
+        # The date was in the label; nothing said what it MEANT. The
+        # default report was 152 days old (audit, finding 16).
+        st.warning(
+            f"This check is **{int(_age)} days old**. Papers it lists may "
+            "have been upgraded, moved or renamed since, and anything "
+            "published since is missing. Run a fresh one from "
+            "**Maintenance**, or turn on the Monday sweep there.")
+    try:
         report = json.loads(rp.read_text())
     except Exception as exc:
         st.error(f"That results file could not be read: {exc}")
@@ -2012,6 +2030,87 @@ def _render_normalize_section(lib: Path) -> None:
             st.rerun()
 
 
+def _render_weekly_service() -> None:
+    """The Monday sweep: what it is set to do, what it last did, a switch.
+
+    Cockpit audit finding 16: none of this existed. Turning it on is his
+    call, and so is letting it file papers by itself -- that is a separate
+    tick, off by default, because with it the sweep moves files with
+    nobody watching (reversibly, in one Activity entry per run).
+    """
+    from ui.cockpit_actions import start_weekly, stop_weekly
+    st.subheader("🗓 Monday sweep")
+    w = _weekly_status_cached()
+    kind, line = _weekly_summary(w)
+    {"warning": st.warning, "error": st.error}.get(kind, st.info)(
+        line.replace("🗓 ", ""))
+    st.caption(
+        "Every Monday at 09:00 (or when the Mac next wakes) it asks Crossref "
+        "whether your unpublished and working papers have appeared, notes "
+        "the answer in each paper's saved details, and writes a report you "
+        "can open below and review on the **Upgrade Queue** page. Noting the "
+        "answers is undoable from Activity. With **also file the safe "
+        "ones**, it additionally downloads near-certain published versions "
+        "(one author, 95%+ match) and moves the preprints to the trash, and "
+        "moves old working papers Crossref has missed three times to "
+        "Unpublished — one Activity entry per run, undoable.")
+    if w.get("last_error"):
+        with st.expander("What the failed run said", expanded=True):
+            st.code(w["last_error"])
+    if w.get("problems"):
+        with st.expander(f"Why the last run is incomplete "
+                         f"({len(w['problems'])})", expanded=True):
+            for item in w["problems"]:
+                st.markdown(f"- {item}")
+    elif w.get("last_run") and w.get("problems") is None:
+        st.caption("That report predates runs recording their problems, so "
+                   "whether it was complete is not known.")
+    cols = st.columns([2, 1])
+    if w.get("on"):
+        auto_now = bool(w.get("auto_apply"))
+        auto = cols[0].checkbox("Also file the safe ones by itself",
+                                value=auto_now, key="weekly_auto")
+        if auto != auto_now:
+            if cols[1].button("Save this choice", key="weekly_resave",
+                              type="primary", use_container_width=True):
+                ok, msg = start_weekly(auto_apply_safe=auto)
+                _flash("success" if ok else "error", msg)
+                if ok:
+                    _log_activity("maintenance.weekly_on",
+                                  "auto" if auto else "report-only")
+                _weekly_status_cached.clear()
+                st.rerun()
+        if cols[1].button("Turn the Monday sweep off", key="weekly_off",
+                          use_container_width=True):
+            ok, msg = stop_weekly()
+            _flash("success" if ok else "error", msg)
+            if ok:
+                _log_activity("maintenance.weekly_off", "")
+            _weekly_status_cached.clear()
+            st.rerun()
+    else:
+        auto = cols[0].checkbox("Also file the safe ones by itself",
+                                value=False, key="weekly_auto")
+        if auto:
+            _reversible_note("Each Monday it will then download, move and "
+                             "trash files with nobody watching.")
+        if cols[1].button("Turn the Monday sweep on", key="weekly_on",
+                          type="primary", use_container_width=True):
+            ok, msg = start_weekly(auto_apply_safe=auto)
+            _flash("success" if ok else "error", msg)
+            if ok:
+                _log_activity("maintenance.weekly_on",
+                              "auto" if auto else "report-only")
+            _weekly_status_cached.clear()
+            st.rerun()
+    if w.get("last_report") and Path(w["last_report"]).with_suffix(".html").exists():
+        if st.button("📄 Open the last Monday report", key="weekly_open_last"):
+            import subprocess as _sp
+            _sp.run(["open", str(Path(w["last_report"]).with_suffix(".html"))],
+                    capture_output=True)
+    st.divider()
+
+
 def render_maintenance() -> None:
     st.header("🧹 Maintenance")
     st.caption(
@@ -2029,6 +2128,8 @@ def render_maintenance() -> None:
     lib = _library()
 
     _render_normalize_section(lib)
+
+    _render_weekly_service()
 
     # Phase 5: one-click full weekly run (the Monday plist's equivalent)
     # via the cockpit so users don't need a terminal to trigger it.
@@ -2295,6 +2396,56 @@ def _watcher_status_cached() -> dict:
     """
     from ui.cockpit_actions import watcher_status
     return watcher_status()
+
+
+@st.cache_data(ttl=10, show_spinner=False)
+def _weekly_status_cached() -> dict:
+    """``weekly_status`` for the sidebar, which redraws on every click."""
+    from ui.cockpit_actions import weekly_status
+    return weekly_status()
+
+
+#: A report older than this is called out as stale (the sweep is weekly).
+WEEKLY_STALE_DAYS = 8
+
+
+def _age_words(days) -> str:
+    if days is None:
+        return "never"
+    if days < 1:
+        return "today"
+    if days < 2:
+        return "yesterday"
+    return f"{int(days)} days ago"
+
+
+def _weekly_summary(w: dict) -> tuple:
+    """``(kind, text)`` -- one line for the sidebar.
+
+    The Monday sweep had no status anywhere (cockpit audit, finding 16):
+    the only weekly surface was the button that runs it by hand, while
+    the newest report was five months old. Three states, as everywhere:
+    on, off, and "could not tell"; and never "on" without saying when it
+    last actually ran.
+    """
+    ran = w.get("last_run")
+    when = (f"last ran {_age_words(w.get('age_days'))} ({ran[:10]})"
+            if ran else "has never run")
+    if w.get("last_error"):
+        return ("error", "Monday sweep: its last run FAILED before writing a "
+                         "report — see Maintenance.")
+    if w.get("problems"):
+        return ("warning", f"Monday sweep: {when}, INCOMPLETE — "
+                           f"{len(w['problems'])} problem(s); see Maintenance.")
+    if w.get("on") is None:
+        return ("warning", f"Monday sweep: CAN'T CONFIRM it is scheduled; {when}.")
+    if not w.get("on"):
+        return ("caption", f"🗓 Monday sweep: off · {when}.")
+    stale = (w.get("age_days") or 0) > WEEKLY_STALE_DAYS or not ran
+    auto = " · files the safe ones" if w.get("auto_apply") else ""
+    return ("warning" if stale and ran else "caption",
+            f"🗓 Monday sweep: on{auto} · {when}"
+            + (" — overdue." if stale and ran else "."))
 
 
 _ATTENTION_TTL_SECONDS = 1800

@@ -165,7 +165,7 @@ class TestProcessReport:
         import processing.upgrade_to_published as up
         from processing.undo_log import UndoLog
         log_dir = tmp_path / ".operation_log"
-        monkeypatch.setattr(up, "UndoLog", lambda: UndoLog(log_dir=log_dir))
+        monkeypatch.setattr(up, "UndoLog", lambda log_dir_=None, **k: UndoLog(log_dir=log_dir))
         return log_dir
 
     def test_one_paper_raising_does_not_abort_batch(
