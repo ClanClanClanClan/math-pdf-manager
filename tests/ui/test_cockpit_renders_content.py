@@ -449,6 +449,7 @@ def test_stats_shows_the_count_of_every_status_folder(cockpit, lib, monkeypatch)
         cockpit, "_library_health_cached",
         _fake_cached({"sidecar_coverage": 0.42, "sidecars": 12, "pdfs": 29,
                       "vocab_pending": 63, "vocab_ruled": 400,
+                      "casing_review": 85, "casing_held": 60,
                       "undo_transactions": 17, "last_tx_age_days": 2,
                       "trash_pdfs": 9, "model_trained_on": 0,
                       "model_accuracy": 0.0, "model_age_days": 0,
@@ -464,7 +465,8 @@ def test_stats_shows_the_count_of_every_status_folder(cockpit, lib, monkeypatch)
             f"'{label}' was not shown with its count {n}"
             f"\n--- rendered page ---\n{text[:3000]}")
     # The health strip's numbers are the other half of this page.
-    assert_metric(cockpit.st, "Words awaiting your ruling", 63)
+    # Both lists that hold a word back: 63 in Settings + 85 on Spelling.
+    assert_metric(cockpit.st, "Words awaiting your ruling", 148)
     assert_metric(cockpit.st, "Changes you can still undo", 17)
     assert_metric(cockpit.st, "Files in the trash", 9)
     assert_metric(cockpit.st, "Waiting", 1)          # the 12/ backlog

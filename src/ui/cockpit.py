@@ -2995,6 +2995,42 @@ def render_conformance() -> None:
         st.success(f"Saved {p.name}")
 
 
+def _words_awaiting_ruling(h: dict) -> tuple:
+    """(value, help) for the Stats "Words awaiting your ruling" metric.
+
+    Two lists can hold a word back. The casing census (``casing_review``)
+    is the one that blocks renames today; its buttons are on the Spelling
+    page. The older title vocabulary (``vocab_pending``) is decided in
+    Settings. The metric counted only the second -- 0 while 148 waited --
+    and a list it could not READ counted as empty. A None stays visible
+    as "—", never as 0.
+    """
+    casing, held = h.get("casing_review"), h.get("casing_held")
+    pending, ruled = h.get("vocab_pending"), h.get("vocab_ruled")
+    parts = []
+    if casing is None:
+        parts.append("The list of words the renamer is holding back could "
+                     "not be read, so this figure is not known.")
+    elif casing:
+        parts.append(
+            f"{casing} word(s) are written both ways in your titles: {held} "
+            f"are held back — not capitalised until you decide — and "
+            f"{casing - held} are applied but worth a look. Answer them on "
+            f"the Spelling page, under “Name or ordinary word?”.")
+    if pending is None:
+        parts.append("The title vocabulary (Settings) could not be read.")
+    elif pending:
+        parts.append(f"{pending} more word(s) wait in Settings → Title "
+                     f"vocabulary.")
+    if ruled:
+        parts.append(f"You have already ruled on {ruled} there.")
+    if casing is None or pending is None:
+        return "—", " ".join(parts)
+    if not casing + pending:
+        parts.insert(0, "No word is waiting for you.")
+    return casing + pending, " ".join(parts)
+
+
 def render_stats() -> None:
     _hdr, _btn = st.columns([0.75, 0.25])
     with _hdr:
@@ -3086,10 +3122,8 @@ def render_stats() -> None:
                       f"authors and DOI stored alongside them. That is what "
                       f"search and duplicate-detection read. Fill in the "
                       f"missing ones from Settings.")
-    hc[1].metric("Words awaiting your ruling", h["vocab_pending"],
-                 help=f"Words the renamer cannot tell how to capitalise. "
-                      f"You have already ruled on {h['vocab_ruled']}. "
-                      f"Decide the rest in Settings → Title vocabulary.")
+    _w_value, _w_help = _words_awaiting_ruling(h)
+    hc[1].metric("Words awaiting your ruling", _w_value, help=_w_help)
     hc[2].metric("Changes you can still undo", h["undo_transactions"],
                  help="Every batch of changes ever made is still reversible "
                       f"from the Activity page (the most recent was "
@@ -3098,7 +3132,11 @@ def render_stats() -> None:
                  help="Nothing is ever deleted outright. These can be put "
                       "back from the Activity page or straight from Finder.")
     notes = []
-    if h["model_trained_on"]:
+    if h["model_trained_on"] is None:
+        notes.append("Capitalisation helper: its file is there but could not "
+                     "be read (often a Dropbox file mid-sync) — this is NOT "
+                     "the same as untrained; do not retrain it because of this")
+    elif h["model_trained_on"]:
         notes.append(
             f"Capitalisation helper: learned from {h['model_trained_on']} of "
             f"your own filenames, and gets {h['model_accuracy']:.0%} right on "
@@ -3107,7 +3145,9 @@ def render_stats() -> None:
     else:
         notes.append("Capitalisation helper: not trained yet — train it in "
                      "Settings → Title vocabulary")
-    if h["corpus_stats_age_days"] >= 0:
+    if h["corpus_stats_age_days"] is None:
+        notes.append("word statistics: could not be read")
+    elif h["corpus_stats_age_days"] >= 0:
         notes.append("word statistics taken from your own library: "
                      f"{h['corpus_stats_age_days']} days old")
     st.caption(" · ".join(notes))
@@ -4534,7 +4574,26 @@ def _render_title_vocabulary(lib: Path) -> None:
             st.rerun()
 
         if not pending:
-            st.success("No uncertain title words. ✓")
+            # This list being empty said "No uncertain title words ✓" while
+            # 148 words were held back in the OTHER list -- the one the
+            # renamer actually consults, answered on the Spelling page.
+            try:
+                from processing.casing_vocabulary import review_queue
+                _held = len(review_queue())
+            except Exception:
+                _held = None
+            if _held is None:
+                st.warning("Nothing is waiting in this list. The other list "
+                           "— words the renamer holds back, answered on the "
+                           "Spelling page — could not be read, so it is not "
+                           "known whether anything waits there.")
+            elif _held:
+                st.info(f"Nothing is waiting in this list. **{_held} word(s)** "
+                        "are waiting in the other one: the renamer is holding "
+                        "them back until you answer “Name or ordinary word?” "
+                        "on the **Spelling** page.")
+            else:
+                st.success("No uncertain title words. ✓")
             return
 
         # Most-seen first; cap the render so a huge backlog stays snappy.
@@ -5548,9 +5607,22 @@ def _search_index_cached(lib_str: str) -> list:
     return build_index(Path(lib_str))
 
 
+@st.cache_data(ttl=1800, show_spinner="Preparing the downloads…")
+def _search_export_cached(lib_str: str, hits: tuple) -> tuple:
+    """CSV and BibTeX for EVERY match, built once per result set.
+
+    Each row reads its paper's sidecar for the DOI: 1.1 s cold for the
+    3,848 "stochastic" matches (measured 2026-10-09). Without the cache
+    that was paid again on every click on the page. Keyed on the hits
+    themselves, so a file that moves changes the key."""
+    from ui.search_page import row_details, to_bibtex, to_csv
+    rows = [row_details(name, rel, Path(lib_str)) for name, rel in hits]
+    return to_csv(rows), to_bibtex(rows), len(rows)
+
+
 def render_search() -> None:
     """Instant search over the 29k canonical filenames + CSV/BibTeX export."""
-    from ui.search_page import row_details, search_index, to_bibtex, to_csv
+    from ui.search_page import search_index
 
     st.header("🔎 Search")
     st.caption(
@@ -5585,9 +5657,10 @@ def render_search() -> None:
             "it to finish syncing and search again."
         )
         return
-    hits = search_index(index, query, limit=200)
-    st.caption(f"{len(hits)} result(s)"
-               + (" (first 200 shown — refine the query)" if len(hits) == 200 else ""))
+    hits = search_index(index, query)          # every match, not a page
+    st.caption(f"{len(hits):,} result(s)"
+               + (" — listed 25 at a time below; both downloads hold all of them"
+                  if len(hits) > 25 else ""))
     if not hits:
         st.info("Nothing in your library matches all of those words.")
         st.caption(
@@ -5619,17 +5692,18 @@ def render_search() -> None:
                      key="search_more", use_container_width=True):
             st.session_state["search_shown"] = _shown + 25
             st.rerun()
-        st.caption("All results are included in the CSV / BibTeX exports below.")
+        st.caption(f"The downloads below hold all {len(hits):,} results, "
+                   "not only the ones listed here.")
 
     st.divider()
-    rows = [row_details(name, rel, lib) for name, rel in hits]
+    _csv, _bib, _n = _search_export_cached(str(lib), tuple(hits))
     ecols = st.columns(2)
     ecols[0].download_button(
-        "⬇ CSV", to_csv(rows), file_name="library_search.csv",
+        f"⬇ CSV  ({_n:,} rows)", _csv, file_name="library_search.csv",
         mime="text/csv", use_container_width=True,
     )
     ecols[1].download_button(
-        "⬇ BibTeX", to_bibtex(rows), file_name="library_search.bib",
+        f"⬇ BibTeX  ({_n:,} entries)", _bib, file_name="library_search.bib",
         mime="text/plain", use_container_width=True,
     )
 

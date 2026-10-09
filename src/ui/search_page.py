@@ -9,10 +9,12 @@ built from one library walk (cached by the caller).  Matching is
 case- and accent-insensitive; multiple space-separated terms must ALL
 match (AND semantics), each anywhere in the name.
 
-Export produces CSV and BibTeX from the filtered rows.  BibTeX entry
-types map from the library's folder convention (01/02/03 → article-ish,
-05 → book, 06 → phdthesis); DOIs are pulled from sidecars for the
-result set only (bounded), never a whole-library sidecar sweep.
+Export produces CSV and BibTeX from EVERY match -- not a page of them.
+BibTeX entry types map from the library's folder convention (01/02/03 →
+article-ish, 05 → book, 06 → phdthesis); DOIs are read from the sidecars
+of the matched papers only, never a whole-library sidecar sweep. MEASURED
+2026-10-09 on the real library: the largest common query, "stochastic",
+matches 3,848 papers and their export takes 1.1 s cold, 0.3 s warm.
 """
 from __future__ import annotations
 
@@ -26,7 +28,6 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-MAX_EXPORT_SIDECAR_READS = 500
 
 
 def _fold(s: str) -> str:
@@ -56,8 +57,15 @@ def build_index(library_root: Path) -> list:
     return rows
 
 
-def search_index(index: list, query: str, *, limit: int = 200) -> list:
-    """AND-match all space-separated terms; returns ``[(name, relpath)]``."""
+def search_index(index: list, query: str, *, limit: Optional[int] = None) -> list:
+    """AND-match all space-separated terms; returns ``[(name, relpath)]``.
+
+    Every match by default. The cap used to be 200, and the page built its
+    count AND both exports from the capped list: "stochastic" reported 200
+    results and exported 200 rows of its 3,848 under a caption saying the
+    export held them all (cockpit audit, re-measured 2026-10-09). Paging
+    what is LISTED is the page's job, not the search's.
+    """
     terms = [_fold(t) for t in query.split() if t.strip()]
     if not terms:
         return []
@@ -65,7 +73,7 @@ def search_index(index: list, query: str, *, limit: int = 200) -> list:
     for name, rel, key in index:
         if all(t in key for t in terms):
             out.append((name, rel))
-            if len(out) >= limit:
+            if limit is not None and len(out) >= limit:
                 break
     return out
 

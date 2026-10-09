@@ -65,6 +65,12 @@ def collect_library_health(library_root: Path) -> dict:
     out["sidecars"] = n_sidecars
     out["sidecar_coverage"] = round(n_sidecars / n_pdfs, 4) if n_pdfs else 0.0
 
+    # A probe that FAILED reports None, never 0. Every one of these used to
+    # fall back to 0 in its except, and the page rendered that as a
+    # confident "0 words awaiting your ruling" or "not trained yet" -- the
+    # second of which tells him to retrain, overwriting a model that a
+    # half-synced Dropbox file merely made unreadable (cockpit audit).
+
     # Title vocabulary + assist model (the learning loop's backlog).
     try:
         from processing.title_vocab import load_vocab
@@ -72,7 +78,20 @@ def collect_library_health(library_root: Path) -> dict:
         out["vocab_pending"] = len(v["pending"])
         out["vocab_ruled"] = len(v["proper"]) + len(v["common"])
     except Exception:
-        out["vocab_pending"] = out["vocab_ruled"] = 0
+        out["vocab_pending"] = out["vocab_ruled"] = None
+
+    # The words the renamer is HOLDING BACK until he says "name or ordinary
+    # word". They live in the casing census, not in title_vocab above, and
+    # this strip only ever read title_vocab: measured 2026-10-09 it said
+    # 0 while 148 were waiting (124 held back, 24 applied but flagged).
+    try:
+        from processing.casing_vocabulary import review_queue
+        q = review_queue()
+        out["casing_review"] = len(q)
+        out["casing_held"] = sum(1 for r in q if r["kind"] == "held")
+    except Exception:
+        out["casing_review"] = out["casing_held"] = None
+
     try:
         from processing.title_model import model_path
         mp = model_path(library_root)
@@ -83,13 +102,13 @@ def collect_library_health(library_root: Path) -> dict:
                 m.get("metrics", {}).get("accuracy", 0.0))
             out["model_age_days"] = _age_days(mp)
         else:
-            out["model_trained_on"] = 0
+            out["model_trained_on"] = 0           # truly never trained
             out["model_accuracy"] = 0.0
             out["model_age_days"] = -1.0
     except Exception:
-        out["model_trained_on"] = 0
-        out["model_accuracy"] = 0.0
-        out["model_age_days"] = -1.0
+        out["model_trained_on"] = None            # there, but unreadable
+        out["model_accuracy"] = None
+        out["model_age_days"] = None
 
     # Undo log: how much reversible history exists, and how fresh.
     ops = library_root / ".operation_log"
@@ -110,6 +129,6 @@ def collect_library_health(library_root: Path) -> dict:
         sp = stats_path(library_root)
         out["corpus_stats_age_days"] = _age_days(sp) if sp.exists() else -1.0
     except Exception:
-        out["corpus_stats_age_days"] = -1.0
+        out["corpus_stats_age_days"] = None
 
     return out

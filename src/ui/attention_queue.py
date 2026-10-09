@@ -634,6 +634,45 @@ def collect_unsorted_backlog(
     return items
 
 
+def collect_casing_rulings(library_root: Path) -> list[AttentionItem]:
+    """ONE row while words wait for "name or ordinary word?".
+
+    The renamer will not capitalise a held-back word until he answers, so
+    the backlog blocks real renames -- yet it was shown only inside a
+    collapsed expander on the Spelling page, and the Stats strip counted a
+    different, empty list (0 while 148 waited, measured 2026-10-09). One
+    summary row, not one per word: a word is answered on Spelling, where
+    the buttons are. Lets a failure raise; the sweep turns that into a
+    visible "could not run" row instead of a silent absence.
+    """
+    from processing.casing_vocabulary import review_queue
+    queue = review_queue()
+    if not queue:
+        return []
+    held = sum(1 for r in queue if r["kind"] == "held")
+    changed = sum(1 for r in queue if r["kind"] == "changed")
+    bits = [f"{held} held back"] if held else []
+    if changed:
+        bits.append(f"{changed} changed since you decided")
+    if len(queue) - held - changed:
+        bits.append(f"{len(queue) - held - changed} worth a look")
+    return [AttentionItem(
+        key="casing_rulings",
+        source="casing_rulings",
+        severity=SEVERITY_WARNING if held or changed else SEVERITY_INFO,
+        title=f"{len(queue)} word(s) wait for you: name or ordinary word?",
+        detail=(
+            f"{' · '.join(bits)}.\n\n"
+            "Your titles write each of these both ways. A held-back word "
+            "is not capitalised in any rename until you decide. Answer "
+            "them on the **Spelling** page, under “Name or ordinary "
+            "word?” — closest calls first."
+        ),
+        payload={"count": len(queue), "held": held},
+        actions=[("Dismiss 7d", "dismiss_7d")],
+    )]
+
+
 COLLECTORS: list[tuple[str, Callable[[Path], list[AttentionItem]]]] = [
     ("watcher_failure", lambda root: collect_watcher_failures()),
     ("upgrade_flag", collect_upgrade_flags),
@@ -643,6 +682,7 @@ COLLECTORS: list[tuple[str, Callable[[Path], list[AttentionItem]]]] = [
     ("topic_suggestion", collect_topic_suggestions),
     ("permanently_unpublished", collect_permanently_unpublished),
     ("unsorted_backlog", collect_unsorted_backlog),
+    ("casing_rulings", collect_casing_rulings),
 ]
 
 
