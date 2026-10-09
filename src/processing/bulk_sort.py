@@ -34,7 +34,6 @@ from __future__ import annotations
 import argparse
 import json
 import logging
-import shutil
 import sys
 import time
 from pathlib import Path
@@ -91,12 +90,21 @@ def _move_to_trash(
     *,
     subfolder: str,
     dry_run: bool = False,
+    undo_log=None,
 ) -> Path:
     """Move a successfully-sorted source PDF to ``.trash/sorted_originals/``.
 
     Returns the trash path the file was moved to (or would be moved to,
     in dry-run mode).
+
+    Through ``logged_move``: a saved record of the source goes with it, in
+    the same transaction, so one undo restores both. A bare
+    ``shutil.move`` left the record behind in the staging folder's mirror,
+    belonging to no paper -- and was recorded only AFTER the move, so a
+    crash in between left a trashed file with no undo entry.
     """
+    from processing.undo_log import logged_move, trash_slot_taken
+
     trash_dir = library_root / ".trash" / "sorted_originals" / subfolder
     if not dry_run:
         trash_dir.mkdir(parents=True, exist_ok=True)
@@ -106,11 +114,11 @@ def _move_to_trash(
     # The cap is a safety net so a maliciously-pre-populated trash directory
     # can't lock us in an unbounded loop; in practice the counter will be
     # tiny (a paper rarely gets sorted more than once).
-    if target.exists() and target.resolve() != source.resolve():
+    if trash_slot_taken(target):
         MAX_DISAMBIG_ATTEMPTS = 10000
         for i in range(1, MAX_DISAMBIG_ATTEMPTS + 1):
             cand = trash_dir / f"{source.stem}.{i}{source.suffix}"
-            if not cand.exists():
+            if not trash_slot_taken(cand):
                 target = cand
                 break
         else:
@@ -120,7 +128,7 @@ def _move_to_trash(
             )
 
     if not dry_run:
-        shutil.move(str(source), str(target))
+        logged_move(source, target, undo_log=undo_log)
     return target
 
 
@@ -233,10 +241,9 @@ def sort_one(
             library_root,
             subfolder=pdf.parent.name,
             dry_run=dry_run,
+            undo_log=undo_log,
         )
         result["moved_source_to"] = str(trash_path)
-        if undo_log is not None and not dry_run:
-            undo_log.record_move(pdf, trash_path)
     except Exception as exc:
         logger.exception("Failed to trash source %s", pdf)
         result["error"] = f"ingest ok but trashing source failed: {exc}"

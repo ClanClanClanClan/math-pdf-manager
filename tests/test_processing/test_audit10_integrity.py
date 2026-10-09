@@ -228,16 +228,47 @@ class TestRecordBeforeMutate:
         # The copy op was recorded even though copy2 raised.
         assert any(op["type"] == "copy" for op in log._current_tx["operations"])
 
-    def test_trash_move_records_before_moving_in_source(self):
-        # The preprint-to-trash block must call record_move BEFORE
-        # shutil.move so a crash in the gap still leaves a reversible
-        # undo entry.  Assert the real source ordering of the function.
-        import inspect
+    def test_trash_move_is_recorded_before_the_file_moves(self, tmp_path, monkeypatch):
+        # The preprint-to-trash move must be in the undo log BEFORE the file
+        # moves, so a crash in the gap still leaves a reversible entry. This
+        # used to assert the order of two lines of source text; the move now
+        # goes through logged_move (which also carries the paper's record),
+        # so the BEHAVIOUR is checked instead: the move fails, the entry is
+        # already there.
+        import processing.ingest as ingest
+        import processing.undo_log as ul
         import processing.upgrade_to_published as up
-        src = inspect.getsource(up)
-        rec = src.index("undo_log.record_move(preprint_path, trash_path)")
-        mv = src.index("shutil.move(str(preprint_path), str(trash_path))")
-        assert rec < mv, "record_move must precede shutil.move for the trash branch"
+        from processing.identity import enable_sidecar_mirror
+        from processing.undo_log import UndoLog
+
+        lib = tmp_path / "lib"
+        enable_sidecar_mirror(lib)
+        pre = lib / "02 - Unpublished papers" / "S" / "Smith, J. - A.pdf"
+        pre.parent.mkdir(parents=True)
+        pre.write_bytes(b"%PDF-1.4 preprint")
+
+        def _download(doi, download_dir):
+            f = Path(download_dir) / "pub.pdf"
+            f.parent.mkdir(parents=True, exist_ok=True)
+            f.write_bytes(b"%PDF-1.4 the published version, a little longer")
+            return f
+
+        def boom(*a, **k):
+            raise OSError("disk full")
+
+        monkeypatch.setattr(up, "try_download_by_doi", _download)
+        monkeypatch.setattr(ingest, "ingest_paper",
+                            lambda p, **k: {"success": True, "destination": ""})
+        monkeypatch.setattr(ul.shutil, "move", boom)
+        log = UndoLog(log_dir=tmp_path / ".operation_log")
+        log.begin_transaction("upgrade")
+        res = up.upgrade_paper({"file": str(pre), "match": {"doi": "10.1/x"}},
+                               lib, tmp_path / "dl", undo_log=log)
+        assert "preprint move error" in res["action"], res
+        assert pre.exists(), "the failed move left the preprint where it was"
+        ops = [(op["type"], Path(op["source"]).name, Path(op["destination"]).parent.name)
+               for op in log._current_tx["operations"]]
+        assert ops == [("move", pre.name, "upgraded_preprints")], ops
 
 
 # ---------------------------------------------------------------------------

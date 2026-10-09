@@ -35,7 +35,8 @@ import requests
 
 logger = logging.getLogger(__name__)
 
-from processing.undo_log import UndoLog, logged_move, logged_copy
+from processing.undo_log import (UndoLog, logged_move, logged_copy,
+                                 trash_slot_taken)
 
 from core.config_paths import get_library_root as _get_library_root
 LIBRARY_ROOT = _get_library_root()
@@ -303,7 +304,7 @@ def upgrade_paper(
         # Downloaded successfully — ingest into library
         try:
             from processing.ingest import ingest_paper
-            from processing.identity import PaperIdentity, sidecar_path
+            from processing.identity import PaperIdentity
 
             # ROUTING FIX (live trial): preserve the user's curated
             # preprint name and topic instead of re-deriving them from
@@ -317,12 +318,17 @@ def upgrade_paper(
             # preprint's sidecar (set when the preprint was filed /
             # classified).  Falls back to None (auto-classify) only if
             # the preprint had no recorded topic.
+            #
+            # Not guarded by ``sidecar_path(...).exists()``: that is where a
+            # record SHOULD go, and a record of 252-255 bytes still sits
+            # at its older full-name location, so the guard skipped the
+            # topic of exactly those papers. ``load`` finds a record
+            # wherever it is, and answers a blank one when there is none.
             preserved_topic = None
             try:
-                if sidecar_path(preprint_path).exists():
-                    pre_ident = PaperIdentity.load(preprint_path)
-                    if pre_ident.topic_codes:
-                        preserved_topic = pre_ident.topic_codes[0]
+                pre_ident = PaperIdentity.load(preprint_path)
+                if pre_ident.topic_codes:
+                    preserved_topic = pre_ident.topic_codes[0]
             except Exception:
                 pass
 
@@ -344,10 +350,11 @@ def upgrade_paper(
                 # we lose the trail of "we found this paper because
                 # we kept checking the preprint for X months".
                 try:
-                    from processing.identity import PaperIdentity, sidecar_path as _scp
+                    # No sidecar_path(...).exists() guard, for the reason
+                    # given above: is_new() below is the test that a
+                    # record exists, wherever it is stored.
                     if (
                         preprint_path.exists()
-                        and _scp(preprint_path).exists()
                         and ingest_result.get("destination")
                     ):
                         new_canonical = Path(ingest_result["destination"])
@@ -411,24 +418,23 @@ def upgrade_paper(
                             # preprint_variants) already does this.
                             trash_path = trash_dir / preprint_path.name
                             _n = 2
-                            while trash_path.exists():
+                            while trash_slot_taken(trash_path):
                                 trash_path = trash_dir / (
                                     f"{preprint_path.stem} ({_n})"
                                     f"{preprint_path.suffix}")
                                 _n += 1
 
-                            # Audit-10: record BEFORE moving.  Otherwise a
-                            # crash between the move and record_move sends
-                            # the preprint to .trash with no undo entry, so
-                            # the cockpit Activity tab can't reverse it
-                            # (violating "traceable and cancellable, not
-                            # only through CLI").  Recording first is safe:
-                            # if the move fails, undo finds nothing at the
-                            # destination and skips.
-                            if undo_log:
-                                undo_log.record_move(preprint_path, trash_path)
-
-                            shutil.move(str(preprint_path), str(trash_path))
+                            # The preprint's saved record goes WITH it, in
+                            # the same transaction, so one undo restores
+                            # both. A bare shutil.move left the record at
+                            # the preprint's old name, belonging to no
+                            # paper: three of the library's orphaned
+                            # records (measured 2026-10-09) are exactly
+                            # that. logged_move also records BEFORE moving
+                            # (audit-10), so a crash mid-move still leaves
+                            # an undo entry.
+                            logged_move(preprint_path, trash_path,
+                                        undo_log=undo_log)
 
                             result["action"] = "DOWNLOADED + FILED + DELETED preprint"
                         except Exception as exc:

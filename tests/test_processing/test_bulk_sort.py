@@ -101,6 +101,13 @@ class TestMoveToTrash:
                                 subfolder="01 - Published papers", dry_run=True)
         # Source still exists (not moved)
         assert source.exists()
+        # ...and nothing was created: a dry run makes no trash folder either.
+        # (A mutation pass found this unchecked: bulk_sort's own dry-run test
+        # never reaches _move_to_trash, its synthetic PDF fails the quality
+        # gate first.)
+        assert not (synthetic_library / ".trash").exists()
+        assert target.parent == (synthetic_library / ".trash" / "sorted_originals"
+                                 / "01 - Published papers")
 
     def test_collision_loop_is_bounded(self, synthetic_library, make_pdf, monkeypatch):
         """A malicious pre-populated trash directory must not lock us up.

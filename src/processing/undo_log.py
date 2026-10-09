@@ -735,6 +735,26 @@ def _is_same_file(a: Path, b: Path) -> bool:
         return False
 
 
+def trash_slot_taken(dest: Path) -> bool:
+    """Is ``dest`` unusable as the name of a PDF being retired to the trash?
+
+    Taken when a file is there OR a saved record already answers to that
+    name. A retired PDF takes its record along (``logged_move``), and the
+    record lands at the trash name's own record location; a record left
+    there by anything else would make ``logged_move`` refuse rather than
+    clobber, so the name is skipped instead. Every place a record could be
+    is asked, not only that one: an older full-name record (252-255 bytes)
+    does not stop ``logged_move``, but would then answer for the retired
+    paper -- as its only record, if it brought none. A name too long to
+    test raises: the move could not succeed under it either, and a loop
+    that treated it as merely taken would never end.
+    """
+    if dest.exists():
+        return True
+    from processing.identity import find_sidecar
+    return find_sidecar(dest) is not None
+
+
 def _retire_to_trash(path: Path, reason: str) -> Path:
     """Move ``path`` into ``<library>/.trash/<reason>/`` instead of deleting it.
 
@@ -742,7 +762,10 @@ def _retire_to_trash(path: Path, reason: str) -> Path:
     did -- undoing a copy -- is the branch that lost a paper.
 
     The name is made unique rather than overwritten: two undone copies of the
-    same paper must not silently become one.
+    same paper must not silently become one. A saved record of the copy goes
+    with it (``logged_move``); left behind, it would belong to no paper.
+    Unlogged on purpose: this runs inside an undo, which is not itself a
+    transaction.
     """
     from core.config_paths import get_library_root
     try:
@@ -753,10 +776,10 @@ def _retire_to_trash(path: Path, reason: str) -> Path:
     trash.mkdir(parents=True, exist_ok=True)
     target = trash / path.name
     n = 1
-    while target.exists():
+    while trash_slot_taken(target):
         target = trash / f"{path.stem} ({n}){path.suffix}"
         n += 1
-    path.rename(target)
+    logged_move(path, target)
     return target
 
 
