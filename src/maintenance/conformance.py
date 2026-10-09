@@ -419,6 +419,7 @@ def check_sidecars(library_root: Path, pdfs: list, all_pdfs: list = None) -> tup
     at the naive path, disagreeing on doi, arxiv_id and classifier_text.
     """
     from processing.identity import sidecar_path
+    from processing.sidecar_repair import _file_id, unclaimed_records
 
     mirror = library_root / ".mathpdf-sidecars"
     findings: list = []
@@ -431,14 +432,11 @@ def check_sidecars(library_root: Path, pdfs: list, all_pdfs: list = None) -> tup
     # reported 2,113 instead of 27.
     all_pdfs = pdfs if all_pdfs is None else all_pdfs
 
-    def _exists(p: Path) -> bool:
-        # Path.exists() RAISES ENAMETOOLONG rather than returning False —
-        # the same trap that once aborted a 6,186-file batch at file 1,921.
-        try:
-            return p.exists()
-        except OSError:
-            return False
-
+    # Records are identified by FILE (device, inode), not by path string:
+    # APFS folds case and macOS returns NFD names, so one record can be
+    # reached under two spellings. _file_id also answers None, rather than
+    # raising, for a name over 255 bytes -- the trap that once aborted a
+    # 6,186-file batch at file 1,921.
     judged = {str(p) for p in pdfs}
     for pdf in all_pdfs:
         rel = pdf.relative_to(library_root)
@@ -447,14 +445,12 @@ def check_sidecars(library_root: Path, pdfs: list, all_pdfs: list = None) -> tup
         except Exception:                           # pragma: no cover
             continue
         naive = mirror / rel.parent / (pdf.stem + ".meta.json")
-        have_c, have_n = _exists(canonical), _exists(naive)
-        if have_c:
-            claimed.add(str(canonical))
-        if have_n:
-            claimed.add(str(naive))
+        id_c, id_n = _file_id(canonical), _file_id(naive)
+        have_c, have_n = id_c is not None, id_n is not None
+        claimed.update(i for i in (id_c, id_n) if i is not None)
         if str(pdf) not in judged:
             continue        # counted for orphans, not for coverage
-        if have_c and have_n and canonical != naive:
+        if have_c and have_n and id_c != id_n:
             findings.append(Finding(
                 str(rel), VIOLATION, "two-sidecar-records",
                 "a hashed and a naive record both exist and can diverge"))
@@ -463,19 +459,13 @@ def check_sidecars(library_root: Path, pdfs: list, all_pdfs: list = None) -> tup
         else:
             missing += 1
 
-    orphans = 0
-    from processing.identity import _NON_LIBRARY_DIRS
-    for sc in mirror.rglob("*.meta.json"):
-        # The mirror shadows .trash too, and a retired paper's record is
-        # unclaimable BY CONSTRUCTION — no PDF will ever match it.  Not
-        # excluding it made 133 of the 159 "orphans" the owner's own
-        # deliberate deletions, a red number that can never reach zero
-        # and grows every time they throw something away.
-        if any(part in _NON_LIBRARY_DIRS
-               for part in sc.relative_to(mirror).parts):
-            continue
-        if str(sc) not in claimed:
-            orphans += 1
+    # The mirror shadows .trash too, and a retired paper's record is
+    # unclaimable BY CONSTRUCTION -- no PDF will ever match it. Not
+    # excluding it made 133 of the 159 "orphans" the owner's own deliberate
+    # deletions. The rule lives in ONE place, shared with the repair that
+    # the page offers, so the red number and the repairable list agree.
+    stranded = unclaimed_records(library_root, claimed)
+    orphans = len(stranded)
 
     stats = {
         "pdfs": len(pdfs),
@@ -485,10 +475,14 @@ def check_sidecars(library_root: Path, pdfs: list, all_pdfs: list = None) -> tup
         # Bounded by construction: a pairing, not a ratio of two counts.
         "coverage_pct": round(100.0 * paired / len(pdfs), 2) if pdfs else 0.0,
     }
-    if orphans:
+    # One finding per record, named. A single "<sidecars>: 68 record(s)
+    # match no paper" row left him unable to see WHICH papers had lost
+    # their DOI (cockpit audit, finding 21).
+    for sc in stranded:
         findings.append(Finding(
-            "<sidecars>", VIOLATION, "orphaned-records",
-            f"{orphans} record(s) match no paper"))
+            str(sc.relative_to(library_root)), VIOLATION, "orphaned-records",
+            "a saved record (DOI, arXiv id, first-page text) that no paper "
+            "in the library reads"))
     return findings, stats
 
 

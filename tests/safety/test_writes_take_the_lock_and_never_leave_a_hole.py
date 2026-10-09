@@ -176,7 +176,10 @@ def test_an_exception_inside_still_releases_the_lock(C, tmp_path):
 MUTATORS = {"bulk_sort", "_approve_sort", "_approve_upgrade", "process_report",
             "check_publications", "apply_topic_proposals", "_undo_transaction",
             "_conflicts_bulk_apply", "retire_variant",
-            "apply_duplicate_resolutions", "resolve_group"}
+            "apply_duplicate_resolutions", "resolve_group",
+            # finding 21: the record reconnect, and the backfill beside it
+            # (which was also writing records without the lock)
+            "apply_reconnect", "backfill_directory"}
 
 
 def _tree():

@@ -960,6 +960,7 @@ def backfill_sidecar(
     pdf_path: Path,
     *,
     overwrite: bool = False,
+    content_hash: str = "",
 ) -> bool:
     """Create a minimal sidecar for a PDF that doesn't have one yet.
 
@@ -976,12 +977,16 @@ def backfill_sidecar(
     """
     if not pdf_path.exists():
         raise FileNotFoundError(pdf_path)
-    sc = sidecar_path(pdf_path)
-    if sc.exists() and not overwrite:
+    # WHERE ONE IS, not only where a new one would go. An over-long name's
+    # record may sit at its full-name mirror path while sidecar_path now
+    # answers with the hashed location; asking only sidecar_path wrote a
+    # SECOND record beside the first -- the "two sidecar records" finding
+    # Conformance reports, whose copies then disagree.
+    if not overwrite and find_sidecar(pdf_path) is not None:
         return False
 
     identity = PaperIdentity()
-    identity.content_sha256 = compute_content_hash(pdf_path)
+    identity.content_sha256 = content_hash or compute_content_hash(pdf_path)
     identity.original_filename = pdf_path.name
 
     # Filing date: prefer creation time when available (Apple HFS+/APFS),
@@ -1082,13 +1087,30 @@ def backfill_directory(
 
     Returns a summary dict::
 
-        {"scanned": N, "written": M, "skipped": K, "errors": E}
+        {"scanned": N, "written": M, "skipped": K, "errors": E,
+         "kept_for_reconnect": R}
+
+    A paper with no record whose CONTENTS match a stranded record (one
+    left behind by a rename) is not given a fresh, blank one: that would
+    fill the very spot the reconnect needs, and the stranded record -- DOI,
+    cached text and all -- could then never go back (cockpit audit, 21:
+    measured 2026-10-09, 37 such papers, 13 with a DOI). They are counted
+    in ``kept_for_reconnect`` and left for Conformance's reconnect.
     """
-    summary = {"scanned": 0, "written": 0, "skipped": 0, "errors": 0}
+    from processing.sidecar_repair import _recorded_hash, find_orphans
+    stranded = {h for h in map(_recorded_hash, find_orphans(root)) if h}
+    summary = {"scanned": 0, "written": 0, "skipped": 0, "errors": 0,
+               "kept_for_reconnect": 0}
     for pdf in iter_pdfs(root):
         summary["scanned"] += 1
         try:
-            if backfill_sidecar(pdf, overwrite=overwrite):
+            digest = ""
+            if stranded and (overwrite or find_sidecar(pdf) is None):
+                digest = compute_content_hash(pdf)
+                if digest in stranded:
+                    summary["kept_for_reconnect"] += 1
+                    continue
+            if backfill_sidecar(pdf, overwrite=overwrite, content_hash=digest):
                 summary["written"] += 1
                 if verbose:
                     print(f"  wrote sidecar for {pdf}")

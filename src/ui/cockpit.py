@@ -2850,6 +2850,114 @@ def render_spelling() -> None:
                 st.caption("No ruling matches that.")
 
 
+def _orphan_plan_for_session(plan: dict, lib: Path) -> dict:
+    """``plan_reconnect``'s answer as library-relative strings."""
+    def rel(p):
+        return str(Path(p).relative_to(lib))
+    return {"library": str(lib), "orphans": plan["orphans"],
+            "candidates": plan["candidates"],
+            "matched": [[rel(sc), rel(pdf)] for sc, pdf in plan["matched"]],
+            "ambiguous": [rel(sc) for sc in plan["ambiguous"]],
+            "unmatched": [rel(sc) for sc in plan["unmatched"]]}
+
+
+def _record_label(rel: str) -> str:
+    name = Path(rel).name
+    return name[:-len(".meta.json")] if name.endswith(".meta.json") else name
+
+
+def _render_orphan_repair(lib: Path, n_orphans: int) -> None:
+    """Reconnect saved records stranded by a rename (audit finding 21).
+
+    ``processing.sidecar_repair`` was tested and undo-logged and had no
+    caller at all, while this page printed the orphans in red with no
+    action. It matches by CONTENT, only among papers with no record of
+    their own, so it can never replace a good record with a stale one;
+    and it says how many it cannot place, rather than leaving them to look
+    handled.
+    """
+    with st.container(border=True):
+        st.markdown(f"**{n_orphans:,} saved record(s) belong to no paper**")
+        st.caption(
+            "Each one holds a paper's DOI, arXiv number or first-page text. "
+            "A record is left behind when its PDF is renamed outside the app "
+            "(in Finder, or by an older tool): the record keeps the old name. "
+            "The repair looks for each record's paper by its **contents** — "
+            "never by its name — among papers that have no record of their "
+            "own, and moves the record back beside it. Nothing else changes, "
+            "and Activity can undo it.")
+        plan = st.session_state.get("orphan_plan")
+        if plan and plan.get("library") != str(lib):
+            plan = None
+        if st.button("🔍 Find the papers these records belong to",
+                     key="orphan_plan_run"):
+            from processing.sidecar_repair import plan_reconnect
+            with st.spinner("Matching records to papers by their contents…"):
+                plan = _orphan_plan_for_session(plan_reconnect(lib), lib)
+            st.session_state["orphan_plan"] = plan
+        if not plan:
+            return
+        m, a, u = plan["matched"], plan["ambiguous"], plan["unmatched"]
+        st.markdown(f"**{len(m):,}** can go back to their paper · "
+                    f"**{len(a):,}** could belong to more than one · "
+                    f"**{len(u):,}** match no paper in the library")
+        if m:
+            with st.expander(f"The {len(m):,} record(s), and the paper each "
+                             "goes back to", expanded=len(m) <= 10):
+                for sc, pdf in m[:300]:
+                    st.markdown(f"`{_record_label(sc)}`  \n→ `{pdf}`")
+                if len(m) > 300:
+                    st.caption(f"… and {len(m) - 300:,} more")
+        if a:
+            with st.expander(f"{len(a):,} left alone: two or more papers "
+                             "have exactly these contents"):
+                st.caption("The record could belong to either, so it is not "
+                           "guessed. Keep one copy (Duplicates page) and look "
+                           "again.")
+                for sc in a[:300]:
+                    st.markdown(f"`{sc}`")
+        if u:
+            with st.expander(f"{len(u):,} that no paper in the library "
+                             "matches — these stay in red"):
+                st.caption(
+                    "No PDF here has the contents these records describe: "
+                    "the paper was deleted, or replaced by a different file "
+                    "(a published version, a fresh download). Nothing here "
+                    "deletes them; they stay listed until you look at them.")
+                for sc in u[:300]:
+                    st.markdown(f"`{sc}`")
+        if not m:
+            return
+        ok = st.checkbox(f"I've read the list — put these {len(m):,} records "
+                         "back beside their papers", key="orphan_confirm")
+        if st.button(f"Reconnect {len(m):,} record(s)", type="primary",
+                     disabled=not ok, key="orphan_apply"):
+            from processing.sidecar_repair import apply_reconnect
+            pairs = {"matched": [(lib / sc, lib / pdf) for sc, pdf in m]}
+            ran, res = _locked_call(lib, "Reconnect records", apply_reconnect,
+                                    lib, pairs, dry_run=False)
+            if ran:
+                n, skipped = res["reconnected"], res["skipped"]
+                details = [f"{x['sidecar']} — {x['reason']}" for x in skipped]
+                if n:
+                    _log_activity("conformance.reconnect_records", str(lib),
+                                  f"{n} reconnected", res.get("tx_id") or "")
+                    st.session_state["conformance_outdated"] = (
+                        f"This report is from before {n:,} record(s) were "
+                        "reconnected. Press **Run the check** for the new "
+                        "figures.")
+                    _clear_scan_caches()
+                _flash("success" if n and not skipped
+                       else "warning" if n else "error",
+                       f"Reconnected {n:,} of {len(m):,} record(s)."
+                       + (f" {len(skipped):,} were left as they were — the "
+                          "reasons are below." if skipped else "")
+                       + (" Undo it from Activity." if n else ""),
+                       details=details, details_label="Left as they were")
+                st.session_state.pop("orphan_plan", None)
+            st.rerun()
+
+
 def render_conformance() -> None:
     """Does the library match what the rules say it should be?
 
@@ -2886,10 +2994,13 @@ def render_conformance() -> None:
         bar.empty()
         st.session_state["conformance_report"] = rep
         st.session_state["conformance_prev"] = C.load_previous(_library())
+        st.session_state.pop("conformance_outdated", None)
 
     if rep is None:
         st.info("Not run yet. Press **Run the check**.")
         return
+    if st.session_state.get("conformance_outdated"):
+        st.info(st.session_state["conformance_outdated"])
 
     delta = C.diff_against(rep, st.session_state.get("conformance_prev"))
 
@@ -2932,6 +3043,8 @@ def render_conformance() -> None:
             "files: " + "; ".join(f"{n:,} × {r.replace('-', ' ')}"
                                   for r, n in sorted(_lw.items(), key=lambda kv: -kv[1]))
             + ". Listed under *Why, grouped* below.")
+    if _lw.get("orphaned-records"):
+        _render_orphan_repair(_library(), _lw["orphaned-records"])
 
     if rep.scanned == 0:
         # "Nothing was examined" is not "everything is fine".  An empty
@@ -5174,15 +5287,26 @@ def render_settings() -> None:
                          use_container_width=True):
         from processing.identity import backfill_directory
         with st.spinner("Walking the library..."):
-            summary = backfill_directory(
+            ran, summary = _locked_call(
+                lib, "Fill in missing details", backfill_directory,
                 lib, limit=(bf_limit or None), verbose=False,
             )
-        st.success(
-            f"Scanned {summary['scanned']} · wrote {summary['written']} · "
-            f"skipped {summary['skipped']} · errors {summary['errors']}"
-        )
-        _log_activity("settings.backfill", str(lib),
-                      f"wrote={summary['written']}")
+        if ran:
+            st.success(
+                f"Scanned {summary['scanned']} · wrote {summary['written']} · "
+                f"skipped {summary['skipped']} · errors {summary['errors']}"
+            )
+            if summary.get("kept_for_reconnect"):
+                st.info(
+                    f"{summary['kept_for_reconnect']} paper(s) were NOT given "
+                    "a new record: each has an older record, left behind by "
+                    "a rename, that still holds its details. Put those back "
+                    "from the **Conformance** page (Find the papers these "
+                    "records belong to).")
+            _log_activity("settings.backfill", str(lib),
+                          f"wrote={summary['written']}")
+        else:
+            _render_flashes()
     if bf_cols[1].button("Check they still match", key="bf_verify",
                          use_container_width=True):
         from processing.identity import verify_all_sidecars, list_hash_collisions

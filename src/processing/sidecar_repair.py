@@ -31,9 +31,21 @@ def _sidecar_root(library_root: Path) -> Path:
     return library_root / MIRROR_DIR_NAME
 
 
-def _pdf_for_sidecar(library_root: Path, sidecar: Path) -> Path:
-    rel = sidecar.relative_to(_sidecar_root(library_root))
-    return library_root / rel.with_name(rel.name[: -len(".meta.json")] + ".pdf")
+def _file_id(p: Path):
+    """``(st_dev, st_ino)``, or ``None`` when there is no such file.
+
+    A record is identified by the FILE, not by how its path is spelled.
+    APFS folds case and macOS hands names back NFD-decomposed, so one
+    record can be reached under two spellings; comparing path strings
+    counted such a record as both claimed and orphaned. ``stat`` also
+    answers ``None`` instead of raising when a name is over the 255-byte
+    limit, which ``exists()`` does not.
+    """
+    try:
+        st = p.stat()
+    except OSError:
+        return None
+    return (st.st_dev, st.st_ino)
 
 
 def _exists(p: Path):
@@ -49,58 +61,107 @@ def _exists(p: Path):
         return None
 
 
-def find_orphans(library_root: Path) -> list[Path]:
-    """Sidecars whose PDF is not where the mirror says it should be."""
-    root = _sidecar_root(library_root)
-    if not root.is_dir():
+def claimed_records(pdfs) -> tuple[set, list]:
+    """``(claimed, homeless)`` over ``pdfs``.
+
+    ``claimed`` -- the file ids of every record some PDF would read: each
+    of its ``sidecar_candidates`` that exists, including the hashed
+    location used for over-long names. ``homeless`` -- the PDFs with no
+    record anywhere.
+
+    This used to be guessed from the record's own name: strip
+    ``.meta.json``, add ``.pdf``, see if that file exists. The hashed
+    ``.sidecars/<sha1>.meta.json`` records of the longest names can never
+    pass that test, so 24 healthy records were called orphans while one
+    real orphan was missed (cockpit audit, measured 2026-09-05).
+    """
+    from processing.identity import sidecar_candidates
+    claimed: set = set()
+    homeless: list = []
+    for pdf in pdfs:
+        ids = [fid for fid in map(_file_id, sidecar_candidates(pdf)) if fid]
+        claimed.update(ids)
+        if not ids:
+            homeless.append(pdf)
+    return claimed, homeless
+
+
+def unclaimed_records(library_root: Path, claimed: set) -> list[Path]:
+    """THE orphan rule: a record in the mirror that no paper claims.
+
+    Shared with ``maintenance.conformance.check_sidecars`` so the number
+    Conformance prints in red and the list this module repairs are the
+    same list. Records shadowing ``.trash`` (and the other non-library
+    folders) are not orphans: a retired paper's record is unclaimable by
+    construction.
+    """
+    from processing.identity import _NON_LIBRARY_DIRS
+    mirror = _sidecar_root(library_root)
+    if not mirror.is_dir():
         return []
     out = []
-    for s in root.rglob("*.meta.json"):
-        if _exists(_pdf_for_sidecar(library_root, s)) is False:
-            out.append(s)
-    return out
+    for sc in mirror.rglob("*.meta.json"):
+        if any(part in _NON_LIBRARY_DIRS
+               for part in sc.relative_to(mirror).parts):
+            continue
+        fid = _file_id(sc)
+        if fid is not None and fid not in claimed:
+            out.append(sc)
+    return sorted(out)
+
+
+def find_orphans(library_root: Path) -> list[Path]:
+    """Records that belong to no paper in the library."""
+    from processing.identity import iter_pdfs
+    claimed, _ = claimed_records(iter_pdfs(library_root))
+    return unclaimed_records(library_root, claimed)
+
+
+def _recorded_hash(sidecar: Path) -> str:
+    try:
+        return json.loads(sidecar.read_text(encoding="utf-8")).get(
+            "content_sha256") or ""
+    except Exception:
+        return ""
 
 
 def plan_reconnect(library_root: Path) -> dict:
     """Work out which orphan belongs to which PDF.  Touches nothing.
 
-    Returns ``{"matched": [(sidecar, pdf)], "ambiguous": [...],
-    "unmatched": [...], "candidates": n}``.
+    Returns ``{"orphans": n, "matched": [(sidecar, pdf)], "ambiguous":
+    [...], "unmatched": [...], "candidates": n}``.
+
+    Only PDFs with NO record anywhere are candidates. A PDF that already
+    has one is never offered another, so a reconnect cannot replace a
+    good record with a stale one.
     """
     from processing.identity import compute_content_hash, iter_pdfs
 
-    orphans = find_orphans(library_root)
-    # Only PDFs with no sidecar of their own can receive one.
-    homeless = []
-    for pdf in iter_pdfs(library_root):
-        rel = pdf.relative_to(library_root)
-        side = _sidecar_root(library_root) / rel.with_suffix(".meta.json")
-        if _exists(side) is False:
-            homeless.append(pdf)
+    claimed, homeless = claimed_records(iter_pdfs(library_root))
+    orphans = unclaimed_records(library_root, claimed)
 
     by_hash: dict[str, list[Path]] = {}
-    for pdf in homeless:
-        h = compute_content_hash(pdf)
-        if h:
-            by_hash.setdefault(h, []).append(pdf)
+    if orphans:                       # nothing to match: hash nothing
+        for pdf in homeless:
+            h = compute_content_hash(pdf)
+            if h:
+                by_hash.setdefault(h, []).append(pdf)
 
     matched, ambiguous, unmatched = [], [], []
-    claimed: set[Path] = set()
+    claimed_pdfs: set[Path] = set()
     for s in orphans:
-        try:
-            want = json.loads(s.read_text()).get("content_sha256") or ""
-        except Exception:
-            want = ""
-        hits = [p for p in by_hash.get(want, []) if p not in claimed] if want else []
+        want = _recorded_hash(s)
+        hits = [p for p in by_hash.get(want, []) if p not in claimed_pdfs] if want else []
         if len(hits) == 1:
-            claimed.add(hits[0])
+            claimed_pdfs.add(hits[0])
             matched.append((s, hits[0]))
         elif len(hits) > 1:
             ambiguous.append(s)
         else:
             unmatched.append(s)
-    return {"matched": matched, "ambiguous": ambiguous,
-            "unmatched": unmatched, "candidates": len(homeless)}
+    return {"orphans": len(orphans), "matched": matched,
+            "ambiguous": ambiguous, "unmatched": unmatched,
+            "candidates": len(homeless)}
 
 
 def apply_reconnect(library_root: Path, plan: dict, *, dry_run: bool = True,
@@ -123,14 +184,34 @@ def apply_reconnect(library_root: Path, plan: dict, *, dry_run: bool = True,
     if own:
         tx_id = log.begin_transaction(f"reconnect {len(pairs)} orphaned sidecars")
 
+    from processing.identity import (compute_content_hash, find_sidecar,
+                                     sidecar_path)
     moved, skipped = 0, []
     try:
         for sidecar, pdf in pairs:
-            rel = pdf.relative_to(library_root)
-            dest = _sidecar_root(library_root) / rel.with_suffix(".meta.json")
-            if _exists(dest) is not False:
+            sidecar, pdf = Path(sidecar), Path(pdf)
+            # The plan can be minutes old. Everything it relied on is
+            # checked again, at the moment of the move.
+            if _file_id(sidecar) is None:
+                skipped.append({"sidecar": sidecar.name, "reason":
+                                "the record is no longer where the check found it"})
+                continue
+            if _file_id(pdf) is None:
+                skipped.append({"sidecar": sidecar.name, "reason":
+                                "the paper is no longer where the check found it"})
+                continue
+            # Where a NEW record for this paper is written -- the hashed
+            # location for an over-long name, which the naive mirror path
+            # used to ignore (the move then failed on ENAMETOOLONG).
+            dest = sidecar_path(pdf)
+            if find_sidecar(pdf) is not None or _exists(dest) is not False:
                 skipped.append({"sidecar": sidecar.name, "reason":
                                 "that paper already has a record"})
+                continue
+            want = _recorded_hash(sidecar)
+            if not want or compute_content_hash(pdf) != want:
+                skipped.append({"sidecar": sidecar.name, "reason":
+                                "the paper's contents no longer match the record"})
                 continue
             try:
                 dest.parent.mkdir(parents=True, exist_ok=True)
