@@ -78,6 +78,20 @@ MAX_BASENAME_BYTES = 251
 MIRROR_DIR_NAME = ".mathpdf-sidecars"
 
 
+#: Folder -> library root, for roots FOUND by the marker walk only. Every
+#: PDF in a library has the same root, yet every load re-walked the folder
+#: chain testing for the marker (cockpit audit, finding 18). Negative
+#: answers are not cached: ``enable_sidecar_mirror`` can create the marker
+#: later in the same process, and a cached "no library here" would then be
+#: wrong. A positive answer only goes stale if the marker is deleted, which
+#: nothing does.
+_ROOT_BY_DIR: dict = {}
+
+
+def _clear_library_root_cache() -> None:
+    _ROOT_BY_DIR.clear()
+
+
 def _library_root_for(pdf_path: Path) -> Optional[Path]:
     """Find the library root that owns ``pdf_path``, or None.
 
@@ -93,9 +107,21 @@ def _library_root_for(pdf_path: Path) -> Optional[Path]:
     # Walk-up via the marker.  This makes ``enable_sidecar_mirror``
     # idempotent: once the marker exists, every call resolves to that
     # library root regardless of where ``get_library_root()`` points.
+    # The loop's first pass checks the cache for pdf_path.parent itself; a
+    # separate shortcut before it was redundant (a mutation run deleted it
+    # and no test noticed, because nothing changed).
+    visited = []
     for ancestor in [pdf_path.parent, *pdf_path.parents]:
+        cached = _ROOT_BY_DIR.get(str(ancestor))
+        if cached is not None:
+            for d in visited:
+                _ROOT_BY_DIR[d] = cached
+            return cached
+        visited.append(str(ancestor))
         try:
             if (ancestor / MIRROR_DIR_NAME).is_dir():
+                for d in visited:
+                    _ROOT_BY_DIR[d] = ancestor
                 return ancestor
         except OSError:
             pass
@@ -169,6 +195,25 @@ def sidecar_read_cache():
         _SIDECAR_READ_CACHE = None
 
 
+def _relative_to_root(pdf_path: Path, library_root: Path) -> Path:
+    """``pdf_path`` relative to ``library_root``, resolving only if needed.
+
+    A root found by the marker walk is a LEXICAL ancestor of the PDF, so
+    a plain ``relative_to`` is exact and costs nothing. Resolving both
+    sides -- a realpath per PDF, the bulk of a 29k-PDF sweep's sidecar cost
+    -- is only needed when the root came from the configured fallback,
+    which is resolved, and the PDF path contains a symlink (macOS /var ->
+    /private/var); that is exactly when the lexical attempt raises. Paths
+    with ".." are resolved, since a lexical relative would keep them.
+    """
+    if ".." not in pdf_path.parts:
+        try:
+            return pdf_path.relative_to(library_root)
+        except ValueError:
+            pass
+    return pdf_path.resolve().relative_to(library_root.resolve())
+
+
 def sidecar_path(pdf_path: Path) -> Path:
     """Return the sidecar path for ``pdf_path``.
 
@@ -194,7 +239,7 @@ def sidecar_path(pdf_path: Path) -> Path:
             # of the mirror. Real library paths have no symlink so the answer
             # was right there; anything under a temp directory got a
             # different convention without saying so.
-            relative = pdf_path.resolve().relative_to(library_root.resolve())
+            relative = _relative_to_root(pdf_path, library_root)
         except (ValueError, OSError):
             library_root = None
     if library_root is not None:
@@ -244,7 +289,7 @@ def sidecar_candidates(pdf_path: Path) -> list[Path]:
         # the mirror. Real library paths have no symlink in them so it works
         # there; a temp directory has one, which is how this surfaced.
         try:
-            relative = pdf_path.resolve().relative_to(library_root.resolve())
+            relative = _relative_to_root(pdf_path, library_root)
         except (ValueError, OSError):
             relative = None
         if relative is not None:
