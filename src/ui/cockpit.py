@@ -418,6 +418,16 @@ def _normalize_scope_note(data: dict) -> None:
                f"your instruction.")
 
 
+def _preview_is_stale(previewed, current) -> bool:
+    """Were the controls changed after the preview was taken?
+
+    ``None`` means "this preview predates recording its settings" (an old
+    saved snapshot) -- not stale, because the apply is restricted to the
+    previewed files regardless.
+    """
+    return previewed is not None and previewed != current
+
+
 def _reversible_note(detail: str = "") -> None:
     """The single reversibility affordance, used under every writing control.
 
@@ -787,11 +797,14 @@ def _render_batch_sort(lib: Path, pending: int) -> None:
             # MEASURED >=0.20s/paper (metadata extraction alone), so
             # "All" over the 1,933-paper inbox is a >6-minute dry run.
             tick, done = _progress_ui("Reading paper")
-            st.session_state["bulk_sort_preview_res"] = bulk_sort(
+            _pv = bulk_sort(
                 lib, limit=limit, dry_run=True, progress=tick,
                 exclude=set(st.session_state.sort_skipped))
-            _save_scan("bulk_sort_preview",
-                       st.session_state["bulk_sort_preview_res"])
+            # Remember what this preview was run WITH, so a later change
+            # of the dropdown cannot silently widen the apply.
+            _pv["_previewed_size"] = size
+            st.session_state["bulk_sort_preview_res"] = _pv
+            _save_scan("bulk_sort_preview", _pv)
             done("Preview ready — nothing has been moved.")
 
         res = st.session_state.get("bulk_sort_preview_res")
@@ -852,6 +865,15 @@ def _render_batch_sort(lib: Path, pending: int) -> None:
         if not ok:
             st.info("Nothing here can be filed automatically.")
             return
+        if _preview_is_stale(res.get("_previewed_size"), size):
+            # The apply used to read the dropdown's CURRENT value: preview
+            # 25, switch to "All", and "File these 25 papers" filed the
+            # whole inbox (cockpit audit, finding 8).
+            st.warning(
+                f"You changed **How many** from {res['_previewed_size']} to "
+                f"{size} after this preview. Press **Preview** again — the "
+                f"list above is not what would be filed now.")
+            return
         st.warning(
             f"**File {len(ok)} papers now?** They move out of the inbox. "
             "Reversible in one click from Activity."
@@ -864,8 +886,10 @@ def _render_batch_sort(lib: Path, pending: int) -> None:
                 # count climb is the difference between "it's working"
                 # and "I should force-reload and hope".
                 tick, done = _progress_ui("Filing paper")
-                out = bulk_sort(lib, limit=limit, dry_run=False,
-                                progress=tick,
+                # EXACTLY the papers in the list above -- never "the
+                # first N of whatever is there now".
+                out = bulk_sort(lib, dry_run=False, progress=tick,
+                                paths={str(r.get("source")) for r in ok},
                                 exclude=set(st.session_state.sort_skipped))
                 done()
                 _log_activity("sort.bulk", f"{out['filed']} papers",
@@ -1538,10 +1562,12 @@ def _render_batch_upgrade(lib: Path, report_path: Path, candidates: list,
         if c1.button("👁 Preview (changes nothing)", use_container_width=True,
                      key="bulk_upg_preview"):
             with st.spinner("Checking which papers would be upgraded…"):
-                st.session_state["bulk_upg_preview_res"] = process_report(
+                _pv = process_report(
                     run_path, library_root=lib, min_confidence=min_conf,
                     dry_run=True, max_papers=n,
                 )
+                _pv["_previewed"] = {"n": n, "min_conf": min_conf}
+                st.session_state["bulk_upg_preview_res"] = _pv
 
         res = st.session_state.get("bulk_upg_preview_res")
         if not res:
@@ -1553,6 +1579,14 @@ def _render_batch_upgrade(lib: Path, report_path: Path, candidates: list,
               "DOI": str(r.get("doi", ""))[:40]} for r in rows[:200]],
             use_container_width=True, hide_index=True,
         )
+        _was = res.get("_previewed")
+        if _was and _preview_is_stale((_was.get("n"), _was.get("min_conf")),
+                                      (n, min_conf)):
+            st.warning(
+                "You changed **How many** or the confidence threshold after "
+                "this preview. Press **Preview** again — the list above is "
+                "not what would be upgraded now.")
+            return
         st.warning(
             f"**Upgrade these {len(rows)} papers now?** Each preprint moves "
             "to `.trash/upgraded_preprints/`. Reversible in one click from "
@@ -1563,10 +1597,13 @@ def _render_batch_upgrade(lib: Path, report_path: Path, candidates: list,
                          type="primary", use_container_width=True,
                          key="bulk_upg_apply"):
                 with st.spinner(f"Working through {len(rows)} papers…"):
+                    # EXACTLY the papers in the list above (finding 8).
                     out = process_report(
                         run_path, library_root=lib,
                         min_confidence=min_conf, dry_run=False,
-                        manual_only=queue_only, max_papers=n,
+                        manual_only=queue_only,
+                        only_files={str(r.get("file")) for r in rows
+                                    if r.get("file")},
                     )
                 _log_activity(
                     "upgrade.bulk",
@@ -1583,11 +1620,12 @@ def _render_batch_upgrade(lib: Path, report_path: Path, candidates: list,
                     if _f:
                         st.session_state.upgrade_done.add(_f)
                 st.session_state.pop("bulk_upg_preview_res", None)
-                st.success(
-                    f"Upgraded {out['downloaded']} · queued "
-                    f"{out['flagged']} in To Download · skipped "
-                    f"{out['skipped']}. Undo in Activity."
-                )
+                # Through _flash: st.success followed by st.rerun() was
+                # never seen (cockpit audit, finding 7).
+                _flash("success" if out.get("downloaded") else "warning",
+                       f"Upgraded {out['downloaded']} · queued "
+                       f"{out['flagged']} in To Download · skipped "
+                       f"{out['skipped']}. Undo in Activity.")
                 _attention_count_cached.clear()
                 st.rerun()
 
@@ -2977,9 +3015,13 @@ def render_pipeline_preview() -> None:
             )
         st.session_state["preview_summary"] = summary.to_dict()
         st.session_state["preview_proposals"] = [p.to_dict() for p in proposals]
+        # What this preview was run WITH -- the apply must use the same.
+        st.session_state["preview_params"] = {
+            "scope_sel": scope_sel, "sample": sample, "enrich": enrich}
         _save_scan("pipeline_preview", {
             "summary": st.session_state["preview_summary"],
             "proposals": st.session_state["preview_proposals"],
+            "params": st.session_state["preview_params"],
         })
 
     s = st.session_state.get("preview_summary")
@@ -2994,6 +3036,8 @@ def render_pipeline_preview() -> None:
             s = st.session_state["preview_summary"] = _snap.get("summary")
             proposals = st.session_state["preview_proposals"] = \
                 _snap.get("proposals")
+            if _snap.get("params"):
+                st.session_state["preview_params"] = _snap["params"]
             st.caption(
                 f"Showing your last preview, from {_age_h:.1f} h ago — "
                 "rerun it for fresh numbers."
@@ -3135,8 +3179,26 @@ def render_pipeline_preview() -> None:
         f"suggestions and recall-misses are left for you. Re-scans fresh "
         f"before moving."
     )
+    # The apply must act on what was PREVIEWED: the same scope and
+    # abstracts setting, and only the papers listed. It used to re-scan the
+    # whole library with no scope, sample or list -- 348 previewed, 1,243
+    # applied (cockpit audit, finding 9).
+    _pp = st.session_state.get("preview_params") or {}
+    _scope_sel_used = _pp.get("scope_sel", scope_sel)
+    _scope_used = None if _scope_sel_used == "Whole library" else lib / _scope_sel_used
+    _enrich_used = _pp.get("enrich", enrich)
+    _move_paths = {p.get("path") for p in (proposals or [])
+                   if p.get("status") == "move" and p.get("proposed_topic")}
+    _stale = bool(_pp) and _preview_is_stale(
+        (_pp.get("scope_sel"), _pp.get("sample"), _pp.get("enrich")),
+        (scope_sel, sample, enrich))
     if n_moves == 0:
         st.info("No confident moves to apply.")
+    elif _stale:
+        st.warning(
+            "You changed **Scope**, **Sample** or **Use cached abstracts** "
+            "after this preview. Press **Run preview** again — the numbers "
+            "above are not what would be moved now.")
     else:
         confirm = st.checkbox(
             f"I understand this will MOVE {n_moves} file(s).",
@@ -3146,7 +3208,8 @@ def render_pipeline_preview() -> None:
         if ca.button("Show me the list first (changes nothing)",
                      key="preview_apply_dryrun"):
             from processing.pipeline_preview import apply_topic_proposals
-            res = apply_topic_proposals(lib, dry_run=True, enrich=enrich)
+            res = apply_topic_proposals(lib, dry_run=True, enrich=_enrich_used,
+                                        scope=_scope_used, only=_move_paths)
             st.write(f"Would apply **{res['selected']}** move(s).")
             st.dataframe(
                 [{"paper": Path(w["path"]).name, "topic": w["topic"]}
@@ -3157,7 +3220,9 @@ def render_pipeline_preview() -> None:
                      key="preview_apply_now"):
             from processing.pipeline_preview import apply_topic_proposals
             with st.spinner("Filing…"):
-                res = apply_topic_proposals(lib, statuses=("move",), enrich=enrich)
+                res = apply_topic_proposals(lib, statuses=("move",),
+                                            enrich=_enrich_used,
+                                            scope=_scope_used, only=_move_paths)
             ok_n, fail_n = len(res["applied"]), len(res["failed"])
             dup_n = len(res.get("duplicates", []))
             if res.get("tx_id"):

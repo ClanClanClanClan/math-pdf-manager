@@ -472,6 +472,7 @@ def process_report(
     dry_run: bool = False,
     manual_only: bool = False,
     max_papers: Optional[int] = None,
+    only_files: Optional[set] = None,
     verbose: bool = False,
 ) -> dict:
     """Process a publication checker report.
@@ -488,6 +489,13 @@ def process_report(
         if p.get("match", {}).get("confidence", 0) >= min_confidence
     ]
 
+    if only_files is not None:
+        # EXACTLY the papers the owner previewed (cockpit audit, finding 8):
+        # the batch used to re-run with the dropdown's current size.
+        import unicodedata as _ud
+        wanted = {_ud.normalize("NFC", str(x)) for x in only_files}
+        candidates = [c for c in candidates
+                      if _ud.normalize("NFC", str(c.get("file", ""))) in wanted]
     if max_papers:
         # Sort by confidence (highest first) and take top N
         candidates.sort(key=lambda p: -p.get("match", {}).get("confidence", 0))

@@ -395,9 +395,16 @@ def apply_topic_proposals(
     dry_run: bool = False,
     enrich: bool = False,
     exclude: Optional[set] = None,
+    only: Optional[set] = None,
 ) -> dict:
     """Apply the classifier's proposals to the library (the gated bulk
     file).  DESTRUCTIVE unless ``dry_run``.
+
+    ``only`` restricts the batch to the papers the owner actually saw in
+    the preview -- intersected with the fresh scan below, so a paper that
+    is no longer eligible is still left alone. Without it, a preview of a
+    200-paper sample or one folder was followed by an apply over the whole
+    library (cockpit audit, finding 9: 348 previewed, 1,243 applied).
 
     Safety design:
       * Re-derives proposals from a FRESH scan (never trusts stale UI
@@ -426,6 +433,11 @@ def apply_topic_proposals(
         ex = {unicodedata.normalize("NFC", str(e)) for e in exclude}
         targets = [p for p in targets
                    if unicodedata.normalize("NFC", p.path) not in ex]
+    if only is not None:
+        import unicodedata
+        wanted = {unicodedata.normalize("NFC", str(x)) for x in only}
+        targets = [p for p in targets
+                   if unicodedata.normalize("NFC", p.path) in wanted]
     if limit is not None:
         targets = targets[:limit]
 

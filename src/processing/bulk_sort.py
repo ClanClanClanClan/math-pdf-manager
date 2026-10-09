@@ -252,6 +252,7 @@ def bulk_sort(
     only: Optional[str] = None,
     limit: Optional[int] = None,
     exclude: Optional[set] = None,
+    paths: Optional[set] = None,
     dry_run: bool = False,
     verbose: bool = False,
     progress: Optional[Callable[[int, int, str], None]] = None,
@@ -282,6 +283,16 @@ def bulk_sort(
         # button files them by machine rules anyway, overriding the one
         # decision he had already recorded about them.
         candidates = [(p, s) for (p, s) in candidates if str(p) not in exclude]
+    if paths is not None:
+        # EXACTLY the papers the owner previewed, and only if still here.
+        # The cockpit used to re-run with the "How many" dropdown's
+        # CURRENT value: preview 25, switch to "All", and a button still
+        # reading "File these 25 papers" filed the whole inbox (cockpit
+        # audit, finding 8). NFC both sides: macOS hands out NFD names.
+        import unicodedata as _ud
+        wanted = {_ud.normalize("NFC", str(x)) for x in paths}
+        candidates = [(p, s) for (p, s) in candidates
+                      if _ud.normalize("NFC", str(p)) in wanted]
     if limit is not None:
         candidates = candidates[:limit]
 
