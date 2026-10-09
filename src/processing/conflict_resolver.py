@@ -275,6 +275,13 @@ def resolve_keep_conflict(
         canonical = find_canonical_for_conflict(conflict)
     if canonical is None:
         return False, "could not derive canonical path from conflict filename"
+    # BEFORE anything moves. Without this, a conflict copy that had gone
+    # since the scan (Dropbox sync from the other machine, a second tab)
+    # meant the canonical was retired to the trash first and the promotion
+    # then failed -- an empty shelf, reported as a bare failure (cockpit
+    # audit, finding 20). resolve_keep_canonical always had this check.
+    if not conflict.exists():
+        return False, f"conflict gone: {conflict}"
 
     trash = library_root / ".trash" / "conflict_copies"
     trash.mkdir(parents=True, exist_ok=True)
@@ -306,6 +313,7 @@ def resolve_keep_conflict(
             logger.warning("sidecar merge failed: %s", exc)
 
     # Step 1: shove the old canonical aside if it exists.
+    retired = None
     if canonical.exists():
         retired = trash / f"{canonical.stem}.old{canonical.suffix}"
         n = 1
@@ -321,7 +329,20 @@ def resolve_keep_conflict(
     try:
         logged_move(conflict, canonical, undo_log=undo_log)
     except Exception as exc:
-        return False, f"promoting conflict: {exc}"
+        # Step 1 already retired the canonical. Put it back rather than
+        # leave the shelf empty, and say exactly where things stand.
+        if retired is None:
+            return False, f"promoting conflict: {exc}"
+        try:
+            logged_move(retired, canonical, undo_log=undo_log)
+        except Exception as exc2:
+            return False, (
+                f"promoting conflict failed ({exc}) and putting the original "
+                f"back ALSO failed ({exc2}). The original is safe in "
+                f".trash/conflict_copies/{retired.name}; restore it from the "
+                f"Activity page.")
+        return False, (f"promoting conflict failed ({exc}); the original was "
+                       f"put back where it was. Nothing else changed.")
 
     return True, f"conflict promoted to {canonical.relative_to(library_root)}"
 

@@ -171,8 +171,13 @@ def test_the_record_rewrite_goes_into_the_undo_log_when_one_is_open(tmp_path):
 def test_the_cockpit_opens_a_transaction_around_the_check():
     src = COCKPIT.read_text(encoding="utf-8")
     tree = ast.parse(src)
+    def _fn(node):
+        return getattr(node, "id", None) or getattr(node, "attr", None)
+    # Directly, or through the library lock: _locked_call(lib, action, fn, ...)
     calls = [n for n in ast.walk(tree) if isinstance(n, ast.Call)
-             and getattr(n.func, "id", "") == "check_publications"]
+             and (_fn(n.func) == "check_publications"
+                  or (_fn(n.func) == "_locked_call" and len(n.args) >= 3
+                      and _fn(n.args[2]) == "check_publications"))]
     assert calls, "check_publications is no longer called from the cockpit?"
     assert all(any(k.arg == "undo_log" for k in c.keywords) for c in calls), (
         "the Maintenance page's publication check must pass an undo log")

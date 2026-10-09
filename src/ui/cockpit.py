@@ -428,6 +428,46 @@ def _preview_is_stale(previewed, current) -> bool:
     return previewed is not None and previewed != current
 
 
+def _acquire_library_lock(lib: Path, action: str):
+    """The library write lock for one cockpit action -- or None, and a flash.
+
+    The watcher, the weekly job and the filename tidy-up all take this lock;
+    every OTHER cockpit path that moves, renames or rewrites papers did not
+    (cockpit audit, finding 10), so a click could interleave with the filer
+    working on the same files. Bounded wait, as in apply_renames: a button
+    that never returns is worse than one that says the library is busy.
+
+    NOT re-entrant: each acquire opens a new descriptor, and a second flock
+    on the same file blocks even within one process. Never wrap a call that
+    takes the lock itself (apply_renames, the full weekly run).
+    """
+    from processing.library_normalize import LOCK_WAIT_SECONDS
+    from processing.locking import LibraryLock
+    lock = LibraryLock(lib)
+    if lock.acquire(blocking=True, timeout=LOCK_WAIT_SECONDS):
+        return lock
+    _flash("error",
+           f"“{action}” did not run: another process is working on the "
+           f"library (waited {int(LOCK_WAIT_SECONDS)} s) — usually the "
+           f"automatic filer finishing an arrival. Nothing was changed; try "
+           f"again in a moment.")
+    return None
+
+
+def _locked_call(lib: Path, action: str, fn, *args, **kwargs):
+    """``(ran, result)``: ``fn`` under the library write lock, or not at all."""
+    lock = _acquire_library_lock(lib, action)
+    if lock is None:
+        return False, None
+    try:
+        return True, fn(*args, **kwargs)
+    finally:
+        lock.release()
+
+
+_BUSY = (False, "the library was busy, so nothing was changed")
+
+
 def _reversible_note(detail: str = "") -> None:
     """The single reversibility affordance, used under every writing control.
 
@@ -888,10 +928,14 @@ def _render_batch_sort(lib: Path, pending: int) -> None:
                 tick, done = _progress_ui("Filing paper")
                 # EXACTLY the papers in the list above -- never "the
                 # first N of whatever is there now".
-                out = bulk_sort(lib, dry_run=False, progress=tick,
-                                paths={str(r.get("source")) for r in ok},
-                                exclude=set(st.session_state.sort_skipped))
+                _ran, out = _locked_call(
+                    lib, "File these papers", bulk_sort, lib, dry_run=False,
+                    progress=tick, paths={str(r.get("source")) for r in ok},
+                    exclude=set(st.session_state.sort_skipped))
                 done()
+                if not _ran:
+                    st.rerun()
+                    return
                 _log_activity("sort.bulk", f"{out['filed']} papers",
                               f"{out['failed']} left",
                               out.get("transaction_id") or "")
@@ -1126,8 +1170,10 @@ def render_sort_queue() -> None:
 
     if cols[0].button("✅ Approve", key=f"approve_{pdf}", type="primary"):
         # MOVE model: file into the chosen topic folder (or standard).
-        ok, msg = _approve_sort(pdf, edited_name, status, lib,
+        _ran, _r = _locked_call(lib, "File this paper", _approve_sort, pdf,
+                                edited_name, status, lib,
                                 topic=chosen_topic, preview=prev)
+        ok, msg = _r if _ran else _BUSY
         if ok:
             st.toast(f"Filed → {destination.relative_to(lib)}  ·  "
                      f"undo from Activity")
@@ -1472,7 +1518,9 @@ def render_upgrade_queue() -> None:
     cols = st.columns([1, 1, 1, 1, 4])
 
     if cols[0].button("✅ Download + Upgrade", key=f"upg_approve_{entry['file']}", type="primary"):
-        ok, msg = _approve_upgrade(entry, lib)
+        _ran, _r = _locked_call(lib, "Download + Upgrade", _approve_upgrade,
+                                entry, lib)
+        ok, msg = _r if _ran else _BUSY
         if ok:
             # The report file is a snapshot and still lists this paper.
             # Without this line the rerun below puts the paper we just
@@ -1598,13 +1646,17 @@ def _render_batch_upgrade(lib: Path, report_path: Path, candidates: list,
                          key="bulk_upg_apply"):
                 with st.spinner(f"Working through {len(rows)} papers…"):
                     # EXACTLY the papers in the list above (finding 8).
-                    out = process_report(
+                    _ran, out = _locked_call(
+                        lib, "Upgrade these papers", process_report,
                         run_path, library_root=lib,
                         min_confidence=min_conf, dry_run=False,
                         manual_only=queue_only,
                         only_files={str(r.get("file")) for r in rows
                                     if r.get("file")},
                     )
+                if not _ran:
+                    st.rerun()
+                    return
                 _log_activity(
                     "upgrade.bulk",
                     f"{out['downloaded']} upgraded",
@@ -2075,8 +2127,14 @@ def render_maintenance() -> None:
                 _pub_tx = _pub_log.begin_transaction(
                     "publication check: Crossref answers recorded in papers' records")
                 try:
-                    _pubs_res = check_publications(
+                    _ran, _pubs_res = _locked_call(
+                        lib, "Publication check", check_publications,
                         lib, limit=100, verbose=False, undo_log=_pub_log)
+                    if not _ran:
+                        _pubs_res = {"unpublished": [], "working": [],
+                                     "unchecked": [], "_not_checked": [],
+                                     "_errors": [{"error": "the library was "
+                                                  "busy; the check did not run"}]}
                     results["publications"] = _pubs_res
                     _unk = len(_pubs_res.get("unchecked") or [])
                     _errs = (_pubs_res.get("_errors") or []) + [
@@ -3244,9 +3302,13 @@ def render_pipeline_preview() -> None:
                      key="preview_apply_now"):
             from processing.pipeline_preview import apply_topic_proposals
             with st.spinner("Filing…"):
-                res = apply_topic_proposals(lib, statuses=("move",),
-                                            enrich=_enrich_used,
-                                            scope=_scope_used, only=_move_paths)
+                _ran, res = _locked_call(
+                    lib, "Apply now", apply_topic_proposals, lib,
+                    statuses=("move",), enrich=_enrich_used,
+                    scope=_scope_used, only=_move_paths)
+            if not _ran:
+                st.rerun()
+                return
             ok_n, fail_n = len(res["applied"]), len(res["failed"])
             dup_n = len(res.get("duplicates", []))
             if res.get("tx_id"):
@@ -3434,7 +3496,7 @@ def render_activity() -> None:
                                    key=f"undo_ok_{i}_{tx_id}")
                 if col2.button("↶ Undo", key=f"undo_{i}_{tx_id}",
                                type="primary", disabled=not ok):
-                    _undo_transaction(tx_id)
+                    _locked_call(_library(), "Undo", _undo_transaction, tx_id)
                     st.rerun()
 
 
@@ -3813,7 +3875,14 @@ def render_attention() -> None:
                         btn_key = f"attn_{it.key}_{action_id}"
                         if not st.button(label, key=btn_key, use_container_width=True):
                             continue
-                        # Dispatch
+                        # Dispatch -- under the library write lock: several
+                        # branches below move, file or rewrite papers, and
+                        # "retry" re-ingests a file still sitting in the
+                        # filer's own inbox (cockpit audit, finding 10).
+                        _attn_lock = _acquire_library_lock(_library(), label)
+                        if _attn_lock is None:
+                            st.rerun()
+                            continue
                         try:
                             if action_id == "dismiss_7d":
                                 dismiss(it.key, days=7)
@@ -4037,6 +4106,8 @@ def render_attention() -> None:
                             logger.exception("attention action %s failed",
                                              action_id)
                             _flash("error", f"That didn't work: {exc}")
+                        finally:
+                            _attn_lock.release()
                         st.rerun()
 
         remaining = len(source_items) - len(page_items)
@@ -5182,9 +5253,10 @@ def render_conflicts() -> None:
         use_container_width=True,
         disabled=not selected,
     ):
-        n_ok, n_fail, errors = _conflicts_bulk_apply(
+        _ran, _r = _locked_call(lib, "Resolve conflicts", _conflicts_bulk_apply,
             conflicts, selected, lib, "suggested",
         )
+        n_ok, n_fail, errors = _r if _ran else (0, 0, [])
         st.toast(f"Resolved {n_ok} conflict(s) the suggested way"
                  + (f", {n_fail} could not be done" if n_fail else "")
                  + " — undo from Activity.")
@@ -5199,9 +5271,10 @@ def render_conflicts() -> None:
         use_container_width=True,
         disabled=not selected,
     ):
-        n_ok, n_fail, errors = _conflicts_bulk_apply(
+        _ran, _r = _locked_call(lib, "Resolve conflicts", _conflicts_bulk_apply,
             conflicts, selected, lib, "keep_canonical",
         )
+        n_ok, n_fail, errors = _r if _ran else (0, 0, [])
         st.toast(f"Kept the original for {n_ok} conflict(s)"
                  + (f", {n_fail} could not be done" if n_fail else "")
                  + " — undo from Activity.")
@@ -5216,9 +5289,10 @@ def render_conflicts() -> None:
         use_container_width=True,
         disabled=not selected,
     ):
-        n_ok, n_fail, errors = _conflicts_bulk_apply(
+        _ran, _r = _locked_call(lib, "Resolve conflicts", _conflicts_bulk_apply,
             conflicts, selected, lib, "keep_conflict",
         )
+        n_ok, n_fail, errors = _r if _ran else (0, 0, [])
         st.toast(f"Kept the conflicted copy for {n_ok} conflict(s)"
                  + (f", {n_fail} could not be done" if n_fail else "")
                  + " — undo from Activity.")
@@ -5289,7 +5363,9 @@ def render_conflicts() -> None:
             def _do(verb: str, fn, *args, **kwargs):
                 undo_log = UndoLog()
                 tx_id = undo_log.begin_transaction(f"conflict {verb}: {conflict_p.name}")
-                ok, msg = fn(*args, undo_log=undo_log, **kwargs)
+                _ran, _r = _locked_call(lib, f"Conflict: {verb}", fn, *args,
+                                        undo_log=undo_log, **kwargs)
+                ok, msg = _r if _ran else _BUSY
                 if ok:
                     undo_log.commit()
                     st.toast(msg)
@@ -5671,7 +5747,9 @@ def _render_variant_section(lib: Path) -> None:
                 log = UndoLog(log_dir=lib / ".operation_log")
                 tx = log.begin_transaction(
                     f"retire variant: {Path(drop).name}")
-                ok, msg = retire_variant(p, lib, drop=drop, undo_log=log)
+                _ran, _r = _locked_call(lib, "Retire the other", retire_variant,
+                                        p, lib, drop=drop, undo_log=log)
+                ok, msg = _r if _ran else _BUSY
                 if log.has_operations():
                     log.commit()
                 else:
@@ -5855,10 +5933,14 @@ def render_duplicates() -> None:
             type="primary",
             disabled=act == 0,
         ):
-            res = apply_duplicate_resolutions(
+            _ran, res = _locked_call(
+                lib, "Trash redundant copies", apply_duplicate_resolutions,
                 lib, groups=auto, dry_run=False, auto_only=False,
                 exclude=set(excluded),
             )
+            if not _ran:
+                st.rerun()
+                return
             _log_activity(
                 "duplicates.bulk_trash", "",
                 f"removed={res['removed']} failed={len(res['failed'])}",
@@ -5933,7 +6015,10 @@ def render_duplicates() -> None:
                     log = UndoLog(log_dir=lib / ".operation_log")
                     tx = log.begin_transaction(
                         f"dedup (manual): keep {Path(choice).name}")
-                    results = resolve_group(manual, lib, undo_log=log)
+                    _ran, results = _locked_call(lib, "Trash the others",
+                                                 resolve_group, manual, lib,
+                                                 undo_log=log)
+                    results = results if _ran else []
                     log.commit()
                     ok = sum(1 for r, _ in results if r)
                     _log_activity("duplicates.manual_trash", "",

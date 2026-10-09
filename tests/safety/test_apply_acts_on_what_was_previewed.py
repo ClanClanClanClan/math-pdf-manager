@@ -119,11 +119,26 @@ def test_apply_topic_proposals_moves_only_the_listed_papers(tmp_path):
 
 # ------------------------------------------------- the cockpit's apply calls
 
+def _fname(node):
+    return getattr(node, "id", None) or getattr(node, "attr", None)
+
+
 def _calls(name: str) -> list:
+    """Calls to ``name`` -- directly, or through the library lock as
+    ``_locked_call(lib, action, name, ...)``, whose keywords are the call's
+    own. (Since finding 10 every writing call goes through the lock, and a
+    finder that only saw direct calls checked nothing.)"""
     tree = ast.parse(COCKPIT.read_text(encoding="utf-8"))
-    return [n for n in ast.walk(tree) if isinstance(n, ast.Call)
-            and (getattr(n.func, "id", None) == name
-                 or getattr(n.func, "attr", None) == name)]
+    out = []
+    for n in ast.walk(tree):
+        if not isinstance(n, ast.Call):
+            continue
+        if _fname(n.func) == name:
+            out.append(n)
+        elif (_fname(n.func) == "_locked_call" and len(n.args) >= 3
+              and _fname(n.args[2]) == name):
+            out.append(n)
+    return out
 
 
 def _kw(call) -> dict:
