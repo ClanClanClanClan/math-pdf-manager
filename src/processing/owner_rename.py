@@ -25,11 +25,17 @@ def _nfc(s: str) -> str:
 
 
 def target_rel(folder_rel: str, stem: str) -> str:
-    """The library-relative path a (folder, typed name) pair asks for."""
+    """The library-relative path a (folder, typed name) pair asks for.
+
+    Only the NEW name is normalised to NFC (the library's convention). The
+    folder is used exactly as it exists on disk: on a filesystem that
+    compares bytes, a normalised spelling of an existing folder is a
+    different, missing folder.
+    """
     stem = _nfc(stem.strip())
     if stem.lower().endswith(".pdf"):
         stem = stem[:-4].rstrip()
-    return str(Path(_nfc(folder_rel)) / f"{stem}.pdf")
+    return str(Path(folder_rel) / f"{stem}.pdf")
 
 
 def check_owner_rename(library_root: Path, old_rel: str,
@@ -43,7 +49,11 @@ def check_owner_rename(library_root: Path, old_rel: str,
 
     problems: list[str] = []
     warnings: list[str] = []
-    old_rel, new_rel = _nfc(old_rel), _nfc(new_rel)
+    # Both are judged EXACTLY as given: the paper as it is on disk, the new
+    # name as apply_renames will write it (target_rel builds it in NFC).
+    # Normalising the source passed on APFS -- which treats both forms as
+    # one name -- and failed on CI's byte-exact filesystem, where a
+    # decomposed name normalised to NFC is a file that is not there.
     old, new = library_root / old_rel, library_root / new_rel
     name = new.name
     stem = name[:-4] if name.lower().endswith(".pdf") else name
@@ -74,7 +84,7 @@ def check_owner_rename(library_root: Path, old_rel: str,
     try:
         if not old.is_file():
             problems.append("The paper is no longer where it was.")
-        elif str(old) == str(new):          # both NFC since the top
+        elif _nfc(str(old)) == _nfc(str(new)):
             problems.append("That is its current name and folder.")
         elif not new.parent.is_dir():
             problems.append("That folder does not exist.")

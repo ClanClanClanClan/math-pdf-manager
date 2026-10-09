@@ -258,3 +258,26 @@ def test_the_folder_list_never_offers_an_archival_collection(C, lib):
     _paper(lib, OLD)
     folders = C._library_folders(_index(lib))
     assert PUB in folders and not any(f.startswith(arch) for f in folders)
+
+
+def test_the_paper_is_looked_up_as_it_is_on_disk(lib, monkeypatch):
+    """CI caught this on Linux, where filenames compare as bytes: the
+    source was NFC-normalised before being looked for, so a paper stored
+    decomposed 'was no longer where it was'. APFS treats both forms as one
+    name and hid it -- so pin WHICH spelling reaches the filesystem."""
+    nfd = unicodedata.normalize("NFD", f"{PUB}/Lévy, P. - Processus.pdf")
+    _paper(lib, nfd)
+    asked = []
+    real = Path.is_file
+    monkeypatch.setattr(Path, "is_file",
+                        lambda self: asked.append(str(self)) or real(self))
+    check_owner_rename(lib, nfd, f"{PUB}/Lévy, P. - Processus II.pdf")
+    assert str(lib / nfd) in asked, "the on-disk spelling must be the one looked up"
+    assert unicodedata.normalize("NFC", nfd) != nfd, "precondition"
+    assert str(lib / unicodedata.normalize("NFC", nfd)) not in asked
+
+
+def test_an_existing_folder_is_kept_as_spelled(lib):
+    folder = unicodedata.normalize("NFD", "07c - Équations/01 - Published papers")
+    assert target_rel(folder, "Smith, J. - X").startswith(folder), (
+        "a re-spelled folder is a different, missing folder on a byte-exact disk")
