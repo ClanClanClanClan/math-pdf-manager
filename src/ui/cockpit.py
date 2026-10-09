@@ -293,23 +293,106 @@ def _log_activity(action: str, source: str, destination: str = "", tx_id: str = 
     st.session_state.activity_log = st.session_state.activity_log[:100]
 
 
-def _flash(kind: str, msg: str) -> None:
+def _flash(kind: str, msg: str, details: Optional[list] = None,
+           details_label: str = "") -> None:
     """Queue a message that survives the ``st.rerun()`` after an action.
 
     Action handlers draw a result and then rerun unconditionally, which
     throws the freshly-drawn page away: ``st.toast`` survives that,
-    ``st.error`` / ``st.warning`` / ``st.info`` do not.  So every
-    failure explanation in the cockpit was invisible and a failed click
-    looked exactly like a dead button.  Messages parked here are drawn
-    at the top of the next render.
+    ``st.error`` / ``st.warning`` / ``st.info`` / ``st.success`` do not.
+    So every failure explanation in the cockpit was invisible and a failed
+    click looked exactly like a dead button.  Messages parked here are
+    drawn at the top of the next render, on WHATEVER page that is.
+
+    ``details`` (e.g. the files that were refused) is shown in an expander
+    under the message, so "3 left alone" comes with WHICH three and why.
     """
-    st.session_state.setdefault("flash", []).append((kind, msg))
+    st.session_state.setdefault("flash", []).append(
+        (kind, msg, list(details or []), details_label))
 
 
 def _render_flashes() -> None:
-    """Draw and clear anything queued by ``_flash``."""
-    for kind, msg in st.session_state.pop("flash", []):
-        {"error": st.error, "warning": st.warning}.get(kind, st.info)(msg)
+    """Draw and clear anything queued by ``_flash``.
+
+    Called once per run from ``main()`` before the page is drawn. It used
+    to be called only inside the Home page, so a message queued by
+    Maintenance, Sort Queue or Activity was never shown anywhere -- the
+    Normalize apply and the bulk filer drew their result with st.success
+    and then reran, and a fully REFUSED batch looked identical to an
+    applied one (cockpit audit, finding 7).
+    """
+    for item in st.session_state.pop("flash", []):
+        kind, msg = item[0], item[1]
+        details = item[2] if len(item) > 2 else []
+        label = item[3] if len(item) > 3 else ""
+        {"error": st.error, "warning": st.warning,
+         "success": st.success}.get(kind, st.info)(msg)
+        if details:
+            with st.expander(label or f"Details ({len(details)})"):
+                for line in details[:200]:
+                    st.caption(line)
+                if len(details) > 200:
+                    st.caption(f"… and {len(details) - 200:,} more")
+
+
+def _flash_rename_result(res: dict, *, noun: str) -> None:
+    """One honest message for an apply_renames-style result.
+
+    Four outcomes that must not look alike: everything done, some refused,
+    nothing done, and "the library was busy" -- the last arrives as
+    res["error"] and was never shown at all.
+    """
+    done = int(res.get("renamed", 0) or 0)
+    skipped = res.get("skipped", []) or []
+    lines = [f"`{x.get('old', '?')}` — {x.get('reason', '?')}" for x in skipped]
+    undo = "  Undo it from the Activity page." if res.get("tx_id") else ""
+    if res.get("error"):
+        _flash("error", f"Nothing was {noun}: {res['error']}", lines,
+               f"Not touched ({len(skipped)})")
+    elif done and not skipped:
+        _flash("success", f"{done:,} file(s) {noun}.{undo}")
+    elif done:
+        _flash("warning",
+               f"{done:,} file(s) {noun}; {len(skipped):,} left alone and kept "
+               f"in the list so you can retry.{undo}",
+               lines, f"Left alone ({len(skipped)}) — and why")
+    else:
+        _flash("error",
+               f"Nothing was {noun} — all {len(skipped):,} were left alone. "
+               f"Your files are exactly as they were.",
+               lines, f"Left alone ({len(skipped)}) — and why")
+
+
+def _remaining_after_apply(proposals: list, batch: list, res: dict) -> list:
+    """The proposals still pending after applying ``batch``.
+
+    Drops only what was ACTUALLY renamed. It used to drop the whole
+    attempted batch, so a refused file vanished from the list and could not
+    be retried without a fresh full scan -- and with the result message
+    also lost to the rerun, there was no trace that it had been refused.
+    """
+    refused = {x.get("old") for x in res.get("skipped", []) or []}
+    done = {p["old"] for p in batch} - refused
+    return [p for p in proposals if p["old"] not in done]
+
+
+def _activity_row_label(tx: dict) -> str:
+    """One Activity row's heading. A partial undo must look partial.
+
+    A partial undo leaves ``undone=False`` (so it stays retryable) and
+    records what came back in ``partial_undo`` -- which nothing read, so
+    the row was byte-identical to one never touched (audit finding 19).
+    """
+    when = str(tx.get("timestamp", ""))[:19].replace("T", " ")
+    label = (f"{when}  ·  {_humanize_tx(tx.get('description', '(no description)'))}"
+             f"  ·  {tx.get('operations_count', '?')} change(s)")
+    if tx.get("undone"):
+        return label + "  ·  ALREADY UNDONE"
+    partial = tx.get("partial_undo")
+    if partial:
+        return label + (f"  ·  PARTLY UNDONE ({partial.get('reversed', '?')} "
+                        f"reversed, {len(partial.get('not_reversed', []))} not)")
+    return label
 
 
 def _reversible_note(detail: str = "") -> None:
@@ -767,10 +850,15 @@ def _render_batch_sort(lib: Path, pending: int) -> None:
                               out.get("transaction_id") or "")
                 st.session_state.pop("bulk_sort_preview_res", None)
                 _save_scan("bulk_sort_preview", None)
-                st.success(
-                    f"Filed {out['filed']} papers "
-                    f"({out['failed']} left for you). Undo in Activity."
-                )
+                _filed, _left = out.get("filed", 0), out.get("failed", 0)
+                if _filed and not _left:
+                    _flash("success", f"Filed {_filed} papers. Undo in Activity.")
+                elif _filed:
+                    _flash("warning", f"Filed {_filed} papers; {_left} were left "
+                           f"for you in the Sort Queue. Undo in Activity.")
+                else:
+                    _flash("error", f"Nothing was filed — all {_left} were left "
+                           f"for you in the Sort Queue.")
                 _attention_count_cached.clear()
                 st.rerun()
 
@@ -1777,25 +1865,15 @@ def _render_normalize_section(lib: Path) -> None:
                     lib, batch, dry_run=False,
                     pending_words=(data["pending_words"] if queue_words else None),
                 )
-            st.success(
-                f"Renamed {res['renamed']} · left alone {len(res['skipped'])}."
-                + ("  You can undo this whole batch from the Activity page."
-                   if res.get("tx_id") else "")
-            )
-            if res["skipped"]:
-                with st.expander(f"{len(res['skipped'])} left alone "
-                                 "(that name is already taken, or the file "
-                                 "has moved)"):
-                    for s in res["skipped"][:50]:
-                        st.caption(f"`{s['old']}` — {s['reason']}")
+            _flash_rename_result(res, noun="renamed")
             if res.get("tx_id"):
                 _log_activity("normalize.apply", str(lib),
                               f"{res['renamed']} renamed", res["tx_id"])
-            # Drop everything we just attempted from the pending scan so the
-            # view shrinks; a fresh scan reflects the true remaining set.
-            done = {p["old"] for p in batch}
-            data["proposals"] = [p for p in data["proposals"]
-                                 if p["old"] not in done]
+            # Drop only what was ACTUALLY renamed. This used to drop the
+            # whole attempted batch, so a refused file vanished from the
+            # list and could not be retried without a fresh full scan.
+            data["proposals"] = _remaining_after_apply(
+                data["proposals"], batch, res)
             data["by_kind"] = {
                 k: sum(1 for p in data["proposals"] if p["kind"] == k)
                 for k in (AUTHOR, TITLE, BOTH)
@@ -3136,8 +3214,8 @@ def render_activity() -> None:
         when = tx.get("timestamp", "")[:19].replace("T", " ")
         n_ops = tx.get("operations_count", "?")
         undone = tx.get("undone", False)
-        label = f"{when}  ·  {_humanize_tx(desc)}  ·  {n_ops} change(s)" + (
-            "  ·  ALREADY UNDONE" if undone else "")
+        partial = tx.get("partial_undo") if not undone else None
+        label = _activity_row_label(tx)
         # The Undo button lived inside a collapsed expander, so the one
         # control this page exists for was invisible until the user guessed
         # to click a row.  Open the newest still-undoable entry — that is
@@ -3154,13 +3232,28 @@ def render_activity() -> None:
             if undone:
                 st.caption("Already undone.")
             else:
+                if partial:
+                    st.warning(
+                        f"Undone in part on {str(partial.get('at', ''))[:16].replace('T', ' ')}: "
+                        f"{partial.get('reversed', '?')} change(s) came back, "
+                        f"{len(partial.get('not_reversed', []))} did not. Pressing "
+                        f"Undo again retries only the ones that did not.")
+                    with st.expander("What did not come back, and why"):
+                        for line in partial.get("not_reversed", [])[:200]:
+                            st.caption(line)
                 col1, col2 = st.columns([1, 1])
                 if col1.button("Show what Undo would do",
                                key=f"prev_{i}_{tx_id}"):
                     _preview_undo(tx_id)
-                if col2.button("↶ Undo", key=f"undo_{i}_{tx_id}", type="primary"):
-                    if _undo_transaction(tx_id):
-                        st.rerun()
+                # Every other bulk action in this app sits behind an "I've
+                # read it" tick; Undo -- up to 8,514 changes, with no redo --
+                # was the one that fired on a single click (finding 11).
+                ok = col2.checkbox(f"Reverse all {n_ops} change(s)",
+                                   key=f"undo_ok_{i}_{tx_id}")
+                if col2.button("↶ Undo", key=f"undo_{i}_{tx_id}",
+                               type="primary", disabled=not ok):
+                    _undo_transaction(tx_id)
+                    st.rerun()
 
 
 def _preview_undo(tx_id: str) -> None:
@@ -3179,11 +3272,13 @@ def _preview_undo(tx_id: str) -> None:
 
 
 def _undo_transaction(tx_id: str) -> bool:
-    """Reverse a transaction.  Returns True only if it actually worked.
+    """Reverse a transaction.  Returns True only if something came back.
 
-    The caller must not rerun on failure: a rerun throws away the error
-    message, so a failed undo looked identical to a successful one --
-    the most dangerous possible confusion in this app.
+    Every outcome is reported through ``_flash``, so the caller may rerun
+    unconditionally: the message is drawn on the next page either way.
+    (It used to draw with st.warning/st.error and rely on the caller NOT
+    rerunning -- which held for total failure and failed for partial
+    success, the case that most needs explaining.)
     """
     from processing.undo_log import UndoLog
     log = UndoLog()
@@ -3196,33 +3291,33 @@ def _undo_transaction(tx_id: str) -> bool:
         # library is in a state it is not in.
         done = sum(1 for r in results if r.get("ok"))
         refused = [r for r in results if not r.get("ok")]
-        if done:
-            st.toast(f"Undid {done} of {len(results)} ops in {tx_id}", icon="↶")
-        if refused:
-            st.warning(
-                f"{len(refused)} of {len(results)} operations could NOT be "
-                f"undone and were left alone. The transaction stays in the "
-                f"list so you can retry after resolving them.")
-            with st.expander(f"What was refused ({len(refused)})"):
-                for r in refused[:200]:
-                    st.write(r["action"])
-                if len(refused) > 200:
-                    st.caption(f"… and {len(refused) - 200:,} more")
-        if not done:
-            st.error(
-                "Nothing was undone. The files are exactly where they were "
-                "before this click.")
+        why = [str(r.get("action", "?")) for r in refused]
+        # Everything goes through _flash: the caller reruns, and a bare
+        # st.warning was destroyed by that rerun -- a PARTIAL undo looked
+        # exactly like a complete one, with only a 4-second toast left
+        # (audit finding 19).
+        if done and not refused:
+            _flash("success", f"Undone: all {done} change(s) reversed.")
+        elif done:
+            _flash("warning",
+                   f"Undone in part: {done} of {len(results)} change(s) "
+                   f"reversed, {len(refused)} left alone. The entry stays in "
+                   f"Activity marked PARTLY UNDONE so you can retry them.",
+                   why, f"Not reversed ({len(refused)}) — and why")
+        else:
+            _flash("error",
+                   "Nothing was undone. The files are exactly where they were "
+                   "before this click.", why, f"Refused ({len(refused)}) — and why")
             return False
         _log_activity("undo", tx_id, f"{done}/{len(results)} ops", tx_id)
         _attention_count_cached.clear()
         return True
     except Exception as exc:
         logger.exception("undo of %s failed", tx_id)
-        st.error(
-            f"Undo did not work: {exc}\n\nNothing has been changed by this "
-            f"click.  The files are still where they are, and the entry "
-            f"stays in the list so you can try again."
-        )
+        _flash("error",
+               f"Undo did not work: {exc}\n\nNothing has been changed by this "
+               f"click.  The files are still where they are, and the entry "
+               f"stays in the list so you can try again.")
         return False
 
 
@@ -3271,7 +3366,6 @@ def render_attention() -> None:
         "What needs you, grouped. Nothing here changes your library until "
         "you press a button, and every change can be undone from Activity."
     )
-    _render_flashes()
     _hc = st.columns([0.75, 0.25])
     with _hc[1]:
         # The scan is genuinely expensive (a full library walk), so it is
@@ -5728,6 +5822,8 @@ def main() -> None:
     # here vs "Attention" there) and only worked by accident, because
     # render_sidebar runs first and seeds session_state.
     page = st.session_state.get("page", "Attention")
+    # Results of the last action, on whatever page we land on.
+    _render_flashes()
     if page == "Attention":
         render_attention()
     elif page == "Search":
