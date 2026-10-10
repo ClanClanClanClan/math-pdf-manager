@@ -93,7 +93,8 @@ def _paper(lib: Path, folder: str, kind: str):
 
 
 def _identity(record: Path) -> dict:
-    """The record's content, minus ``copy_locations`` (see the xfail below)."""
+    """The record's content, minus ``copy_locations`` -- which a move
+    rightly changes (it says where the paper now is)."""
     d = json.loads(record.read_text(encoding="utf-8"))
     d.pop("copy_locations", None)
     return d
@@ -203,8 +204,9 @@ def test_one_undo_brings_back_both_exactly_where_they_were(lib, retirer, kind, m
     original = _identity(record)
     log, tx, res, trashed, _ = _run(lib, retirer, pdf, monkeypatch)
     results = log.undo_transaction(tx)
-    assert [r["ok"] for r in results] == [True, True], results
-    assert all(r["action"].startswith("MOVED BACK") for r in results), results
+    assert [r["ok"] for r in results] == [True, True, True], results
+    assert [r["action"].split(" ")[0] for r in results] == [
+        "RESTORED", "MOVED", "MOVED"], results
     assert pdf.read_bytes() == PREPRINT
     assert record.is_file(), "the record did not return to the place it was in"
     assert find_sidecar(pdf) == record
@@ -224,12 +226,10 @@ def test_an_upgrade_keeps_the_topic_and_history_of_any_record(lib, kind, monkeyp
     assert {"date": "2026-01-01", "result": "unpublished"} in checks
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "logged_move rewrites the record's copy_locations to the trash path "
-    "outside the undo log, so after undo the record still names the trash. "
-    "Pre-existing in every logged_move/logged_rename; separate follow-up."))
 @pytest.mark.parametrize("retirer", sorted(RETIRERS))
 def test_undo_restores_the_record_byte_for_byte(lib, retirer, monkeypatch):
+    """Was xfail(strict): the move rewrote copy_locations outside the undo
+    log, so an undone retirement left the record naming the trash."""
     pdf, record = _paper(lib, RETIRERS[retirer][0], "ordinary")
     before = record.read_bytes()
     log, tx, *_ = _run(lib, retirer, pdf, monkeypatch)
@@ -440,7 +440,7 @@ def test_retiring_never_orphans_never_clobbers_and_undoes_cleanly(
     """For any record location, and a trash already holding PDFs and/or
     records under the names the retirement would try: no record is
     orphaned, nothing already there changes, and one undo puts back every
-    file that was there before (the record's copy_locations aside)."""
+    file that was there before, byte for byte."""
     lib = Path(tempfile.mkdtemp(dir=tmp_path)) / "lib"
     lib.mkdir()
     enable_sidecar_mirror(lib)
@@ -480,8 +480,5 @@ def test_retiring_never_orphans_never_clobbers_and_undoes_cleanly(
     after = _snapshot(lib)
     assert set(after) == set(before) | side_effects
     for k, v in before.items():
-        if k == record.relative_to(lib):
-            assert _identity(record) == original
-        else:
-            assert after[k] == v, f"not restored: {k}"
+        assert after[k] == v, f"not restored byte for byte: {k}"
     assert find_orphans(lib) == []

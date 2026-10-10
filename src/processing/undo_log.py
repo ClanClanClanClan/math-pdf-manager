@@ -194,7 +194,8 @@ class UndoLog:
             "destination": str(new_path),
         })
 
-    def record_sidecar_edit(self, pdf_path: Path, changes: dict) -> None:
+    def record_sidecar_edit(self, pdf_path: Path, changes: dict, *,
+                            absent=()) -> None:
         """Record a reversible edit to a paper's sidecar fields.
 
         Audit-11b: some actions change sidecar *fields* rather than
@@ -205,17 +206,18 @@ class UndoLog:
         neither reappeared as a suggestion nor matched its folder.
 
         ``changes`` maps ``field -> [old_value, new_value]``.  Undo
-        restores each ``old_value``.  Record this AFTER any file move in
-        the same transaction so that, on undo (reverse order), the field
-        is restored while the file is still at the post-move location.
+        restores each ``old_value`` -- or, for a field listed in
+        ``absent``, removes it, since it was not in the record before.
+        Record this AFTER any file move in the same transaction so that,
+        on undo (reverse order), the field is restored while the file is
+        still at the post-move location.
         """
         if self._current_tx is None:
             raise RuntimeError("No active transaction — call begin_transaction() first")
-        self._append({
-            "type": "sidecar_edit",
-            "path": str(pdf_path),
-            "changes": changes,
-        })
+        op = {"type": "sidecar_edit", "path": str(pdf_path), "changes": changes}
+        if absent:
+            op["absent"] = sorted(absent)
+        self._append(op)
 
     def has_operations(self) -> bool:
         """True if the current transaction has recorded at least one operation.
@@ -376,14 +378,18 @@ class UndoLog:
                     })
                     continue
                 try:
-                    from processing.identity import PaperIdentity
-                    ident = PaperIdentity.load(pdf)
-                    if ident.is_new():
+                    # The recorded fields, and nothing else: a full save
+                    # here added every field the record predated, so the
+                    # record that came back was not the one that left.
+                    from processing.identity import patch_record
+                    absent = set(op.get("absent", ()))
+                    done = patch_record(
+                        pdf, {f: old for f, (old, _new) in changes.items()
+                              if f not in absent},
+                        remove=sorted(absent & set(changes)))
+                    if done is None:
                         results.append({"action": f"SKIP: no sidecar to restore: {pdf}", "ok": False})
                         continue
-                    for field, (old_val, _new_val) in changes.items():
-                        setattr(ident, field, old_val)
-                    ident.save(pdf, recompute_hash=False)
                     results.append({
                         "action": f"RESTORED sidecar fields {list(changes)} on {pdf.name}",
                         "ok": True,
@@ -685,7 +691,8 @@ def logged_move(
         # continues since the move itself already succeeded.
         try:
             from processing.identity import repath_copy_locations, repath_topic_copies
-            repath_copy_locations(destination, old_path=source, new_path=destination)
+            repath_copy_locations(destination, old_path=source, new_path=destination,
+                                  undo_log=undo_log)
             # If the basename changed, also rename the topic-folder
             # hardlinks so users browsing 07a/ don't see the old
             # filename forever.
@@ -819,7 +826,8 @@ def logged_rename(
         # rename the topic-folder hardlinks.
         try:
             from processing.identity import repath_copy_locations, repath_topic_copies
-            repath_copy_locations(new_path, old_path=old_path, new_path=new_path)
+            repath_copy_locations(new_path, old_path=old_path, new_path=new_path,
+                                  undo_log=undo_log)
             repath_topic_copies(
                 new_path, old_path=old_path, new_path=new_path,
                 undo_log=undo_log,

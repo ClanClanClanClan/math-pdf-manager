@@ -494,6 +494,7 @@ class TestMoveAndRename:
 
         src = _make_pdf(tmp_path / "src.pdf")
         PaperIdentity(doi="10.1/x").save(src)
+        before = sidecar_path(src).read_bytes()
         dst = tmp_path / "sub" / "dst.pdf"
 
         log = UndoLog(log_dir=tmp_path / "ops")
@@ -503,12 +504,14 @@ class TestMoveAndRename:
 
         tx = json.loads((tmp_path / "ops" / f"{tx_id}.json").read_text())
         kinds = [op["type"] for op in tx["operations"]]
-        # PDF move first, then sidecar move
-        assert kinds == ["move", "move"]
-        # And undo brings them back
+        # PDF move first, then sidecar move, then the record's new
+        # location -- that field only, recorded so undo can put it back.
+        assert kinds == ["move", "move", "sidecar_edit"]
+        assert list(tx["operations"][2]["changes"]) == ["copy_locations"]
+        # And undo brings them back, the record exactly as it was
         log.undo_transaction(tx_id)
         assert src.exists()
-        assert sidecar_path(src).exists()
+        assert sidecar_path(src).read_bytes() == before
         assert not dst.exists()
         assert not sidecar_path(dst).exists()
 

@@ -778,6 +778,56 @@ def _nfc_str(s: str) -> str:
     return unicodedata.normalize("NFC", s)
 
 
+_ABSENT = object()
+
+
+def patch_record(pdf_path: Path, values: dict, *, remove=(),
+                 undo_log=None) -> Optional[bool]:
+    """Change these fields of the paper's saved record, and nothing else.
+
+    ``PaperIdentity.save`` rewrites the WHOLE record: it adds every field
+    the record predates and drops any it does not know. Measured
+    2026-10-10: 27,130 of the 29,367 live records lack at least one field,
+    so every move rewrote them -- and undo, which restored the fields it
+    had recorded through the same ``save``, could not put back the record
+    that was there. Right for a writer that owns the record; wrong for a
+    move, which only has to say where the paper now is, and for an undo,
+    which must restore exactly what was there.
+
+    Edits the stored JSON in place: ``values`` set, ``remove`` deleted,
+    every other field as it was, in the layout ``save`` writes. With
+    ``undo_log``, the previous values go into a ``sidecar_edit`` (fields
+    that were absent listed as ``absent``), so undo restores the record
+    byte for byte.
+
+    True if the record changed, False if nothing needed to, None if there
+    is no readable record here.
+    """
+    path = record_location(pdf_path)
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if not isinstance(data, dict):
+        return None
+    new = dict(data)
+    for k in remove:
+        new.pop(k, None)
+    new.update(values)
+    touched = sorted(k for k in set(values) | set(remove)
+                     if data.get(k, _ABSENT) != new.get(k, _ABSENT))
+    if not touched:
+        return False
+    if undo_log is not None:
+        undo_log.record_sidecar_edit(
+            pdf_path, {k: [data.get(k), new.get(k)] for k in touched},
+            absent=[k for k in touched if k not in data])
+    from core.io import atomic_write_text
+    atomic_write_text(path, json.dumps(new, indent=2, ensure_ascii=False,
+                                       sort_keys=True), encoding="utf-8")
+    return True
+
+
 def repath_topic_copies(
     sidecar_pdf_path: Path,
     *,
@@ -858,8 +908,8 @@ def repath_topic_copies(
             logger.warning("could not rename topic copy %s: %s", p, exc)
             new_locations.append(loc)
     if renamed > 0:
-        identity.copy_locations = new_locations
-        identity.save(sidecar_pdf_path, recompute_hash=False)
+        patch_record(sidecar_pdf_path, {"copy_locations": new_locations},
+                     undo_log=undo_log)
     return renamed
 
 
@@ -943,6 +993,7 @@ def repath_copy_locations(
     *,
     old_path: Path,
     new_path: Path,
+    undo_log=None,  # type: ignore[no-untyped-def]
 ) -> bool:
     """Swap ``old_path`` → ``new_path`` inside the sidecar's ``copy_locations``.
 
@@ -952,7 +1003,10 @@ def repath_copy_locations(
 
     The caller passes ``sidecar_pdf_path`` (where the sidecar lives
     NOW, post-move).  We swap ``str(old_path)`` for ``str(new_path)``
-    inside copy_locations and re-save without recomputing the hash.
+    inside copy_locations -- that field only (``patch_record``). With
+    ``undo_log`` the edit is recorded, so undoing the move also puts the
+    old list back: it used to be written outside the log, and an undone
+    move left the record naming the place the paper had been moved TO.
     """
     if not sidecar_path(sidecar_pdf_path).exists():
         return False
@@ -986,9 +1040,8 @@ def repath_copy_locations(
         changed = True
     if not changed:
         return False
-    identity.copy_locations = out
-    identity.save(sidecar_pdf_path, recompute_hash=False)
-    return True
+    return bool(patch_record(sidecar_pdf_path, {"copy_locations": out},
+                             undo_log=undo_log))
 
 
 # Module-level alias to keep call sites readable: ``load_sidecar(pdf)``
