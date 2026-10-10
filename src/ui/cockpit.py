@@ -3025,12 +3025,33 @@ def _orphan_plan_for_session(plan: dict, lib: Path) -> dict:
             "to_trash": [[rel(sc), rel(pdf)] for sc, pdf in plan.get("to_trash", [])],
             "to_trash_refused": [[rel(sc), why] for sc, why
                                  in plan.get("to_trash_refused", [])],
+            "still": [[rel(sc), words] for sc, words in plan.get("still", [])],
             "unmatched": [rel(sc) for sc in plan["unmatched"]]}
 
 
 def _record_label(rel: str) -> str:
     name = Path(rel).name
     return name[:-len(".meta.json")] if name.endswith(".meta.json") else name
+
+
+def _warn_what_stays_wrong(plan: dict, pairs: list, after: str) -> None:
+    """Before the button: which of these records the repair would leave
+    naming a place where no file is (the plan's ``still``). Says nothing
+    when none would -- the measured case for the 37 of 2026-10-10."""
+    mine = {sc for sc, _ in pairs}
+    rows = [(sc, words) for sc, words in plan.get("still", []) if sc in mine]
+    if not rows:
+        return
+    st.warning(
+        f"{len(rows):,} of these record(s) will still name a place where no "
+        f"file is after {after}. The repair puts the paper's name where its "
+        "old name was; where a record does not say which of its places that "
+        "was, it adds the paper's name and leaves the others as they are, "
+        "rather than guess.")
+    with st.expander(f"The {len(rows):,} record(s), and what would stay"):
+        for sc, words in rows[:300]:
+            for w in words:
+                st.markdown(f"`{_record_label(sc)}` — {w}")
 
 
 def _still_wrong(res: dict) -> list[str]:
@@ -3113,9 +3134,10 @@ def _render_orphan_repair(lib: Path, n_orphans: int) -> None:
                     st.caption(f"`{_record_label(sc)}` matches a paper in the "
                                f"trash, but is left alone: {why}.")
         if t:
-            _offer_records_to_trash(lib, t)
+            _offer_records_to_trash(lib, t, plan)
         if not m:
             return
+        _warn_what_stays_wrong(plan, m, "reconnecting")
         ok = st.checkbox(f"I've read the list — put these {len(m):,} records "
                          "back beside their papers", key="orphan_confirm")
         if st.button(f"Reconnect {len(m):,} record(s)", type="primary",
@@ -3149,7 +3171,7 @@ def _render_orphan_repair(lib: Path, n_orphans: int) -> None:
             st.rerun()
 
 
-def _offer_records_to_trash(lib: Path, t: list) -> None:
+def _offer_records_to_trash(lib: Path, t: list, plan: dict) -> None:
     """Records whose paper is already in the trash go there with it.
 
     Kept apart from "Reconnect": a different decision. These papers were
@@ -3169,6 +3191,7 @@ def _offer_records_to_trash(lib: Path, t: list) -> None:
             st.markdown(f"`{_record_label(sc)}`  \n→ `{pdf}`")
         if len(t) > 300:
             st.caption(f"… and {len(t) - 300:,} more")
+    _warn_what_stays_wrong(plan, t, "joining their papers")
     ok = st.checkbox(f"I've read the list — put these {len(t):,} records with "
                      "their papers in the trash", key="orphan_trash_confirm")
     _reversible_note()

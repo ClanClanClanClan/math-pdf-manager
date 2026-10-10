@@ -125,10 +125,17 @@ def _topic_copy(lib, old, new):
     return topic
 
 
-def _reconnect(lib):
+def _reconnect(lib, *, check_preview=True):
+    """Plan and press, as the page does -- and check that what the page
+    would have said before the press (``still``) is what the press did."""
     plan = plan_reconnect(lib)
     assert len(plan["matched"]) == 1, plan
-    return apply_reconnect(lib, plan, dry_run=False)
+    out = apply_reconnect(lib, plan, dry_run=False)
+    if check_preview and out["moved"]:
+        said = dict(plan["still"]).get(plan["matched"][0][0], [])
+        assert said == out["moved"][0]["still"], (
+            "the page warned one thing and the button did another")
+    return out
 
 
 def _locations(pdf):
@@ -140,6 +147,61 @@ def _undo(lib, tx_id):
     results = UndoLog(log_dir=lib / ".operation_log").undo_transaction(tx_id)
     assert all(r["ok"] for r in results), results
     return results
+
+
+# ------------------------------------------- the nine records the owner has
+#
+# Measured read-only on the real library, 2026-10-10: the 9 orphans whose
+# copy_locations name their paper's OLD file, all among the 37 "Reconnect"
+# matches. Each is (the entry as stored, the paper's name on disk now),
+# code point for code point: Bättig's entry is composed and its file
+# decomposed; the Astérisque entry mixes a decomposed folder with a
+# composed name. All 9 are ordinary records.
+
+NINE = [
+    ("01 - Published papers/B/B\u00e4ttig, R. J. - Completness of securities market models\u2014an operator point of view.pdf",
+     "Ba\u0308ttig, R. J. - Completeness of securities market models\u2014an operator point of view.pdf"),
+    ("01 - Published papers/D/Duncan, T. E., Pasik-Duncan, B. - Linear\u2013quadratic fractional Gausian control.pdf",
+     "Duncan, T. E., Pasik-Duncan, B. - Linear\u2013quadratic fractional Gaussian control.pdf"),
+    ("01 - Published papers/L/Lions, P.-L., Souganidis, P. E. - Stochastic homogenization of Hamilon-Jacobi and \"viscous\"-Hamilton\u2013Jacobi equations with convex nonlinearities - revisited.pdf",
+     "Lions, P.-L., Souganidis, P. E. - Stochastic homogenization of Hamilton-Jacobi and \"viscous\"-Hamilton\u2013Jacobi equations with convex nonlinearities, revisited.pdf"),
+    ("05 - Books and lecture notes/05 - Aste\u0301risque/Ast\u00e9risque 100 - Faisceaux pervers \u2013 A. A. Beilinson, J. Bernstein, P. Deligne, O. Gabber \u2013 Ast\u00e9risque 100, 1982 \u2013 Soci\u00e9t\u00e9 Math\u00e9matique de France \u2013 378a1f3fd8847fe6a926ca6df2c7e591 \u2013 Anna\u2019s Archive.pdf",
+     "Aste\u0301risque 100 - Beilinson, A. A., Bernstein, J., Deligne, P., Gabber, O. - Faisceaux pervers.pdf"),
+    ("05 - Books and lecture notes/06 - Saint-Flour/021 - Biane, P., Durrett, R. T. - Lectures on probability theory, \u00e9cole d'\u00e9t\u00e9 de probabilites de Saint-Flour XXIII, 1993.pdf",
+     "021 - Biane, P., Durrett, R. T. - Lectures on probability theory, \u00e9cole d\u2019\u00e9t\u00e9 de probabilit\u00e9s de Saint-Flour XXIII, 1993.pdf"),
+    ("05 - Books and lecture notes/A/Andersen, T. G., Davis, R. A., Krei\u00df, J.-P., Mikosch, T. - Handbook of financiel time series.pdf",
+     "Andersen, T. G., Davis, R. A., Krei\u00df, J.-P., Mikosch, T. - Handbook of financial time series.pdf"),
+    ("05 - Books and lecture notes/F/Fleming, W. H., Soner, H. M. - Controlled Makov processes and viscosity solutions.pdf",
+     "Fleming, W. H., Soner, H. M. - Controlled Markov processes and viscosity solutions.pdf"),
+    ("05 - Books and lecture notes/W/Wise, G. L., Hall, E. B. - Couterexamples in probability and real analysis.pdf",
+     "Wise, G. L., Hall, E. B. - Counterexamples in probability and real analysis.pdf"),
+    ("08 - Se\u0301minaires de probabilite\u0301s de Strasbourg/Se\u0301minaire 25 - 1991/374-Albeverio, S. A., Ma, Z.-M. - Necessary and sufficient condtions for the existence of m-perfect processes associated with Dirichlet forms.pdf",
+     "374-Albeverio, S. A., Ma, Z.-M. - Necessary and sufficient conditions for the existence of m-perfect processes associated with Dirichlet forms.pdf"),
+]
+
+
+@pytest.mark.parametrize("entry,now", NINE, ids=[n.split(" - ")[0][:24] for _, n in NINE])
+def test_each_of_the_nine_names_its_paper_after_reconnect(lib, entry, now):
+    old = lib / entry
+    old.parent.mkdir(parents=True, exist_ok=True)
+    old.write_bytes(b"%PDF-1.4 " + entry.encode())
+    rec = sidecar_path(old)
+    rec.parent.mkdir(parents=True, exist_ok=True)
+    rec.write_text(_dump(dict(OLD_SCHEMA, content_sha256=compute_content_hash(old),
+                              copy_locations=[str(old)])), encoding="utf-8")
+    new = old.with_name(now)
+    old.rename(new)                                   # the rename that stranded it
+    assert find_orphans(lib) == [rec], "control"
+    before = rec.read_bytes()
+    plan = plan_reconnect(lib)
+    assert plan["matched"] == [(rec, new)]
+    assert plan["still"] == [], "nothing to warn about before the press"
+    out = apply_reconnect(lib, plan, dry_run=False)
+    assert out["moved"][0]["still"] == []
+    assert _locations(new) == [str(new)], "the record names the paper as it is now"
+    assert find_orphans(lib) == []
+    _undo(lib, out["tx_id"])
+    assert rec.read_bytes() == before
 
 
 # --------------------------------------------- every kind of record and name
@@ -325,7 +387,7 @@ def test_a_failed_edit_still_reconnects_and_says_so(lib, monkeypatch):
     monkeypatch.setattr(identity, "repath_copy_locations", boom)
     rec, old, new = _strand(lib)
     before = rec.read_bytes()
-    out = _reconnect(lib)
+    out = _reconnect(lib, check_preview=False)       # no preview foresees a full disk
     assert out["reconnected"] == 1 and find_sidecar(new) is not None
     assert out["moved"][0]["still"] == [
         "its list of the paper's places could not be updated: disk full"]
@@ -380,7 +442,7 @@ def test_a_record_joining_its_paper_in_the_trash_names_the_trash(lib):
     pdf.rename(trashed)                                # the old retirement
     before = rec.read_bytes()
     plan = plan_reconnect(lib)
-    assert plan["to_trash"] == [(rec, trashed)]
+    assert plan["to_trash"] == [(rec, trashed)] and plan["still"] == []
     out = apply_trash_reconnect(lib, plan, dry_run=False)
     assert out["moved"][0]["still"] == []
     assert _locations(trashed) == [str(trashed)]
@@ -497,6 +559,81 @@ def test_a_clean_reconnect_says_nothing_more(C, lib, monkeypatch):
     kind, msg, details = C.st.session_state["flash"][-1][:3]
     assert kind == "success" and "no file" not in msg and details == []
     assert _locations(new) == [str(new)]
+
+
+def _warnings(C, monkeypatch):
+    said = []
+    monkeypatch.setattr(C.st, "warning", lambda msg, *a, **k: said.append(msg))
+    return said
+
+
+def test_the_page_warns_before_the_press_what_would_stay_wrong(C, lib, monkeypatch):
+    earlier = lib / SHELF / "Smith, J. - Earliest name.pdf"
+    rec, old, new = _strand(lib, locations=[str(earlier)])
+    said = _warnings(C, monkeypatch)
+    shown = []
+    monkeypatch.setattr(C.st, "markdown", lambda m, *a, **k: shown.append(m))
+    monkeypatch.setattr(C.st, "button", lambda *a, **k: False)
+    C.st.session_state["orphan_plan"] = C._orphan_plan_for_session(plan_reconnect(lib), lib)
+    C._render_orphan_repair(lib, 1)
+    warned = [w for w in said if "no file is" in w]
+    assert len(warned) == 1
+    assert warned[0].startswith("1 of these record(s) will still name a place "
+                                "where no file is after reconnecting")
+    assert f"`{old.stem}` — it still lists a place where no file is: {earlier}" in shown
+    assert find_orphans(lib) == [rec], "nothing was pressed"
+
+
+def test_the_page_says_nothing_more_when_nothing_would_stay_wrong(C, lib, monkeypatch):
+    _strand(lib)
+    said = _warnings(C, monkeypatch)
+    monkeypatch.setattr(C.st, "button", lambda *a, **k: False)
+    C.st.session_state["orphan_plan"] = C._orphan_plan_for_session(plan_reconnect(lib), lib)
+    C._render_orphan_repair(lib, 1)
+    assert not any("no file is" in w for w in said)
+
+
+def test_the_warning_names_only_the_records_of_its_own_button(C, lib, monkeypatch):
+    """A shelf record that would stay wrong is not warned about under the
+    trash button, nor the other way round."""
+    earlier = lib / SHELF / "Smith, J. - Earliest name.pdf"
+    _strand(lib, locations=[str(earlier)])
+    pdf = lib / "02 - Unpublished papers/C" / "Cao, C. - X.pdf"
+    pdf.parent.mkdir(parents=True)
+    pdf.write_bytes(b"%PDF-1.4 cao")
+    trec = sidecar_path(pdf)
+    trec.parent.mkdir(parents=True, exist_ok=True)
+    trec.write_text(_dump(dict(OLD_SCHEMA, content_sha256=compute_content_hash(pdf),
+                               copy_locations=[str(pdf)])), encoding="utf-8")
+    trashed = lib / ".trash/upgraded_preprints" / pdf.name
+    trashed.parent.mkdir(parents=True)
+    pdf.rename(trashed)
+    said = _warnings(C, monkeypatch)
+    monkeypatch.setattr(C.st, "button", lambda *a, **k: False)
+    C.st.session_state["orphan_plan"] = C._orphan_plan_for_session(plan_reconnect(lib), lib)
+    C._render_orphan_repair(lib, 2)
+    warned = [w for w in said if "no file is" in w]
+    assert len(warned) == 1 and "after reconnecting" in warned[0]
+
+
+def test_the_trash_button_warns_before_the_press_too(C, lib, monkeypatch):
+    pdf = lib / "02 - Unpublished papers/C" / "Cao, C. - X.pdf"
+    pdf.parent.mkdir(parents=True)
+    pdf.write_bytes(b"%PDF-1.4 cao")
+    rec = sidecar_path(pdf)
+    rec.parent.mkdir(parents=True, exist_ok=True)
+    rec.write_text(_dump(dict(OLD_SCHEMA, content_sha256=compute_content_hash(pdf),
+                              copy_locations=[str(pdf), "/Volumes/Gone/x.pdf"])),
+                   encoding="utf-8")
+    trashed = lib / ".trash/upgraded_preprints" / pdf.name
+    trashed.parent.mkdir(parents=True)
+    pdf.rename(trashed)
+    said = _warnings(C, monkeypatch)
+    monkeypatch.setattr(C.st, "button", lambda *a, **k: False)
+    C.st.session_state["orphan_plan"] = C._orphan_plan_for_session(plan_reconnect(lib), lib)
+    C._render_orphan_repair(lib, 1)
+    warned = [w for w in said if "no file is" in w]
+    assert len(warned) == 1 and "after joining their papers" in warned[0]
 
 
 def test_the_trash_button_says_it_too(C, lib, monkeypatch):

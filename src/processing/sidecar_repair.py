@@ -164,6 +164,37 @@ def _places_it_answers_for(sidecar: Path, locations):
     return out
 
 
+#: What the reconnect says of a record whose list of places it cannot read.
+_UNREADABLE = ("its list of the paper's places could not be read, so it "
+               "was left as it was")
+
+
+def _old_place(old_places):
+    """The entry to swap for the paper's path; ``None``: swap nothing."""
+    return Path(old_places[0]) if old_places else None
+
+
+def _naming_no_file(locations) -> list[str]:
+    return [f"it still lists a place where no file is: {loc}"
+            for loc in locations if _file_id(Path(loc)) is None]
+
+
+def would_stay_wrong(sidecar: Path, pdf: Path) -> list[str]:
+    """What reconnecting this record to ``pdf`` would leave wrong in its
+    list of places -- worked out without writing, by the rule and in the
+    words :func:`apply_reconnect` reports afterwards, so the page can say
+    it BEFORE the button is pressed. Empty when nothing would be.
+    """
+    from processing.identity import repathed_locations
+    locations = _read_record(sidecar).get("copy_locations", [])
+    old_places = _places_it_answers_for(sidecar, locations)
+    if old_places is None:
+        return [_UNREADABLE]
+    after = repathed_locations(locations, old_path=_old_place(old_places),
+                               new_path=pdf)
+    return _naming_no_file(locations if after is None else after)
+
+
 def _name_the_paper_here(pdf: Path, old_places, log) -> list[str]:
     """After a reconnect: the record, now beside ``pdf``, names it.
 
@@ -181,16 +212,14 @@ def _name_the_paper_here(pdf: Path, old_places, log) -> list[str]:
     """
     from processing.identity import record_location, repath_copy_locations
     if old_places is None:
-        return ["its list of the paper's places could not be read, so it "
-                "was left as it was"]
+        return [_UNREADABLE]
     try:
-        repath_copy_locations(pdf, old_path=Path(old_places[0]) if old_places else None,
+        repath_copy_locations(pdf, old_path=_old_place(old_places),
                               new_path=pdf, undo_log=log)
     except OSError as exc:            # the write; the list holds only paths
         return [f"its list of the paper's places could not be updated: {exc}"]
-    now = _read_record(record_location(pdf)).get("copy_locations", [])
-    return [f"it still lists a place where no file is: {loc}"
-            for loc in now if _file_id(Path(loc)) is None]
+    return _naming_no_file(
+        _read_record(record_location(pdf)).get("copy_locations", []))
 
 
 def plan_reconnect(library_root: Path) -> dict:
@@ -199,7 +228,11 @@ def plan_reconnect(library_root: Path) -> dict:
     Returns ``{"orphans": n, "matched": [(sidecar, pdf)], "ambiguous":
     [...], "to_trash": [(sidecar, trash_pdf)], "to_trash_refused":
     [(sidecar, reason)], "unmatched": [...], "candidates": n,
-    "trash_candidates": n}``.
+    "trash_candidates": n, "still": [(sidecar, [words])]}``.
+
+    ``still``: for each record of ``matched`` and ``to_trash`` that the
+    move would leave naming a place where no file is, what
+    (:func:`would_stay_wrong`) -- so the page says so before the press.
 
     Only PDFs with NO record anywhere are candidates. A PDF that already
     has one is never offered another, so a reconnect cannot replace a
@@ -276,10 +309,13 @@ def plan_reconnect(library_root: Path) -> dict:
                 continue
             to_trash.append((s, hit))
         unmatched = still
+    stays_wrong = [(s, words) for s, pdf in matched + to_trash
+                   for words in [would_stay_wrong(s, pdf)] if words]
     return {"orphans": len(orphans), "matched": matched,
             "ambiguous": ambiguous, "to_trash": to_trash,
             "to_trash_refused": refused, "unmatched": unmatched,
-            "candidates": len(homeless), "trash_candidates": n_trash}
+            "candidates": len(homeless), "trash_candidates": n_trash,
+            "still": stays_wrong}
 
 
 def _former_place(library_root: Path, sidecar: Path) -> Path:
