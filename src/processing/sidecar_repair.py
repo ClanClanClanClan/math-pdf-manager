@@ -129,13 +129,26 @@ def plan_reconnect(library_root: Path) -> dict:
     """Work out which orphan belongs to which PDF.  Touches nothing.
 
     Returns ``{"orphans": n, "matched": [(sidecar, pdf)], "ambiguous":
-    [...], "unmatched": [...], "candidates": n}``.
+    [...], "to_trash": [(sidecar, trash_pdf)], "to_trash_refused":
+    [(sidecar, reason)], "unmatched": [...], "candidates": n,
+    "trash_candidates": n}``.
 
     Only PDFs with NO record anywhere are candidates. A PDF that already
     has one is never offered another, so a reconnect cannot replace a
     good record with a stale one.
+
+    ``to_trash``: records no paper in the library matches, whose paper is
+    already in ``.trash`` -- retired by a path that left the record
+    behind (measured 2026-10-09: 3 of 39, the preprints of the June pilot
+    upgrade). Same rule, among record-less PDFs in the trash, tried only
+    after the library: a paper on the shelves always comes first. Kept
+    apart from ``matched`` so the owner decides each kind separately. A
+    record whose old place is an archival collection is not proposed
+    (``to_trash_refused``, with the reason): those keep their records,
+    and no tool proposes retiring anything in them.
     """
-    from processing.identity import compute_content_hash, iter_pdfs
+    from processing.identity import PDF_GLOB, compute_content_hash, iter_pdfs
+    from processing.library_scope import why_not_proposable
 
     claimed, homeless = claimed_records(iter_pdfs(library_root))
     orphans = unclaimed_records(library_root, claimed)
@@ -159,20 +172,89 @@ def plan_reconnect(library_root: Path) -> dict:
             ambiguous.append(s)
         else:
             unmatched.append(s)
+
+    to_trash, refused, n_trash = [], [], 0
+    trash = library_root / ".trash"
+    if unmatched and trash.is_dir():
+        _, trash_homeless = claimed_records(sorted(trash.rglob(PDF_GLOB)))
+        n_trash = len(trash_homeless)
+        in_trash: dict[str, list[Path]] = {}
+        for pdf in trash_homeless:
+            h = compute_content_hash(pdf)
+            if h:
+                in_trash.setdefault(h, []).append(pdf)
+        def lone_hit(s):
+            want = _recorded_hash(s)
+            hits = in_trash.get(want, []) if want else []
+            return hits[0] if len(hits) == 1 else None   # two papers: not guessed
+        # Two records wanting ONE paper are not chosen between either (the
+        # standing ruling: two records for one paper are merged, never
+        # picked from); both stay where they are.
+        wanted: dict[Path, int] = {}
+        for s in unmatched:
+            hit = lone_hit(s)
+            if hit is not None:
+                wanted[hit] = wanted.get(hit, 0) + 1
+        still = []
+        for s in unmatched:
+            hit = lone_hit(s)
+            if hit is None or wanted[hit] != 1:
+                still.append(s)
+                continue
+            why = why_not_proposable(library_root, _former_place(library_root, s))
+            if why:
+                refused.append((s, why))
+                still.append(s)
+                continue
+            to_trash.append((s, hit))
+        unmatched = still
     return {"orphans": len(orphans), "matched": matched,
-            "ambiguous": ambiguous, "unmatched": unmatched,
-            "candidates": len(homeless)}
+            "ambiguous": ambiguous, "to_trash": to_trash,
+            "to_trash_refused": refused, "unmatched": unmatched,
+            "candidates": len(homeless), "trash_candidates": n_trash}
+
+
+def _former_place(library_root: Path, sidecar: Path) -> Path:
+    """Where the paper this record belonged to used to be (its folder, for
+    a coded ``.sidecars/<sha1>`` record, whose name is not recoverable)."""
+    from processing.identity import MIRROR_DIR_NAME
+    rel = sidecar.relative_to(library_root / MIRROR_DIR_NAME)
+    parts = [p for p in rel.parent.parts if p != ".sidecars"]
+    name = rel.name[:-len(".meta.json")] + ".pdf"
+    return library_root.joinpath(*parts, name)
+
+
+def _claimed_in_library(library_root: Path, sidecar: Path) -> bool:
+    """Does a paper now on the shelf beside this record's old place read it?
+
+    The plan can be minutes old. Had the paper come back since -- an undo
+    of the move that stranded the record -- the record is no longer an
+    orphan, and moving it would strand the paper instead.
+    """
+    from processing.identity import PDF_GLOB, sidecar_candidates
+    fid = _file_id(sidecar)
+    folder = _former_place(library_root, sidecar).parent
+    try:
+        pdfs = list(folder.glob(PDF_GLOB))
+    except OSError:
+        return False
+    return any(_file_id(c) == fid for pdf in pdfs for c in sidecar_candidates(pdf))
 
 
 def apply_reconnect(library_root: Path, plan: dict, *, dry_run: bool = True,
-                    undo_log=None) -> dict:
+                    undo_log=None, pairs_key: str = "matched",
+                    description: str = "reconnect {n} orphaned sidecars") -> dict:
     """Move each matched sidecar to sit beside its PDF.
 
     Never overwrites: if the destination already exists the pair is
     skipped, because that PDF already has a record and clobbering it
     would destroy a good one to save a stale one.
+
+    ``pairs_key`` picks which of the plan's lists to act on -- only that
+    one: the papers on the shelves (``matched``) and those already in the
+    trash (``to_trash``) are separate decisions.
     """
-    pairs = plan.get("matched", [])
+    pairs = plan.get(pairs_key, [])
     if dry_run:
         return {"dry_run": True, "would_reconnect": len(pairs)}
 
@@ -182,11 +264,11 @@ def apply_reconnect(library_root: Path, plan: dict, *, dry_run: bool = True,
     log = undo_log or UndoLog(log_dir=library_root / ".operation_log")
     tx_id = None
     if own:
-        tx_id = log.begin_transaction(f"reconnect {len(pairs)} orphaned sidecars")
+        tx_id = log.begin_transaction(description.format(n=len(pairs)))
 
     from processing.identity import (compute_content_hash, find_sidecar,
                                      sidecar_path)
-    moved, skipped = 0, []
+    moved, skipped, done = 0, [], []
     try:
         for sidecar, pdf in pairs:
             sidecar, pdf = Path(sidecar), Path(pdf)
@@ -199,6 +281,10 @@ def apply_reconnect(library_root: Path, plan: dict, *, dry_run: bool = True,
             if _file_id(pdf) is None:
                 skipped.append({"sidecar": sidecar.name, "reason":
                                 "the paper is no longer where the check found it"})
+                continue
+            if _claimed_in_library(library_root, sidecar):
+                skipped.append({"sidecar": sidecar.name, "reason":
+                                "a paper in the library reads this record again"})
                 continue
             # Where a NEW record for this paper is written -- the hashed
             # location for an over-long name, which the naive mirror path
@@ -218,6 +304,7 @@ def apply_reconnect(library_root: Path, plan: dict, *, dry_run: bool = True,
                 log.record_rename(sidecar, dest)
                 sidecar.rename(dest)
                 moved += 1
+                done.append({"sidecar": sidecar.name, "paper": pdf.name})
             except OSError as exc:
                 skipped.append({"sidecar": sidecar.name, "reason": str(exc)})
     finally:
@@ -227,8 +314,23 @@ def apply_reconnect(library_root: Path, plan: dict, *, dry_run: bool = True,
             else:
                 log.discard()
                 tx_id = None
-    return {"dry_run": False, "reconnected": moved, "skipped": skipped,
-            "tx_id": tx_id}
+    return {"dry_run": False, "reconnected": moved, "moved": done,
+            "skipped": skipped, "tx_id": tx_id}
+
+
+def apply_trash_reconnect(library_root: Path, plan: dict, *,
+                          dry_run: bool = True, undo_log=None) -> dict:
+    """Put each record whose paper is already in the trash beside it.
+
+    The same move, checks and undo as :func:`apply_reconnect`, on the
+    plan's ``to_trash`` list only. The record lands in the mirror's
+    ``.trash`` shadow, exactly where a retirement through ``logged_move``
+    would have put it.
+    """
+    return apply_reconnect(
+        library_root, plan, dry_run=dry_run, undo_log=undo_log,
+        pairs_key="to_trash",
+        description="Put {n} saved record(s) with their papers in the trash")
 
 
 # ---------------------------------------------------------------------------

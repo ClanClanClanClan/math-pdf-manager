@@ -3022,6 +3022,9 @@ def _orphan_plan_for_session(plan: dict, lib: Path) -> dict:
             "candidates": plan["candidates"],
             "matched": [[rel(sc), rel(pdf)] for sc, pdf in plan["matched"]],
             "ambiguous": [rel(sc) for sc in plan["ambiguous"]],
+            "to_trash": [[rel(sc), rel(pdf)] for sc, pdf in plan.get("to_trash", [])],
+            "to_trash_refused": [[rel(sc), why] for sc, why
+                                 in plan.get("to_trash_refused", [])],
             "unmatched": [rel(sc) for sc in plan["unmatched"]]}
 
 
@@ -3062,9 +3065,12 @@ def _render_orphan_repair(lib: Path, n_orphans: int) -> None:
         if not plan:
             return
         m, a, u = plan["matched"], plan["ambiguous"], plan["unmatched"]
+        t = plan.get("to_trash", [])
         st.markdown(f"**{len(m):,}** can go back to their paper · "
                     f"**{len(a):,}** could belong to more than one · "
-                    f"**{len(u):,}** match no paper in the library")
+                    + (f"**{len(t):,}** belong to papers already in the trash · "
+                       if t else "")
+                    + f"**{len(u):,}** match no paper in the library")
         if m:
             with st.expander(f"The {len(m):,} record(s), and the paper each "
                              "goes back to", expanded=len(m) <= 10):
@@ -3090,6 +3096,11 @@ def _render_orphan_repair(lib: Path, n_orphans: int) -> None:
                     "deletes them; they stay listed until you look at them.")
                 for sc in u[:300]:
                     st.markdown(f"`{sc}`")
+                for sc, why in plan.get("to_trash_refused", []):
+                    st.caption(f"`{_record_label(sc)}` matches a paper in the "
+                               f"trash, but is left alone: {why}.")
+        if t:
+            _offer_records_to_trash(lib, t)
         if not m:
             return
         ok = st.checkbox(f"I've read the list — put these {len(m):,} records "
@@ -3120,6 +3131,62 @@ def _render_orphan_repair(lib: Path, n_orphans: int) -> None:
                        details=details, details_label="Left as they were")
                 st.session_state.pop("orphan_plan", None)
             st.rerun()
+
+
+def _offer_records_to_trash(lib: Path, t: list) -> None:
+    """Records whose paper is already in the trash go there with it.
+
+    Kept apart from "Reconnect": a different decision. These papers were
+    retired by a step that left the record at the old name (until
+    2026-10-09, upgrading a preprint and filing from the inbox did), so the
+    record belongs to no paper in the library. It moves into the trash
+    beside its paper -- where a retirement puts it today -- in one
+    undoable transaction. Nothing on the shelves changes.
+    """
+    with st.expander(f"The {len(t):,} record(s) whose paper is already in "
+                     "the trash", expanded=len(t) <= 10):
+        st.caption("Each paper was moved to the trash by a step that left its "
+                   "record behind. The record joins its paper there; if the "
+                   "paper is ever put back, undo this first so the record "
+                   "comes back with it.")
+        for sc, pdf in t[:300]:
+            st.markdown(f"`{_record_label(sc)}`  \n→ `{pdf}`")
+        if len(t) > 300:
+            st.caption(f"… and {len(t) - 300:,} more")
+    ok = st.checkbox(f"I've read the list — put these {len(t):,} records with "
+                     "their papers in the trash", key="orphan_trash_confirm")
+    _reversible_note()
+    if st.button(f"Put {len(t):,} record(s) with their papers in the trash",
+                 disabled=not ok, key="orphan_trash_apply"):
+        from processing.sidecar_repair import apply_trash_reconnect
+        pairs = {"to_trash": [(lib / sc, lib / pdf) for sc, pdf in t]}
+        ran, res = _locked_call(lib, "Put records with their papers in the trash",
+                                apply_trash_reconnect, lib, pairs, dry_run=False)
+        if ran:
+            n, skipped = res["reconnected"], res["skipped"]
+            details = ([f"moved: {_record_label(x['sidecar'])} — now beside "
+                        f"{x['paper']} in the trash" for x in res.get("moved", [])]
+                       + [f"left as it was: {_record_label(x['sidecar'])} — "
+                          f"{x['reason']}" for x in skipped])
+            if n:
+                _log_activity("conformance.records_to_trash", str(lib),
+                              f"{n} put with their papers in the trash",
+                              res.get("tx_id") or "")
+                st.session_state["conformance_outdated"] = (
+                    f"This report is from before {n:,} record(s) were put "
+                    "with their papers in the trash. Press **Run the check** "
+                    "for the new figures.")
+                _clear_scan_caches()
+            _flash("success" if n and not skipped
+                   else "warning" if n else "error",
+                   f"Put {n:,} of {len(t):,} record(s) with their papers in "
+                   "the trash."
+                   + (f" {len(skipped):,} were left as they were." if skipped
+                      else "")
+                   + (" Undo it from Activity." if n else ""),
+                   details=details, details_label="What moved, and what was left")
+            st.session_state.pop("orphan_plan", None)
+        st.rerun()
 
 
 def render_conformance() -> None:
