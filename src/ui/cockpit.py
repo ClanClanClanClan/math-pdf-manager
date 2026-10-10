@@ -3033,6 +3033,18 @@ def _record_label(rel: str) -> str:
     return name[:-len(".meta.json")] if name.endswith(".meta.json") else name
 
 
+def _still_wrong(res: dict) -> list[str]:
+    """What a reconnect left wrong in the records it moved, one line each."""
+    return [f"{_record_label(x['sidecar'])} — {note}"
+            for x in res.get("moved", []) for note in x.get("still", [])]
+
+
+def _still_wrong_sentence(res: dict) -> str:
+    k = sum(1 for x in res.get("moved", []) if x.get("still"))
+    return (f" {k:,} moved record(s) still name a place where no file is, "
+            "or could not be updated — listed below." if k else "")
+
+
 def _render_orphan_repair(lib: Path, n_orphans: int) -> None:
     """Reconnect saved records stranded by a rename (audit finding 21).
 
@@ -3051,8 +3063,9 @@ def _render_orphan_repair(lib: Path, n_orphans: int) -> None:
             "(in Finder, or by an older tool): the record keeps the old name. "
             "The repair looks for each record's paper by its **contents** — "
             "never by its name — among papers that have no record of their "
-            "own, and moves the record back beside it. Nothing else changes, "
-            "and Activity can undo it.")
+            "own, and moves the record back beside it, where it names the "
+            "paper's file as it is called now. Nothing else changes, and "
+            "Activity can undo it.")
         plan = st.session_state.get("orphan_plan")
         if plan and plan.get("library") != str(lib):
             plan = None
@@ -3113,7 +3126,8 @@ def _render_orphan_repair(lib: Path, n_orphans: int) -> None:
                                     lib, pairs, dry_run=False)
             if ran:
                 n, skipped = res["reconnected"], res["skipped"]
-                details = [f"{x['sidecar']} — {x['reason']}" for x in skipped]
+                details = ([f"{x['sidecar']} — {x['reason']}" for x in skipped]
+                           + _still_wrong(res))
                 if n:
                     _log_activity("conformance.reconnect_records", str(lib),
                                   f"{n} reconnected", res.get("tx_id") or "")
@@ -3127,8 +3141,10 @@ def _render_orphan_repair(lib: Path, n_orphans: int) -> None:
                        f"Reconnected {n:,} of {len(m):,} record(s)."
                        + (f" {len(skipped):,} were left as they were — the "
                           "reasons are below." if skipped else "")
+                       + _still_wrong_sentence(res)
                        + (" Undo it from Activity." if n else ""),
-                       details=details, details_label="Left as they were")
+                       details=details, details_label="Left as they were, "
+                       "and what is still wrong")
                 st.session_state.pop("orphan_plan", None)
             st.rerun()
 
@@ -3167,7 +3183,8 @@ def _offer_records_to_trash(lib: Path, t: list) -> None:
             details = ([f"moved: {_record_label(x['sidecar'])} — now beside "
                         f"{x['paper']} in the trash" for x in res.get("moved", [])]
                        + [f"left as it was: {_record_label(x['sidecar'])} — "
-                          f"{x['reason']}" for x in skipped])
+                          f"{x['reason']}" for x in skipped]
+                       + _still_wrong(res))
             if n:
                 _log_activity("conformance.records_to_trash", str(lib),
                               f"{n} put with their papers in the trash",
@@ -3183,6 +3200,7 @@ def _offer_records_to_trash(lib: Path, t: list) -> None:
                    "the trash."
                    + (f" {len(skipped):,} were left as they were." if skipped
                       else "")
+                   + _still_wrong_sentence(res)
                    + (" Undo it from Activity." if n else ""),
                    details=details, details_label="What moved, and what was left")
             st.session_state.pop("orphan_plan", None)

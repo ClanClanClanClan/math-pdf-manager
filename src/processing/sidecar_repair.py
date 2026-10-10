@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import json
 import logging
+import unicodedata
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -117,12 +118,79 @@ def find_orphans(library_root: Path) -> list[Path]:
     return unclaimed_records(library_root, claimed)
 
 
-def _recorded_hash(sidecar: Path) -> str:
+def _read_record(sidecar: Path) -> dict:
+    """The record's fields; ``{}`` when it cannot be read as an object."""
     try:
-        return json.loads(sidecar.read_text(encoding="utf-8")).get(
-            "content_sha256") or ""
-    except Exception:
-        return ""
+        data = json.loads(sidecar.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _recorded_hash(sidecar: Path) -> str:
+    return _read_record(sidecar).get("content_sha256") or ""
+
+
+def _places_it_answers_for(sidecar: Path, locations):
+    """The entries of ``locations`` naming where this record's paper was
+    when the record was left behind -- ``None`` when that cannot be told
+    (the field is not a list of paths).
+
+    An entry names that place when a paper there would read THIS record,
+    asked of the filesystem by file identity, not by spelling. One rule
+    for every kind of record: an ordinary one, a full-name one of 252-255
+    bytes, and a coded ``.sidecars/<sha1>`` one, whose name is a hash of
+    the old filename -- it cannot be read back, but it can be checked.
+    The hash is of the name as it was spelled, so each entry is also
+    tried in both Unicode forms; case and the other kinds' forms the
+    filesystem folds by itself.
+    """
+    from processing.identity import sidecar_candidates
+    fid = _file_id(sidecar)
+    if (fid is None or not isinstance(locations, list)
+            or not all(isinstance(loc, str) for loc in locations)):
+        return None
+    out = []
+    for loc in locations:
+        # A relative entry means nothing fixed: read against the working
+        # directory, it could answer to a record from one place and not
+        # from another.
+        if not Path(loc).is_absolute():
+            continue
+        forms = {loc, *(unicodedata.normalize(f, loc) for f in ("NFC", "NFD"))}
+        if any(_file_id(c) == fid
+               for form in forms for c in sidecar_candidates(Path(form))):
+            out.append(loc)
+    return out
+
+
+def _name_the_paper_here(pdf: Path, old_places, log) -> list[str]:
+    """After a reconnect: the record, now beside ``pdf``, names it.
+
+    What ``logged_rename`` does to the list, had the rename that stranded
+    the record gone through it: the entry for the old place becomes
+    ``pdf``, which is added if no entry named it. Only ``copy_locations``
+    changes, in the same transaction as the move, so undo puts the record
+    back byte for byte. Entries the record does not answer to are not
+    touched -- they may be a topic copy, or a place from an older history
+    this move knows nothing about -- and no other file is renamed (unlike
+    ``logged_rename``, which also renames topic copies: the reconnect
+    moves a record, nothing else).
+
+    Returns what is still wrong, in words; an empty list when nothing is.
+    """
+    from processing.identity import record_location, repath_copy_locations
+    if old_places is None:
+        return ["its list of the paper's places could not be read, so it "
+                "was left as it was"]
+    try:
+        repath_copy_locations(pdf, old_path=Path(old_places[0]) if old_places else None,
+                              new_path=pdf, undo_log=log)
+    except OSError as exc:            # the write; the list holds only paths
+        return [f"its list of the paper's places could not be updated: {exc}"]
+    now = _read_record(record_location(pdf)).get("copy_locations", [])
+    return [f"it still lists a place where no file is: {loc}"
+            for loc in now if _file_id(Path(loc)) is None]
 
 
 def plan_reconnect(library_root: Path) -> dict:
@@ -250,6 +318,14 @@ def apply_reconnect(library_root: Path, plan: dict, *, dry_run: bool = True,
     skipped, because that PDF already has a record and clobbering it
     would destroy a good one to save a stale one.
 
+    The record then names the paper where it is now: the entry of its
+    ``copy_locations`` for the place it was left at is replaced, in the
+    same transaction (:func:`_name_the_paper_here`). A record that kept
+    the old place there named a file that no longer exists (9 of the 10
+    such records in the library, measured 2026-10-10, were orphans left
+    by a rename). Each moved item's ``still`` lists in words what is left
+    wrong -- an entry still naming no file, a list that could not be read.
+
     ``pairs_key`` picks which of the plan's lists to act on -- only that
     one: the papers on the shelves (``matched``) and those already in the
     trash (``to_trash``) are separate decisions.
@@ -294,19 +370,26 @@ def apply_reconnect(library_root: Path, plan: dict, *, dry_run: bool = True,
                 skipped.append({"sidecar": sidecar.name, "reason":
                                 "that paper already has a record"})
                 continue
-            want = _recorded_hash(sidecar)
+            record = _read_record(sidecar)
+            want = record.get("content_sha256")
             if not want or compute_content_hash(pdf) != want:
                 skipped.append({"sidecar": sidecar.name, "reason":
                                 "the paper's contents no longer match the record"})
                 continue
+            # Asked BEFORE the move: afterwards the record answers to the
+            # paper's new place, not its old one.
+            old_places = _places_it_answers_for(
+                sidecar, record.get("copy_locations", []))
             try:
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 log.record_rename(sidecar, dest)
                 sidecar.rename(dest)
-                moved += 1
-                done.append({"sidecar": sidecar.name, "paper": pdf.name})
             except OSError as exc:
                 skipped.append({"sidecar": sidecar.name, "reason": str(exc)})
+                continue
+            moved += 1
+            done.append({"sidecar": sidecar.name, "paper": pdf.name,
+                         "still": _name_the_paper_here(pdf, old_places, log)})
     finally:
         if own:
             if log.has_operations():

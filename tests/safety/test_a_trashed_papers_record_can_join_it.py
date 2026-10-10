@@ -177,9 +177,12 @@ def test_the_record_joins_its_paper_and_one_undo_brings_it_back(lib):
     before = record.read_bytes()
     out = apply_trash_reconnect(lib, plan_reconnect(lib), dry_run=False)
     assert out["reconnected"] == 1 and out["skipped"] == []
-    assert out["moved"] == [{"sidecar": record.name, "paper": trashed.name}]
+    assert out["moved"] == [{"sidecar": record.name, "paper": trashed.name,
+                             "still": []}]
     assert find_sidecar(trashed) == sidecar_path(trashed)
-    assert sidecar_path(trashed).read_bytes() == before
+    moved = json.loads(sidecar_path(trashed).read_text())
+    assert moved == {**json.loads(before), "copy_locations": [str(trashed)]}, (
+        "the record names its paper where it is now, and nothing else changed")
     assert not record.exists() and find_orphans(lib) == []
     log = UndoLog(log_dir=lib / ".operation_log")
     [tx] = log.list_transactions()

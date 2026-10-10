@@ -991,7 +991,7 @@ def remove_dead_location(
 def repath_copy_locations(
     sidecar_pdf_path: Path,
     *,
-    old_path: Path,
+    old_path: Optional[Path],
     new_path: Path,
     undo_log=None,  # type: ignore[no-untyped-def]
 ) -> bool:
@@ -1007,26 +1007,44 @@ def repath_copy_locations(
     ``undo_log`` the edit is recorded, so undoing the move also puts the
     old list back: it used to be written outside the log, and an undone
     move left the record naming the place the paper had been moved TO.
+
+    ``old_path=None``: where the paper was is not known (a reconnected
+    record none of whose entries it answers to). Nothing is swapped;
+    ``new_path`` is only added if missing.
     """
     if not sidecar_path(sidecar_pdf_path).exists():
         return False
     identity = load_sidecar(sidecar_pdf_path)
     if identity.is_new():
         return False
-    old_str = str(old_path)
+    out = repathed_locations(identity.copy_locations, old_path=old_path,
+                             new_path=new_path)
+    if out is None:
+        return False
+    return bool(patch_record(sidecar_pdf_path, {"copy_locations": out},
+                             undo_log=undo_log))
+
+
+def repathed_locations(locations, *, old_path: Optional[Path],
+                       new_path: Path) -> Optional[list]:
+    """``locations`` with ``old_path`` swapped for ``new_path`` -- the rule
+    :func:`repath_copy_locations` writes, computed without writing (a
+    read-only measurement can ask it). ``None`` when nothing would change.
+    """
     new_str = str(new_path)
     # NFC on both sides (non-negotiable 8): macOS hands back decomposed
     # names, and a caller may pass composed ones. Compared exactly, the old
     # entry was not found, survived beside the new one, and the record
     # listed the paper twice -- once under a name it no longer has.
-    old_key, new_key = _nfc_str(old_str), _nfc_str(new_str)
-    keys = {_nfc_str(loc) for loc in identity.copy_locations}
+    old_key = None if old_path is None else _nfc_str(str(old_path))
+    new_key = _nfc_str(new_str)
+    keys = {_nfc_str(loc) for loc in locations}
     if old_key not in keys and new_key in keys:
-        return False
+        return None
     changed = False
     out: list[str] = []
     seen: set[str] = set()
-    for loc in identity.copy_locations:
+    for loc in locations:
         repl = new_str if _nfc_str(loc) == old_key else loc
         if _nfc_str(repl) in seen:
             changed = True
@@ -1038,10 +1056,7 @@ def repath_copy_locations(
     if new_key not in seen:
         out.append(new_str)
         changed = True
-    if not changed:
-        return False
-    return bool(patch_record(sidecar_pdf_path, {"copy_locations": out},
-                             undo_log=undo_log))
+    return out if changed else None
 
 
 # Module-level alias to keep call sites readable: ``load_sidecar(pdf)``
