@@ -438,6 +438,31 @@ def _current_watch(inbox: Path):
     return (st.st_dev, st.st_ino, birth)
 
 
+def _auto_reconnect(library_root: Path) -> dict:
+    """One timed pass of ``sidecar_repair.auto_reconnect``; never raises.
+
+    Whatever happens is logged in words; a failure must not take the
+    filer down with it.
+    """
+    try:
+        from processing.sidecar_repair import auto_reconnect
+        res = auto_reconnect(library_root)
+    except Exception as exc:                      # keep filing regardless
+        logger.error("Putting back saved details failed: %s", exc)
+        return {"error": str(exc)}
+    if res.get("busy"):
+        logger.info("Saved details: the library was busy; will retry.")
+    elif res.get("reconnected"):
+        logger.info("Saved details put back for %d paper(s) renamed outside "
+                    "the app (transaction %s).", res["reconnected"], res["tx_id"])
+    for name, why in res.get("left", []):
+        logger.info("Saved details left for Conformance: %s -- %s", name, why)
+    for item in res.get("skipped", []):
+        logger.info("Saved details not put back: %s -- %s",
+                    item.get("sidecar"), item.get("reason"))
+    return res
+
+
 def run_daemon(config: WatcherConfig, *, dry_run: bool = False) -> None:
     """Run the filesystem watcher daemon."""
     config.ensure_dirs()
@@ -493,6 +518,11 @@ def run_daemon(config: WatcherConfig, *, dry_run: bool = False) -> None:
     watch = _current_watch(config.inbox_dir)
     last_check = time.monotonic()
     CHECK_EVERY = 30.0
+    # Saved details stranded by a rename outside the app are put back by
+    # themselves, when certain (owner's decision 6, 2026-10-14). The first
+    # run waits a few minutes so a restart does not compete with the inbox.
+    RECONNECT_EVERY = 3600.0
+    last_reconnect = time.monotonic() - RECONNECT_EVERY + 300.0
 
     # Say what we are watching. The cockpit's badge reads this instead of
     # re-deriving the inbox from the config, which can disagree with what
@@ -511,6 +541,11 @@ def run_daemon(config: WatcherConfig, *, dry_run: bool = False) -> None:
         while observer.is_alive():
             handler.process_settled()
             time.sleep(config.poll_interval)
+
+            if (not dry_run
+                    and time.monotonic() - last_reconnect >= RECONNECT_EVERY):
+                last_reconnect = time.monotonic()
+                _auto_reconnect(config.library_root)
 
             if time.monotonic() - last_check < CHECK_EVERY:
                 continue

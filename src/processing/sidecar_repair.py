@@ -452,6 +452,63 @@ def apply_trash_reconnect(library_root: Path, plan: dict, *,
         description="Put {n} saved record(s) with their papers in the trash")
 
 
+AUTO_RECONNECT_DESCRIPTION = ("Saved details put back after a rename outside "
+                              "the app: {n} paper(s)")
+
+
+def auto_reconnect(library_root: Path) -> dict:
+    """Put back, unasked, every record whose paper is CERTAIN.
+
+    The owner's decision 6, 2026-10-14: a paper renamed in Finder (here or
+    on his other Mac, through Dropbox) leaves its saved details under the
+    old name -- one did at 09:22 that morning. The auto-filer now runs
+    this on a timer. "Certain" is exactly the reconnect's own rule, unchanged:
+    same contents (fingerprint), one candidate only, and that paper has no
+    record of its own. On top of it, nothing is done to the archival
+    collections (why_not_proposable, at the record's old place and at the
+    paper) and nothing the plan predicts would still be wrong afterwards
+    (``still``); those stay for Conformance, with the reason.
+
+    Never waits for the library lock: if the filer or the cockpit holds
+    it, this run does nothing and says so; the next one retries. One
+    undoable transaction per run, visible on the Activity page.
+
+    Returns ``{"orphans", "reconnected", "left": [(record name, why)],
+    "skipped", "tx_id", "busy"}``.
+    """
+    from processing.library_scope import why_not_proposable
+    from processing.locking import LibraryLock
+
+    plan = plan_reconnect(library_root)
+    warned = {str(sc) for sc, _words in plan.get("still") or []}
+    certain, left = [], []
+    for sc, pdf in plan.get("matched", []):
+        why = (why_not_proposable(library_root, pdf)
+               or why_not_proposable(library_root, _former_place(library_root, Path(sc))))
+        if why is not None:
+            left.append((Path(sc).name, why))
+        elif str(sc) in warned:
+            left.append((Path(sc).name, "something would still be wrong afterwards"))
+        else:
+            certain.append((sc, pdf))
+    out = {"orphans": plan.get("orphans", 0), "reconnected": 0, "left": left,
+           "skipped": [], "tx_id": None, "busy": False}
+    if not certain:
+        return out
+    lock = LibraryLock(library_root)
+    if not lock.acquire(blocking=False):
+        out["busy"] = True
+        return out
+    try:
+        res = apply_reconnect(library_root, {"matched": certain}, dry_run=False,
+                              description=AUTO_RECONNECT_DESCRIPTION)
+    finally:
+        lock.release()
+    out.update(reconnected=res["reconnected"], skipped=res["skipped"],
+               tx_id=res["tx_id"])
+    return out
+
+
 # ---------------------------------------------------------------------------
 # Papers with TWO records (the older full-name one and the coded one)
 # ---------------------------------------------------------------------------
