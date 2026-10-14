@@ -245,8 +245,16 @@ _FIELD_VALUES = st.one_of(st.text(max_size=8), st.integers(-3, 3), st.booleans()
                           st.lists(st.text(max_size=5), max_size=2), st.none())
 
 
+# too_slow: this test failed once, 2026-10-14, inside the commit gate while
+# the machine ran ~7x slower than usual (305 s for a 40 s suite); it passed
+# 4 full gate runs and 40 isolated seeded runs after, and its saved example
+# replays clean -- so not the data. Hypothesis' too_slow health check still
+# fires with deadline=None and is the only load-dependent failure here; the
+# gate keeps only 20 lines, so this is an inference, not a reading. It
+# concerns how fast examples are GENERATED, never what is asserted.
 @settings(max_examples=60, deadline=None,
-          suppress_health_check=[HealthCheck.function_scoped_fixture])
+          suppress_health_check=[HealthCheck.function_scoped_fixture,
+                                 HealthCheck.too_slow])
 @given(drop=st.sets(st.sampled_from(sorted(OLD_SCHEMA)), max_size=6),
        extra=st.dictionaries(st.text("abcxyz_", min_size=1, max_size=6),
                              _FIELD_VALUES, max_size=3),

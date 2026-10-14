@@ -238,7 +238,8 @@ def _fold(s: str) -> str:
     pair, and no normalisation form would have equated them.
     """
     from processing.apostrophes import fold_marks
-    nfkd = unicodedata.normalize("NFD", fold_marks(s))
+    from processing.quote_marks import fold_quotes
+    nfkd = unicodedata.normalize("NFD", fold_marks(fold_quotes(s)))
     return "".join(c for c in nfkd if not unicodedata.combining(c)).casefold()
 
 

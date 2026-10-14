@@ -226,8 +226,12 @@ def check_filename(
     # Get language from the full filename for better context
     try:
         lang = detect(filename)
+        quote_lang = lang
     except (LangDetectException, ValueError):
         lang = "en"
+        # Quotation marks are never set on a guess: an undetectable
+        # language keeps its straight marks (owner's rule, 2026-10-14).
+        quote_lang = None
     debug_print(f"Detected language from full filename: {lang}")
 
     # Find phrase spans for exceptions
@@ -240,7 +244,7 @@ def check_filename(
 
     # Enhanced quote processing that excludes contractions
     title_wo_ext_processed, quote_flags = fix_and_flag_quotes(
-        title_wo_ext, lang, math_regions, phrase_spans, debug=debug
+        title_wo_ext, quote_lang, math_regions, phrase_spans, debug=debug
     )
     for flag in quote_flags:
         result.add_message("error", flag)

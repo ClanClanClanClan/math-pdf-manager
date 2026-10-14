@@ -13,50 +13,17 @@ from .unicode_utils import iterate_nonmath_segments, is_in_spans
 from .math_utils import should_preserve_digit
 
 
-# Language-specific quote conversion rules
+# Straight SINGLE quote handling per language (apostrophes; see
+# convert_straight_quotes_to_proper). Double quotation marks are not here:
+# they follow the owner's convention in processing.quote_marks (2026-10-14),
+# which replaced this table's American "en" opener, its closer table, and
+# its German/Spanish/Italian conversions.
 QUOTE_CONVERSIONS = {
-    "en": {
-        '"': "\u201c",  # Straight double quote → Left double quotation mark
-        "'": "\u2019",  # Straight single quote → Right single quotation mark (for possessives)
-    },
-    "fr": {
-        '"': "\u00ab",  # Straight double quote → Left-pointing double angle quotation mark
-        "'": "\u2019",  # Straight single quote → Right single quotation mark
-    },
-    "de": {
-        '"': "\u201e",  # Straight double quote → Double low-9 quotation mark
-        "'": "\u2019",  # Straight single quote → Right single quotation mark
-    },
-    "es": {
-        '"': "\u00ab",  # Straight double quote → Left-pointing double angle quotation mark
-        "'": "\u2019",  # Straight single quote → Right single quotation mark
-    },
-    "it": {
-        '"': "\u00ab",  # Straight double quote → Left-pointing double angle quotation mark
-        "'": "\u2019",  # Straight single quote → Right single quotation mark
-    },
-}
-
-#: The CLOSING double quote for each language above.
-#:
-#: The table beside this one gives only OPENERS, and
-#: ``convert_straight_quotes_to_proper`` used to emit that opener for
-#: EVERY straight double quote in the string -- so a quoted paper title
-#: came out of the ingest namer as "Commentary on <<Longest increasing
-#: subsequences<< by Aldous", never once closing. Verified live before
-#: the fix, in all three languages, on the real function.
-#:
-#: This is the ingest path (arxivbot CMO.get_canonical_filename ->
-#: _validate_filename -> check_filename -> fix_and_flag_quotes), so it
-#: named every new paper. The MOVE path was never affected:
-#: processing/move_normalizer takes the corrected author block and keeps
-#: the title verbatim, which is why only one such filename reached disk.
-QUOTE_CLOSERS = {
-    "en": "\u201d",   # ” right double quotation mark
-    "fr": "\u00bb",   # » right-pointing double angle
-    "de": "\u201c",   # “ German closes with the LEFT double mark
-    "es": "\u00bb",   # »
-    "it": "\u00bb",   # »
+    "en": {"'": "\u2019"},  # Right single quotation mark (possessives)
+    "fr": {"'": "\u2019"},
+    "de": {"'": "\u2019"},
+    "es": {"'": "\u2019"},
+    "it": {"'": "\u2019"},
 }
 
 # Number word mappings
@@ -578,7 +545,24 @@ def convert_straight_quotes_to_proper(text: str, lang: str, regions: List[Tuple[
         Text with proper quotes
     """
     debug_print(f"Converting straight quotes for language '{lang}' in text: '{text}'")
-    
+
+    # The owner's convention (2026-10-14, "1B") lives in ONE place,
+    # processing.quote_marks: English ‘outer’ with “inner”, French « outer »
+    # with ‹ inner ›, anything else left as it is. This table used to give
+    # English the American “…” and convert German, Spanish and Italian too.
+    # Straight single quotes keep their old handling below (apostrophes).
+    if '"' in text:
+        # A quote inside mathematics or a protected phrase is not ours to
+        # touch. Which languages convert is decided in quote_marks alone.
+        if any(start <= i < end for i, ch in enumerate(text) if ch == '"'
+               for start, end in regions + spans):
+            return text
+        from processing.quote_marks import requote
+        res = requote(text, lang)
+        if res.status != "changed":
+            return text
+        text = res.title
+
     if lang not in QUOTE_CONVERSIONS:
         debug_print(f"No quote conversion rules for language '{lang}', returning unchanged")
         return text
@@ -588,27 +572,13 @@ def convert_straight_quotes_to_proper(text: str, lang: str, regions: List[Tuple[
     # ``.replace(straight, proper)`` approach can't tell apostrophes from
     # closing single-quotes — context matters for "don't" vs "'word'".
     result_chars = list(text)
-    # True while the next straight double quote should OPEN a quotation.
-    want_open = True
 
     for i, char in enumerate(text):
         # Skip if in math region or exception span
         if any(start <= i < end for start, end in regions + spans):
             continue
 
-        if char == '"':
-            # Alternate: the first straight double OPENS, the next CLOSES.
-            # This used to be `conversions['"']` unconditionally, which
-            # emitted an opener every time and could never produce a
-            # closing mark in any language.
-            result_chars[i] = (conversions['"'] if want_open
-                               else QUOTE_CLOSERS.get(lang, conversions['"']))
-            debug_print(
-                f"Converted straight double quote at position {i} "
-                f"({'opening' if want_open else 'closing'})")
-            want_open = not want_open
-
-        elif char == "'":
+        if char == "'":
             # Only convert if it's NOT a contraction apostrophe
             if not is_contraction_apostrophe(text, i):
                 result_chars[i] = conversions["'"]

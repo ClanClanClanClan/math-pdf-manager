@@ -66,7 +66,11 @@ def search_index(index: list, query: str, *, limit: Optional[int] = None) -> lis
     export held them all (cockpit audit, re-measured 2026-10-09). Paging
     what is LISTED is the page's job, not the search's.
     """
-    terms = [_fold(t) for t in query.split() if t.strip()]
+    # Quotes are folded over the WHOLE query before it is split: split
+    # first, and a typed ‘hot hand’ leaves its closing ’ stuck to "hand’",
+    # which then matches nothing.
+    from processing.quote_marks import fold_quotes
+    terms = [_fold(t) for t in fold_quotes(query).split() if t.strip()]
     if not terms:
         return []
     out = []
