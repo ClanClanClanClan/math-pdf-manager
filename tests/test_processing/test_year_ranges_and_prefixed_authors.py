@@ -146,3 +146,36 @@ def test_a_veto_still_wins_behind_a_prefix(monkeypatch):
     monkeypatch.setattr(A, "load_map", lambda *a, **k: TABLE)
     name = "103-le Gall, J.-F. - Marches aléatoires.pdf"
     assert canonicalise_filename(name) == (name, False)
+
+
+# --------------------------- the 2026-10-14 rulings, and Tsirel’son
+
+def test_tsirelson_is_reached_whichever_apostrophe_the_file_carries():
+    """The ruling "tsirel'son" (U+0027) never matched the file "Tsirel’son,
+    B. S." (U+2019), so he kept a spelling he had ruled against himself.
+    The lookup deliberately does not fold apostrophes (a guard keeps the
+    fold out of this module), so the second spelling is its own entry."""
+    for mark in ("'", "’"):
+        name = f"030-1 - Tsirel{mark}son, B. S., Werner, W. - Lectures.pdf"
+        assert canonicalise_filename(name) == (
+            "030-1 - Tsirelson, B. S., Werner, W. - Lectures.pdf", True), mark
+
+
+def test_the_titles_apostrophe_is_never_touched():
+    out, _ = canonicalise_filename("Gal'chuk, L. I. - Tsirel’son’s equation.pdf")
+    assert out.endswith(" - Tsirel’son’s equation.pdf"), "titles are never touched"
+
+
+@pytest.mark.parametrize("name,expected", [
+    ("Klebaner, F. C., Lipster, R. S. - When.pdf", "Klebaner, F. C., Liptser, R. S. - When.pdf"),
+    ("Levental, S., Skorohod, A. V. - A condition.pdf", "Levental, S., Skorokhod, A. V. - A condition.pdf"),
+    ("Shiryayev, A. N. - Selected works.pdf", "Shiryaev, A. N. - Selected works.pdf"),
+    ("Khintchine, A. - Metrische Kettenbruchprobleme.pdf", "Khinchin, A. - Metrische Kettenbruchprobleme.pdf"),
+    ("465-Mc Gill, P. - Integral representation.pdf", "465-McGill, P. - Integral representation.pdf"),
+    ("Jedidi, W., Jurek, Z. J., al Romian, J. - Some.pdf", "Jedidi, W., Jurek, Z. J., Al Romian, J. - Some.pdf"),
+    ("al Rachid, H., Bossy, M. - New.pdf", "AlRachid, H., Bossy, M. - New.pdf"),
+    ("al Hadad, J., Palmowski, Z. - Pricing.pdf", "Al-Hadad, J., Palmowski, Z. - Pricing.pdf"),
+])
+def test_the_rulings_of_2026_10_14_are_in_force(name, expected):
+    """Approved by the owner; checked against each paper's title page or archive."""
+    assert canonicalise_filename(name) == (expected, True)

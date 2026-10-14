@@ -274,8 +274,27 @@ author_surnames:
   #     was read off this library's own PDF dedication page.
   "kolokol'tsov": "Kolokoltsov"   # 53 files; his own Warwick CV has 0 apostrophe forms and ~130 bare
   "tsirel'son": "Tsirelson"   # 5 files; he ruled on it himself, in writing, on his own FAQ page
+  "tsirel’son": "Tsirelson"   # 1 file (Saint-Flour 030-1); same man, written with U+2019 -- the
+                              # lookup does not fold apostrophes (a guard test keeps the fold out of
+                              # this module: ʹ in Telʹksnis is a soft sign, a letter), so list it
   "mel'nikov": "Melnikov"   # 5 files; arXiv self-submissions + his own CRC monograph title pages
   "venttsel'": "Wentzell"   # 1 file; his own family spelling, and LC files him under it
   "prats'ovytyĭ": "Pratsiovytyi"   # 18 files; ORCID 0000-0001-6130-9413 + his own arXiv title page
   "prats'ovytyi": "Pratsiovytyi"   # 1 file; same man, the library's other spelling of him
   "telʹksnis": "Telksnys"   # 1 file; Lithuanian, round-tripped through Cyrillic; LC's own note gives "t.p. (L. Telksnys)"
+
+  # --- Transliteration: ONE spelling per person in the author block
+  #     (owner's ruling, asked 2026-09-05, approved 2026-10-14). Titles are
+  #     never respelled ("Skorohod integral" stays). Rename only to merge
+  #     with the same person's existing key, or when the block is wrong.
+  "lipster": "Liptser"   # 4 files; Липцер is Lipt-ser under every romanisation; his own byline "Robert S. Liptser"
+  "skorohod": "Skorokhod"   # 3 files (incl. Séminaire 28, 21-Jacod); merges with Skorokhod, A. V.
+  "shiryayev": "Shiryaev"   # 2 files (Kolmogorov Selected Works II, III); merges with Shiryaev, A. N. (56)
+  "khintchine": "Khinchin"   # 2 files; merges with Khinchin, A. Ya. -- the weakest call: his 1934-35 bylines read "A. Khintchine"
+
+  # --- Checked 2026-10-14 against each paper's title page or archive record
+  #     (approved by the owner the same day).
+  "mc gill": "McGill"   # 5 Strasbourg exposés; NUMDAM prints "Mc Gill", his other papers "McGill"; merges with 2 McGill, P. (Paul McGill)
+  "al romian": "Al Romian"   # 1 file; title page "Jumanah Al Romian" -- SPACED
+  "al rachid": "AlRachid"   # 1 file; title page and arXiv 1901.05507 "Houssam AlRachid" -- ONE word
+  "al hadad": "Al-Hadad"   # 1 file; title page "Jonas Al-Hadad", jonas.al-hadad@pwr.edu.pl -- HYPHEN

@@ -229,6 +229,24 @@ RESPELLINGS = {
     # "Koc University". Both library files are hers.
     "caglar": "Çağlar",
     "çaglar": "Çağlar",
+    # The same man as "tsirel'son" above, written with U+2019 on the one
+    # Saint-Flour volume; the lookup does not fold apostrophes.
+    "tsirel’son": "Tsirelson",
+    # TRANSLITERATION: one spelling per person in the author block -- the
+    # owner's ruling (asked 2026-09-05, approved 2026-10-14). Each merges
+    # with the same person's existing key in this library; titles are never
+    # respelled. Evidence: agent-results/NAMING-RULING.md, section 3.
+    #   Lipster: Липцер romanises Lipt-ser under every system; no system
+    #     yields "Lipster"; his own Latin byline is "Robert S. Liptser".
+    "lipster": "Liptser",
+    #   Skorohod: merges with "Skorokhod, A. V.", the library's key for him.
+    "skorohod": "Skorokhod",
+    #   Shiryayev: the Kolmogorov Selected Works II and III (verified from
+    #     their cached first pages); merges with "Shiryaev, A. N." (56 files).
+    "shiryayev": "Shiryaev",
+    #   Khintchine: merges with "Khinchin, A. Ya."; the weakest call -- his
+    #     own 1934-35 Latin bylines read "A. Khintchine".
+    "khintchine": "Khinchin",
 }
 
 
