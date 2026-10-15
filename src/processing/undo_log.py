@@ -99,6 +99,24 @@ def restore_blocker(dst: Path, src: Path) -> str:
     return ""
 
 
+def copy_undo_blocker(dst: Path, src: Path) -> str:
+    """Why undoing the copy ``src`` -> ``dst`` would not happen, or "".
+
+    restore_blocker's counterpart for copies, asked by the dry run and the
+    live run alike.  The preview used to check only that the copy was still
+    there, so it promised "WOULD DELETE COPY" for an upgrade's published
+    PDF -- whose original, the download, is always gone -- and the live
+    run then refused it: the preview of undoing every upgrade disagreed
+    with the undo (found 2026-10-15).
+    """
+    if not dst.exists():
+        return f"SKIP: copy already gone: {dst}"
+    if not src.exists():
+        return (f"REFUSED: the original is gone, so this copy is the only "
+                f"version left: {dst}")
+    return ""
+
+
 class UndoLog:
     """Records file operations and provides undo functionality."""
 
@@ -421,11 +439,10 @@ class UndoLog:
             elif op["type"] == "copy":
                 # Undo copy: remove the copy
                 if dry_run:
-                    gone = not dst.exists()
+                    blocker = copy_undo_blocker(dst, src)
                     results.append(
-                        {"action": (f"SKIP: copy already gone: {dst}" if gone
-                                    else f"WOULD DELETE COPY: {dst}"),
-                         "ok": not gone})
+                        {"action": blocker or f"WOULD DELETE COPY: {dst}",
+                         "ok": not blocker})
                 else:
                     # DO NOT UNLINK. This is the only hard delete of a
                     # library PDF in src/, and it has already cost a paper:
@@ -444,12 +461,10 @@ class UndoLog:
                     # copy is only safe if the thing it was copied from
                     # survives; otherwise "remove the duplicate" removes the
                     # last remaining version.
-                    if dst.exists() and not src.exists():
-                        results.append(
-                            {"action": (f"REFUSED: the original is gone, so this "
-                                        f"copy is the only version left: {dst}"),
-                             "ok": False})
-                    elif dst.exists():
+                    blocker = copy_undo_blocker(dst, src)
+                    if blocker:
+                        results.append({"action": blocker, "ok": False})
+                    else:
                         retired = _retire_to_trash(dst, "undone_copies")
                         results.append({"action": f"RETIRED COPY: {dst} → {retired}",
                                         "ok": True})
@@ -483,8 +498,6 @@ class UndoLog:
                                 "could not clean dead location %s "
                                 "from %s sidecar: %s", dst, src, exc,
                             )
-                    else:
-                        results.append({"action": f"SKIP: copy already gone: {dst}", "ok": False})
 
             elif op["type"] == "rename":
                 # Undo rename: rename back
@@ -509,9 +522,16 @@ class UndoLog:
         #
         # A partial undo now stays RETRYABLE, and remembers which
         # operations already came back so a retry is not a double-undo.
+        #
+        # "Came back" is each row's ``ok``, the same flag the cockpit counts.
+        # This used to be a second rule -- the row's text starting with SKIP
+        # or CANNOT -- which missed "REFUSED: the original is gone" (undoing
+        # a copy, e.g. an upgrade's published PDF) and "FAILED to restore
+        # sidecar": the page said "Undone in part ... so you can retry" while
+        # the log marked the transaction fully undone and Activity offered
+        # no retry (found 2026-10-15 by pressing Undo on an upgrade).
         if not dry_run:
-            failed = [r for r in results
-                      if str(r.get("action", "")).startswith(("SKIP", "CANNOT"))]
+            failed = [r for r in results if not r.get("ok")]
             tx["undone"] = not failed
             tx["undone_at"] = datetime.now(timezone.utc).isoformat()
             if failed:

@@ -175,10 +175,26 @@ treat them as rules, not suggestions.
 
 ## Known and open, ranked
 
-1. **10 library-changing cockpit callbacks have never been executed by a
-   test** — `_undo_transaction` 0 of 25 statements, `_apply` 0/10,
-   `render_spelling` 0/85 (and it calls `apply_renames(dry_run=False)`).
-   Reintroducing the exact bug commit `323cdc1` fixed leaves the suite green.
+1. **Every library-changing cockpit button is now pressed by a test
+   (2026-10-15); what that turned up is still open.** Measured: 37 buttons
+   move, rename, retire or rewrite something — found by AST
+   (`tests/ui/library_write_sites.py`), not by eye. The suite used to execute
+   the writing line of 5 of them; now 37/37, each pressed on a synthetic
+   library with the disk checked and ↶ Undo pressed on Activity
+   (`tests/ui/test_*buttons*.py`, `test_undo_button.py`). `cockpit.py` lines
+   covered 55.4% → 72.1%. `tests/safety/test_every_library_writing_button_is_pressed.py`
+   (pre-commit) fails on any new writing button that no test presses.
+   (The old figures here had gone stale: `_undo_transaction` was already
+   19/19 and the 323cdc1 regression already failed 2 tests, through a stubbed
+   undo log; it now also fails against the real one.) Fixed on the way, in
+   `undo_log`: an undo that left something behind was marked fully done when
+   the leftover was a REFUSED copy (every upgrade), and the preview of undoing
+   a copy could not show that refusal. **Still open:** undoing an upgrade
+   cannot take the published PDF off the shelf (said honestly now, as a
+   partial undo); a retried partial undo never reaches "done" even when
+   everything came back; not in the undo log at all — Mark done (×3), Home
+   "Look again", Upgrade "Flag for manual", "Fill in missing details",
+   "Cache abstracts now"; undoing a topic filing leaves a blank record.
 2. **Three slow screens**: Sort Queue 10–11 s per paper (a failed arXiv
    lookup is never cached), Home/Attention 12–76 s, Conformance ~3.5 min
    against a label saying "about a minute".
