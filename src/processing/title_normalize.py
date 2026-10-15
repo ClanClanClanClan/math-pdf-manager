@@ -377,12 +377,20 @@ def propose_title_case(
     after_open_quote = False       # previous token was a bare opening quote
     in_quote = False               # inside a "…" / «…» / “…” span
 
-    # Quote characters that OPEN and CLOSE a cited span.  The apostrophe
-    # is deliberately absent — it is a possessive ("Girsanov's", "l'") far
-    # more often than a quote, and toggling on it would silently freeze
-    # the rest of the title.
-    _QUOTE_OPEN = "«“"
-    _QUOTE_CLOSE = "»”"
+    # Quote characters that OPEN and CLOSE a cited span. The straight
+    # apostrophe is deliberately absent -- it is a possessive ("Girsanov's",
+    # "l'") far more often than a quote, and toggling on it would silently
+    # freeze the rest of the title.
+    #
+    # Since the owner's quote ruling (2026-10-14) English titles quote with
+    # ‘outer’ and “inner”, French with « outer » and ‹ inner ›, so the span
+    # is a STACK, not a flag: the inner “…” closing must not end the outer
+    # ‘…’. An opening ‘ is never an apostrophe; a ’ closes a ‘ span only
+    # where no letter follows it ("Itô’s" inside a quotation stays inside).
+    # Without this, converting ‘Physics and Derivatives’ from straight
+    # quotes made the caser propose "Physics and derivatives".
+    _QUOTE_OPEN = "«“‹‘"
+    _QUOTE_CLOSE = "»”›"
     _QUOTE_TOGGLE = "\""
 
     # Bracketed BIBLIOGRAPHIC spans are citations, not prose: the journal
@@ -446,16 +454,26 @@ def propose_title_case(
     def _in_citation(pos: int) -> bool:
         return any(a <= pos < b for a, b in _cite_spans)
 
-    def _quote_state(tok: str, state: bool) -> bool:
-        """Update in-quote state over one token's characters."""
-        for ch in tok:
+    def _quote_state(tok: str, state) -> tuple:
+        """The open quotation marks after one token's characters, as a
+        stack (truthy while inside a quotation)."""
+        stack = list(state or ())
+        for j, ch in enumerate(tok):
             if ch in _QUOTE_OPEN:
-                state = True
+                stack.append(ch)
             elif ch in _QUOTE_CLOSE:
-                state = False
+                if stack:
+                    stack.pop()
+            elif ch == "’":
+                if stack and stack[-1] == "‘" and not (
+                        j + 1 < len(tok) and tok[j + 1].isalpha()):
+                    stack.pop()
             elif ch in _QUOTE_TOGGLE:
-                state = not state
-        return state
+                if stack and stack[-1] == ch:
+                    stack.pop()
+                else:
+                    stack.append(ch)
+        return tuple(stack)
 
     # Absolute offset of each token in ``title`` — the citation spans are
     # measured on the whole string, but the loop below works token by

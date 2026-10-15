@@ -503,6 +503,46 @@ class TestQuotedSpansArePreserved:
         p = propose_title_case("« Le pari » mis à l’épreuve par les théories")
         assert "» mis à" in p.proposed
 
+    # ---- the owner's convention (2026-10-14): English ‘outer’ “inner”,
+    #      French « outer » ‹ inner ›. Measured: with straight quotes
+    #      converted, the caser proposed "Physics and derivatives",
+    #      "Math-for-industry" and "the barrier theorem" -- because ‘ did
+    #      not open a span.
+
+    # Without corpus statistics the caser lowers only FUNCTION words, so
+    # each probe puts capitalised ones (Of, The, And) where protection ends.
+
+    @pytest.mark.parametrize("title,keeps", [
+        ("Special issue ‘Physics Of The Derivatives’, interview", "‘Physics Of The Derivatives’"),
+        ("Proceedings of the forum ‘Math-for-Industry’ 2018", "‘Math-for-Industry’"),
+        ("Notes on ‹ Theory Of The Game › en bref", "‹ Theory Of The Game ›"),
+        ("Notes on « Theory Of The Game » en bref", "« Theory Of The Game »"),
+    ])
+    def test_english_single_and_french_inner_quotes_protect_the_span(self, title, keeps):
+        assert keeps in propose_title_case(title).proposed
+
+    def test_an_inner_quotation_does_not_close_the_outer_one(self):
+        p = propose_title_case("Comment on ‘A Note on “Local Time” And The Barrier’ by Smith")
+        assert "And The Barrier’" in p.proposed, p.proposed
+
+    def test_an_apostrophe_inside_a_quotation_does_not_close_it(self):
+        p = propose_title_case("Comment on ‘Itô’s Lemma Of The Barrier’ revisited")
+        assert "Lemma Of The Barrier’" in p.proposed, p.proposed
+
+    def test_a_trailing_apostrophe_does_not_close_a_double_quotation(self):
+        """’ closes only a span opened by ‘ -- in “The Players’ Union …”
+        it is a plural possessive."""
+        p = propose_title_case("Notes on “The Players’ Union Of The World” today")
+        assert "Union Of The World”" in p.proposed, p.proposed
+
+    def test_the_span_closes_and_the_rest_is_cased_normally(self):
+        p = propose_title_case("The ‘Hot Hand’ Of The game")
+        assert p.proposed.endswith("of the game"), p.proposed
+
+    def test_an_apostrophe_alone_opens_nothing(self):
+        p = propose_title_case("Girsanov’s theorem Of The game")
+        assert p.proposed.endswith("of the game"), p.proposed
+
 
 class TestEllipsisAndCitations:
     """Two more boundary classes found by reviewing the real batch."""
