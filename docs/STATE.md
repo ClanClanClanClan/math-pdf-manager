@@ -226,16 +226,39 @@ batch sort's Apply reuses the same remembered answers; not measured.
    everything came back; not in the undo log at all — Mark done (×3), Home
    "Look again", Upgrade "Flag for manual", "Fill in missing details",
    "Cache abstracts now"; undoing a topic filing leaves a blank record.
-2. **Slow screens**: Home/Attention 12–76 s, Conformance ~3.5 min
-   against a label saying "about a minute". (Sort Queue: fixed 2026-10-15,
+2. **Slow screens**: Home/Attention 12–76 s. (Sort Queue: fixed 2026-10-15,
    see "Sort Queue speed" above.)
+   *Conformance — FIXED 2026-10-15.* It took ~3.5 min against a label
+   saying "about a minute". Measured read-only on the real library, old and
+   new code back to back on the same busy Mac: **341.6 s → 131.9 s**,
+   identical report. The count of non-PDF documents stat()ed all ~220,000
+   entries, Scripts/ and the record mirror included, to count 220 (78–143 s
+   → under 3 s); the caser re-derived its 463 whitelist phrases per title
+   (per-file loop 158 s → 78 s, 0 of 25,251 verdicts different); the
+   sidecar check stat()ed each record three times. The page now states the
+   measured time and shows one bar per stage with an ETA -- the old bar sat
+   at 100% for the last three minutes.
 3. **`filename_ground_truth` has no production caller.** 27 sites still split
    on `" - "` naively. The rename path produces 0 wrong proposals today, so
    this is latent, not active — but it is the module the docs call the owner
    of that split.
-4. **`docs/FILENAME_CONVENTION.md` is actively wrong** — it prescribes an
-   author-initial format the code deliberately rewrites and the library
-   contradicts 3,844 to 1. Delete or rewrite it.
+4. ~~`docs/FILENAME_CONVENTION.md` is actively wrong~~ — **rewritten
+   2026-10-15 from the code**: every rule names its module and carries the
+   library's measured agreement (the automatic pipeline leaves 25,249 of
+   25,251 in-scope names unchanged). Rewriting it surfaced three places
+   where the code disagrees with a settled ruling, listed in its §6, all
+   **open**, plus one gap by design:
+   - arrival collapses multi-letter initials, `Yu. A.` → `Y. A.`
+     (`cmo.Author.initials`); 174 library blocks carry one today;
+   - arrival keeps a title contraction as U+0027 (ruling and library:
+     U+2019, 1,699 to 0) and turns a prime `f'(x)` into `f’(x)`;
+   - the Spelling page's *Name or ordinary word?* answers
+     (`config/casing_decisions.json`) are read only by
+     `core/sentence_case`, which no live path calls -- they change no
+     filename, though the page says held words are "not being capitalised
+     until you decide";
+   - (by design) a name typed in the Sort Queue box is filed verbatim,
+     with no rule applied and nothing checking it afterwards but Conformance.
 5. **31 stranded paper-identity records**, with a 150-line repair that has no
    cockpit surface.
 6. **12 cockpit issues** in `docs/known-issues-cockpit.md`, unfixed by design.

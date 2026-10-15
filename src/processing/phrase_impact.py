@@ -92,7 +92,7 @@ def occurrences(title: str, phrase: str) -> list:
     CASE-FOLDING MUST NOT HAPPEN BY HAND HERE.  The first version folded
     both strings and did index arithmetic on the result, documenting the
     fold as "length-preserving".  It is not: "ß".casefold() is "ss", and
-    this library deliberately keeps German ß (FILENAME_CONVENTION 3.15),
+    this library deliberately keeps German ß (FILENAME_CONVENTION.md 4.2),
     while NFD→NFC shortens any decomposed accent — and macOS hands out
     NFD.  Either shifts every index after the character, so the reported
     span was silently the wrong slice.  It survived the whole test file

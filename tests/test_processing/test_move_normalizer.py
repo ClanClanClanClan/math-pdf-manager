@@ -26,7 +26,7 @@ class TestNormalizeName:
         which encoded the assumption that every particle is preserved
         verbatim. Researched: "Le" is a French definite ARTICLE and part
         of the surname (Claude Le Bris is never "Bris"), so the capital
-        is correct — see docs/FILENAME_CONVENTION.md 2.6. The hyphenated
+        is correct — see docs/FILENAME_CONVENTION.md 2.4. The hyphenated
         initials "P.-L." are what this test was really guarding and they
         are asserted below exactly as before, plus the prepositions that
         must NOT be touched, which the old fixture never covered.

@@ -1,668 +1,460 @@
-# Filename Convention
+# Filename convention — what the code enforces
 
-This document is the authoritative specification for PDF filenames in the
-library.  All filename generation, validation, and normalisation code must
-conform to these rules.
+**Rewritten 2026-10-15 from the code.** The previous version of this file
+prescribed rules the code does not apply and, in places, rewrites the other
+way (it asked for `Krée, P.A.`; the code writes `Krée, P. A.`, and the library
+agrees with the code). This version states only what a module enforces, names
+that module, and gives the library's agreement with each rule.
 
-**Canonical implementation:** `CMO.get_canonical_filename()` in
-`src/arxivbot/models/cmo.py`.
-
-**Validation:** `check_filename()` in
-`src/validators/filename_checker/core.py`.
-
----
-
-## 1. Format
-
-```
-Author1, I., Author2, I. - Title.pdf
-```
-
-| Component | Rule |
-|-----------|------|
-| Author section | All authors, `Lastname, Initials.` format, separated by `, ` |
-| Separator | ` - ` (space + hyphen + space) |
-| Title | Sentence case, full length, original language |
-| Extension | `.pdf` |
+Every number below was measured on 2026-10-15, read-only, over the
+**25,251 PDFs the tools may touch**: `processing/library_scope.py` leaves out
+the archival collections and the two staging folders. Each count comes from the
+module's own function, not a re-implementation, run on the filename alone.
+Where code and this file disagree, the code is what happens: fix one of them.
 
 ---
 
-## 2. Author Rules
+## 0. When a name is made, and by what
 
-### 2.1 Format: `Lastname, Initials.`
+| moment | what builds or checks the name |
+|---|---|
+| a new paper arrives (watcher, *File these papers*, the name the Sort Queue suggests) | `arxivbot/models/cmo.py` `CMO.get_canonical_filename`, which runs `validators/filename_checker/core.check_filename` with `sentence_case=False`; then `processing/move_normalizer.normalize_full_name` (`processing/ingest.py`) |
+| a name the owner typed in the Sort Queue box, or an upgrade that keeps the preprint's name | **taken as typed**: none of the rules below is applied (`ingest.py`, `canonical_override`) |
+| an existing paper is filed into a topic | `normalize_full_name` (`processing/publication_topic_router.file_into_topic`) |
+| an existing name is tidied | Maintenance → *Normalize existing filenames*: `processing/library_normalize.propose_renames` → `normalize_full_name`, applied only when the owner presses Apply |
+| checked | Conformance: `maintenance/conformance.examine` runs the same `normalize_full_name` |
 
-Each given name produces one initial (first letter, uppercase, followed
-by a period).  Initials are concatenated with periods.
+So there are two kinds of rule:
 
-| Given name | Initials | Full format |
-|------------|----------|-------------|
-| Jean | J. | Dupont, J. |
-| Jean-Pierre | J.-P. | Dupont, J.-P. |
-| Paul André | P.A. | Krée, P.A. |
-| Karl Theodor Hans | K.T.H. | Zheng, K.T.H. |
-| S. C. P. (already initials) | S.C.P. | Yam, S.C.P. |
+- **Every path**: inside `normalize_full_name`. It applies, in order,
+  `filename_normalizer.normalize_filename`,
+  `author_surnames.canonicalise_filename`, the initials fix,
+  `math_typography.canonicalise` and `title_normalize.propose_title_case`.
+- **Arrival only**: inside `cmo.py` and `check_filename`. Nothing re-applies
+  these to a name already on a shelf.
 
-### 2.2 Name particles
-
-Particles (de, el, van, von, d', l', in 't, …) stay with the family
-name and are NOT capitalised unless the author conventionally
-capitalises them.
-
-| Full name | Formatted |
-|-----------|-----------|
-| Nicole el Karoui | el Karoui, N. |
-| Thomas de Angelis | de Angelis, T. |
-| Kees in 't Hout | in 't Hout, K. |
-| Eduardo Abi Jaber | Abi Jaber, E. |
-
-Multi-word family names are listed in `data/multiword_familynames_1.txt`
-(444 entries).
-
-### 2.3 Accented and non-Latin characters
-
-Always preserved in **NFC** form (see §6).
-
-| Name | Formatted |
-|------|-----------|
-| Dylan Possamaï | Possamaï, D. |
-| Romuald Élie | Élie, R. |
-| Leszek Słomiński | Słomiński, L. |
-
-### 2.4 Multiple authors
-
-Authors are separated by `, ` (comma + space).  Because initials also
-use commas, the author section is a flat comma-separated list:
-
-```
-Dupont, J.-P., Martin, G., Krée, P.A. - Title.pdf
-```
-
-### 2.5 "et al." — dynamic truncation
-
-As many authors as possible are listed while keeping the total filename
-within the byte budget.  When not all authors fit, the listed authors
-are followed by `, et al.`.
-
-**The budget is 251 bytes, not 255.**  255 is the filesystem's limit on
-the PDF's own name; every paper also has a sidecar whose name is the
-stem plus `.meta.json`, and that has to fit too.  The margin is not
-theoretical: 11 papers in the library sit in the [252, 255] range and
-3 of them errored during the first real sidecar backfill.  The constant
-is `processing.identity.MAX_BASENAME_BYTES`.
-
-Algorithm:
-1. Try all authors.  If the filename fits → done.
-2. Binary-search for the largest *k* such that
-   `Author1, …, Authork, et al. - Title.pdf` ≤ 251 bytes.
-
-The title is **never** truncated — only the author list compresses.
+**Measured.** `normalize_full_name` leaves **25,249 of 25,251** names
+unchanged. The two it would change are in §2.4 and §3.1.
 
 ---
 
-## 3. Title Rules
+## 1. Shape
 
-### 3.1 Capitalisation: sentence case
+**`Author block - Title.pdf`**, split at the **first** `" - "`. A paper with
+no author is `Title.pdf`. Every tool that reads a name splits it this way
+(`move_normalizer.normalize_full_name`, `author_surnames.canonicalise_filename`,
+`phrase_impact.title_of`). A series prefix in front of the authors
+(`Astérisque 281 - Authors - Title`) is tolerated.
 
-Titles use **sentence case**: capitalise the first word and proper nouns
-only.  Applied by `to_sentence_case_academic()` in
-`src/core/sentence_case.py`.
+Repairs to the separator itself, on every path
+(`processing/filename_normalizer.normalize_filename`):
 
-#### English
+- a separator with its space eaten is restored (`Itô, K.- Poisson` →
+  `Itô, K. - Poisson`), but a compound initial is left alone (`Zou, H.-F.`);
+- the spaces around the separator become exactly one on each side;
+- a title that opens with the separator's own punctuation loses it
+  (`J. - , Propagation` → `J. - Propagation`);
+- a dangling comma before the separator is removed.
 
-| Rule | Example |
-|------|---------|
-| First word capitalised | `On the convergence of…` |
-| Proper nouns capitalised | `…Brownian motion…`, `…Markov chains…` |
-| Proper adjectives capitalised | `Bayesian`, `Gaussian`, `Euclidean`, `Laplacian` |
-| Acronyms preserved | `BSDE`, `PDE`, `SDE`, `LIBOR`, `CVA` |
-| Mixed-case brands preserved | `LaTeX`, `macOS`, `PyTorch`, `GitHub` |
-| Compound names preserved (with correct dash) | `McKean–Vlasov`, `Black–Scholes`, `Fokker–Planck` |
-| Technical prefixes stay lowercase (even at start) | `g-expectation`, `p-variation`, `α-stable`, `f-divergence` |
-| Small words lowercase (unless first) | `a`, `an`, `the`, `and`, `or`, `of`, `in`, `to`, `for`, `by`, `on`, `at`, `with` |
+**Measured.** 25,196 names have the separator; **55 do not**.
+Conformance reports those 55 as *Never examined*, because no author rule can
+reach them. `normalize_filename` leaves **25,251 of 25,251** names unchanged.
 
-#### French
+---
 
-Sentence case.  Proper nouns capitalised.
+## 2. The author block
 
-```
-Les systèmes hamiltoniens et leur intégrabilité
-Décomposition des difféomorphismes du tore… d'après Bourbaki
-```
+### 2.1 `Surname, A. B.` — one space between initials
 
-#### German
+Each author is `Surname, Initials`. Initials are separated by one space, and
+hyphenated given names keep their hyphen: `Lions, P.-L.`, `Bouchaud, J.-P.`.
 
-Nouns capitalised per German orthographic rules.
+- **At arrival**, `cmo.Author.initials` joins initials with `". "`.
+- **On existing names**, `core/initials.space_initials` respaces glued
+  initials (`Rogers, L.C.G.` → `Rogers, L. C. G.`). It runs through
+  `move_normalizer`, only when `_has_unspaced_initials` sees a full stop
+  glued to a capital.
 
-```
-Stochastik für das Lehramt
-```
+**Measured.**
+- 24,666 author blocks carry an initial. The live author path would respace
+  **none** of them.
+- 127 blocks do contain glued capitals, and every one is a series name,
+  `Mémoires de la S.M.F. …`, which the path rightly leaves alone.
+- 1,923 blocks carry a hyphenated initial.
 
-#### Spanish
+### 2.2 Initials of more than one letter
 
-Sentence case.  Inverted punctuation marks (`¿`, `¡`) are preserved.
+Transliterated initials keep all their letters: `Kabanov, Yu. M.`,
+`Neretin, Yu. A.`, `Rutickii, Ya. B.`. An initial is a capital plus up to three lower-case letters
+(`core/initials.INITIAL`), so `Yu.A.` is respaced to `Yu. A.` and never cut
+to `Y.`.
 
-```
-¿Existe una solución única para el problema de control óptimo?
-```
+**Measured.** 174 author blocks carry one. By occurrence: `Yu.` 154, `Ya.`
+12, `Kh.`, `Ch.`, `Th.`, `Ph.` 2 each, and `Ts.`, `Sh.`, `Sz.` 1 each.
 
-#### Italian
+**Open.** At arrival, `cmo.Author.initials` keeps the first letter of each
+given name, so a paper arriving as `Yu. A.` is named `Y. A.` (probe,
+2026-10-15). The over-length refit `library_normalize._fit_to_limit`
+rebuilds names the same way. See §6.
 
-Sentence case.  Proper nouns capitalised.
+### 2.3 Commas
 
-#### Russian and other non-Latin-script languages
+There is one space after each comma, **in the author block only**. In a
+title, a comma is often mathematics (`C^{0,1}`, `CARMA(p,q)`), and a rule
+that crossed the separator once damaged 86 titles. No space goes before a
+comma, except straight after a dash. Every path applies this
+(`filename_normalizer.normalize_filename`).
 
-Titles in Latin transliteration follow the capitalisation conventions
-of the target language.  No automatic transliteration from Cyrillic or
-other scripts is performed; names must be provided in Latin script by
-the metadata source (ArXiv, Crossref, etc.).
+### 2.4 Surnames, and the particles in them
 
-The capitalisation whitelist (`config/config.yaml`) contains canonical
-Latin spellings for mathematician names (e.g., Chebyshev not
-Tchebycheff).
+A particle takes a capital **when it is part of the surname** and stays
+lower case **when it is a preposition**. The test is whether it can be
+dropped: Tocqueville is "Tocqueville", so his `de` is a link word, but Le Gall
+is never "Gall", so `Le` is part of the name.
 
-#### Language detection
+Nationality cannot be recovered from the particle: `da Prato` is Italian
+and takes a capital, `da Silva` is Portuguese and does not. So the rule is a
+**per-person list**, `config/author_surnames.yaml`, and its header carries
+the sources. The owner can switch any entry off at Settings → Author
+surnames; those vetoes are stored with the library
+(`<library>/.mathpdf-config/author_surname_vetoes.json`).
 
-Language is detected automatically via `langdetect` (imported in
-`src/validators/filename_checker/core.py`) to apply language-specific
-rules for capitalisation and quotation marks.
+How it is applied:
+- by `processing/author_surnames.canonicalise_filename`, on every path;
+- to the author block only, including behind an exposé number (`103-le Gall`
+  → `103-Le Gall`);
+- the same letters in a title are ordinary words and are never touched.
 
-#### Language-specific punctuation spacing
+**Measured.**
+- 163 rulings are in force.
+- 646 author blocks name a ruled surname. **645** spell it as ruled.
+- One does not: `Prats'ovytyĭ`. The ruling writes `Pratsiovytyi`, so the
+  next Normalize would rename that one file.
 
-French typography requires a thin non-breaking space (U+202F) before
-`;`, `!`, `?`, and `:`.  This is **NOT** applied in filenames because
-U+202F is stripped for filesystem safety (see §4.4).  Standard English
-spacing (no space before punctuation) is used for all languages in
-filenames.
+### 2.5 The apostrophe in a surname: U+0027
 
-### 3.2 Dashes in titles
+The author block is a **key**, not prose. Search, the sort order, the
+duplicate detector, and every comparison with zbMATH, arXiv, ORCID and Crossref
+run on it, and those authorities write U+0027. The reasoning is in
+`processing/apostrophes.py`.
 
-| Character | Unicode | Use | Example |
-|-----------|---------|-----|---------|
-| Hyphen `-` | U+002D | Compound adjectives, prefixes, prefix + single word | `mean-field`, `long-time`, `G-expectation` |
-| En-dash `–` | U+2013 | Between two proper names, or prefix + multi-word compound | `McKean–Vlasov`, `Black–Scholes`, `G–Brownian motion` |
-| Em-dash `—` | U+2014 | Parenthetical breaks (rare in titles) | `…theory — a new approach` |
+No naming path enforces this as a general rule. It holds only where a surname
+ruling spells it (`D'Amato`).
 
-**Key distinction for prefixes (G-, p-, etc.):**
-- Prefix + **single word** → **hyphen**: `G-expectation`, `G-martingale`, `G-framework`, `G-SDE`
-- Prefix + **multi-word compound** → **en-dash**: `G–Brownian motion`, `G–Lévy process`, `G–stochastic control`, `G–white noise`
+**Measured.** 91 author blocks contain U+0027, and **0** contain U+2019.
 
-The name-dash whitelist (`data/name_dash_whitelist.txt`, 305 entries)
-specifies the correct dash for each compound term.
+### 2.6 Too many authors: `, et al.`
 
-**Rule:** `--` (double hyphen) is always normalised to en-dash `–`.
+When the full name would be over the byte limit (§4.4), authors are dropped
+from the end until it fits, the title is kept whole, and `, et al.` is
+appended. The code is `cmo.build_with_max_authors`, used at arrival and by
+the sweep's `library_normalize._fit_to_limit`.
 
-### 3.3 Subtitles and colons
+**Measured.** 12 author blocks end in `, et al.`. One writes `et al.` without
+the comma and one writes `etal`. Nothing rewrites the spelling on an existing
+name.
 
-Many papers have a main title and subtitle separated by a colon.
-The colon is replaced with a **comma**, and the subtitle follows in
-**lowercase** (sentence case continues — the subtitle is not a new
-sentence).
+---
 
-| Source | In filename |
-|--------|-------------|
-| `Geometry: A Story` | `Geometry, a story` |
-| `Optimal stopping: A new approach` | `Optimal stopping, a new approach` |
-| `BSDEs: Theory and Applications` | `BSDEs, theory and applications` |
+## 3. The title
 
-Other separators:
+### 3.1 Casing: the safe default
 
-| Separator | In filename | Capitalisation after |
-|-----------|-------------|---------------------|
-| Period `.` | Preserved | Yes — treated as new sentence |
-| Em-dash `—` | Preserved | No |
-| Comma `,` | Preserved | No |
+`processing/title_normalize.propose_title_case`, on every path, **word by
+word**:
 
-### 3.5 Quotation marks (language-specific)
+- **The first word** is capitalised. It is left alone when it is:
+  - a single letter followed by a hyphen (`p-adic`);
+  - a lower-case particle (`de Finetti`);
+  - mixed-case, an acronym, or accented.
+- **A mid-title word** is lowered only when it is a plain `Xxxx` in ASCII
+  and **provably ordinary**. That means one of:
+  - the owner marked it common in `<library>/.mathpdf-config/title_vocab.json`;
+  - it is in the built-in list;
+  - the library itself writes it lower case at least 5 times, and at least 5×
+    as often as capitalised (`processing/title_corpus.corpus_says_common`).
+- **Never lowered:**
+  - a word inside quotation marks, nested ones included (§3.3);
+  - a word inside a bibliographic bracket (`[Stochastic Process. Appl. 107 (2003)]`);
+  - a multi-word name from the whitelists in `config/config.yaml` or the
+    owner's vocabulary;
+  - `University`, `Institute` and similar in `<Noun> of <Name>`;
+  - a month next to a year, or a known place;
+  - a word after a lower-case particle;
+  - a word after an internal `. ! ? …`;
+  - a short capitalised run that may be a name.
+- **A German title**, recognised by a marker word or by `ß`, has **no** word
+  lowered.
+- **A mid-title word is never capitalised.** A whitelist entry can only keep a
+  capital that is already there. The owner's **phrase rulings** are the only
+  thing that imposes a spelling, dash included: `title_vocab.json` "phrases",
+  set at Settings → Name phrases, matched regardless of case and dash.
+- A word it cannot prove is kept as written and listed for the owner. It
+  never guesses.
 
-Straight quotes are normalised to typographic quotes based on language.
-Implemented in `fix_and_flag_quotes()` in
-`src/validators/filename_checker/text_processing.py`.
+**Measured.** **25,195 of 25,196** titles are already what the caser
+proposes. The one exception is a mistaken proposal,
+`…Euclid’s Elements` → `…Euclid’s elements`: the book's title is not a name
+the caser knows. Conformance lists it for the owner.
 
-| Language | Double quotes | Single quote / apostrophe |
-|----------|--------------|--------------------------|
-| English | `"…"` (U+201C / U+201D) | `'` (U+2019) |
-| French | `«…»` (U+00AB / U+00BB) | `'` (U+2019) |
-| German | `„…"` (U+201E / U+201D) | `'` (U+2019) |
-| Spanish, Italian | `«…»` (U+00AB / U+00BB) | `'` (U+2019) |
+**Not live.** The *Name or ordinary word?* answers on the Spelling page are
+saved to `config/casing_decisions.json`. Only
+`core/sentence_case.to_sentence_case_academic` reads that file, and no live
+path calls it: both call sites of `check_filename` pass `sentence_case=False`.
+So those answers do not change any filename today. See §6.
 
-Apostrophes in contractions (`it's`, `d'après`, `l'équation`) are
-preserved as right single quotation mark (U+2019).
+### 3.2 Mathematics
 
-### 3.6 Ellipsis
+`processing/math_typography.canonicalise`, on every path, title only:
 
-Three consecutive dots `...` are normalised to horizontal ellipsis `…`
-(U+2026).  Implemented in `fix_ellipsis()`.
+- A sub- or superscript is written in **Unicode** when every character of it
+  has a Unicode form (`L^2` → `L²`, `X_n` → `Xₙ`).
+- Otherwise it is written in **LaTeX** form, with braces only for more than
+  one character (`C^{1,α}`).
+- `\mathbb{X}` becomes the double-struck letter, for the 15 letters that have
+  one.
+- Unbalanced brackets, nested scripts and empty scripts are **refused**
+  (`math_typography.problems`) and left as they are.
 
-### 3.7 Small numbers
+The author block is never touched: `X_n` is a subscript in a title but an
+initial in an author block.
 
-Isolated digits 0–9 in non-mathematical context are spelled out:
-`2-dimensional` stays, but a lone `2` in text becomes `two`.
-Implemented in `spell_out_small_numbers()`.
+**Measured.** 476 titles carry scripts. **471** are already canonical,
+**5** are refused (Conformance: *maths refused*), and **0** would change.
 
-### 3.8 Title preservation
+### 3.3 Quotation marks
 
-The following are always preserved as-is:
+This is the owner's ruling of 2026-10-14, kept in one place,
+`processing/quote_marks.requote`:
 
-- Mathematical symbols: ℝ, ℤ, ≤, ∞, Γ, ζ, ^, ₜ, etc.
-- Parentheses and brackets: `(0 < d < 2)`, `[d'après …]`
-- Punctuation: commas, semicolons, apostrophes
-- Superscript/subscript Unicode: ⁰¹²³⁴⁵⁶⁷⁸⁹, ₀₁₂₃₄₅₆₇₈₉
-
-### 3.9 Mathematical notation
-
-Mathematical notation is preserved exactly as the source provides it.
-No normalisation between ASCII and Unicode representations is performed.
-
-| Both valid | Example |
-|------------|---------|
-| ASCII-style | `R^d`, `L_2`, `H^1` |
-| Unicode | `ℝᵈ`, `L₂`, `H¹` |
-
-Spacing within mathematical expressions is preserved as-is.
-
-### 3.10 Roman numerals
-
-Roman numerals in context (Part II, Volume III, Chapter IV) are
-preserved as roman numerals and treated as acronyms (uppercase).
-They are NOT converted to arabic numerals.
-
-### 3.11 Abbreviations
-
-Common abbreviations are preserved as the source provides them:
-`vs.`, `i.e.`, `e.g.`, `cf.`, `etc.` — kept with their periods.
-Not expanded to full words.  Note: `et al.` in the *title* is
-preserved as-is; `et al.` in the *author section* has special
-truncation semantics (see §2.5).
-
-### 3.12 Ordinals
-
-Ordinals in compound adjectives are preserved as digits: `2nd-order`,
-`1st-kind`.  The number spelling rule (§3.7) does not apply to
-ordinals because the digit is not isolated.
-
-### 3.13 Apostrophes and the marks that look like them
-
-**The rule is keyed on what the mark DOES, not on the language.**
-
-The obvious guess is that this works like quotation marks, which are
-famously per-language (« » French, „ " German, " " English). Checked, and
-it does not: CLDR gives every locale its own `quotationStart` /
-`quotationEnd` and defines **no apostrophe element in any locale, ever**,
-and every national authority prescribes the same 9-shaped raised comma
-for elision — Imprimerie nationale (Lacroux), Accademia della Crusca,
-Duden, Onze Taal, IEC, RAE, Chicago 6.117. Nobody flips it.
-
-The real axis is **punctuation versus letter**, which Unicode encodes as
-different characters (core spec §6.2.7): U+2019 where the mark is a
-punctuation apostrophe, U+02BC where it is a modifier *letter*. Which
-side a name falls on **is** language-dependent, and CLDR settles it in
-`exemplarCharacters`: Ukrainian's and Breton's alphabets contain U+02BC,
-Hawaiian's contains U+02BB (turned the other way), while French, Italian,
-Irish and Dutch contain no apostrophe at all — theirs is punctuation.
-
-| function | example | character |
+| language | outer | inner |
 |---|---|---|
-| Elision (a dropped letter or article) | `d'Auria`, `dell'Antonio`, `in 't Hout`, `l'équation` | punctuation apostrophe |
-| Possessive / English contraction | `Itô's formula`, `don't` | punctuation apostrophe |
-| Anglicised Irish/Scottish prefix | `O'Connell`, `O'Neill` | punctuation apostrophe |
-| German derivational `-'sch` (Duden §62) | `Green'schen`, `Gibbs'sche` | punctuation apostrophe |
-| Flemish fused prefix (capital, no space) | `T'Joens` | punctuation apostrophe |
-| **Transliterated Cyrillic soft sign ь** | `Kolokol'tsov`, `Ural'tseva` | **not an apostrophe** — a letter (U+02B9 by ISO 9 / ALA-LC) |
-| **Breton `c'h` trigraph** | `Le Floc'h`, `Le Balc'h` | **not an apostrophe** — part of a letter (U+02BC officially) |
-| **Mathematical prime** | `f'`, `X'_t`, `L'(θ)` | **not an apostrophe** — U+2032 |
+| English | `‘…’` | `“…”` |
+| French | `« … »` | `‹ … ›` |
+| any other, or not known | left as they are | |
 
-#### What this library writes
+Details:
 
-**Author block: U+0027 APOSTROPHE.** The author block is a *key*, not
-prose — Search, the sort order, the duplicate detector and every
-comparison against zbMATH, arXiv, ORCID and Crossref run on it, and
-uniformity beats typography there. Measured: those authorities are
-**99.95% U+0027** across 1,909 name records, and Unicode's own
-identifier-comparison data (UTS #39 `confusables.txt`) maps U+2019 *to*
-U+0027, not the reverse. Its U+2019 preference is explicitly scoped to
-"when text is set".
+- In French, the space inside the guillemets is an ordinary U+0020.
+- One pair of double marks is converted. An odd number of marks, nesting, or
+  marks that cannot be paired are left as they are.
+- A straight `"` between two letters is an inch mark, not a quote.
+- The language is that of the **title around the quotation**, not of the
+  quoted words or the authors' names (`quote_marks.quotation_language`,
+  since 2026-10-15). The seeded detector reads the title; then small words
+  outside the quotation that only English or only French uses decide between
+  those two. Any other answer, or none, leaves the marks as they are.
+- **Applied at arrival only**, and only when the title holds a straight `"`
+  outside mathematics (`validators/filename_checker/text_processing.convert_straight_quotes_to_proper`).
+- No sweep applies it to names already filed; the module's own docstring
+  calls for a per-file review instead.
+- The caser (§3.1) recognises `‘…’` and `‹…›`, nested, and never recases
+  inside them.
 
-**Title: U+2019** for a punctuation apostrophe, because a title is set
-prose and that is what every authority above prescribes. A title U+0027
-is *not automatically wrong*: an unmeasured share of the 1,343 in the
-corpus are mathematical primes (`f'`, `X'`), and converting those to
-U+2019 would silently change their meaning. **The title rule therefore
-applies to new files only; there is no retroactive sweep.**
+**Measured.** 251 titles carry quotation marks. Under the rule above, their
+languages are English 179, French 66 and other 6. Through `requote`:
 
-That the two fields carry different characters is deliberate. They have
-different jobs — the author block is matched by machines, the title is
-read by a person.
+- **226** are already in the convention.
+- **6** would change, e.g. `Erratum "Optimal stopping time problem…"` →
+  `Erratum ‘Optimal stopping time problem…’`, and
+  `Une preuve "standard" du principe…` → `Une preuve « standard » du principe…`.
+- **19** are left as they are: 6 read as a language other than English or
+  French, 5 that already contain single marks (nesting), and 8 whose marks
+  cannot be paired.
 
-#### Matching folds them; naming does not
+### 3.4 Apostrophes, and the marks that look like them
 
-No normalisation form equates these marks: NFC, NFD, NFKC, NFKD and
-casefold all leave U+0027 and U+2019 distinct. That is categorically
-unlike the NFD/NFC accent trap (§6), where normalising repairs the match.
-So `processing.apostrophes.fold_marks` maps every apostrophe-like mark to
-one key for **Search and duplicate detection only** — including the ones
-that are *not* apostrophes, because the goal is to make them match, not
-to claim they are the same thing. A test asserts no naming path imports
-it.
+The rule is keyed on **what the mark does**, not on the language. Every
+national authority prescribes the same raised comma for elision, and none
+flips it. The real axis is **punctuation versus letter**:
 
-#### Known defects in the corpus (measured, not swept)
+| function | example | mark |
+|---|---|---|
+| elision, possessive, contraction | `l'équation`, `Itô's formula`, `don't` | punctuation apostrophe |
+| anglicised prefix | `O'Connell` | punctuation apostrophe |
+| German `-'sch` | `Green'schen` | punctuation apostrophe |
+| transliterated Cyrillic soft sign | `Kolokol'tsov` | **a letter**, not an apostrophe |
+| Breton `c'h` | `Le Floc'h` | **part of a letter** |
+| mathematical prime | `f'`, `X'_t` | **a prime** (U+2032), not an apostrophe |
 
-- `in t'Hout` — the mark is on the wrong side; the physicist is Karel
-  **in 't Hout** (elided *het*). One file.
-- `dell'utilit`a` — LaTeX accent residue for `utilità`. One file.
-- Seven titles open a quotation with `'` and close it with `'`, two of
-  them doubled (`''…''`) where a double quotation mark belongs. These are
-  unbalanced *pairs*, not stray apostrophes, and must be repaired as
-  pairs — a blanket rule would destroy legitimate opening quotes.
-- `Gal'Čuk` — the interior capital is title-casing damage: Python's
-  `str.title()` capitalises after every apostrophe-like character, so
-  `le floc'h`.title() gives `Le Floc'H`. Fix the caser, not just the file.
-- ~90 files in the Cyrillic soft-sign class use U+0027. The standards
-  genuinely conflict here (ISO 9 / ALA-LC / AMS say prime; BGN/PCGN says
-  U+2019), so this is a policy decision and **not** a sweep. Note also
-  that U+02B9 is a *fatal* error under pdflatex and unencodable in
-  cp1252, which the BibTeX and CSV exports rely on.
+The full taxonomy and its sources are in `processing/apostrophes.py`.
 
-### 2.6 Name particles (de, van, Le, Di, El, …)
+- **Author block:** U+0027 (§2.5).
+- **Title:** the settled choice is U+2019 for a punctuation apostrophe,
+  because a title is prose. A prime must never become one.
 
-**A particle takes a capital when it is part of the surname, and stays
-lower case when it is a preposition.** The test is whether it can be
-dropped: Alexis *de* Tocqueville is "Tocqueville", so `de` is a link
-word; Jean-François Le Gall is never "Gall", so `Le` is part of the name.
+**What the code does.** No naming path applies the title rule in general.
+At arrival, `convert_straight_quotes_to_proper` behaves like this (probe,
+2026-10-15):
 
-| stays lower case — preposition | takes a capital — part of the name |
-|---|---|
-| French `de`, `d'` | French articles `Le`, `La`, `Du`, `Des` (`Du`/`Des` = *de+le*, *de+les*) |
-| German `von`, `zu` | Modern Italian `De`, `Di`, `Da`, `Del`, `Della` |
-| Netherlands Dutch `van`, `van der`, `de`, `den`, `ter` | Flemish, Afrikaans and American Dutch `Van`, `De` (fixed by registration) |
-| Portuguese/Spanish `de`, `da`, `dos`, `das` | Latin-script Arabic/Hebrew `El`, `Al`, `Ben` |
+- A straight `'` it judges a contraction stays **U+0027**: `l'équation`,
+  `Itô's`.
+- Every other `'` becomes `’`. That includes a prime: `f'(x)` → `f’(x)`. It
+  also includes both ends of a quoted word: `'hot hand'` → `’hot hand’`.
 
-Exceptions that are real, not sloppiness: Italian *falsi cognomi*
-(`da Vinci`, `de' Medici`) are epithets rather than surnames and stay
-lower case, as do Italian noble predicates — which is why **`de Finetti`
-is correctly lower case**. Lower-case `al-`/`el-` is right only for
-*transliterated medieval* figures, and then it carries a hyphen
-(`al-Khwārizmī`); every living author has a Latin-script legal name and
-publishes capitalised.
+Search and duplicate detection fold every apostrophe-like mark together
+(`apostrophes.fold_marks`); no naming path uses that fold.
 
-**The bearer's own usage overrides the rule** (`du Bois-Reymond` keeps a
-lower-case *du* against the French rule, because the family fixed it).
+**Measured.** **1,699** titles contain U+2019 and **0** contain U+0027. So
+the library follows the title rule, while arrival does not. See §6.
 
-**This is a per-person list, not a rule keyed on the particle**, because
-nationality is not recoverable from the particle: `da Prato` is Italian
-and takes a capital, `da Silva` is Portuguese and does not. The list is
-`config/author_surnames.yaml`; the owner can switch any entry off from
-Settings → Author surnames, and that veto is stored with the library.
+### 3.5 Year ranges take an en dash
 
-**Scope: the author block only.** In a title the same letters are
-ordinary words — French and Dutch prose, *le Monde*. A rule that crossed
-the separator once turned the mathematician "Makovski" into "Markovski".
+This is the owner's ruling of 2026-10-09, applied by
+`processing/filename_normalizer._en_dash_year_ranges` on every path, to the
+whole name.
 
-Researched 2026-09-03 against the LC name authority file, RDA/LC-PCC,
-Chicago 8.5 / 8.7–8.11 / 14.21 / 16.71, the Imprimerie nationale via
-Lacroux, the Accademia della Crusca, Taalunie/Onze Taal, zbMATH and
-arXiv. Note that `Surname, I. I.` is the *inverted bibliographic entry*,
-not Chicago's "surname used alone": CMOS 14.21 keeps a lower-case
-particle lower case there (its own example, `du Maurier, Daphne.`), which
-is why Dutch `van` and German `von` do **not** take a capital here even
-though a bare surname in prose would.
+- Two years joined by `--`, `-`, `:`, `‐`, `‑`, `−` or `—` become
+  `1988–1990`. The `:` is how macOS stores a `/` typed in Finder, so
+  `2002/2003` on screen is `2002:2003` on disk.
+- Only an increasing pair within 1500–2099 counts. A two-digit end is kept
+  short: `1906–98`.
+- A date (`2023-01-26`) and a piece of a DOI are left alone.
 
-Measured over the library: 118 rulings, 594 files. Two proposed changes
-were refuted on re-checking and are deliberately absent — `de Feo` and
-`de Vries`, where the research had found the wrong person.
+**Measured.** **106** names carry a year range, **all** with an en dash. **0**
+use another mark. The 45 that did were renamed on 2026-10-09, in
+transaction `91180f9880fc`.
 
-Tests: `tests/safety/test_author_surname_authority.py`.
+### 3.6 Colons, slashes, double hyphens
 
----
+- **At arrival** (`cmo.get_canonical_filename`):
+  - a `:` in the title becomes `,`, the subtitle convention. The caser then
+    treats the subtitle like the rest of the title: `BSDEs: Theory and
+    Applications` arrives as `BSDEs, theory and applications`, but
+    `Optimal stopping: A new approach` keeps its `A`, because a one-letter
+    word is never lowered (probe, 2026-10-15);
+  - a `/` becomes a **hyphen**;
+  - a `\` is kept.
+- **On every path** (`filename_normalizer.normalize_filename`):
+  - `--` between digits becomes `–`;
+  - a spaced ` -- ` becomes `, `;
+  - a hyphen left by a sanitised colon (`equations- When`) becomes `, `,
+    except after a script glyph (`W¹- Sobolev`);
+  - a dash straight after `?` or `!` is dropped, and the next word is
+    capitalised unless it is an identifier (`iOS`, `p-adic`).
 
-### 3.14 Institution names vs. descriptions
+**Measured.** **0** names contain `--`. **113** titles hold a `:` on disk,
+which Finder shows as `/` (`small/large`, `L^∞/L¹`). Nothing rewrites those
+apart from year ranges, so they stay as they are.
 
-A generic word — *University*, *Society*, *Institute* — is **capitalised
-when it is part of an institution's official name** and **lower-case when
-it is merely descriptive** (Chicago 8.68):
+### 3.7 Ellipsis and ligatures — arrival only
 
-| Capitalised — a name | Lower-case — a description |
-|---|---|
-| `Rutgers University` | `a university course` |
-| `the University of Durham` | `the Lvov school of mathematics` |
-| `London Mathematical Society` | `CIMPA summer school` |
-| `Indian Statistical Institute` | `the French school of probability` |
+Applied by `validators/filename_checker/text_processing.fix_ellipsis` and
+`fix_ligatures`:
 
-The distinction is not recoverable from the text. A mechanical rule
-—"capitalise the generic when the preceding word is a proper name"— was
-written and **measured**: it got 3 of the 6 universities in this library
-right, missed `Brown University` (because *brown* is a colour) and fired
-on `Lvov school` and `French school`, which are movements rather than
-places. Only knowing which institutions exist separates them, so the
-knowledge is **written down** in `config/config.yaml`
-(`capitalization_whitelist`) rather than guessed at.
+- `...` becomes `…`, outside mathematics.
+- `ﬁ ﬂ ﬀ ﬃ ﬄ` are expanded to their letters.
 
-**A config entry can only preserve, never impose.** It stops the caser
-lowering a capital that is already correct; it cannot add one to
-`rutgers university`. That limit is structural and deliberate — it is
-what keeps a one-line config edit from becoming a bulk rename of the
-library. Imposing a spelling on already-lower-case text is the separate
-power of an owner *phrase ruling* (`title_vocab.decide_phrase`), which
-matches case-insensitively and rewrites the span.
-
-Measured 2026-09-02 over all 25,252 in-scope PDFs: the entries rename
-nothing — they prevent damage rather than repair it. Twelve titles do
-hold a lower-case institution name and would only be corrected by phrase
-rulings, which are the owner's call.
-
-**Where the owner does this.** Settings → **Name phrases** lists every
-multi-word name already in the whitelist that is not yet ruled, with a
-measured count of how many filenames spell it differently today, and
-rules or revokes one with a click. Ruling changes only what the namer
-*would* do; Maintenance → *Normalize existing filenames* is where the
-resulting renames are reviewed and applied reversibly. The two are
-deliberately separate steps.
-
-Measured 2026-09-02 over 29,512 filenames: 16 phrases would fix 28 files
-between them, and for every one of those phrases the count shown and the
-number the renamer actually changes agree exactly.
-
-Tests: `tests/safety/test_institution_names_keep_their_capitals.py`,
-`tests/test_processing/test_phrase_impact.py`,
-`tests/ui/test_phrase_rulings_section.py`.
-
-### 3.15 German sharp-s and special letters
-
-German `ß` is preserved as-is, never converted to `ss`.  Spanish
-inverted punctuation (`¿`, `¡`) is preserved.  All diacritics and
-special letters from any language are preserved in NFC form.
+**Measured.** 7 titles contain `…`. 2 contain `...`, both inside
+mathematics (`ζ(2, ..., 2)`), which the rule leaves alone. **0** contain a
+ligature.
 
 ---
 
-## 4. Text Normalisation Rules
+## 4. Characters and length
 
-### 4.1 Ligature expansion
+### 4.1 NFC
 
-PDF extraction sometimes produces Unicode ligatures.  These are
-expanded to their component ASCII letters.  Implemented in
-`fix_ligatures()` in `src/validators/filename_checker/text_processing.py`.
+Every path compares and writes **NFC** (`filename_normalizer`, `cmo`). The
+sweep never proposes a rename that differs only in normalisation form
+(`library_normalize.propose_renames`): APFS treats the two spellings as one
+file.
 
-| Ligature | Expansion |
-|----------|-----------|
-| ﬁ (U+FB01) | fi |
-| ﬂ (U+FB02) | fl |
-| ﬀ (U+FB00) | ff |
-| ﬃ (U+FB03) | ffi |
-| ﬄ (U+FB04) | ffl |
+**Measured.** 4,300 names are stored decomposed (NFD) on disk. That is
+expected and harmless; every comparison normalises first.
 
-### 4.2 Whitespace normalisation
+### 4.2 Letters
 
-- Multiple spaces → single space
-- Trailing/leading spaces → removed
-- Space before comma → removed (`Possamaï , D.` → `Possamaï, D.`)
-- Missing space after comma → added (`Possamaï,D.` → `Possamaï, D.`)
+All letters are kept as they are, in NFC. **`ß` is never converted to `ss`.**
+No code does it, and the German guard in §3.1 relies on it.
 
-### 4.3 Parentheses and brackets
+### 4.3 Spaces and invisible characters
 
-Must be balanced.  Every opening `(`, `[`, `{` must have a matching
-closing `)`, `]`, `}`.  Unmatched delimiters are flagged by validation.
-Mathematical angle brackets `⟨…⟩` are also checked.
+- **On every path**, runs of spaces collapse to one and the name is trimmed.
+- **At arrival only** (`cmo._clean_for_fs`):
+  - no-break, thin and other special spaces (U+00A0, U+2000–U+200A, U+202F)
+    become ordinary spaces;
+  - control characters (C0, DEL, C1) and every invisible format character
+    (zero-width space, soft hyphen, byte-order mark, bidi marks) are removed.
 
-### 4.4 Non-breaking and special spaces
+**Measured.** **0** names carry a control or format character. **1**
+carries a special space, and only arrival would replace it.
 
-All spaces in filenames are regular spaces (U+0020).
+### 4.4 Length
 
-| Character | Unicode | Action |
-|-----------|---------|--------|
-| Non-breaking space | U+00A0 | Replaced with regular space |
-| Narrow no-break space | U+202F | Stripped (in dangerous Unicode list) |
-| Thin space | U+2009 | Replaced with regular space |
-| Em space, en space, etc. | U+2000–U+200A | Replaced with regular space |
+- A whole name is **at most 255 bytes** in UTF-8; that is the filesystem's
+  limit.
+- At arrival the stem gets the limit less 4 bytes for `.pdf`. Authors go first
+  (§2.6). Only if one author plus `, et al.` still does not fit is the title
+  cut, at a word boundary.
+- Conformance reports any proposal over 255 bytes as a violation.
+- Separately, a paper's saved record is named stem + `.meta.json` and must
+  fit in 251 bytes (`processing/identity.MAX_BASENAME_BYTES`). A longer one
+  is stored under a hashed name.
 
-This means French thin-space-before-punctuation is NOT preserved in
-filenames.  This is by design — filesystem tools and terminal
-emulators handle special spaces poorly.
-
----
-
-## 5. Filesystem Safety
-
-### 5.1 Character replacements
-
-Only filesystem-unsafe characters are replaced:
-
-| Character | Replacement | Reason |
-|-----------|-------------|--------|
-| `/` | `–` (en-dash) | Path separator on Unix |
-| `\` | `–` (en-dash) | Path separator on Windows |
-| `:` | `,` (comma) | Illegal on macOS HFS+/APFS; also subtitle convention (see §3.3) |
-| Control chars U+0000–U+001F | removed | Invisible / illegal |
-
-All other characters are preserved, including `( ) [ ] & * + = < > ' "`.
-
-### 5.2 Dangerous Unicode removal
-
-The following invisible/malicious Unicode characters are silently
-removed.  Implemented in `sanitize_unicode_security()` in
-`src/validators/filename_checker/unicode_utils.py`.
-
-| Category | Characters removed |
-|----------|--------------------|
-| Bidirectional overrides | U+202A–U+202E (LRE, RLE, LRO, RLO, PDF) |
-| Zero-width | U+200B (ZWSP), U+200C (ZWNJ), U+200D (ZWJ) |
-| Direction marks | U+200E (LRM), U+200F (RLM) |
-| Byte-order mark | U+FEFF (BOM) |
-| Invisible operators | U+2060–U+2064 (word joiner, function application, invisible times/separator/plus) |
-| Narrow no-break space | U+202F |
-
-### 5.3 Mixed-script detection
-
-Filenames mixing Latin with Cyrillic or other scripts are flagged
-(potential homograph attack), **except** when the non-Latin characters
-are mathematical symbols (Greek letters, blackboard bold, etc.).
-
-### 5.4 Filename length
-
-- Maximum: **255 bytes** UTF-8 (filesystem `NAME_MAX`).
-- Auto-detected via `os.pathconf()`.
-- Author list is compressed (→ "et al.") to fit; title is never
-  truncated.
+**Measured.** The longest name is 255 bytes. 10 names are over 251 bytes,
+and their records are hashed.
 
 ---
 
-## 6. Unicode Normalisation
+## 5. Not rules (no code enforces them)
 
-### 6.1 NFC everywhere
+Do not cite these as the convention:
 
-All text (titles, author names, filenames) uses **NFC** (Canonical
-Decomposition followed by Canonical Composition).
-
-macOS stores filenames in **NFD** (decomposed: `e` + combining accent).
-All code must normalise to NFC before comparison or storage.
-
-| Form | Example for é | Bytes |
-|------|--------------|-------|
-| NFC (correct) | U+00E9 (single code point) | 2 bytes |
-| NFD (macOS disk) | U+0065 + U+0301 (e + combining acute) | 3 bytes |
-
-Implemented via `unicodedata.normalize("NFC", text)` and the `nfc()`
-helper in `src/validators/filename_checker/unicode_utils.py`.
-
----
-
-## 7. Whitelists and Data Files
-
-| File | Purpose | Entries |
-|------|---------|--------|
-| `config/config.yaml` → `capitalization_whitelist` | Mathematician/scientist names with exact capitalisation | 500+ |
-| `data/name_dash_whitelist.txt` | Compound names with correct dash type (Black–Scholes, etc.) | 52 |
-| `data/name_dash_whitelist_1.txt` | Extended compound name list | 100+ |
-| `data/multiword_familynames_1.txt` | Multi-word family names (Abi Jaber, de Angelis, etc.) | 444 |
-| `data/known_words_1.txt` | Dictionary for spell-checking | 1,228 |
-| `src/core/sentence_case.py` → `MATH_TECHNICAL_PREFIXES` | Single-letter prefixes that stay lowercase | 30+ |
-| `src/core/sentence_case.py` → `mixed_case_words` | Brands: LaTeX, macOS, PyTorch, etc. | 20+ |
-| `src/core/sentence_case.py` → `proper_adjectives` | Bayesian, Gaussian, Markovian, etc. | 6+ |
+- **The dash between co-equal names** (`Hamilton–Jacobi` with an en dash, a
+  hyphen within one word) is house style, but no naming path enforces it:
+  the arrival checker's `validators/filename_checker/tokenization.enforce_ndash_between_authors`
+  is a placeholder that returns its input, and the dash whitelists only
+  preserve. An owner phrase ruling is the only thing that sets a dash.
+- **Small numbers spelled out** was removed: it turned `AR(1)` into
+  `AR(one)`.
+- **`core/sentence_case.to_sentence_case_academic`**, and the data it reads
+  (`config/casing_decisions.json`, `config/title_casing.json`), are not on
+  any live path (§3.1).
+- **Bracket balance** is not checked when naming. The maths rule only refuses
+  to convert inside unbalanced brackets.
+- **Mixed scripts** produce a message only.
+- **Per-language casing** beyond the German guard does not exist.
 
 ---
 
-## 8. Validation Pipeline
+## 6. Where the code and the settled rulings disagree (open)
 
-The full validation pipeline (`check_filename()` in
-`src/validators/filename_checker/core.py`) applies these steps in order:
-
-1. **NFC normalisation** — convert NFD → NFC
-2. **Dangerous Unicode removal** — strip BOM, bidi overrides, zero-width
-3. **Ligature expansion** — ﬁ → fi, ﬂ → fl, etc.
-4. **Parse authors and title** — split on ` - ` separator
-5. **Language detection** — via `langdetect`
-6. **Sentence case conversion** — `to_sentence_case_academic()`
-7. **Dash normalisation** — `--` → `–`, whitelist lookup for names
-8. **Quotation mark conversion** — language-specific typography
-9. **Ellipsis normalisation** — `...` → `…`
-10. **Small number spelling** — isolated digits → words
-11. **Whitespace cleanup** — collapse doubles, fix comma spacing
-12. **Length check** — verify ≤ 255 bytes UTF-8
+1. **Multi-letter initials collapse at arrival.** `Yu. A.` arrives as
+   `Y. A.` (`cmo.Author.initials`; also `library_normalize._fit_to_limit`).
+   The library holds 174 such blocks; the automatic pipeline leaves every
+   one of them as it is.
+2. **Title apostrophes at arrival** (§3.4). Contractions arrive as U+0027,
+   against both the ruling and the library's 1,699–0. A prime becomes `’`, and
+   a quoted `'word'` gets two closing marks.
+3. **The Spelling page's *Name or ordinary word?* answers change no
+   filename** (§3.1).
+4. *By design, noted because nothing else checks it:* **a typed name is
+   taken verbatim** (§0). None of the rules here is applied to it; only
+   Conformance would later notice one that breaks an every-path rule.
 
 ---
 
-## 9. Implementation Map
+## 7. Examples — real names that every path leaves unchanged
 
-### Filename generators
-
-| Generator | File | Purpose | Matches spec? |
-|-----------|------|---------|--------------|
-| `CMO.get_canonical_filename()` | `src/arxivbot/models/cmo.py` | **Primary** — library filing | Yes |
-| `enhanced_parser._generate_filename_from_metadata()` | `src/pdf_processing/parsers/enhanced_parser.py` | Deprecated fallback | No |
-| `academic_downloader._generate_filename()` | `src/downloader/academic_downloader.py` | Temporary download name | No |
-| `version_detection.generate_filename_with_version()` | `src/downloader/version_detection.py` | Versioned download name | No |
-| `proper_downloader._generate_filename()` | `src/downloader/proper_downloader.py` | Temporary download name | No |
-| `discovery.generate_filename()` | `src/discovery/integration.py` | Temporary download name | No |
-
-### Filename parsers (inverse operation)
-
-| Parser | File | Purpose |
-|--------|------|---------|
-| `parse_filename()` | `ml/pdf-meta-llm/scripts/extract_text.py` | Training data extraction |
-| `parse_authors_and_title()` | `src/validators/filename_checker/author_processing.py` | Validation |
-
-### Core modules
-
-| Module | File | Purpose |
-|--------|------|---------|
-| `to_sentence_case_academic()` | `src/core/sentence_case.py` | Title capitalisation |
-| `check_filename()` | `src/validators/filename_checker/core.py` | Full validation pipeline |
-| `sanitize_unicode_security()` | `src/validators/filename_checker/unicode_utils.py` | Dangerous char removal |
-| `fix_ellipsis()` | `src/validators/filename_checker/text_processing.py` | Ellipsis normalisation |
-| `fix_ligatures()` | `src/validators/filename_checker/text_processing.py` | Ligature expansion |
-| `fix_and_flag_quotes()` | `src/validators/filename_checker/text_processing.py` | Quote typography |
-| `spell_out_small_numbers()` | `src/validators/filename_checker/text_processing.py` | Number spelling |
-| `find_math_regions()` | `src/validators/filename_checker/math_utils.py` | Protect math from fixes |
-
----
-
-## 10. Examples
+Each was checked on 2026-10-15 with `normalize_full_name`, which returned it
+unchanged.
 
 ```
-Touzi, N. - A note on BSDEs.pdf
-el Karoui, N., Rouge, R. - Pricing via utility maximization and entropy.pdf
-Dupont, J.-P., Martin, G., Krée, P.A. - On the convergence of SGD in ℝ^d.pdf
-Achdou, Y., Lasry, J.-M., Lions, P.-L., Moll, B. - Income and wealth distribution in macroeconomics, a continuous-time approach.pdf
-Rogers, L.C.G., Walsh, J.B. - A(t,Bₜ) is not a semimartingale.pdf
-Roynette, B., Yor, M. - Couples de Wald indéfiniment divisibles. Exemples liés à la fonction Γ d'Euler et à la fonction ζ de Riemann.pdf
-Omidshafiei, S., Hennes, D., Garnelo, M., et al. - Multiagent off-screen behaviour prediction in football.pdf
-Golse, F. - Validité de la théorie cinétique des gaz, au-delà de l'équation de Boltzmann [d'après T. Bodineau, I. Gallagher, L. Saint-Raymond, S. Simonella].pdf
+Averboukh, Yu. A. - Target problem for mean field type differential game.pdf     §2.2
+Lions, P.-L. - Bifurcation and optimal stochastic control.pdf                     §2.1
+Le Gall, J.-F. - Itô’s excursion theory and random trees.pdf                      §2.4, §3.4
+Abi Jaber, E., de Carvalho, N. - Reconciling rough volatility with jumps.pdf      §2.4
+Krasnosel'skii, M. A., Rutickii, Ya. B. - Convex functions and Orlicz spaces.pdf  §2.2, §2.5
+Tuyls, K., Omidshafiei, S., et al. - Game plan, what AI can do for football, and what football can do for AI.pdf
+                                                                                  §2.6, §3.6
+0-1-Mürmann, M. G. - Erratum ‘A semi-Markovian model for the Brownian motion’.pdf §3.3
+17-Assouad, P. - Démonstration de la « Conjecture de Chung » par Carleson.pdf     §3.3
+1-Knight, F. B. - A transformation from prediction to past of an L²-stochastic process.pdf
+                                                                                  §3.2
+Andreescu, T., Feng, Z. - Mathematical olympiads 1999–2000, problems and solutions from around the world.pdf
+                                                                                  §3.5
+Rásonyi, M., Sayit, H. - Exponential utility maximization in small:large financial markets.pdf
+                                                                                  §3.6 (Finder shows small/large)
+Zagier, D. - Evaluation of the multiple ζ values ζ(2, ..., 2, 3, 2, ..., 2).pdf   §3.7
 ```

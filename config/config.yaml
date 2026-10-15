@@ -194,7 +194,7 @@ capitalization_whitelist:
   # it cannot impose one on "rutgers university". MEASURED over all
   # 25,252 in-scope PDFs: these entries rename nothing. Imposing a
   # spelling is the separate power of an owner phrase ruling
-  # (title_vocab.decide_phrase). See docs/FILENAME_CONVENTION.md 3.14.
+  # (title_vocab.decide_phrase). See docs/FILENAME_CONVENTION.md 3.1.
   - Rutgers University
   - Brown University
   - New York University

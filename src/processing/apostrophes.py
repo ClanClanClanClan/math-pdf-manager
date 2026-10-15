@@ -16,8 +16,8 @@ CLDR settles it per language in ``exemplarCharacters``: Ukrainian's and
 Breton's alphabets contain U+02BC, Hawaiian's contains U+02BB, while
 French, Italian, Irish and Dutch contain no apostrophe at all.
 
-See docs/FILENAME_CONVENTION.md 3.13 for the full taxonomy and the
-per-class rulings.  This module exists for ONE purpose: matching.
+See docs/FILENAME_CONVENTION.md 3.4 for the taxonomy, the per-class
+rulings and what the naming code actually does with them.  This module exists for ONE purpose: matching.
 
 WHY FOLDING MATTERS MORE THAN THE SPELLING.  No Unicode normalisation
 form equates these marks -- NFC, NFD, NFKC, NFKD and casefold all leave

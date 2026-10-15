@@ -219,22 +219,27 @@ All other findings stay in the HTML report and surface in the cockpit
 
 ## Filename convention
 
-The full spec is `docs/FILENAME_CONVENTION.md`. In short:
+`docs/FILENAME_CONVENTION.md` states the convention the code enforces, rule by
+rule, with the module that enforces it and the library's measured agreement
+(the automatic naming pipeline leaves 25,249 of the 25,251 names the tools may
+touch unchanged, measured 2026-10-15).
+In short:
 
 ```
-{Family1, I., Family2, I., ... - Title.pdf}
+{Family1, I. I., Family2, I. - Title.pdf}
 ```
 
-- Sentence case for the title (848-entry whitelist of canonical
-  capitalisations like LaTeX, BSDEs, Lévy, etc.)
-- En-dash between compound surnames (McKean–Vlasov via 305-entry whitelist)
-- "et al." truncation when the filesystem byte limit (255 on macOS) would
-  otherwise be exceeded
-- NFC Unicode normalisation
-- Colon → comma (subtitle convention)
-- Dashes, ligatures, ellipses, quotation marks normalised
-- LaTeX commands in PDF metadata (`\^o`, `\'e`, `\v{S}`, …) decoded to Unicode
-  before sentence-case processing
+- Initials spaced (`P. A.`, `J.-P.`, `Yu. A.`); particles per person, from
+  `config/author_surnames.yaml`
+- Title in a safe-default sentence case: a capital is lowered only when the
+  library itself shows the word is ordinary; the owner's phrase rulings are the
+  only thing that imposes a spelling
+- Mathematics in Unicode where every character has a form (`L²`, `Xₙ`), LaTeX
+  otherwise; year ranges with an en dash (`1999–2000`)
+- Quotation marks: English ‘outer’ “inner”, French « outer » ‹ inner ›, any
+  other language left as it is
+- At arrival only: colon → comma, `/` → hyphen, invisible characters removed,
+  `, et al.` when the name would exceed 255 bytes
 
 ## Publisher coverage
 
