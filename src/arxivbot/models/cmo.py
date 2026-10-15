@@ -20,11 +20,22 @@ class Author:
     family: str
     given: str | None = None
     affiliations: List[str] = field(default_factory=list)
+    #: A generational suffix written as its own part of the name, between
+    #: surname and initials: "Krusell, P., Smith, Jr., A. A." (9 author
+    #: blocks in the library, 2026-10-15). The other way the owner writes
+    #: one, "Cruz Jr., J. B." (32 blocks), keeps it inside ``family``.
+    #: Both forms are his, typed by hand over the same years, so a name
+    #: keeps the form it came with. Filled by the arrival parser; Crossref's
+    #: own ``suffix`` is not read (which form a new paper should get is his
+    #: decision, docs/FILENAME_CONVENTION.md §6).
+    suffix: str | None = None
 
     def display_name(self) -> str:
-        if self.given:
-            return f"{self.family}, {self.given}"
-        return self.family
+        if not self.given:
+            return self.family
+        if self.suffix:
+            return f"{self.family}, {self.suffix}, {self.given}"
+        return f"{self.family}, {self.given}"
 
     def initials(self) -> str:
         """Initials in the library's canonical SPACED form.
@@ -243,15 +254,10 @@ class CMO:
             # forbids.
             family = _clean_for_fs(family)
             initials = _clean_for_fs(initials)
-            if family and initials:
-                segments.append(f"{family}, {initials}.")
-            elif family:
-                segments.append(family)
-            elif initials:
-                # Cleaning ate the surname entirely.  Emitting ", J." would
-                # produce a filename starting with a comma, so drop the
-                # author rather than invent a shape the library never uses.
-                continue
+            suffix = _clean_for_fs(unicodedata.normalize("NFC", author.suffix or ""))
+            segment = author_segment(family, initials, suffix)
+            if segment:
+                segments.append(segment)
         return segments
 
     def _build_with_max_authors(
@@ -296,6 +302,26 @@ def _get_fs_name_max() -> int:
         _FS_NAME_MAX = 255
 
     return _FS_NAME_MAX
+
+
+def author_segment(family: str, initials: str, suffix: str | None = None) -> str:
+    """One author as a filename writes it, or "" when there is no surname.
+
+    ``"Lions, P.-L."``, ``"Smith, Jr., A. A."``, a bare ``"Qilegeri"``. The
+    one shape, for arrival (``CMO._author_segments``) and for the sweep's
+    over-length refit (``library_normalize._fit_to_limit``), which used to
+    spell it out separately. A surname that cleaning ate leaves nothing:
+    ", J." would start the filename with a comma. A suffix stands only
+    between surname and initials, the one place the library writes it
+    apart, so with no initials there is nowhere for it to go.
+    """
+    if not family:
+        return ""
+    if not initials:
+        return family
+    if suffix:
+        return f"{family}, {suffix}, {initials}."
+    return f"{family}, {initials}."
 
 
 #: The library's spelling, measured: 10 of the 12 existing names that carry

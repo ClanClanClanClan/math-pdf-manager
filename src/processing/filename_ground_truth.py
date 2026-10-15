@@ -217,6 +217,19 @@ _INITIALS = rf"(?:{_INITIAL}(?:[-\s]+{_INITIAL})*)"
 #: "Harvey, F.R., Lawson, Jr., H.B." -- the suffix is its own comma-separated
 #: part, which is why it has to be modelled rather than stripped.
 _SUFFIX = r"(?:Jr|Sr|II|III|IV)\.?"
+_SUFFIX_RE = re.compile(_SUFFIX)
+
+
+def is_generational_suffix(part: str) -> bool:
+    """Is this comma-separated part of an author block a generational suffix?
+
+    The one definition: the arrival parser (``ingest.parse_authors_string``)
+    asks here, so it reads "Krusell, P., Smith, Jr., A. A." the way this
+    module's ``AUTHOR_BLOCK_RE`` does -- Smith is an author with the suffix
+    "Jr.", not more initials of Krusell's.  The pattern is ASCII, so an NFD
+    name cannot hide one.
+    """
+    return _SUFFIX_RE.fullmatch(part) is not None
 
 #: A MONONYM -- a person with one name and no initial to give.  "Qilegeri" is
 #: a Mongolian single name; she is the fourth author of the COVID knowledge-

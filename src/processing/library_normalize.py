@@ -96,7 +96,7 @@ def _fit_to_limit(filename: str) -> Optional[str]:
     re-applied, because a name that says eleven authors when the paper has
     more is a worse answer than a name that says eleven and "et al.".
     """
-    from arxivbot.models.cmo import ET_AL, build_with_max_authors
+    from arxivbot.models.cmo import ET_AL, author_segment, build_with_max_authors
 
     stem, dot, ext = filename.rpartition(".")
     if not dot or " - " not in stem:
@@ -108,8 +108,11 @@ def _fit_to_limit(filename: str) -> Optional[str]:
 
     from processing.ingest import parse_authors_string
     parsed = parse_authors_string(authors)
-    segments = [f"{a.family}, {a.initials()}." if a.initials() else a.family
-                for a in parsed if a.family]
+    # The parser never returns an author without a surname (a property in
+    # tests/safety/test_generational_suffix_at_arrival.py), so the filter is
+    # belt and braces: an empty segment would write ", , " into the name.
+    segments = [seg for a in parsed
+                if (seg := author_segment(a.family, a.initials(), a.suffix))]
     if not segments:
         return None
     if had_et_al and len(segments) > 1:

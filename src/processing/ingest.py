@@ -27,6 +27,7 @@ import fitz  # PyMuPDF
 
 from arxivbot.models.cmo import Author, CMO
 from organization.system import OrganizationSystem
+from processing.filename_ground_truth import is_generational_suffix
 from processing.undo_log import UndoLog
 
 logger = logging.getLogger(__name__)
@@ -957,6 +958,9 @@ _INITIALS_RE = re.compile(
 
 # Strong author separators (NOT comma — comma is ambiguous)
 _STRONG_SEP_RE = re.compile(r"\s*&\s*|\s*;\s*|\s+and\s+", re.IGNORECASE)
+# What a segment may start or end with that is not part of any name. No ";"
+# reaches a segment: it is a strong separator, split on first.
+_EDGE_SEPARATORS_RE = re.compile(r"^[\s,]+|[\s,]+$")
 
 
 def _looks_like_initials(s: str) -> bool:
@@ -1003,34 +1007,43 @@ def _parse_first_last(name: str, multiword_surnames: Optional[Set[str]] = None) 
     return Author(family=family, given=given or None)
 
 
-def _looks_like_filename_format(raw: str) -> bool:
-    """True if the string looks like 'Last, F., Last, F., ...' (filename format).
+def _parse_filename_format(raw: str) -> Optional[List[Author]]:
+    """'Last, F., Last, Jr., F., ...' as authors, or None if it is not that.
 
-    The signature: even number of comma-separated parts, where every odd-indexed
-    part is initials.
+    The library's own form: a surname part then an initials part, for every
+    author -- and, when the name has a generational suffix written apart,
+    the suffix as its own part between the two (``filename_ground_truth``
+    decides what a suffix is; it models the block the same way).
+
+    Before the suffix was read, "Jr." passed for initials (a capital, a
+    lower-case letter and a full stop), so "Krusell, P., Smith, Jr., A. A."
+    had an odd number of parts, was not this form, and fell through to
+    "one author with a long given name": "Krusell, P. S. J. A. A.". All 9
+    library blocks written this way came back wrong (2026-10-15); the 32
+    written "Cruz Jr., J. B." were already right, the suffix being inside
+    the surname part.
+
+    Never an empty list: ``split`` gives at least one part, and each pass
+    either returns None or adds an author.
     """
     parts = [p.strip() for p in raw.split(",")]
-    if len(parts) < 2 or len(parts) % 2 != 0:
-        return False
-    for i in range(1, len(parts), 2):
-        if not _looks_like_initials(parts[i]):
-            return False
-    # And the even-indexed parts shouldn't look like initials themselves
-    for i in range(0, len(parts), 2):
-        if not parts[i] or _looks_like_initials(parts[i]):
-            return False
-    return True
-
-
-def _parse_filename_format(raw: str) -> List[Author]:
-    """Parse 'Last, F., Last, F., ...' into Author objects."""
-    parts = [p.strip() for p in raw.split(",")]
     authors = []
-    for i in range(0, len(parts), 2):
+    i = 0
+    while i < len(parts):
         family = parts[i]
-        given = parts[i + 1] if i + 1 < len(parts) else None
-        if family:
-            authors.append(Author(family=family, given=given))
+        if not family or _looks_like_initials(family):
+            return None
+        suffix = None
+        # Only when initials follow: in "Smith, Jr., Jones, A." the "Jr." is
+        # all Smith has, and it is read as before.
+        if (i + 2 < len(parts) and is_generational_suffix(parts[i + 1])
+                and _looks_like_initials(parts[i + 2])):
+            suffix = parts[i + 1]
+            i += 1
+        if i + 1 >= len(parts) or not _looks_like_initials(parts[i + 1]):
+            return None
+        authors.append(Author(family=family, given=parts[i + 1], suffix=suffix))
+        i += 2
     return authors
 
 
@@ -1046,16 +1059,22 @@ def _parse_segment(seg: str, multiword_surnames: Optional[Set[str]] = None) -> L
     # Strip separator punctuation the strong-separator split leaves
     # behind. "Gray, A., Greenhalgh, D., Hu, L., Mao, X., and Pan, J."
     # splits on " and " into a first segment ending in a comma, and
-    # _looks_like_filename_format below requires an EVEN number of
-    # comma-separated parts — the trailing empty part made it nine
-    # instead of eight, the heuristic bailed, and the whole list
+    # _parse_filename_format below needs every comma-separated part to
+    # be a surname, its initials or its suffix — the trailing empty part
+    # was none of them, the heuristic bailed, and the whole list
     # collapsed into a single author whose surname was
     # "Gray, A., Greenhalgh, D., Hu, L., Mao, X.," — producing the
     # filename "Gray, A. G. D. H. L. M. X., Pan, J. - ….pdf".
     #
     # "A, B, C, and D" is the standard English list, so this was every
     # paper with three or more authors written that way.
-    seg = seg.strip().strip(",;").strip()
+    #
+    # Every run of them, not one of each: ", , Smith" stripped space, then
+    # commas, then space, kept its second comma, and parsed into an author
+    # with an empty surname -- dropped from the name, filed under Z. No
+    # library block or waiting /Author field has that shape (2026-10-15);
+    # a property found it.
+    seg = _EDGE_SEPARATORS_RE.sub("", seg)
     if not seg or seg.lower().rstrip(".") in {"et al", "and others"}:
         return []
 
@@ -1068,8 +1087,9 @@ def _parse_segment(seg: str, multiword_surnames: Optional[Set[str]] = None) -> L
 
     # Heuristic 1: Pair-style filename format inside one segment
     # ("Last, F., Last, F." inside a single &-delimited segment)
-    if _looks_like_filename_format(seg):
-        return _parse_filename_format(seg)
+    in_filename_format = _parse_filename_format(seg)
+    if in_filename_format is not None:
+        return in_filename_format
 
     # Heuristic 2: First part has multiple words, AND the part after the first
     # comma does NOT look like initials → this is "First Last, First Last"
@@ -1131,7 +1151,12 @@ def parse_authors_string(
             result.extend(parse_authors_string(item, multiword_surnames))
         return result
 
-    raw = str(raw).strip()
+    # NFC first: macOS hands filenames back decomposed, and a decomposed
+    # "É." is not an initial to the patterns below, so "Amar, É.,
+    # Matheron, É." collapsed into one author. Decomposed, 161 of the
+    # library's 3,215 distinct author blocks with an accent parsed
+    # differently from the same block composed (2026-10-15).
+    raw = unicodedata.normalize("NFC", str(raw)).strip()
     if not raw:
         return []
 

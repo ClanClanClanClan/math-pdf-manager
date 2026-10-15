@@ -531,6 +531,21 @@ Not fixed; raw list in agent-results `authors_not_in_text.txt`.
      the 175 single-quoted library titles arrive exactly as shelved
      (before: 0), and 1,685 of the 1,699 apostrophe titles (before: 1,513).
      0 of 25,251 proposals change. Left by rule: one nested quotation;
+   - ~~a generational suffix written apart breaks the author parse~~ —
+     **fixed 2026-10-15** (FILENAME_CONVENTION §2.7): `Krusell, P., Smith,
+     Jr., A. A.` used to come back as `Krusell, P. S. J. A. A.`. The library
+     writes `Jr.` two ways, both typed by you (`Cruz Jr., J. B.` 32 blocks,
+     `Smith, Jr., A. A.` 9), so a name keeps its form: all 41 now rebuild
+     exactly (before: 32), the over-length refit gained 8 and lost none, and
+     0 of 25,251 proposals changed. The parser also reads decomposed accents
+     now (161 of 3,215 accented blocks misread before, 0 after), and a list
+     opening `, , ` no longer yields an author with no surname (no real input
+     has that shape; a property found it). `Dr. Z`
+     (a pen name, 3 files) is left alone on purpose. **Still open, your
+     call:** where a NEW paper's suffix goes when the source writes it in
+     full (`H. Rumsey Jr.` arrives as `Jr., H. R.`) or Crossref gives it
+     separately (dropped today), since neither of your two forms follows
+     the paper (§6 item 6);
    - the Spelling page's *Name or ordinary word?* answers
      (`config/casing_decisions.json`) are read only by
      `core/sentence_case`, which no live path calls -- they change no

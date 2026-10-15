@@ -167,6 +167,64 @@ the sweep's `library_normalize._fit_to_limit`.
 the comma and one writes `etal`. Nothing rewrites the spelling on an existing
 name.
 
+### 2.7 Generational suffixes: `Jr.`
+
+The library writes a suffix two ways, and both are the owner's: typed by hand
+over the same years (2006–2025, by each record's original filename).
+
+| form | blocks | people |
+|---|--:|--:|
+| `Cruz Jr., J. B.`: inside the surname | 32 | 11 |
+| `Smith, Jr., A. A.`: its own part, between surname and initials | 9 | 8 |
+
+Neither form follows the paper. Of the 18 papers whose first pages print the
+name one way, the shelf matches the print in 5 (`Jonathan E. Ingersoll, Jr.`
+is shelved `Ingersoll Jr., J. E.`). So **a name keeps the form it has**, and
+no rule picks between them.
+
+A suffix is `Jr`, `Sr`, `II`, `III` or `IV`, with or without a full stop
+(`filename_ground_truth.is_generational_suffix`, the decomposer's own model
+of an author block; the arrival parser asks the same function).
+`Wewcomb II, R. T.` is the one numeral in the library.
+
+- **At arrival**, `ingest.parse_authors_string` reads a suffix written apart
+  into `cmo.Author.suffix`, and `cmo.author_segment` writes it back in the
+  same place. A suffix inside the surname stays in `Author.family`. The
+  refit `library_normalize._fit_to_limit` uses the same parser and the same
+  `author_segment`, and drops an author together with the suffix.
+- **On existing names**, nothing touches a suffix.
+
+Until 2026-10-15 the parser read `Jr.` as initials (a capital, a lower-case
+letter, a full stop), so the 9 blocks written apart came back as one author:
+`Krusell, P., Smith, Jr., A. A.` became `Krusell, P. S. J. A. A.`, and
+`Clancy, Jr., D.` became `Clancy, J. D.`.
+
+**Measured.**
+- 41 author blocks carry `Jr.`. Parsed and rebuilt by the arrival namer, each
+  comes out exactly as it is on the shelf: **41 of 41** (the old code: 32).
+  The `II` block does too.
+- Over all 18,760 distinct author blocks, the parse changed for those 9 and
+  no others.
+- The refit rebuilds 24,691 of 25,196 names exactly (the old code: 24,683).
+  It gained 8 and lost none. The ninth block sits behind `Astérisque 213 - `,
+  which the refit does not split off.
+- Where a suffix reaches arrival: 2 of the 2,206 PDFs waiting in staging with
+  an /Author field carry one, both written in full (`James E. Fuson III`,
+  `Danilo Jr Dela Cruz`). None writes `Surname, Jr., I.`. In practice that
+  form arrives through a name typed in the Sort Queue box, which is parsed
+  for its folder, and through the refit. A suffix written in full is still
+  read wrongly (§6).
+
+**`Dr. Z` is left alone.** It is a pen name (William Ziemba's column), on 3
+files named by hand in 2006 and filed under `D`. Nothing in the string tells
+it apart from an honorific in front of a real name (`Dr. John Smith` should
+lose the `Dr.`), so a round trip would mean listing one pen name, for a
+parse that no path makes. Every path leaves the three names unchanged, the
+refit only touches names over 255 bytes, and the PDFs' /Author fields read
+`ISDN`, `William Ziemba` and `ISDN`. The known cost: typed in the Sort Queue
+box, `Dr. Z - …` would be filed under `Z`. A strict xfail in
+`tests/safety/test_generational_suffix_at_arrival.py` records this.
+
 ---
 
 ## 3. The title
@@ -471,7 +529,16 @@ sweep never proposes a rename that differs only in normalisation form
 file.
 
 **Measured.** 4,300 names are stored decomposed (NFD) on disk. That is
-expected and harmless; every comparison normalises first.
+expected and harmless, because every comparison normalises first.
+
+The arrival parser did not, until 2026-10-15. A decomposed `É.` was not an
+initial to it, so `Amar, É., Matheron, É.` read as one author. That
+happened to 161 of the 3,215 distinct author blocks with an accent when they
+were decomposed; now it happens to none. The effect was small. A folder is
+chosen by the first surname, which survived; the refit is handed composed
+names; and 1 of the 2,206 /Author fields waiting in staging is decomposed,
+not in initials. What was lost was the other authors, in the check of a
+typed or already-canonical name against the paper's own text.
 
 ### 4.2 Letters
 
@@ -550,6 +617,18 @@ Do not cite these as the convention:
 5. *By design, noted because nothing else checks it:* **a typed name is
    taken verbatim** (§0). None of the rules here is applied to it; only
    Conformance would later notice one that breaks an every-path rule.
+6. **Where a new paper's suffix goes is unruled** (§2.7). A suffix written
+   in full, as arXiv and PDF metadata write names, is taken for the surname:
+   `H. Rumsey Jr.` arrives as `Jr., H. R.` (the library has `Rumsey Jr., H.`),
+   `James E. Fuson III` as `III, J. E. F.`, and `Anthony A. Smith, Jr.` as
+   `Anthony A. Smith, Jr.`, filed under J, I and A. Crossref gives the suffix
+   as a field of its own, and arrival drops it (`Smith, A. A.`). Fixing
+   either means choosing between the owner's two forms, or dropping the
+   suffix, and that is his choice: neither form follows the paper (§2.7).
+   Measured: 2 of the 2,206 /Author fields waiting in staging carry one.
+   Related: since the multi-letter fix (§2.2) an honorific is read as an
+   initial, so `Dr. John Smith` arrives as `Smith, Dr. J.` (before:
+   `Smith, D. J.`; both wrong).
 
 ---
 
@@ -564,6 +643,9 @@ Lions, P.-L. - Bifurcation and optimal stochastic control.pdf                   
 Le Gall, J.-F. - Itô’s excursion theory and random trees.pdf                      §2.4, §3.4
 Abi Jaber, E., de Carvalho, N. - Reconciling rough volatility with jumps.pdf      §2.4
 Krasnosel'skii, M. A., Rutickii, Ya. B. - Convex functions and Orlicz spaces.pdf  §2.2, §2.5
+Krusell, P., Smith, Jr., A. A. - Income and wealth heterogeneity in the macroeconomy.pdf
+                                                                                  §2.7
+Itô, K., McKean Jr., H. P. - Diffusion processes and their sample paths.pdf       §2.7
 Tuyls, K., Omidshafiei, S., et al. - Game plan, what AI can do for football, and what football can do for AI.pdf
                                                                                   §2.6, §3.6
 0-1-Mürmann, M. G. - Erratum ‘A semi-Markovian model for the Brownian motion’.pdf §3.3
