@@ -196,18 +196,56 @@ class TitleProposal:
 # sound oracle is the built-in list + the owner's own corpus statistics.
 
 
-def _whitelists() -> set:
+#: ``[config the union was built from, the union]``.  The sentence-case
+#: config is loaded once per process and, when reloaded, REPLACED by a new
+#: dict -- never edited in place -- so identity says whether the union is
+#: still the one that config gives.  Holding the reference keeps its id from
+#: being reused by a later config.  Rebuilding the union for every title
+#: cost ~0.3 ms of each call, ~8 s of a Conformance run (2026-10-15).
+_WHITELIST_MEMO: list = [None, frozenset()]
+
+
+def _whitelists() -> frozenset:
     """Union of the sentence-case engine's proper-noun-ish whitelists."""
     try:
         from core.sentence_case import _load_sentence_case_config
         cfg = _load_sentence_case_config()
-        out = set()
-        for key in ("capitalization_whitelist", "name_dash_whitelist",
-                    "proper_adjectives", "mixed_case_words", "compound_terms"):
-            out |= {str(w) for w in cfg.get(key, ())}
-        return out
+        if _WHITELIST_MEMO[0] is not cfg:
+            out = set()
+            for key in ("capitalization_whitelist", "name_dash_whitelist",
+                        "proper_adjectives", "mixed_case_words", "compound_terms"):
+                out |= {str(w) for w in cfg.get(key, ())}
+            _WHITELIST_MEMO[:] = [cfg, frozenset(out)]
+        return _WHITELIST_MEMO[1]
     except Exception:  # pragma: no cover
-        return set()
+        return frozenset()
+
+
+#: ``{candidate set: _multiword_phrases(set)}``, bounded.
+_MULTIWORD_MEMO: dict = {}
+
+
+def _multiword_phrases(candidates: frozenset) -> tuple:
+    """``(phrase, phrase.lower())`` for each member of ``candidates`` that
+    is more than one word, longest first.
+
+    Every title asks this of the same ~1,250 whitelist entries; filtering
+    them with a regex per title was ~3 ms of a ~6 ms call (measured
+    2026-10-15), most of a Conformance run's per-file cost.  The answer
+    depends only on the set, so it is kept per set.  The order among
+    phrases of equal length is whatever the set yields, as it always was;
+    the caller only asks whether a position falls inside ANY match, so the
+    order cannot change a result.
+    """
+    hit = _MULTIWORD_MEMO.get(candidates)
+    if hit is None:
+        hit = tuple((p, p.lower()) for p in sorted(
+            (p for p in candidates if len(_WORD_RE.findall(p)) > 1),
+            key=len, reverse=True))
+        if len(_MULTIWORD_MEMO) >= 8:       # rulings changed several times
+            _MULTIWORD_MEMO.clear()
+        _MULTIWORD_MEMO[candidates] = hit
+    return hit
 
 
 
@@ -417,14 +455,11 @@ def propose_title_case(
     # "contains a space" would have been the wrong test: "S-Plus" and
     # "Euro-Par" are single tokens the word loop still splits in two, so
     # they need the phrase pass exactly as much as "New York" does.
-    _phrases = sorted(
-        (p for p in (proper_all | set(vocab.get("phrases", ())))
-         if len(_WORD_RE.findall(p)) > 1),
-        key=len, reverse=True,          # longest first: greedy, no overlap
-    )
-    for _ph in _phrases:
+    _phrases = _multiword_phrases(
+        frozenset(proper_all | set(vocab.get("phrases", ()))))
+    _low_title = title.lower()
+    for _ph, _low_ph in _phrases:
         _start = 0
-        _low_title, _low_ph = title.lower(), _ph.lower()
         while True:
             _at = _low_title.find(_low_ph, _start)
             if _at < 0:

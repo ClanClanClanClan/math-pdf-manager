@@ -25,6 +25,7 @@ Dutch prose, "le Monde" is a newspaper).
 """
 from __future__ import annotations
 
+import functools
 import logging
 import re
 import unicodedata
@@ -51,7 +52,12 @@ def _nfc(s: str) -> str:
     return unicodedata.normalize("NFC", s)
 
 
+@functools.lru_cache(maxsize=1)
 def _config_path() -> Path:
+    # Cached: resolving this file's path is one lstat per directory above
+    # it, ~14 on the owner's Dropbox path, and every name the namer reads
+    # asked again -- 350,000 lstats in one Conformance run (2026-10-15).
+    # The answer cannot change while the process runs.
     return Path(__file__).resolve().parents[2] / "config" / "author_surnames.yaml"
 
 

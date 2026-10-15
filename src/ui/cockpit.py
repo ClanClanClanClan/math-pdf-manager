@@ -3292,7 +3292,12 @@ def render_conformance() -> None:
             "Runs the naming pipeline over every filename and checks that "
             "it is a **fixpoint** — that the rules would change nothing. "
             "A file the pipeline cannot even reach a verdict on is a bug, "
-            "not a backlog item, and shows up red. Takes about a minute. No "
+            "not a backlog item, and shows up red. It takes about two minutes "
+            "for the 25,000 files it judges (2 min 12 s, measured on 15 "
+            "October 2026 on a busy Mac; it was about 5 minutes before "
+            "that day's speed-up), and up to a minute longer the first time "
+            "in a while, when macOS has to read the folders from disk again. "
+            "The bar names each stage and how long it has left. No "
             "paper is renamed or moved; it may refresh the word-statistics "
             "file the namer keeps in the library's settings folder. It judges "
             "the same files the filename tidy-up may change — the archival "
@@ -3302,12 +3307,20 @@ def render_conformance() -> None:
 
     rep = st.session_state.get("conformance_report")
     if st.button("▶ Run the check", type="primary"):
-        bar = st.progress(0.0, text="Examining filenames…")
+        # One bar per stage, each with its own count and its own ETA. A
+        # single bar fed only the filename count stood at 100% for the last
+        # three minutes of the run while the records were checked.
+        bars: dict = {}
 
-        def _p(i, n):
-            bar.progress(min(1.0, i / max(n, 1)), text=f"{i:,} / {n:,}")
+        def _p(i, n, stage):
+            if stage not in bars:
+                for _tick, _done in bars.values():
+                    _done()
+                bars[stage] = _progress_ui(stage + ":")
+            bars[stage][0](i, n)
         rep = C.run(_library(), progress=_p)
-        bar.empty()
+        for _tick, _done in bars.values():
+            _done()
         st.session_state["conformance_report"] = rep
         st.session_state["conformance_prev"] = C.load_previous(_library())
         st.session_state.pop("conformance_outdated", None)
@@ -3402,8 +3415,8 @@ def render_conformance() -> None:
             "produced by different oracles and a change in the spelling "
             "count between them is not by itself evidence about the library.")
     st.caption(
-        f"{rep.scanned:,} scanned in {rep.duration_s}s · sidecar coverage "
-        f"{rep.globals_.get('coverage_pct', 0)}%")
+        f"{rep.scanned:,} scanned in {_fmt_eta(rep.duration_s)} · sidecar "
+        f"coverage {rep.globals_.get('coverage_pct', 0)}%")
 
     st.markdown("##### Why, grouped")
     st.caption("To rename or move one of these yourself, find it on the "

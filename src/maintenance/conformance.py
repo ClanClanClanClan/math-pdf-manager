@@ -42,11 +42,13 @@ file lands in NOT_EXAMINED or VIOLATION by construction.
 """
 from __future__ import annotations
 
+import errno
 import json
+import os
 import time
 import unicodedata
 from dataclasses import asdict, dataclass, field
-from pathlib import Path
+from pathlib import Path, PurePath
 from typing import Callable, Optional
 
 CANONICAL = "canonical"
@@ -65,6 +67,15 @@ TYPO = "suspected_typo"
 RED = (NOT_EXAMINED, VIOLATION)
 
 REPORT_DIRNAME = ".mathpdf-config/conformance"
+
+#: The stages :func:`run` reports to its ``progress`` callback, in order.
+STAGE_LISTING = "Finding your papers"
+STAGE_EXAMINING = "Examining filenames"
+STAGE_RECORDS = "Checking saved records"
+
+#: How often the listing stage reports, in PDFs found. Its total is not
+#: known until the walk ends, so it says 0 for the total.
+_LISTING_TICK = 2000
 
 # macOS per-component limit.  A proposal longer than this can never be
 # applied, so emitting one is a bug in the proposer, not a backlog item.
@@ -406,7 +417,9 @@ def check_config_reachability(library_root: Path) -> list:
     return out
 
 
-def check_sidecars(library_root: Path, pdfs: list, all_pdfs: list = None) -> tuple[list, dict]:
+def check_sidecars(library_root: Path, pdfs: list, all_pdfs: list = None,
+                   progress: Optional[Callable[[int, int], None]] = None,
+                   ) -> tuple[list, dict]:
     """One record per paper — no more, no less.
 
     Counting sidecar FILES against PDF files (what the Stats page does)
@@ -418,7 +431,7 @@ def check_sidecars(library_root: Path, pdfs: list, all_pdfs: list = None) -> tup
     mirror and fall back to a hashed path; 14 of them also have a record
     at the naive path, disagreeing on doi, arxiv_id and classifier_text.
     """
-    from processing.identity import sidecar_path
+    from processing.identity import lexical_relative, sidecar_path
     from processing.sidecar_repair import _file_id, unclaimed_records
 
     mirror = library_root / ".mathpdf-sidecars"
@@ -437,15 +450,31 @@ def check_sidecars(library_root: Path, pdfs: list, all_pdfs: list = None) -> tup
     # reached under two spellings. _file_id also answers None, rather than
     # raising, for a name over 255 bytes -- the trap that once aborted a
     # 6,186-file batch at file 1,921.
+    #
+    # One stat per distinct path. For every name short enough for the
+    # mirror the canonical and the naive record are the SAME path, and it
+    # was stat()ed twice; the orphan pass below then stat()ed every record a
+    # third time. ~89,000 stats on the Dropbox folder, 28 s of a run
+    # (2026-10-15). A path's identity is read once and handed on.
+    ids: dict = {}
+
+    def _id(p: Path):
+        k = str(p)
+        if k not in ids:
+            ids[k] = _file_id(p)
+        return ids[k]
+
     judged = {str(p) for p in pdfs}
-    for pdf in all_pdfs:
-        rel = pdf.relative_to(library_root)
+    for i, pdf in enumerate(all_pdfs):
+        if progress and i % 1000 == 0:
+            progress(i, len(all_pdfs))
+        rel = lexical_relative(pdf, library_root)
         try:
             canonical = sidecar_path(pdf)
         except Exception:                           # pragma: no cover
             continue
         naive = mirror / rel.parent / (pdf.stem + ".meta.json")
-        id_c, id_n = _file_id(canonical), _file_id(naive)
+        id_c, id_n = _id(canonical), _id(naive)
         have_c, have_n = id_c is not None, id_n is not None
         claimed.update(i for i in (id_c, id_n) if i is not None)
         if str(pdf) not in judged:
@@ -464,7 +493,9 @@ def check_sidecars(library_root: Path, pdfs: list, all_pdfs: list = None) -> tup
     # excluding it made 133 of the 159 "orphans" the owner's own deliberate
     # deletions. The rule lives in ONE place, shared with the repair that
     # the page offers, so the red number and the repairable list agree.
-    stranded = unclaimed_records(library_root, claimed)
+    stranded = unclaimed_records(library_root, claimed, known_ids=ids)
+    if progress:
+        progress(len(all_pdfs), len(all_pdfs))
     orphans = len(stranded)
 
     stats = {
@@ -493,10 +524,17 @@ def run(
     library_root: Path,
     *,
     skip_dirs: Optional[tuple] = None,
-    progress: Optional[Callable[[int, int], None]] = None,
+    progress: Optional[Callable[[int, int, str], None]] = None,
     limit: Optional[int] = None,
 ) -> ConformanceReport:
     """Classify the whole library.  Never renames or moves a paper.
+
+    ``progress(done, total, stage)`` is told which of the three stages is
+    running -- :data:`STAGE_LISTING`, :data:`STAGE_EXAMINING`,
+    :data:`STAGE_RECORDS` -- with a count; ``total`` is 0 while the
+    library is still being listed and the total is not yet known. It used
+    to hear only about the filenames, so the page's bar stood at 100% for
+    the last three minutes of a 4 min 49 s run (measured 2026-10-15).
 
     (Not strictly read-only: the caser that ``examine`` calls may refresh
     ``.mathpdf-config/title_corpus_stats.json`` when it is stale.)
@@ -526,8 +564,12 @@ def run(
 
     pdfs, all_pdfs = [], []
     skipped_by_reason: dict = {}
+    if progress:
+        progress(0, 0, STAGE_LISTING)
     for pdf in iter_pdfs(library_root):
         all_pdfs.append(pdf)
+        if progress and len(all_pdfs) % _LISTING_TICK == 0:
+            progress(len(all_pdfs), 0, STAGE_LISTING)
         rel = pdf.relative_to(library_root)
         if skip_dirs is not None:
             why = (f"skipped folder ({rel.parts[0]})"
@@ -578,15 +620,18 @@ def run(
             findings.append(Finding(
                 str(pdf.relative_to(library_root)), bucket, reason, detail))
         if progress and i % 250 == 0:
-            progress(i, total)
+            progress(i, total, STAGE_EXAMINING)
 
     # Library-wide findings are NOT files.  Adding them into the per-file
     # counters made sum(counts) exceed `scanned` by 15 — a file-shaped
     # metric quietly carrying non-file entries, which is the sort of
     # arithmetic that makes a whole report untrustworthy.  Keep them
     # separate and report both.
-    sc_findings, sc_stats = check_sidecars(library_root, pdfs[:total],
-                                           all_pdfs=all_pdfs)
+    if progress:
+        progress(total, total, STAGE_EXAMINING)
+    sc_findings, sc_stats = check_sidecars(
+        library_root, pdfs[:total], all_pdfs=all_pdfs,
+        progress=(lambda i, n: progress(i, n, STAGE_RECORDS)) if progress else None)
     cfg_findings = check_config_reachability(library_root)
     library_wide = 0
     library_wide_by_reason: dict = {}
@@ -630,20 +675,66 @@ def _out_of_scope(library_root: Path) -> int:
     module's own disease.
     """
     from processing.identity import _NON_LIBRARY_DIRS
+
+    def _skipped(name: str) -> bool:
+        return name in _NON_LIBRARY_DIRS or name.startswith(".")
+
+    # This was ``rglob("*")`` + ``is_file()`` and filtered afterwards: it
+    # walked the code checkout, the trash and the 29,000-record mirror only
+    # to discard them, and stat()ed all ~220,000 entries -- 143 s of a
+    # 289 s run, measured 2026-10-15, for a count of 220. A folder whose
+    # name the filter rejects is now never entered (everything below it was
+    # rejected anyway), and file-or-folder comes from the directory listing,
+    # which costs no stat. Same entries, same tests, same count. (One
+    # difference, deliberate: a symlink whose target cannot be read now
+    # turns the answer into "unknown" (-1) only if it could have been
+    # counted, not when it is, say, a PDF.)
     n = 0
+    stack = [library_root]
     try:
-        for p in library_root.rglob("*"):
-            if not p.is_file() or p.suffix.lower() == ".pdf":
-                continue
-            rel = p.relative_to(library_root)
-            if any(x in _NON_LIBRARY_DIRS or x.startswith(".") for x in rel.parts):
-                continue
-            if p.suffix.lower() in (".djvu", ".epub", ".ps", ".dvi", ".chm") \
-                    or not p.suffix:
-                n += 1
+        while stack:
+            try:
+                with os.scandir(stack.pop()) as it:
+                    entries = list(it)
+            except OSError:
+                continue                # rglob skipped unreadable folders too
+            for e in entries:
+                if _skipped(e.name):
+                    continue
+                try:
+                    is_dir = e.is_dir(follow_symlinks=False)
+                except OSError:
+                    is_dir = False
+                if is_dir:
+                    stack.append(Path(e.path))
+                    continue
+                suffix = PurePath(e.name).suffix.lower()
+                if suffix not in _NOT_PDF_DOCUMENTS and suffix:
+                    continue
+                if _is_file(e):
+                    n += 1
     except OSError:                                 # pragma: no cover
         return -1
     return n
+
+
+#: What :func:`_out_of_scope` counts: these, and names with no extension.
+_NOT_PDF_DOCUMENTS = (".djvu", ".epub", ".ps", ".dvi", ".chm")
+
+
+def _is_file(entry) -> bool:
+    """``Path.is_file()`` for a directory entry, without a stat for a plain
+    file (the listing already says what it is; a symlink is followed).
+
+    Errors are treated exactly as ``Path.is_file`` treats them: a missing
+    or looping target is "not a file"; anything else is raised.
+    """
+    try:
+        return entry.is_file()
+    except OSError as exc:
+        if exc.errno in (errno.ENOENT, errno.ENOTDIR, errno.EBADF, errno.ELOOP):
+            return False
+        raise
 
 
 def save(library_root: Path, rep: ConformanceReport) -> Path:

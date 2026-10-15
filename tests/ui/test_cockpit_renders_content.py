@@ -27,6 +27,7 @@ library used is a synthetic ``tmp_path``.
 from __future__ import annotations
 
 import json
+import re
 import sys
 import types
 from pathlib import Path
@@ -424,6 +425,60 @@ def test_conformance_all_clear_only_when_it_really_is(cockpit):
     text = rendered_text(cockpit.st)
     assert_shows(text, "Every file reached a verdict")
     assert_shows(text, 1200, "scanned count")
+
+
+def test_conformance_states_a_measured_duration_not_a_guess(cockpit):
+    """The page said "about a minute"; a run measured 4 min 49 s. What it
+    says now must be a number someone measured, and the run it shows must
+    say how long THAT run took, in minutes."""
+    cockpit.st.session_state["conformance_report"] = _conformance_report()
+    cockpit.render_conformance()
+    text = rendered_text(cockpit.st)
+    assert "about a minute" not in text
+    how = next(a[0] for n, a, _ in cockpit.st.calls
+               if n == "markdown" and a and "fixpoint" in str(a[0]))
+    assert re.search(r"\d+\s*(?:–\s*\d+\s*)?minutes?", how), how
+    assert "measured" in how, how
+    assert_shows(text, "1m 01s", "the shown run's own duration (61.5 s)")
+    assert "61.5s" not in text
+
+
+def test_conformance_run_shows_each_stage_while_it_runs(cockpit, lib):
+    """A bar fed only the filename count stood at 100% for the last three
+    minutes. Each stage now has its own named bar, with a count."""
+    from maintenance import conformance as C
+    _pdf(lib / "01 - Published papers" / "S" / "Smith, J. - A note.pdf")
+    cockpit.st.values["▶ Run the check"] = True
+    cockpit.render_conformance()
+    bars = "\n".join(str(kw.get("text", "")) for n, _a, kw in cockpit.st.calls
+                     if n == "progress")
+    for stage in (C.STAGE_LISTING, C.STAGE_EXAMINING, C.STAGE_RECORDS):
+        assert stage in bars, (stage, bars)
+    assert "Examining filenames: 1 of 1" in bars, bars
+    assert cockpit.st.session_state["conformance_report"].scanned == 1
+
+
+def test_conformance_shows_one_stage_bar_at_a_time(cockpit, lib, monkeypatch):
+    """A finished stage's bar must go when the next stage starts, or the
+    owner sees "Finding your papers" frozen above the bar that is moving."""
+    _pdf(lib / "01 - Published papers" / "S" / "Smith, J. - A note.pdf")
+    open_bars: list = []
+    seen: list = []
+
+    def fake_progress_ui(verb, **_kw):
+        def tick(i, n=0, label=""):
+            seen.append((verb, list(open_bars)))
+        def done(msg=""):
+            if verb in open_bars:
+                open_bars.remove(verb)
+        open_bars.append(verb)
+        return tick, done
+    monkeypatch.setattr(cockpit, "_progress_ui", fake_progress_ui)
+    cockpit.st.values["▶ Run the check"] = True
+    cockpit.render_conformance()
+    assert len({v for v, _ in seen}) == 3, seen
+    assert all(showing == [verb] for verb, showing in seen), seen
+    assert open_bars == [], "a bar was left on screen after the run"
 
 
 # ---------------------------------------------------------------------------

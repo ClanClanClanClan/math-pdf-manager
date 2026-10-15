@@ -23,6 +23,7 @@ import json
 import logging
 import unicodedata
 from pathlib import Path
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -87,7 +88,8 @@ def claimed_records(pdfs) -> tuple[set, list]:
     return claimed, homeless
 
 
-def unclaimed_records(library_root: Path, claimed: set) -> list[Path]:
+def unclaimed_records(library_root: Path, claimed: set,
+                      known_ids: Optional[dict] = None) -> list[Path]:
     """THE orphan rule: a record in the mirror that no paper claims.
 
     Shared with ``maintenance.conformance.check_sidecars`` so the number
@@ -95,17 +97,24 @@ def unclaimed_records(library_root: Path, claimed: set) -> list[Path]:
     same list. Records shadowing ``.trash`` (and the other non-library
     folders) are not orphans: a retired paper's record is unclaimable by
     construction.
+
+    ``known_ids`` -- ``{str(path): _file_id(path)}`` the caller has just
+    read while building ``claimed`` -- spares a second stat of the same
+    path. Only a found identity is reused; a path the caller saw as
+    missing is asked again, since it was listed here as present.
     """
-    from processing.identity import _NON_LIBRARY_DIRS
+    from processing.identity import _NON_LIBRARY_DIRS, lexical_relative
     mirror = _sidecar_root(library_root)
     if not mirror.is_dir():
         return []
     out = []
     for sc in mirror.rglob("*.meta.json"):
         if any(part in _NON_LIBRARY_DIRS
-               for part in sc.relative_to(mirror).parts):
+               for part in lexical_relative(sc, mirror).parts):
             continue
-        fid = _file_id(sc)
+        fid = (known_ids or {}).get(str(sc))
+        if fid is None:
+            fid = _file_id(sc)
         if fid is not None and fid not in claimed:
             out.append(sc)
     return sorted(out)
