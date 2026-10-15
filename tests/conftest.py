@@ -337,6 +337,10 @@ os.environ["MATH_LIBRARY"] = str(SESSION_LIBRARY)
 # So a subprocess (or a test that needs to *name* the real world without
 # touching it) can find it without re-deriving the owner's home.
 os.environ["MATHPDF_TEST_REAL_HOME"] = str(REAL_HOME)
+# The Sort Queue's background read-ahead stays off unless a test turns it
+# on: a thread that outlives its test would read synthetic PDFs after the
+# test's fakes are gone, and race other tests' request counts.
+os.environ["MATHPDF_READ_AHEAD"] = "0"
 
 _install_write_guard()
 
@@ -407,6 +411,7 @@ def _never_touch_the_real_library(tmp_path_factory, monkeypatch):
         tmp_path_factory.mktemp("lookups") / "lookups.json"))
     _reset_lookup_memory()
     yield root
+    _reset_read_ahead()
     _reset_lookup_memory()
 
 
@@ -415,6 +420,32 @@ def _reset_lookup_memory() -> None:
     if lc is not None:
         lc.forget_unreachable()
         lc._LOADED.clear()
+
+
+def _reset_read_ahead() -> None:
+    """End any read-ahead thread a test started, and forget its state."""
+    import threading
+
+    ra = sys.modules.get("processing.read_ahead")
+    if ra is not None:
+        ra.stop()
+        # By name, not ``ra._thread``: a thread that has already stepped
+        # aside may still be waiting for the turn to let the model go.
+        for t in threading.enumerate():
+            if t.name == "sort-queue-read-ahead":
+                t.join(timeout=10)
+                assert not t.is_alive(), "a read-ahead thread outlived its test"
+        with ra._COND:
+            ra._finished.clear()
+            ra._wanted.clear()
+            ra._reading = None
+            ra._thread = None
+    lm = sys.modules.get("processing.local_model")
+    if lm is not None:
+        with lm.TURN:
+            lm._keepers = 0
+            lm._let_go()
+            lm._reading = False
 
 
 # ---------------------------------------------------------------------------

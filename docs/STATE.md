@@ -237,8 +237,58 @@ up on a dead connection after 5 s, and says where each name came from
 ("arXiv could not be checked: no connection … this name comes from the
 PDF's own metadata"), with an "Ask again now" button.
 
-Still slow: the first time the local model reads a paper (26–49 s). The
-batch sort's Apply reuses the same remembered answers; not measured.
+The batch sort's Apply reuses the same remembered answers; not measured.
+
+### The local model reads ahead — 2026-10-15
+
+**How often he meets it.** 68 of the 2,414 waiting papers always reach the
+local AI model (216 while arXiv is unreachable). The first is the 59th in
+queue order, 19 are within the first 300, and they come in runs: 29 of
+the 67 gaps between them are 1, and 17 sit together among the books.
+
+**What a read costs** (Apple M3, 24 GB, a busy machine): 7.0–68.3 s with
+the model already loaded (median 36.8 s, n = 12); loading it 1.2–1.4 s
+from a warm disk cache, 9.3 s otherwise; 4.4 GB of memory while loaded.
+The read is the cost, so keeping the model loaded saves little; reading
+early is what helps.
+
+**Now** (`processing/read_ahead.py`, `processing/local_model.py`): once the
+paper on screen is read, the page hands the next 25 to one background
+thread, which reads them as the page would; the answers land in the
+lookup cache. One model per process, ever: a paper the thread is reading
+is not read again by the page, which waits for that answer. The model
+stays loaded only while reading ahead; leaving the Sort Queue starts
+nothing more and lets it go (the paper in hand is finished first), and a
+closed tab lets it go after 2 minutes idle. The page says "Reading ahead:
+N of the next 25 papers are ready".
+
+**Measured, read-only, on the real queue**: papers 106–156, the densest
+run of model papers outside the books (9 of them; 4 share their first
+pages with a fifth, so 5 need a read), owner looking at each paper for
+10 s or 5 s:
+
+| time to show | before (master 2a9eb20) | after, 10 s a paper | after, 5 s a paper |
+|---|--:|--:|--:|
+| the 5 papers the model reads | 14.0, 45.3, 32.3, 39.2, 38.8 s | 0.11–0.22 s | 0.10–0.59 s |
+| the other 42, median / worst | 0.13 / 3.0 s | 0.17 / 2.2 s | 0.17 / 1.3 s |
+| … while the model reads behind them, median | — | 0.28 s (n = 12) | 0.34 s (n = 18) |
+
+The machine was far busier during the "after" runs (load 43 and 252
+against 26). A background read costs the page the same whether it runs
+in a thread or a separate process (median 0.156 vs 0.163 s, idle 0.09–0.14
+s): CPU, not the interpreter lock, so a process would buy nothing.
+
+Over the whole queue, simulated from the measured read times and the real
+order (his pace is not recorded anywhere, so it is varied): at 10 s a
+paper, 74% of model papers show at once and the total wait falls from
+50.5 to 6.5 minutes; at 20 s, all of them; at 5 s, 38% and 19 minutes —
+the 17 books in a row arrive faster than any read-ahead can read them.
+
+Found on the way, **open**: `Download (1).pdf`, `Download2.pdf`,
+`Download4.pdf`, `Download6.pdf` and `Download8.pdf` are five different
+papers whose first 4,000 characters are the same Annals of Probability
+cover page, so the model names every one "The Annals of probability" by
+"000-00".
 
 ---
 

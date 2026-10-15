@@ -1084,8 +1084,22 @@ def render_sort_queue() -> None:
             from ui.paper_preview import preview_pdf
             prev = preview_pdf(pdf)
 
+    # Read the next papers while he looks at this one: the local model
+    # takes 7-68 s a paper (processing/read_ahead.py). Asked only AFTER
+    # this paper is read, so the read-ahead never makes him wait for a
+    # paper he is not looking at.
+    from processing import read_ahead
+    read_ahead.want([p for p, _ in candidates[1:1 + read_ahead.WINDOW]])
+
     st.subheader(f"{len(candidates)} left to sort — reviewing the next one")
     st.code(str(pdf.relative_to(lib)), language=None)
+    _ahead = read_ahead.status()
+    if _ahead["running"] and _ahead["window"]:
+        st.caption(
+            f"Reading ahead: {_ahead['ready']} of the next "
+            f"{_ahead['window']} papers are ready"
+            + ("; the local AI model is reading one now."
+               if _ahead["model_reading"] else "."))
 
     if prev.error:
         st.error(f"Preview failed: {prev.error}")
@@ -6872,6 +6886,10 @@ def main() -> None:
     # here vs "Attention" there) and only worked by accident, because
     # render_sidebar runs first and seeds session_state.
     page = st.session_state.get("page", "Attention")
+    if page != "Sort Queue":
+        # He left the Sort Queue: read nothing more ahead, let the model go.
+        from processing import read_ahead
+        read_ahead.stop()
     # Results of the last action, on whatever page we land on.
     _render_flashes()
     if page == "Attention":

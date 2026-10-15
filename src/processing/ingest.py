@@ -629,7 +629,13 @@ def _llm_extract_remembered(extractor_cls, model_path: Path, text: str):
     reads (loading 1.3-27 s, reading 26-43 s), and Approve read it again
     (29-43 s). Only an answer is remembered; a model that fails is asked
     again next time.
+
+    One model at a time (``processing.local_model``): the Sort Queue reads
+    the next papers in the background, and when it is reading THIS one,
+    the page waits for that answer rather than loading a second model to
+    read the same text again. Hence the second look once the turn is ours.
     """
+    from processing import local_model
     from processing import lookup_cache as lc
 
     try:
@@ -639,13 +645,13 @@ def _llm_extract_remembered(extractor_cls, model_path: Path, text: str):
     hit = lc.get("llm", key) if key else None
     if hit is not None:
         return hit.record
-    extractor = extractor_cls(model_path=model_path)
-    try:
-        result = extractor.extract(text)
-    finally:
-        extractor.close()
-    if key and isinstance(result, dict) and "title" in result:
-        lc.put("llm", key, lc.Answer(lc.FOUND, result))
+    with local_model.TURN:
+        hit = lc.get("llm", key) if key else None
+        if hit is not None:
+            return hit.record
+        result = local_model.read(extractor_cls, model_path, text)
+        if key and isinstance(result, dict) and "title" in result:
+            lc.put("llm", key, lc.Answer(lc.FOUND, result))
     return result
 
 
