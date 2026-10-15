@@ -288,7 +288,7 @@ def file_into_topic(
         document-type folder (``"05 - Books and lecture notes"`` /
         ``"06 - Theses"``) when the paper is a book/thesis.
     """
-    from processing.identity import PaperIdentity, find_sidecar, record_location
+    from processing.identity import PaperIdentity, find_sidecar, save_new_record
     from processing.undo_log import logged_move
     from organization.system import (
         OrganizationSystem, PUBLISHED, UNPUBLISHED, WORKING, BOOKS, THESES,
@@ -373,8 +373,7 @@ def file_into_topic(
         # can see the record holds nothing more and retire it. Undo used to
         # leave it: a paper that arrived with no record went back to its
         # shelf with a blank one (measured 2026-10-15).
-        identity.save(pdf_path, recompute_hash=False)
-        undo_log.record_new_record(pdf_path, record_location(pdf_path))
+        save_new_record(identity, pdf_path, undo_log=undo_log)
     old_suggestion = identity.topic_suggestion
     old_confidence = identity.topic_confidence
     old_codes = list(identity.topic_codes)

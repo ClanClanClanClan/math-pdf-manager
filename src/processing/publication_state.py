@@ -262,20 +262,33 @@ def list_permanently_unpublished(library_root: Path) -> list[Path]:
     return out
 
 
-def reset_recheck_state(pdf: Path) -> Optional[PaperIdentity]:
+def reset_recheck_state(pdf: Path, *, undo_log=None) -> Optional[PaperIdentity]:
     """Clear the give-up flag and counter on one paper.
 
     Used by the Attention Queue "re-check this paper" action when the
     user thinks the system gave up prematurely.  Returns the updated
     identity, or ``None`` if the paper has no sidecar yet.
+
+    With ``undo_log`` (an open transaction) the three fields' previous
+    values are recorded BEFORE the record is written, so Home's "Look
+    again" can be undone from Activity; it could not (found 2026-10-15).
+    Only those three fields change: the whole-record ``save`` this used
+    also rewrote every field the record predated, which no undo could
+    take back.
     """
+    from processing.identity import patch_record
+    # No ``is_new()`` test first: load() is new exactly when there is no
+    # readable record, which is when patch_record answers None (a mutation
+    # pass showed the test changed nothing).
     identity = PaperIdentity.load(pdf)
-    if identity.is_new():
-        return None
     identity.permanently_unpublished = False
     identity.recheck_count = 0
     identity.last_check_date = datetime.now(timezone.utc).isoformat(timespec="seconds")
-    identity.save(pdf, recompute_hash=False)
+    if patch_record(pdf, {"permanently_unpublished": False,
+                          "recheck_count": 0,
+                          "last_check_date": identity.last_check_date},
+                    undo_log=undo_log) is None:
+        return None
     return identity
 
 
@@ -325,25 +338,35 @@ def main(argv: Optional[list[str]] = None) -> None:
         return
 
     if args.command == "reset-recheck":
-        if args.all:
-            paths = list_permanently_unpublished(get_library_root())
-            n = 0
-            for p in paths:
-                if reset_recheck_state(p) is not None:
-                    n += 1
-                    print(f"reset: {p.name}")
-            print(f"\nReset {n} paper(s).")
-            return
-        if not args.path:
+        # Through the undo log, as from the cockpit: the reset shows up in
+        # Activity and can be undone there.
+        from processing.undo_log import UndoLog
+        if not args.all and not args.path:
             reset_p.error("provide a PDF path or --all")
-        pdf = Path(args.path)
-        if not pdf.exists():
-            parser.error(f"file not found: {pdf}")
-        out = reset_recheck_state(pdf)
-        if out is None:
-            print(f"No sidecar — nothing to reset: {pdf}")
-        else:
-            print(f"Reset recheck state: {pdf}")
+        if not args.all and not Path(args.path).exists():
+            parser.error(f"file not found: {args.path}")
+        log = UndoLog()
+        log.begin_transaction("Put papers back in the publication check "
+                              "(command line)")
+        try:
+            if args.all:
+                n = 0
+                for p in list_permanently_unpublished(get_library_root()):
+                    if reset_recheck_state(p, undo_log=log) is not None:
+                        n += 1
+                        print(f"reset: {p.name}")
+                print(f"\nReset {n} paper(s).")
+            else:
+                pdf = Path(args.path)
+                if reset_recheck_state(pdf, undo_log=log) is None:
+                    print(f"No sidecar — nothing to reset: {pdf}")
+                else:
+                    print(f"Reset recheck state: {pdf}")
+        finally:
+            if log.has_operations():
+                log.commit()
+            else:
+                log.discard()
         return
 
     parser.print_help()

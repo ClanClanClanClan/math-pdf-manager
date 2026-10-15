@@ -1085,11 +1085,29 @@ load_sidecar = PaperIdentity.load
 # Backfill — best-effort sidecar construction for legacy PDFs
 # ---------------------------------------------------------------------------
 
+def save_new_record(identity: "PaperIdentity", pdf_path: Path, *,
+                    undo_log=None) -> Path:
+    """Save the first record a paper has, and log that it was made.
+
+    ``save(undo_log=...)`` records the fields that changed, which for a
+    paper with no record is every field against a blank one -- undoing it
+    left a blank record behind instead of none. A record made from nothing
+    is a creation, and undo retires it while it holds only what was made
+    (``UndoLog.record_new_record``). The caller has established that there
+    is no record yet.
+    """
+    path = identity.save(pdf_path, recompute_hash=False)
+    if undo_log is not None:
+        undo_log.record_new_record(pdf_path, path)
+    return path
+
+
 def backfill_sidecar(
     pdf_path: Path,
     *,
     overwrite: bool = False,
     content_hash: str = "",
+    undo_log=None,
 ) -> bool:
     """Create a minimal sidecar for a PDF that doesn't have one yet.
 
@@ -1103,6 +1121,9 @@ def backfill_sidecar(
 
     Returns True if a sidecar was written, False if one already existed
     and ``overwrite`` was False.
+
+    ``undo_log``: a new record is logged as made (undo retires it); an
+    overwritten one as an edit of its fields.
     """
     if not pdf_path.exists():
         raise FileNotFoundError(pdf_path)
@@ -1111,7 +1132,8 @@ def backfill_sidecar(
     # answers with the hashed location; asking only sidecar_path wrote a
     # SECOND record beside the first -- the "two sidecar records" finding
     # Conformance reports, whose copies then disagree.
-    if not overwrite and find_sidecar(pdf_path) is not None:
+    existing = find_sidecar(pdf_path)
+    if not overwrite and existing is not None:
         return False
 
     identity = PaperIdentity()
@@ -1127,7 +1149,10 @@ def backfill_sidecar(
         when, tz=timezone.utc
     ).isoformat(timespec="seconds")
 
-    identity.save(pdf_path, recompute_hash=False)
+    if existing is None:
+        save_new_record(identity, pdf_path, undo_log=undo_log)
+    else:
+        identity.save(pdf_path, recompute_hash=False, undo_log=undo_log)
     return True
 
 
@@ -1211,6 +1236,7 @@ def backfill_directory(
     limit: Optional[int] = None,
     overwrite: bool = False,
     verbose: bool = False,
+    undo_log=None,
 ) -> dict:
     """Walk a library tree and backfill sidecars for every PDF.
 
@@ -1225,6 +1251,11 @@ def backfill_directory(
     cached text and all -- could then never go back (cockpit audit, 21:
     measured 2026-10-09, 37 such papers, 13 with a DOI). They are counted
     in ``kept_for_reconnect`` and left for Conformance's reconnect.
+
+    With ``undo_log`` every record made is logged, so Settings' "Fill in
+    missing details" can be undone from Activity: measured 2026-10-15 on
+    the real library, it would make up to 467 records, and none could be
+    taken back.
     """
     from processing.sidecar_repair import _recorded_hash, find_orphans
     stranded = {h for h in map(_recorded_hash, find_orphans(root)) if h}
@@ -1239,7 +1270,8 @@ def backfill_directory(
                 if digest in stranded:
                     summary["kept_for_reconnect"] += 1
                     continue
-            if backfill_sidecar(pdf, overwrite=overwrite, content_hash=digest):
+            if backfill_sidecar(pdf, overwrite=overwrite, content_hash=digest,
+                                undo_log=undo_log):
                 summary["written"] += 1
                 if verbose:
                     print(f"  wrote sidecar for {pdf}")

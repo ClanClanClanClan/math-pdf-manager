@@ -224,10 +224,25 @@ def try_download_by_doi(doi: str, output_dir: Path) -> Optional[Path]:
 def flag_for_manual_download(
     entry: dict,
     library_root: Path,
+    *,
+    undo_log: Optional[UndoLog] = None,
 ) -> Path:
     """Create a flag file in 04/ for manual download.
 
     Returns the path to the flag file.
+
+    Never writes over a note that is already there. It used to
+    (``write_text``), so a second paper with the same title in the same
+    journal replaced the first one's note, and undoing the flag could
+    then only have retired the survivor. The very same note, already
+    there, is returned as it is -- nothing is made. Another paper's note
+    under that name is kept and this one is written beside it, "Title
+    (1).txt".
+
+    With ``undo_log`` the note is recorded as made by the transaction, so
+    the Upgrade Queue's "Flag for manual" -- and a batch upgrade that
+    could not download -- can be undone from Activity (found 2026-10-15:
+    neither could).
     """
     match = entry.get("match", {})
     doi = match.get("doi", "unknown")
@@ -257,7 +272,21 @@ URL: https://doi.org/{doi}
 Download the published PDF, then add it from the cockpit:
 "Papers to download" -> "Add PDFs". It is filed automatically.
 """
-    flag_file.write_text(content, encoding="utf-8")
+    n = 1
+    while True:
+        try:
+            # "x": the existence test and the creation are one step, and
+            # APFS answers it case-insensitively, as it should be asked.
+            with open(flag_file, "x", encoding="utf-8") as fh:
+                fh.write(content)
+            break
+        except FileExistsError:
+            if flag_file.read_text(encoding="utf-8", errors="replace") == content:
+                return flag_file
+            flag_file = flag_dir / f"{safe_title} ({n}).txt"
+            n += 1
+    if undo_log is not None:
+        undo_log.record_new_file(flag_file)
     return flag_file
 
 
@@ -458,7 +487,8 @@ def upgrade_paper(
 
     else:
         # Could not download — flag for manual download
-        flag_file = flag_for_manual_download(entry, library_root)
+        flag_file = flag_for_manual_download(entry, library_root,
+                                             undo_log=undo_log)
         result["action"] = f"FLAGGED for manual download → {flag_file.parent.name}/"
         result["flag_file"] = str(flag_file)
         result["success"] = True  # flagging is a success

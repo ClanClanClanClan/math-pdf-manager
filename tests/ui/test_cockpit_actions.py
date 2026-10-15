@@ -284,27 +284,41 @@ class TestListDownloadFlags:
 
 class TestMarkFlagDone:
 
+    @staticmethod
+    def _log(tmp_path):
+        from processing.undo_log import UndoLog
+        log = UndoLog(log_dir=tmp_path / ".operation_log")
+        log.begin_transaction("mark done")
+        return log
+
     def test_moves_to_trash(self, tmp_path):
         flag = tmp_path / "04 - Papers to be downloaded" / "J" / "p.txt"
         flag.parent.mkdir(parents=True)
         flag.write_text("body")
-        assert mark_flag_done(flag, tmp_path) is True
+        log = self._log(tmp_path)
+        assert mark_flag_done(flag, tmp_path, undo_log=log) is True
         assert not flag.exists()
         trashed = tmp_path / ".trash" / "done_flags" / "p.txt"
         assert trashed.exists()
+        assert log._current_tx["operations"] == [
+            {"type": "move", "source": str(flag), "destination": str(trashed)}]
 
     def test_collision_disambiguated(self, tmp_path):
+        log = self._log(tmp_path)
         flag1 = tmp_path / "f.txt"
         flag1.write_text("one")
-        mark_flag_done(flag1, tmp_path)
+        mark_flag_done(flag1, tmp_path, undo_log=log)
         flag2 = tmp_path / "f.txt"
         flag2.write_text("two")
-        mark_flag_done(flag2, tmp_path)
+        mark_flag_done(flag2, tmp_path, undo_log=log)
         names = sorted(p.name for p in (tmp_path / ".trash" / "done_flags").iterdir())
         assert names == ["f (1).txt", "f.txt"]
 
     def test_missing_returns_false(self, tmp_path):
-        assert mark_flag_done(tmp_path / "nope.txt", tmp_path) is False
+        log = self._log(tmp_path)
+        assert mark_flag_done(tmp_path / "nope.txt", tmp_path,
+                              undo_log=log) is False
+        assert not log.has_operations()
 
 
 # ---------------------------------------------------------------------------

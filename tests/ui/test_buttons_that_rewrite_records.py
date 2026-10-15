@@ -7,8 +7,10 @@ number and history; a button that writes one wrongly loses that quietly,
 which is why each test reads the records back, not just the PDFs.
 
 Two of these buttons only ADD information (a record for a paper that had
-none, the cached first-page text) and do not go through the undo log;
-their tests say so explicitly instead of pretending Activity can undo them.
+none, the cached first-page text). They did so outside the undo log until
+2026-10-15; now Undo takes back exactly what they added -- a record made
+from nothing goes to the record mirror's ``.trash/undone_records/``, a
+field added to an existing record comes off it, byte for byte.
 """
 from __future__ import annotations
 
@@ -47,6 +49,20 @@ def _pdf_with_text(path: Path, text: str) -> Path:
 
 def _pdfs_and_bytes(lib) -> dict:
     return {k: v for k, v in snapshot(lib).items() if k.endswith(".pdf")}
+
+
+_RETIRED = ".mathpdf-sidecars/.trash/undone_records/"
+
+
+def _untrashed(lib) -> dict:
+    """The snapshot less what an undo retired: a record undo took back
+    is in the mirror's ``.trash/undone_records/``, never deleted."""
+    return {k: v for k, v in snapshot(lib).items() if not k.startswith(_RETIRED)}
+
+
+def _retired(lib, pdf) -> bytes:
+    """The record undo took off ``pdf``, where it went."""
+    return sidecar_path(lib / ".trash/undone_records" / pdf.name).read_bytes()
 
 
 # --------------------------------------------------------------------------
@@ -134,7 +150,7 @@ def test_fill_in_missing_details_adds_records_and_moves_nothing(ck):
     kept = put(lib, "01 - Published papers/T/Tan, X. - Has one.pdf")
     _record(kept, doi="10.1000/kept")
     kept_record = sidecar_path(kept).read_bytes()
-    pdfs, txs = _pdfs_and_bytes(lib), transactions(lib)
+    pdfs, txs, before = _pdfs_and_bytes(lib), transactions(lib), snapshot(lib)
     assert PaperIdentity.load(bare).is_new()
 
     ck.st.press("bf_run")
@@ -144,9 +160,17 @@ def test_fill_in_missing_details_adds_records_and_moves_nothing(ck):
     assert sidecar_path(kept).read_bytes() == kept_record, (
         "an existing record was rewritten")
     assert _pdfs_and_bytes(lib) == pdfs
-    assert ck.st.session_state["activity_log"][0]["action"] == "settings.backfill"
-    # Adds records only, outside the undo log: nothing to undo in Activity.
-    assert _new_txs(lib, txs) == []
+    entry = ck.st.session_state["activity_log"][0]
+    assert entry["action"] == "settings.backfill"
+    made = sidecar_path(bare).read_bytes()
+    tx, = _new_txs(lib, txs)
+    assert entry["tx_id"] == tx["id"]
+    assert tx["operations_count"] == 1, "only the new record is the change"
+    undo_from_activity(ck, tx["id"])
+    assert PaperIdentity.load(bare).is_new(), "undo left the new record"
+    assert sidecar_path(kept).read_bytes() == kept_record
+    assert _untrashed(lib) == before
+    assert _retired(lib, bare) == made
 
 
 @presses("render_pipeline_preview[abstracts_bf_run]")
@@ -156,7 +180,10 @@ def test_cache_abstracts_now_stores_the_first_page_text(ck):
         lib / "01 - Published papers/S/Smith, J. - Reflected BSDEs.pdf",
         "Abstract. We study reflected backward stochastic differential equations.")
     _record(pdf, doi="10.1000/rbsde")
-    pdfs, txs = _pdfs_and_bytes(lib), transactions(lib)
+    bare = _pdf_with_text(
+        lib / "01 - Published papers/T/Tan, X. - No record yet.pdf",
+        "Abstract. Optimal stopping of diffusions.")
+    pdfs, txs, before = _pdfs_and_bytes(lib), transactions(lib), snapshot(lib)
 
     ck.st.press("▶ Run preview")             # the expander lives under a preview
     ck.run("render_pipeline_preview")
@@ -167,7 +194,17 @@ def test_cache_abstracts_now_stores_the_first_page_text(ck):
     assert "reflected backward stochastic" in ident.classifier_text.lower()
     assert ident.doi == "10.1000/rbsde", "the backfill lost a field"
     assert _pdfs_and_bytes(lib) == pdfs
-    assert _new_txs(lib, txs) == []          # additive; not in the undo log
+    bare_record = sidecar_path(bare).read_bytes()
+    assert PaperIdentity.load(bare).classifier_text_tried
+    entry = ck.st.session_state["activity_log"][0]
+    assert entry["action"] == "pipeline.abstracts"
+    tx, = _new_txs(lib, txs)
+    assert entry["tx_id"] == tx["id"]
+    undo_from_activity(ck, tx["id"])
+    # The existing record back byte for byte; the one made from nothing
+    # retired, not deleted.
+    assert _untrashed(lib) == before
+    assert _retired(lib, bare) == bare_record
 
 
 @presses("_render_variant_section[var_scan]")

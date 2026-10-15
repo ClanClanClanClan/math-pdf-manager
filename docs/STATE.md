@@ -320,10 +320,41 @@ cover page, so the model names every one "The Annals of probability" by
    had none — while it holds nothing added since; otherwise it is kept and
    the undo says so. **Still open:** undoing an upgrade cannot take the
    published PDF off the shelf — your decision, "Needs your decision" §4;
-   not in the undo log at all — Mark done (×3), Home "Look again", Upgrade
-   "Flag for manual", "Fill in missing details", "Cache abstracts now";
    13 of the 153 entries on Activity are test runs from 10–22 Aug whose
    every path is outside the library.
+
+   *The six buttons outside the undo log — FIXED 2026-10-15.* Mark done
+   (To Download, its "Download now", Home), Home "Look again", Upgrade
+   "Flag for manual", "Fill in missing details" and "Cache abstracts now"
+   now each make one Activity entry, and each is pressed in a test, then
+   ↶ Undo, then the library compared. A record either backfill makes for
+   a paper that had none is retired by undo exactly as a topic filing's
+   is (above). A download note is not a record, so the log has one more
+   kind of change, `file_created`: undo retires the note to
+   `.trash/undone_creations/` — never deletes it — and only while it is
+   byte for byte what was written. Both backfills are logged rather than
+   labelled irreversible, on measurement (read-only, real library, 29,795
+   PDFs): "Fill in missing details" would make ≤467 records; "Cache
+   abstracts" would touch 758 papers, 466 with no record and 292 whose
+   text (3.7 KB on average) goes in the log — about 1 MB, against 4.2 MB
+   for the largest transaction already there. Found and fixed on the way:
+   "Flag for manual" wrote over another paper's note of the same title
+   (`write_text`); "Cache abstracts" and "Look again" rewrote whole
+   records (now only their own fields, so undo gives the record back
+   exactly), and "Cache abstracts" saved a blank record over an
+   unreadable one; a batch upgrade's "flagged for manual download" notes
+   were outside its transaction; the command-line reset was unlogged.
+   `tests/safety/test_every_library_writing_button_can_be_undone.py`
+   (pre-commit) now fails on any writing button whose test does not press
+   ↶ Undo — one exemption, the weekly run, with the tests that prove its
+   writes reversible named.
+   **Found, not fixed:** 147 live records have neither a content hash
+   nor a filing date; "Cache abstracts" makes such a record for a paper
+   with none (466 would be made by a full run now), and "Fill in missing
+   details" then skips that paper for good, since it has a record. And
+   the abstracts page's batch counts papers already done: measured, its
+   "100" would read 3 papers, "500" 4, "2000" 6 — only "All" reaches
+   the 758.
 2. **Slow screens**: Home/Attention 12–76 s. (Sort Queue: fixed 2026-10-15,
    see "Sort Queue speed" above.)
    *Conformance — FIXED 2026-10-15.* It took ~3.5 min against a label

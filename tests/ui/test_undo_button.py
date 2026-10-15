@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
 from processing.identity import PaperIdentity, sidecar_path
 from processing.undo_log import UndoLog, logged_rename
 from tests.ui.press_harness import (ck, presses, put, snapshot,  # noqa: F401
@@ -206,3 +208,53 @@ def test_the_snapshot_sees_a_change_to_a_record_alone(ck):
     ident.save(pdf)
     assert snap(ck.lib) != before
     assert any(k.startswith(".mathpdf-sidecars/") for k in before)
+
+
+# --------------------------------------------------------------------------
+# The cockpit's one transaction helper, used by the buttons that were
+# outside the log until 2026-10-15
+# --------------------------------------------------------------------------
+
+def _note(lib):
+    return put(lib, "04 - Papers to be downloaded/J/Stopping.txt", b"DOI: 10.1/s\n")
+
+
+def test_a_transaction_that_recorded_nothing_leaves_no_entry(ck):
+    with ck.module._Transaction("nothing happens") as tx:
+        pass
+    assert not tx.committed and transactions(ck.lib) == []
+    assert not list((ck.lib / ".operation_log").glob("*.journal.jsonl"))
+
+
+def test_work_done_before_an_error_stays_undoable(ck):
+    """The work recorded did happen: committed, marked INCOMPLETE, and
+    Undo puts it back."""
+    from ui.cockpit_actions import mark_flag_done
+    note = _note(ck.lib)
+    before = snapshot(ck.lib)
+    with pytest.raises(RuntimeError):
+        with ck.module._Transaction("Marked a download note done") as tx:
+            mark_flag_done(note, ck.lib, undo_log=tx.log)
+            raise RuntimeError("the next step failed")
+    assert tx.committed
+    (row,) = transactions(ck.lib)
+    assert "INCOMPLETE" in row["description"]
+    undo_from_activity(ck, row["id"])
+    assert snapshot(ck.lib) == before
+
+
+def test_streamlit_stopping_the_script_does_not_lose_the_record(ck):
+    """Streamlit stops a script with a BaseException, which an
+    ``except Exception`` would let through with the work unrecorded."""
+    from ui.cockpit_actions import mark_flag_done
+
+    class StopException(BaseException):        # streamlit's own is one
+        pass
+
+    note = _note(ck.lib)
+    with pytest.raises(StopException):
+        with ck.module._Transaction("Marked a download note done") as tx:
+            mark_flag_done(note, ck.lib, undo_log=tx.log)
+            raise StopException()
+    (row,) = transactions(ck.lib)
+    assert row["id"] == tx.id and row["operations_count"] == 1

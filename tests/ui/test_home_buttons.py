@@ -67,14 +67,19 @@ def test_mark_done_on_home_moves_the_note_to_the_trash(ck):
     lib = ck.lib
     flag = put(lib, "04 - Papers to be downloaded/Ann. Probab/Stopping.txt",
                b"DOI: 10.1000/stop\n")
+    before, txs = snapshot(lib), transactions(lib)
 
     assert _press_on_home(ck, "upgrade_flag", "mark_flag_done") == "rerun"
 
     assert not flag.exists()
     assert (lib / ".trash/done_flags/Stopping.txt").read_bytes() == (
         b"DOI: 10.1000/stop\n")
-    assert ck.st.session_state["activity_log"][0]["action"] == (
-        "attention.mark_flag_done")
+    entry = ck.st.session_state["activity_log"][0]
+    assert entry["action"] == "attention.mark_flag_done"
+    tx, = _new_txs(lib, txs)
+    assert entry["tx_id"] == tx["id"]
+    undo_from_activity(ck, tx["id"])
+    assert snapshot(lib) == before
 
 
 @presses("render_attention[{btn_key}]<transition_aged>")
@@ -134,14 +139,45 @@ def test_reject_clears_the_suggestion_and_undo_brings_it_back(ck):
 def test_look_again_puts_the_paper_back_in_the_queue(ck):
     lib = ck.lib
     pdf = put(lib, "02 - Unpublished papers/S/Smith, J. - Never published.pdf")
-    _record(pdf, permanently_unpublished=True, recheck_count=3)
+    _record(pdf, permanently_unpublished=True, recheck_count=3,
+            last_check_date="2026-01-01T00:00:00+00:00")
+    before, txs = snapshot(lib), transactions(lib)
 
     assert _press_on_home(ck, "permanently_unpublished", "reset_recheck") == "rerun"
 
     ident = PaperIdentity.load(pdf)
     assert ident.permanently_unpublished is False and ident.recheck_count == 0
-    assert ck.st.session_state["activity_log"][0]["action"] == (
-        "attention.reset_recheck")
+    entry = ck.st.session_state["activity_log"][0]
+    assert entry["action"] == "attention.reset_recheck"
+    tx, = _new_txs(lib, txs)
+    assert entry["tx_id"] == tx["id"]
+    undo_from_activity(ck, tx["id"])
+    assert snapshot(lib) == before          # the record, byte for byte
+    ident = PaperIdentity.load(pdf)
+    assert ident.permanently_unpublished is True and ident.recheck_count == 3
+
+
+def test_look_again_on_a_paper_with_no_record_says_so_and_records_nothing(ck):
+    """The item can outlive its record (deleted by hand between the scan
+    and the click). The warning used to be drawn with st.warning and wiped
+    by the rerun that ends every Home action."""
+    lib = ck.lib
+    pdf = put(lib, "02 - Unpublished papers/S/Smith, J. - Never published.pdf")
+    _record(pdf, permanently_unpublished=True, recheck_count=3)
+    ck.st.session_state["attn_scan_now"] = True
+    ck.st.session_state["attn_open_group"] = "permanently_unpublished"
+    ck.run("render_attention")                     # scanned, item cached
+    from processing.identity import find_sidecar
+    find_sidecar(pdf).unlink()
+    before, txs = snapshot(lib), transactions(lib)
+    ck.st.session_state["attn_open_group"] = "permanently_unpublished"
+    ck.st.press(re.compile(r"^attn_.*_reset_recheck$"))
+
+    assert ck.run("render_attention") == "rerun"
+
+    assert snapshot(lib) == before and _new_txs(lib, txs) == []
+    (kind, msg), = ck.flashes()
+    assert kind == "warning" and "no saved record" in msg, msg
 
 
 @presses("render_attention[{btn_key}]<watcher_retry>")

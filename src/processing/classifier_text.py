@@ -68,6 +68,7 @@ def backfill_classifier_text(
     max_pages: int = DEFAULT_MAX_PAGES,
     max_chars: int = DEFAULT_MAX_CHARS,
     max_seconds: Optional[float] = None,
+    undo_log=None,
 ) -> dict:
     """Populate ``classifier_text`` on sidecars across the library.
 
@@ -83,9 +84,21 @@ def backfill_classifier_text(
     ``stats["stopped_early"]``.  This keeps each invocation comfortably
     under any harness/cron timeout — drive it to completion by calling
     repeatedly (it resumes where it left off).  Returns a stats dict.
+
+    ``undo_log`` (an open transaction) makes the run undoable from
+    Activity. An existing record gains its two fields and nothing else
+    (``patch_record``, previous values recorded before the write) -- the
+    whole-record ``save`` used here rewrote every field a record predated,
+    so no undo could have given the record back. A paper with no record
+    gets one, logged as made. Measured 2026-10-15 on the real library: a
+    full run now would touch 758 papers; 466 have no record (logged by
+    digest), and the other 292 put their text in the log, 3.7 KB on
+    average -- about 1 MB, against 4.2 MB for the largest transaction
+    already there.
     """
     import time as _time
-    from processing.identity import iter_pdfs, PaperIdentity
+    from processing.identity import (find_sidecar, iter_pdfs, PaperIdentity,
+                                     patch_record, save_new_record)
     from processing.pipeline_preview import is_routable
     from processing.locking import LibraryLock
 
@@ -124,19 +137,26 @@ def backfill_classifier_text(
             text = extract_classifier_text(pdf, max_pages=max_pages,
                                            max_chars=max_chars)
 
-            # Re-load fresh right before saving to minimise the window in
-            # which a concurrent topic edit could be lost, then persist
-            # only the new field(s) via the atomic writer.  Mark
-            # ``classifier_text_tried`` either way so an un-extractable
-            # (image-only) PDF isn't retried on every future run.
-            ident = PaperIdentity.load(pdf)
-            ident.classifier_text_tried = True
+            # Persist only the new field(s), into the record as it is NOW:
+            # patch_record re-reads it, so a concurrent topic edit is not
+            # lost.  Mark ``classifier_text_tried`` either way so an
+            # un-extractable (image-only) PDF isn't retried on every
+            # future run.
+            values = {"classifier_text_tried": True}
             if text:
-                ident.classifier_text = text
+                values["classifier_text"] = text
             try:
-                ident.save(pdf, recompute_hash=False)
+                # Asked of the disk, not of ``is_new()``: an UNREADABLE
+                # record also loads as new, and saving a fresh one there
+                # wrote blanks over whatever it held.  Now it is left alone
+                # and counted as failed.
+                if find_sidecar(pdf) is None:
+                    save_new_record(PaperIdentity(**values), pdf,
+                                    undo_log=undo_log)
+                elif patch_record(pdf, values, undo_log=undo_log) is None:
+                    raise OSError("its record could not be read")
                 stats["extracted" if text else "empty"] += 1
-            except Exception as exc:  # pragma: no cover -- defensive
+            except Exception as exc:
                 logger.warning("save failed for %s: %s", pdf, exc)
                 stats["failed"] += 1
     finally:

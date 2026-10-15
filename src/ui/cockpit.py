@@ -468,6 +468,48 @@ def _locked_call(lib: Path, action: str, fn, *args, **kwargs):
 _BUSY = (False, "the library was busy, so nothing was changed")
 
 
+class _Transaction:
+    """``with _Transaction("what he did") as tx:`` -- one undo-log
+    transaction for one cockpit action; pass ``tx.log`` to the writer.
+
+    Committed when the action recorded something, dropped when it did not
+    (``tx.committed`` says which, ``tx.id`` names it for the activity feed).
+    On an exception -- or Streamlit stopping the script, which raises a
+    BaseException -- the work already recorded did happen, so it is
+    committed marked INCOMPLETE rather than lost (``UndoLog.discard``).
+    Keep ``st.rerun()`` outside the block for that reason.
+    """
+
+    def __init__(self, description: str):
+        from processing.undo_log import UndoLog
+        self.log = UndoLog()
+        self.id = self.log.begin_transaction(description)
+        self.committed = False
+
+    def __enter__(self) -> "_Transaction":
+        return self
+
+    def __exit__(self, exc_type, exc, tb) -> bool:
+        if exc_type is not None:
+            self.committed = self.log.has_operations()
+            self.log.discard()
+        elif self.log.has_operations():
+            self.log.commit()
+            self.committed = True
+        else:
+            self.log.discard()
+        return False
+
+
+def _mark_note_done(flag: Path, lib: Path, what: str) -> str:
+    """Retire a download note to the trash, undoably; the transaction's id,
+    or "" when there was no note left to retire."""
+    from ui.cockpit_actions import mark_flag_done
+    with _Transaction(f"{what}: {flag.name}") as tx:
+        mark_flag_done(flag, lib, undo_log=tx.log)
+    return tx.id if tx.committed else ""
+
+
 def _without_dup_group(groups: list, sha256: str) -> list:
     """The saved duplicate groups minus the one just resolved."""
     return [g for g in groups if (g.get("sha256") if isinstance(g, dict)
@@ -1620,14 +1662,23 @@ def render_upgrade_queue() -> None:
         st.rerun()
 
     if cols[2].button("🚩 Flag for manual", key=f"upg_flag_{entry['file']}"):
-        st.session_state.upgrade_skipped.add(str(entry["file"]))
         from processing.upgrade_to_published import flag_for_manual_download
         try:
-            flag_path = flag_for_manual_download(entry, lib)
-            _log_activity("upgrade.flag", str(file_path.name), str(flag_path))
-            st.toast(f"Flagged → {flag_path.parent.name}/", icon="🚩")
+            with _Transaction("Noted a paper to download by hand: "
+                              f"{file_path.name}") as _t:
+                _ran, flag_path = _locked_call(
+                    lib, "Flag for manual", flag_for_manual_download, entry,
+                    lib, undo_log=_t.log)
+            if _ran:
+                st.session_state.upgrade_skipped.add(str(entry["file"]))
+                _log_activity("upgrade.flag", str(file_path.name),
+                              str(flag_path), _t.id if _t.committed else "")
+                st.toast(f"Flagged → {flag_path.parent.name}/"
+                         + ("" if _t.committed else " (it was already there)"),
+                         icon="🚩")
         except Exception as exc:
-            st.error(f"Flag failed: {exc}")
+            # st.error here was wiped by the rerun below before it drew.
+            _flash("error", f"Flag failed: {exc}")
         st.rerun()
 
 
@@ -3759,8 +3810,9 @@ def render_pipeline_preview() -> None:
         st.caption(
             "Reads the abstract and first pages out of each PDF and stores "
             "the text, so the classifier can judge a paper by its content "
-            "instead of its title alone. It only reads your PDFs — nothing "
-            "is moved or renamed — and you can stop and pick up where you "
+            "instead of its title alone. It reads your PDFs and adds the "
+            "text to their saved details — nothing is moved or renamed — "
+            "and you can stop and pick up where you "
             "left off. The whole library takes 30–60 minutes, so start with "
             "a small batch here to see the difference.")
         cbf = st.columns([1, 1])
@@ -3769,12 +3821,19 @@ def render_pipeline_preview() -> None:
         # bleed state between the two pages via st.session_state.
         bf_n = cbf[0].selectbox("Batch", ["100", "500", "2000", "All"], index=0,
                                 key="abstracts_bf_limit")
+        _reversible_note("Undo takes the stored text back off the papers "
+                         "it was added to.")
         if cbf[1].button("Cache abstracts now", key="abstracts_bf_run"):
             from processing.classifier_text import backfill_classifier_text
             lim = None if bf_n == "All" else int(bf_n)
-            with st.spinner("Extracting abstracts…"):
-                bstats = backfill_classifier_text(lib, limit=lim)
+            with st.spinner("Extracting abstracts…"), _Transaction(
+                    "Cached the first pages' text for the topic guesses") as _t:
+                bstats = backfill_classifier_text(lib, limit=lim,
+                                                  undo_log=_t.log)
             st.success(f"Cached: {bstats}")
+            if _t.committed:
+                _log_activity("pipeline.abstracts", str(lib),
+                              f"extracted={bstats.get('extracted', 0)}", _t.id)
 
     # Reviewable band lists.
     def _rows(status):
@@ -4527,17 +4586,20 @@ def render_attention() -> None:
                                 # delete in an app whose whole promise is that
                                 # nothing is ever deleted.  The note now goes
                                 # to ``.trash/done_flags/`` through the same
-                                # helper the To Download page already uses.
-                                from ui.cockpit_actions import (
-                                    mark_flag_done as _mark_flag_done,
-                                )
+                                # helper the To Download page already uses,
+                                # and the undo log (it was outside it).
                                 fp = Path(it.payload.get("flag_file", ""))
-                                if fp.exists() and _mark_flag_done(fp, lib):
+                                _tx = (_mark_note_done(
+                                    fp, lib, "Marked a download note done")
+                                    if fp.exists() else "")
+                                if _tx:
                                     _log_activity("attention.mark_flag_done",
-                                                  fp.name, ".trash/done_flags/")
+                                                  fp.name, ".trash/done_flags/",
+                                                  _tx)
                                     st.toast(
-                                        "Marked done — the note was moved "
-                                        "to the trash folder, not deleted."
+                                        "Marked done — the note is in the "
+                                        "trash folder; undo it from the "
+                                        "Activity page."
                                     )
                                     # Invalidate cached count so the
                                     # sidebar badge updates immediately
@@ -4682,13 +4744,23 @@ def render_attention() -> None:
                                 )
                                 p = Path(it.payload.get("path", ""))
                                 if p.exists():
-                                    out = reset_recheck_state(p)
+                                    with _Transaction(
+                                            "Put a paper back in the "
+                                            f"publication check: {p.name}") as _t:
+                                        out = reset_recheck_state(
+                                            p, undo_log=_t.log)
                                     if out is None:
-                                        st.warning("No sidecar — nothing to reset.")
+                                        _flash("warning",
+                                               f"{p.name} has no saved record "
+                                               f"— nothing to reset.")
                                     else:
                                         _log_activity("attention.reset_recheck",
-                                                      str(p.relative_to(lib)))
-                                        st.toast(f"Recheck state reset for {p.name}")
+                                                      str(p.relative_to(lib)),
+                                                      "", _t.id)
+                                        st.toast(
+                                            f"{p.name} is back in the "
+                                            f"publication check — undo it "
+                                            f"from the Activity page.")
                                         _attention_resolved(it.key, files_moved=False)
                             elif action_id == "accept_topic":
                                 # Move the paper into its suggested
@@ -4810,7 +4882,6 @@ def render_to_download() -> None:
     from ui.cockpit_actions import (
         download_doi_to_inbox,
         list_download_flags,
-        mark_flag_done,
     )
     from watcher.config import WatcherConfig
 
@@ -4945,7 +5016,12 @@ def render_to_download() -> None:
                         # succeeded -- otherwise the user has to click
                         # Mark done as a separate step and the
                         # Attention badge stays stuck on this item.
-                        if mark_flag_done(flag["flag"], lib):
+                        _ran, _tx = _locked_call(
+                            lib, "Mark done", _mark_note_done, flag["flag"],
+                            lib, "Downloaded; marked the download note done")
+                        if _ran and _tx:
+                            _log_activity("download.flag_done", flag["title"],
+                                          ".trash/done_flags/", _tx)
                             _attention_count_cached.clear()
                         st.rerun()
                     else:
@@ -4955,15 +5031,19 @@ def render_to_download() -> None:
                     "Mark done", key=f"flag_done_{flag['flag']}",
                     use_container_width=True,
                     help="Takes this off the list. The note is moved to the "
-                         "library's trash folder, not deleted.",
+                         "library's trash folder, not deleted, and Undo on "
+                         "the Activity page puts it back.",
                 ):
-                    if mark_flag_done(flag["flag"], lib):
+                    _ran, _tx = _locked_call(
+                        lib, "Mark done", _mark_note_done, flag["flag"], lib,
+                        "Marked a download note done")
+                    if _ran and _tx:
                         _log_activity("download.flag_done", flag["title"],
-                                      ".trash/done_flags/")
-                        st.toast("Marked done — the note moved to the "
-                                 "trash folder, not deleted.")
+                                      ".trash/done_flags/", _tx)
+                        st.toast("Marked done — the note is in the trash "
+                                 "folder; undo it from the Activity page.")
                         _attention_count_cached.clear()
-                        st.rerun()
+                    st.rerun()
 
 
 # ---------------------------------------------------------------------------
@@ -5653,13 +5733,18 @@ def render_settings() -> None:
         "Stop after this many files (0 = no limit)", min_value=0, value=0,
         key="bf_limit",
     )
+    _reversible_note("Fill in missing details only adds records; Undo "
+                     "moves the ones it added to the trash.")
     if bf_cols[0].button("Fill in missing details", key="bf_run",
                          use_container_width=True):
         from processing.identity import backfill_directory
-        with st.spinner("Walking the library..."):
+        with st.spinner("Walking the library..."), _Transaction(
+                "Filled in missing details (records for papers that had "
+                "none)") as _t:
             ran, summary = _locked_call(
                 lib, "Fill in missing details", backfill_directory,
                 lib, limit=(bf_limit or None), verbose=False,
+                undo_log=_t.log,
             )
         if ran:
             st.success(
@@ -5674,7 +5759,8 @@ def render_settings() -> None:
                     "from the **Conformance** page (Find the papers these "
                     "records belong to).")
             _log_activity("settings.backfill", str(lib),
-                          f"wrote={summary['written']}")
+                          f"wrote={summary['written']}",
+                          _t.id if _t.committed else "")
         else:
             _render_flashes()
     if bf_cols[1].button("Check they still match", key="bf_verify",

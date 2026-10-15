@@ -163,6 +163,7 @@ def test_bulk_conflict_buttons_resolve_every_selected_copy(ck, button, action):
 def test_apply_suggested_follows_each_conflicts_own_suggestion(ck):
     lib = ck.lib
     a, a_copy, b_copy = _two_conflicts(lib)
+    before, txs = snapshot(lib), transactions(lib)
     ck.st.session_state["conflicts_selected"] = {str(a_copy), str(b_copy)}
     ck.st.press("conf_bulk_suggested")
 
@@ -172,6 +173,9 @@ def test_apply_suggested_follows_each_conflicts_own_suggestion(ck):
     assert a.read_bytes() == b"%PDF-1.4\n% original\n%%EOF\n"
     assert (lib / ".trash/conflict_copies" / a_copy.name).exists()
     assert (lib / "03 - Working papers/T/Tan, X. - Lone.pdf").exists()
+    tx, = _new_txs(lib, txs)
+    undo_from_activity(ck, tx["id"])
+    assert snapshot(lib) == before
 
 
 @presses("render_conflicts[conf_bulk_kc]")
@@ -179,12 +183,16 @@ def test_keep_canonical_in_bulk_retires_every_copy(ck):
     lib = ck.lib
     a, a_copy, b_copy = _two_conflicts(lib)
     ck.st.session_state["conflicts_selected"] = {str(a_copy), str(b_copy)}
+    before, txs = snapshot(lib), transactions(lib)
     ck.st.press("conf_bulk_kc")
 
     ck.run("render_conflicts")
 
     trashed = {p.name for p in (lib / ".trash/conflict_copies").iterdir()}
     assert trashed == {a_copy.name, b_copy.name}
+    tx, = _new_txs(lib, txs)
+    undo_from_activity(ck, tx["id"])
+    assert snapshot(lib) == before
 
 
 @presses("render_conflicts[conf_bulk_kf]")
@@ -192,6 +200,7 @@ def test_keep_conflict_in_bulk_promotes_every_copy(ck):
     lib = ck.lib
     a, a_copy, b_copy = _two_conflicts(lib)
     ck.st.session_state["conflicts_selected"] = {str(a_copy), str(b_copy)}
+    before, txs = snapshot(lib), transactions(lib)
     ck.st.press("conf_bulk_kf")
 
     ck.run("render_conflicts")
@@ -199,6 +208,9 @@ def test_keep_conflict_in_bulk_promotes_every_copy(ck):
     assert (lib / "03 - Working papers/T/Tan, X. - Lone.pdf").exists()
     assert (lib / ".trash/conflict_copies" / f"{a.stem}.old.pdf").exists()
     assert not a_copy.exists()
+    tx, = _new_txs(lib, txs)
+    undo_from_activity(ck, tx["id"])
+    assert snapshot(lib) == before
 
 
 def test_bulk_buttons_cannot_be_pressed_with_nothing_selected(ck):
@@ -334,6 +346,7 @@ def test_download_now_files_the_paper_and_clears_the_note(ck, monkeypatch):
     from watcher.config import WatcherConfig
     monkeypatch.setattr(WatcherConfig, "load",
                         classmethod(lambda cls, *a, **k: cls(inbox_dir=inbox)))
+    before, txs = snapshot(lib), transactions(lib)
     ck.st.press(f"flag_dl_{flag}")
 
     assert ck.run("render_to_download") == "rerun"
@@ -342,12 +355,21 @@ def test_download_now_files_the_paper_and_clears_the_note(ck, monkeypatch):
     assert (inbox / "stopping.pdf").exists()
     assert not flag.exists()
     assert (lib / ".trash/done_flags/Stopping.txt").exists()
+    # The note comes back; the download stays in the inbox for the filer.
+    tx, = _new_txs(lib, txs)
+    done = [e for e in ck.st.session_state["activity_log"]
+            if e["action"] == "download.flag_done"]
+    assert [e["tx_id"] for e in done] == [tx["id"]], (
+        "Activity cannot say which click this entry was")
+    undo_from_activity(ck, tx["id"])
+    assert snapshot(lib) == before
+    assert (inbox / "stopping.pdf").exists()
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "mark_flag_done moves the note with shutil.move, outside the undo log: "
-    "Activity cannot put it back (pre-existing; it is in .trash/done_flags/)"))
+@presses("render_to_download[flag_done_{}]")
 def test_mark_done_can_be_undone_from_activity(ck):
+    """It could not: the note went to the trash by a bare shutil.move,
+    outside the undo log (strict xfail until 2026-10-15)."""
     lib = ck.lib
     flag = _flag(lib)
     before, txs = snapshot(lib), transactions(lib)
@@ -355,5 +377,37 @@ def test_mark_done_can_be_undone_from_activity(ck):
     ck.run("render_to_download")
     assert not flag.exists()
     tx, = _new_txs(lib, txs)
+    assert ck.st.session_state["activity_log"][0]["tx_id"] == tx["id"]
+    assert tx["description"] == "Marked a download note done: Stopping.txt"
     undo_from_activity(ck, tx["id"])
     assert snapshot(lib) == before
+    (kind, msg), = ck.flashes()
+    assert kind == "success", msg
+    assert next(t for t in transactions(lib) if t["id"] == tx["id"])["undone"]
+
+
+def test_mark_done_when_the_library_is_busy_changes_nothing(ck):
+    from processing.locking import LibraryLock
+    lib = ck.lib
+    flag = _flag(lib)
+    before, txs = snapshot(lib), transactions(lib)
+    other = LibraryLock(lib)
+    assert other.acquire(blocking=False)
+    try:
+        ck.st.press(f"flag_done_{flag}")
+        assert ck.run("render_to_download") == "rerun"
+    finally:
+        other.release()
+    assert snapshot(lib) == before and _new_txs(lib, txs) == []
+    (kind, msg), = ck.flashes()
+    assert kind == "error" and "Mark done" in msg, msg
+
+
+def test_mark_done_on_a_note_already_gone_records_nothing(ck):
+    """Two tabs: the note was marked done in the other. Nothing to retire,
+    so no empty entry with a live Undo button lands in Activity."""
+    lib = ck.lib
+    flag = lib / "04 - Papers to be downloaded/Ann. Probab/Stopping.txt"
+    txs = transactions(lib)
+    assert ck.module._mark_note_done(flag, lib, "Marked a download note done") == ""
+    assert _new_txs(lib, txs) == []

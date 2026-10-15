@@ -170,6 +170,38 @@ def created_record_blocker(record: Path, fingerprint: str,
     return ""
 
 
+#: Where undoing a ``file_created`` puts the file it made.
+UNDONE_CREATIONS = "undone_creations"
+
+
+def _sha256(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as fh:
+        for block in iter(lambda: fh.read(1 << 20), b""):
+            h.update(block)
+    return h.hexdigest()
+
+
+def created_file_blocker(path: Path, sha256: str) -> str:
+    """Why undo would not retire a file -- not a record -- a transaction
+    made, or "".
+
+    ``created_record_blocker``'s counterpart for a file that is not a
+    record (a download note in 04/): it has no fields to compare, so it is
+    compared byte for byte. Undoing it retires it, so it must still BE the
+    file made. A note marked done and later written again under the same
+    name is another paper's note by then, and is left where it is. A
+    digest that was never recorded ("") matches no file, so a malformed
+    entry refuses rather than guesses.
+    """
+    if not path.exists():
+        return f"SKIP: already gone: {path}"
+    if _sha256(path) != sha256:
+        return (f"CANNOT UNDO: {path} has changed since it was made, so it "
+                f"is no longer only what this change wrote; leaving it")
+    return ""
+
+
 class UndoLog:
     """Records file operations and provides undo functionality."""
 
@@ -317,6 +349,27 @@ class UndoLog:
             "fingerprint": (record_fingerprint(fields)
                             if isinstance(fields, dict) else ""),
         })
+
+    def record_new_file(self, path: Path) -> None:
+        """Record that this transaction made ``path``, a file that is not a
+        saved record (for those, ``record_new_record``).
+
+        A download note written into 04/ is not a move, so it had no way
+        into the log and "Flag for manual" could not be undone (measured
+        2026-10-15 by pressing it). Undo retires the file to
+        ``.trash/undone_creations/`` -- it does not delete it -- and only
+        while it is still byte for byte what was made
+        (``created_file_blocker``).
+
+        Call it AFTER the file exists: the entry carries the file's digest,
+        which is that check, and a digest can only be taken of what is
+        there. ``source``/``destination`` as in ``record_new_record``, so
+        an older undo loop passes over it.
+        """
+        if self._current_tx is None:
+            raise RuntimeError("No active transaction — call begin_transaction() first")
+        self._append({"type": "file_created", "source": str(path),
+                      "destination": str(path), "sha256": _sha256(path)})
 
     def has_operations(self) -> bool:
         """True if the current transaction has recorded at least one operation.
@@ -665,6 +718,18 @@ class UndoLog:
                 return {"action": blocker, "ok": False}
             retired = _retire_record_to_trash(dst, src)
             return {"action": f"RETIRED RECORD: {dst} → {retired}", "ok": True}
+
+        if op["type"] == "file_created":
+            # Retired, never deleted, and only while it is what was made.
+            blocker = created_file_blocker(dst, op.get("sha256", ""))
+            if blocker:
+                return {"action": blocker, "ok": False}
+            if dry_run:
+                return {"action": f"WOULD RETIRE: {dst.name} (made by this "
+                                  f"change) → .trash/{UNDONE_CREATIONS}/",
+                        "ok": True}
+            retired = _retire_to_trash(dst, UNDONE_CREATIONS)
+            return {"action": f"RETIRED: {dst} → {retired}", "ok": True}
 
         return {"action": f"CANNOT UNDO: unknown kind of change {op['type']!r}",
                 "ok": False}

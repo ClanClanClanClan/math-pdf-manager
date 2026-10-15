@@ -220,14 +220,59 @@ def _assert_undoing_an_upgrade_is_partial_and_says_so(ck, tx_id, pre,
 def test_flag_for_manual_writes_a_note_in_04(ck):
     lib = ck.lib
     pre, entry = _preprint_and_report(lib, ck.home)
+    shelves, trash, txs = _shelves(lib), _trashed(lib), transactions(lib)
     ck.st.press(f"upg_flag_{entry['file']}")
 
     assert ck.run("render_upgrade_queue") == "rerun"
 
     note = lib / "04 - Papers to be downloaded/Ann. Probab./Optimal stopping games.txt"
-    assert "DOI: 10.1000/games" in note.read_text(encoding="utf-8")
+    body = note.read_bytes()
+    assert b"DOI: 10.1000/games" in body
     assert pre.exists(), "flagging must not touch the preprint"
     assert str(pre) in ck.st.session_state["upgrade_skipped"]
+    # Undo takes the note off the To Download list -- into the trash, not
+    # gone -- and leaves everything else as it was.
+    tx, = _new_txs(lib, txs)
+    assert ck.st.session_state["activity_log"][0]["tx_id"] == tx["id"]
+    _assert_undo_restores_the_shelves(ck, tx["id"], shelves, trash)
+    assert not note.exists()
+    assert (lib / ".trash/undone_creations" / note.name).read_bytes() == body
+    assert _trashed(lib) - trash == {f".trash/undone_creations/{note.name}"}
+
+
+def test_flag_for_manual_twice_writes_one_note_and_one_entry(ck):
+    lib = ck.lib
+    pre, entry = _preprint_and_report(lib, ck.home)
+    ck.st.press(f"upg_flag_{entry['file']}")
+    ck.run("render_upgrade_queue")
+    txs, shelves = transactions(lib), _shelves(lib)
+    ck.st.session_state.upgrade_skipped.clear()      # back in the queue
+    ck.st.press(f"upg_flag_{entry['file']}")
+
+    assert ck.run("render_upgrade_queue") == "rerun"
+
+    assert _shelves(lib) == shelves, "a second note, or the first rewritten"
+    assert _new_txs(lib, txs) == []
+    assert ck.st.session_state["activity_log"][0]["tx_id"] == ""
+
+
+def test_flag_for_manual_when_the_library_is_busy_changes_nothing(ck):
+    from processing.locking import LibraryLock
+    lib = ck.lib
+    pre, entry = _preprint_and_report(lib, ck.home)
+    shelves, txs = _shelves(lib), transactions(lib)
+    other = LibraryLock(lib)
+    assert other.acquire(blocking=False)
+    try:
+        ck.st.press(f"upg_flag_{entry['file']}")
+        assert ck.run("render_upgrade_queue") == "rerun"
+    finally:
+        other.release()
+    assert _shelves(lib) == shelves and _new_txs(lib, txs) == []
+    assert str(pre) not in ck.st.session_state["upgrade_skipped"], (
+        "the paper left the queue although no note was written")
+    (kind, msg), = ck.flashes()
+    assert kind == "error" and "Flag for manual" in msg, msg
 
 
 @presses("_render_batch_upgrade[bulk_upg_apply]")

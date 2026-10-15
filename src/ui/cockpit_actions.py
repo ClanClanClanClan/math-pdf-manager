@@ -627,19 +627,28 @@ def list_download_flags(library_root: Path) -> list[dict]:
     return out
 
 
-def mark_flag_done(flag: Path, library_root: Path) -> bool:
-    """Move the flag .txt to ``.trash/done_flags/`` (recoverable)."""
+def mark_flag_done(flag: Path, library_root: Path, *, undo_log) -> bool:
+    """Retire the flag .txt to ``.trash/done_flags/``, through the undo log.
+
+    It was a bare ``shutil.move``: the note reached the trash, but Activity
+    had no record of it, so Mark done -- three buttons -- was a retirement
+    its Undo could not reverse (found 2026-10-15 by pressing each in a
+    test). ``undo_log`` is an open transaction and is required, so that a
+    new caller cannot forget it.
+    """
+    from processing.undo_log import logged_move
+    if undo_log is None:
+        raise ValueError("mark_flag_done needs an open undo transaction")
     if not flag.exists():
         return False
     trash = library_root / ".trash" / "done_flags"
-    trash.mkdir(parents=True, exist_ok=True)
     dest = trash / flag.name
     # Disambiguate collisions
     n = 1
     while dest.exists():
         dest = trash / f"{flag.stem} ({n}){flag.suffix}"
         n += 1
-    shutil.move(str(flag), str(dest))
+    logged_move(flag, dest, undo_log=undo_log)
     return True
 
 
