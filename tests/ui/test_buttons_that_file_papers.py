@@ -288,11 +288,10 @@ def test_apply_now_files_the_previewed_papers_into_their_topic(ck):
     tx, = _new_txs(lib, txs)
     undo_from_activity(ck, tx["id"])
     assert ck.flashes()[-1][0] == "success"
-    # The paper is back where it was.  It had no record before; filing
-    # wrote one, and undo puts its fields back but not its absence -- a
-    # record with no topic (measured 2026-10-15).  What matters is that it
-    # does not claim the topic the undo took away.
-    pdfs = {k: v for k, v in _shelves(lib).items() if k.endswith(".pdf")}
-    assert pdfs == {k: v for k, v in shelves.items() if k.endswith(".pdf")}
-    assert PaperIdentity.load(p).topic_codes == []
+    # The paper is back where it was, and so is its ABSENCE of a record:
+    # filing wrote one, and undo used to leave it behind, blank (measured
+    # 2026-10-15). Now the filing logs making it, and undo retires it.
+    assert _shelves(lib) == shelves
     assert not dest.exists()
+    new_in_trash, = _trashed(lib) - trash
+    assert new_in_trash.startswith(".mathpdf-sidecars/.trash/undone_records/")

@@ -130,9 +130,13 @@ def test_a_refused_file_stays_in_the_list_so_it_can_be_retried(C):
 
 class _FakeLog:
     results: list = []
+    earlier = 0         # changes an earlier press of Undo already brought back
 
     def __init__(self, *a, **k):
         pass
+
+    def reversed_so_far(self, tx_id):
+        return self.earlier
 
     def undo_transaction(self, tx_id, dry_run=False):
         if isinstance(self.results, Exception):
@@ -144,6 +148,7 @@ class _FakeLog:
 def fake_undo(monkeypatch):
     import processing.undo_log as ul
     monkeypatch.setattr(ul, "UndoLog", _FakeLog)
+    monkeypatch.setattr(_FakeLog, "earlier", 0)
     return _FakeLog
 
 
@@ -160,6 +165,37 @@ def test_a_complete_undo_says_complete(C, fake_undo):
     fake_undo.results = [{"ok": True, "action": "RENAMED x"}] * 4
     assert C._undo_transaction("tx1") is True
     assert _render(C)[0][0] == "success"
+
+
+def test_a_retry_that_finishes_says_the_whole_entry_is_back(C, fake_undo):
+    """A retry's rows are only what the first press left behind; "all 1
+    change(s) reversed" would read as if the entry had one change."""
+    fake_undo.earlier = 5
+    fake_undo.results = [{"ok": True, "action": "RENAMED x"}]
+    assert C._undo_transaction("tx1") is True
+    (kind, msg), *_ = _render(C)
+    assert kind == "success"
+    assert msg == ("Undone: the remaining 1 change(s) reversed. With the 5 "
+                   "that came back on an earlier try, all 6 are back.")
+
+
+def test_a_retry_that_is_still_partial_counts_the_earlier_try(C, fake_undo):
+    fake_undo.earlier = 4
+    fake_undo.results = ([{"ok": True, "action": "RENAMED x"}]
+                         + [{"ok": False, "action": "SKIP y"}] * 2)
+    C._undo_transaction("tx1")
+    (kind, msg), *_ = _render(C)
+    assert kind == "warning"
+    assert "1 of 3 change(s) reversed, 2 left alone. 4 had already come back" in msg
+
+
+def test_a_refused_retry_says_this_press_did_nothing(C, fake_undo):
+    fake_undo.earlier = 4
+    fake_undo.results = [{"ok": False, "action": "CANNOT UNDO z"}]
+    assert C._undo_transaction("tx1") is False
+    (kind, msg), *_ = _render(C)
+    assert kind == "error" and msg.startswith("Nothing was undone.")
+    assert "4 had already come back on an earlier try." in msg
 
 
 def test_a_refused_undo_says_nothing_happened_and_returns_false(C, fake_undo):

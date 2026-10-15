@@ -4072,8 +4072,13 @@ def render_activity() -> None:
                 # Every other bulk action in this app sits behind an "I've
                 # read it" tick; Undo -- up to 8,514 changes, with no redo --
                 # was the one that fired on a single click (finding 11).
-                ok = col2.checkbox(f"Reverse all {n_ops} change(s)",
-                                   key=f"undo_ok_{i}_{tx_id}")
+                # A retry reverses only what has not come back yet, so the
+                # tick says that number, not the transaction's size.
+                _left = (f"Reverse the {n_ops - partial.get('reversed', 0)} "
+                         f"change(s) not yet reversed"
+                         if partial and isinstance(n_ops, int)
+                         else f"Reverse all {n_ops} change(s)")
+                ok = col2.checkbox(_left, key=f"undo_ok_{i}_{tx_id}")
                 if col2.button("↶ Undo", key=f"undo_{i}_{tx_id}",
                                type="primary", disabled=not ok):
                     _locked_call(_library(), "Undo", _undo_transaction, tx_id)
@@ -4107,6 +4112,9 @@ def _undo_transaction(tx_id: str) -> bool:
     from processing.undo_log import UndoLog
     log = UndoLog()
     try:
+        # A retry attempts only what an earlier press left behind; the rows
+        # are this press's, and the message says how it adds up.
+        earlier = log.reversed_so_far(tx_id)
         results = log.undo_transaction(tx_id, dry_run=False)
         # Count what actually came back, not how many rows were produced.
         # results includes SKIP and CANNOT UNDO entries, so a completely
@@ -4120,18 +4128,27 @@ def _undo_transaction(tx_id: str) -> bool:
         # st.warning was destroyed by that rerun -- a PARTIAL undo looked
         # exactly like a complete one, with only a 4-second toast left
         # (audit finding 19).
-        if done and not refused:
+        before = (f" {earlier} had already come back on an earlier try."
+                  if earlier else "")
+        if done and not refused and earlier:
+            _flash("success",
+                   f"Undone: the remaining {done} change(s) reversed. With the "
+                   f"{earlier} that came back on an earlier try, all "
+                   f"{earlier + done} are back.")
+        elif done and not refused:
             _flash("success", f"Undone: all {done} change(s) reversed.")
         elif done:
             _flash("warning",
                    f"Undone in part: {done} of {len(results)} change(s) "
-                   f"reversed, {len(refused)} left alone. The entry stays in "
-                   f"Activity marked PARTLY UNDONE so you can retry them.",
+                   f"reversed, {len(refused)} left alone.{before} The entry "
+                   f"stays in Activity marked PARTLY UNDONE so you can retry "
+                   f"them.",
                    why, f"Not reversed ({len(refused)}) — and why")
         else:
             _flash("error",
                    "Nothing was undone. The files are exactly where they were "
-                   "before this click.", why, f"Refused ({len(refused)}) — and why")
+                   f"before this click.{before}", why,
+                   f"Refused ({len(refused)}) — and why")
             return False
         _log_activity("undo", tx_id, f"{done}/{len(results)} ops", tx_id)
         _attention_count_cached.clear()

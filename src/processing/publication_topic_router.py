@@ -275,7 +275,9 @@ def file_into_topic(
     The shared core behind both the Attention-Queue accept action and
     the bulk-apply (Pipeline Preview).  Uses ``logged_move`` so the move
     carries the sidecar and is reversible via the undo log, and records
-    a ``sidecar_edit`` so undo also restores the prior topic fields.
+    a ``sidecar_edit`` so undo also restores the prior topic fields --
+    and, for a paper that had no record, the record's creation, so undo
+    retires it to the trash rather than leave a blank one behind.
     Returns ``(ok, message)``.  Does NOT require a stored suggestion.
 
     Optional finer routing:
@@ -286,7 +288,7 @@ def file_into_topic(
         document-type folder (``"05 - Books and lecture notes"`` /
         ``"06 - Theses"``) when the paper is a book/thesis.
     """
-    from processing.identity import PaperIdentity
+    from processing.identity import PaperIdentity, find_sidecar, record_location
     from processing.undo_log import logged_move
     from organization.system import (
         OrganizationSystem, PUBLISHED, UNPUBLISHED, WORKING, BOOKS, THESES,
@@ -365,6 +367,14 @@ def file_into_topic(
     # the same reversible transaction.  Capture the prior field values so
     # the recorded ``sidecar_edit`` can restore them on undo.
     identity = PaperIdentity.load(pdf_path)
+    if undo_log is not None and find_sidecar(pdf_path) is None:
+        # No record anywhere: this filing makes one. Write it blank first
+        # and log THAT, so undo -- once it has put the topic fields back --
+        # can see the record holds nothing more and retire it. Undo used to
+        # leave it: a paper that arrived with no record went back to its
+        # shelf with a blank one (measured 2026-10-15).
+        identity.save(pdf_path, recompute_hash=False)
+        undo_log.record_new_record(pdf_path, record_location(pdf_path))
     old_suggestion = identity.topic_suggestion
     old_confidence = identity.topic_confidence
     old_codes = list(identity.topic_codes)

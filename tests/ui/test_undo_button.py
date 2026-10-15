@@ -123,6 +123,43 @@ def test_a_partly_refused_undo_counts_what_came_back(ck):
     assert full["partial_undo"]["reversed"] == n - 1
 
 
+@presses(UNDO)
+def test_a_partly_undone_entry_pressed_again_finishes(ck):
+    """The owner's retry, end to end (measured stuck 2026-10-15): the first
+    press brings one paper back and refuses the other, whose old name is
+    taken; he moves the stranger away and presses Undo again. The second
+    press must attempt only what is left, and the entry must end UNDONE."""
+    from tests.ui.streamlit_double import said
+    lib = ck.lib
+    tx, moves = _renamed_with_record(lib, 2)
+    (old0, _new0), (old1, _new1) = moves
+    stranger = old1.parent.parent / "elsewhere.pdf"
+    old1.write_bytes(b"%PDF-1.4\n% somebody else's file\n%%EOF\n")
+    n = next(t for t in transactions(lib) if t["id"] == tx)["operations_count"]
+
+    undo_from_activity(ck, tx)
+    assert ck.flashes()[0][0] == "warning"
+    ck.st.calls.clear()
+    ck.run("render_activity")
+    page = said(ck.st)
+    assert f"PARTLY UNDONE ({n - 1} reversed, 1 not)" in page, (
+        "the Activity row did not say the entry was partly undone")
+    assert "Reverse the 1 change(s) not yet reversed" in page
+    assert f"Reverse all {n} change(s)" not in page
+
+    old1.rename(stranger)                  # he clears the way
+    ck.st.session_state.pop("flash", None)  # the first message was shown
+    undo_from_activity(ck, tx)
+
+    assert ck.flashes() == [(
+        "success", f"Undone: the remaining 1 change(s) reversed. With the "
+                   f"{n - 1} that came back on an earlier try, all {n} are back.")]
+    row = next(t for t in transactions(lib) if t["id"] == tx)
+    assert row["undone"] is True and "partial_undo" not in row
+    assert old0.exists() and old1.exists() and stranger.exists()
+    assert PaperIdentity.load(old1).doi == "10.1000/test.1"
+
+
 def test_undo_cannot_be_pressed_before_the_box_is_ticked(ck):
     """The button is disabled until "Reverse all N change(s)" is ticked;
     a press without the tick changes nothing (finding 11)."""

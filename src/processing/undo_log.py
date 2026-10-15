@@ -117,6 +117,59 @@ def copy_undo_blocker(dst: Path, src: Path) -> str:
     return ""
 
 
+#: "There is no file there" -- distinct from ``None``, "there is a file and
+#: it is not a readable record".
+_MISSING = object()
+
+
+def _read_record(path: Path):
+    """The record's fields; ``_MISSING`` if there is no file, ``None`` if
+    there is one that is not a readable JSON object."""
+    try:
+        text = path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return _MISSING
+    except OSError:
+        return None
+    try:
+        data = json.loads(text)
+    except ValueError:
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def record_fingerprint(fields) -> str:
+    """What a record holds, independent of how its JSON is laid out.
+
+    ``None`` (an unreadable record) has a fingerprint too -- of JSON
+    ``null`` -- which no record's fields can share."""
+    return hashlib.sha256(json.dumps(
+        fields, sort_keys=True, ensure_ascii=False).encode("utf-8")).hexdigest()
+
+
+def created_record_blocker(record: Path, fingerprint: str,
+                           fields=_MISSING) -> str:
+    """Why undo would not retire the record a transaction created, or "".
+
+    A record this transaction made is retired only while it holds exactly
+    what the transaction wrote -- by then undo has put back the fields the
+    transaction itself changed after making it. Anything added since (a DOI
+    found by "Fill in missing details", a publication check) is the paper's
+    and stays with it: the record is KEPT and the undo says so.
+
+    ``fields`` is what the record holds, when the caller already knows (the
+    dry run, which predicts it); otherwise it is read from ``record``.
+    """
+    if fields is _MISSING:
+        fields = _read_record(record)
+    if fields is _MISSING:
+        return f"SKIP: no saved record to retire: {record}"
+    if record_fingerprint(fields) != fingerprint:
+        return (f"KEPT: the saved record this change created has changed "
+                f"since, so it stays with its paper: {record}")
+    return ""
+
+
 class UndoLog:
     """Records file operations and provides undo functionality."""
 
@@ -236,6 +289,34 @@ class UndoLog:
         if absent:
             op["absent"] = sorted(absent)
         self._append(op)
+
+    def record_new_record(self, pdf_path: Path, record: Path) -> None:
+        """Record that ``record`` -- ``pdf_path``'s saved record -- did not
+        exist and was just made.
+
+        Undoing a topic filing put the paper back and the record's fields
+        back, but not the record's ABSENCE: a paper that arrived with no
+        record kept a blank one (found 2026-10-15). Logged at creation, with
+        what the record holds then, so undo can retire it to the trash once
+        it holds nothing more. Record this right after writing the record
+        and before anything else changes it.
+
+        ``source``/``destination`` keep the shape every other file operation
+        has: an undo loop that does not know this type (the code before it)
+        reads both and passes over it, rather than failing half-way through.
+        """
+        if self._current_tx is None:
+            raise RuntimeError("No active transaction — call begin_transaction() first")
+        fields = _read_record(record)
+        self._append({
+            "type": "record_created",
+            "source": str(pdf_path),
+            "destination": str(record),
+            # Unreadable right after writing: no fingerprint, so undo keeps
+            # the record rather than guess.
+            "fingerprint": (record_fingerprint(fields)
+                            if isinstance(fields, dict) else ""),
+        })
 
     def has_operations(self) -> bool:
         """True if the current transaction has recorded at least one operation.
@@ -366,7 +447,11 @@ class UndoLog:
     ) -> list[dict]:
         """Undo all operations in a transaction (in reverse order).
 
-        Returns a list of undo actions taken.
+        Returns one row per operation attempted: ``action`` (what happened,
+        or why not), ``ok`` (it came back) and ``op`` (its index in the
+        transaction). Operations an earlier, partial undo already brought
+        back are not attempted again, and get no row -- in the dry run too,
+        so the preview of a retry shows what the retry will do.
         """
         log_file = self.log_dir / f"{tx_id}.json"
         if not log_file.exists():
@@ -376,152 +461,39 @@ class UndoLog:
         if tx.get("undone"):
             raise ValueError(f"Transaction {tx_id} has already been undone")
 
-        # Refuse to "restore" from special device files. Historical bug:
-        # callers used to record deletions as moves to /dev/null, which made
-        # undo try to move the device file and destroy the source.
-        SPECIAL_DEVICES = {"/dev/null", "/dev/zero", "/dev/random", "/dev/urandom"}
+        ops = tx["operations"]
+        # Per-operation bookkeeping. A retry used to attempt EVERY operation
+        # again; one that had already come back then reported "SKIP: file
+        # gone" (ok=False), so a partly undone transaction could never reach
+        # "done" even with every file home -- and, worse, a retry re-did
+        # reversals: it restored record fields the owner had edited since,
+        # or moved back a file that had been filed again under the old name.
+        # A record written before this bookkeeping existed has none, and is
+        # retried in full, as it always was (none in the real log, 2026-10-15).
+        came_back = set(tx.get("reversed_ops", ()))
 
         results = []
-        # Undo in reverse order
-        for op in reversed(tx["operations"]):
-            # Sidecar-field edits (audit-11b) carry their own shape
-            # (path + changes), not source/destination.  Handle first.
-            if op["type"] == "sidecar_edit":
-                pdf = Path(op["path"])
-                changes = op.get("changes", {})
-                if dry_run:
-                    results.append({
-                        "action": f"WOULD RESTORE sidecar fields {list(changes)} on {pdf.name}",
-                        "ok": True,
-                    })
-                    continue
-                try:
-                    # The recorded fields, and nothing else: a full save
-                    # here added every field the record predated, so the
-                    # record that came back was not the one that left.
-                    from processing.identity import patch_record
-                    absent = set(op.get("absent", ()))
-                    done = patch_record(
-                        pdf, {f: old for f, (old, _new) in changes.items()
-                              if f not in absent},
-                        remove=sorted(absent & set(changes)))
-                    if done is None:
-                        results.append({"action": f"SKIP: no sidecar to restore: {pdf}", "ok": False})
-                        continue
-                    results.append({
-                        "action": f"RESTORED sidecar fields {list(changes)} on {pdf.name}",
-                        "ok": True,
-                    })
-                except Exception as exc:  # pragma: no cover -- defensive
-                    results.append({"action": f"FAILED to restore sidecar on {pdf}: {exc}", "ok": False})
+        for i in range(len(ops) - 1, -1, -1):        # undo in reverse order
+            if i in came_back:
                 continue
-
-            src = Path(op["source"])
-            dst = Path(op["destination"])
-
-            if op["type"] == "move":
-                # Undo move: move destination back to source
-                if str(dst) in SPECIAL_DEVICES:
-                    results.append({
-                        "action": f"CANNOT UNDO: file was deleted (recorded as move to {dst}); "
-                                  f"source path {src} is unrecoverable from this log",
-                        "ok": False,
-                    })
-                    continue
-                if dry_run:
-                    blocker = restore_blocker(dst, src)
-                    results.append(
-                        {"action": blocker or f"WOULD MOVE BACK: {dst.name} → {src}",
-                         "ok": not blocker})
-                else:
-                    results.append(_restore(dst, src, "MOVED BACK"))
-
-            elif op["type"] == "copy":
-                # Undo copy: remove the copy
-                if dry_run:
-                    blocker = copy_undo_blocker(dst, src)
-                    results.append(
-                        {"action": blocker or f"WOULD DELETE COPY: {dst}",
-                         "ok": not blocker})
-                else:
-                    # DO NOT UNLINK. This is the only hard delete of a
-                    # library PDF in src/, and it has already cost a paper:
-                    # transaction 9b9d5b2f584e recorded
-                    # "move ... Abraham, R., Delmas, J.-F., Weibel, J. -
-                    # Probability-graphons ... -> /dev/null". That file is
-                    # gone from 03 - Working papers/A/2023 and from its
-                    # intended home in 01 - Published papers/Z; the only
-                    # reason the paper still exists is an accidental copy
-                    # under 07e - Optimal control on networks.
-                    #
-                    # Undoing a copy is a deletion, and this project does not
-                    # hard-delete. It retires.
-                    #
-                    # It also REFUSES when the original is gone. Undoing a
-                    # copy is only safe if the thing it was copied from
-                    # survives; otherwise "remove the duplicate" removes the
-                    # last remaining version.
-                    blocker = copy_undo_blocker(dst, src)
-                    if blocker:
-                        results.append({"action": blocker, "ok": False})
-                    else:
-                        retired = _retire_to_trash(dst, "undone_copies")
-                        results.append({"action": f"RETIRED COPY: {dst} → {retired}",
-                                        "ok": True})
-                        # When the undone copy was a topic-router
-                        # hardlink, the canonical's sidecar still
-                        # advertises the now-dead path in
-                        # ``copy_locations`` (and probably has the
-                        # topic code in ``topic_codes``).  Walk back to
-                        # the canonical (the original ``src`` of the
-                        # copy op) and clean up so the sidecar matches
-                        # filesystem reality.  Best-effort: a missing
-                        # canonical sidecar is logged and skipped.
-                        try:
-                            from processing.identity import remove_dead_location
-                            if src.exists():
-                                # Topic code is the prefix of the
-                                # destination's parent (e.g.
-                                # "07a - BSDEs" -> "07a").
-                                parent_name = dst.parent.name
-                                topic_code = (
-                                    parent_name.split(" ", 1)[0]
-                                    if " " in parent_name
-                                    else None
-                                )
-                                remove_dead_location(
-                                    src, dst,
-                                    also_remove_topic_code=topic_code,
-                                )
-                        except Exception as exc:  # pragma: no cover
-                            logger.warning(
-                                "could not clean dead location %s "
-                                "from %s sidecar: %s", dst, src, exc,
-                            )
-
-            elif op["type"] == "rename":
-                # Undo rename: rename back
-                if dry_run:
-                    blocker = restore_blocker(dst, src)
-                    results.append(
-                        {"action": blocker or
-                         f"WOULD RENAME BACK: {dst.name} → {src.name}",
-                         "ok": not blocker})
-                else:
-                    results.append(_restore(dst, src, "RENAMED BACK"))
+            row = self._undo_one(ops, i, dry_run=dry_run, skip=came_back)
+            row["op"] = i
+            results.append(row)
 
         # Mark transaction as undone — but ONLY if everything came back.
         #
-        # It used to set undone=True unconditionally, and line 319 then
-        # refuses to touch an undone transaction ever again. So a single
-        # SKIP (destination gone, source occupied, undone out of order)
-        # burned the whole record: the remaining operations became
-        # permanently unreversible. 122 operations across 4 real
-        # transactions are already stranded that way, 89 of them among
-        # the 6,180 author renames.
+        # It used to set undone=True unconditionally, and undo then refuses
+        # to touch an undone transaction ever again. So a single SKIP
+        # (destination gone, source occupied, undone out of order) burned
+        # the whole record: the remaining operations became permanently
+        # unreversible. 122 operations across 4 real transactions are
+        # already stranded that way, 89 of them among the 6,180 author
+        # renames.
         #
-        # A partial undo now stays RETRYABLE, and remembers which
-        # operations already came back so a retry is not a double-undo.
+        # A partial undo stays RETRYABLE, and ``reversed_ops`` remembers
+        # which operations already came back: a retry attempts only the
+        # rest, and the transaction is done once every operation has come
+        # back, on whichever press.
         #
         # "Came back" is each row's ``ok``, the same flag the cockpit counts.
         # This used to be a second rule -- the row's text starting with SKIP
@@ -531,24 +503,171 @@ class UndoLog:
         # the log marked the transaction fully undone and Activity offered
         # no retry (found 2026-10-15 by pressing Undo on an upgrade).
         if not dry_run:
+            came_back |= {r["op"] for r in results if r.get("ok")}
             failed = [r for r in results if not r.get("ok")]
-            tx["undone"] = not failed
+            tx["undone"] = len(came_back) == len(ops)
             tx["undone_at"] = datetime.now(timezone.utc).isoformat()
-            if failed:
+            if tx["undone"]:
+                tx.pop("partial_undo", None)
+                tx.pop("reversed_ops", None)
+            else:
+                tx["reversed_ops"] = sorted(came_back)
                 tx["partial_undo"] = {
                     "at": tx["undone_at"],
-                    "reversed": len(results) - len(failed),
+                    # Over every press so far, so "reversed" and
+                    # "not_reversed" add up to the transaction.
+                    "reversed": len(came_back),
                     "not_reversed": [str(r.get("action")) for r in failed],
                 }
                 logger.warning(
                     "transaction %s only partially undone (%d of %d); it "
-                    "stays retryable", tx_id, len(results) - len(failed),
-                    len(results))
+                    "stays retryable", tx_id, len(came_back), len(ops))
             from core.io import atomic_write_text
             atomic_write_text(log_file,
                               json.dumps(tx, indent=2, ensure_ascii=False))
 
         return results
+
+    def _undo_one(self, ops: list, i: int, *, dry_run: bool,
+                  skip: set) -> dict:
+        """Reverse ``ops[i]`` -- or, in the dry run, say whether it would be."""
+        # Refuse to "restore" from special device files. Historical bug:
+        # callers used to record deletions as moves to /dev/null, which made
+        # undo try to move the device file and destroy the source.
+        SPECIAL_DEVICES = {"/dev/null", "/dev/zero", "/dev/random", "/dev/urandom"}
+        op = ops[i]
+
+        # Sidecar-field edits (audit-11b) carry their own shape
+        # (path + changes), not source/destination.  Handle first.
+        if op["type"] == "sidecar_edit":
+            pdf = Path(op["path"])
+            changes = op.get("changes", {})
+            if dry_run:
+                return {
+                    "action": f"WOULD RESTORE sidecar fields {list(changes)} on {pdf.name}",
+                    "ok": True,
+                }
+            try:
+                # The recorded fields, and nothing else: a full save
+                # here added every field the record predated, so the
+                # record that came back was not the one that left.
+                from processing.identity import patch_record
+                absent = set(op.get("absent", ()))
+                done = patch_record(
+                    pdf, {f: old for f, (old, _new) in changes.items()
+                          if f not in absent},
+                    remove=sorted(absent & set(changes)))
+                if done is None:
+                    return {"action": f"SKIP: no sidecar to restore: {pdf}", "ok": False}
+                return {
+                    "action": f"RESTORED sidecar fields {list(changes)} on {pdf.name}",
+                    "ok": True,
+                }
+            except Exception as exc:  # pragma: no cover -- defensive
+                return {"action": f"FAILED to restore sidecar on {pdf}: {exc}", "ok": False}
+
+        src = Path(op["source"])
+        dst = Path(op["destination"])
+
+        if op["type"] == "move":
+            # Undo move: move destination back to source
+            if str(dst) in SPECIAL_DEVICES:
+                return {
+                    "action": f"CANNOT UNDO: file was deleted (recorded as move to {dst}); "
+                              f"source path {src} is unrecoverable from this log",
+                    "ok": False,
+                }
+            if dry_run:
+                blocker = restore_blocker(dst, src)
+                return {"action": blocker or f"WOULD MOVE BACK: {dst.name} → {src}",
+                        "ok": not blocker}
+            return _restore(dst, src, "MOVED BACK")
+
+        if op["type"] == "copy":
+            # Undo copy: remove the copy
+            blocker = copy_undo_blocker(dst, src)
+            if dry_run:
+                return {"action": blocker or f"WOULD DELETE COPY: {dst}",
+                        "ok": not blocker}
+            # DO NOT UNLINK. This is the only hard delete of a
+            # library PDF in src/, and it has already cost a paper:
+            # transaction 9b9d5b2f584e recorded
+            # "move ... Abraham, R., Delmas, J.-F., Weibel, J. -
+            # Probability-graphons ... -> /dev/null". That file is
+            # gone from 03 - Working papers/A/2023 and from its
+            # intended home in 01 - Published papers/Z; the only
+            # reason the paper still exists is an accidental copy
+            # under 07e - Optimal control on networks.
+            #
+            # Undoing a copy is a deletion, and this project does not
+            # hard-delete. It retires.
+            #
+            # It also REFUSES when the original is gone. Undoing a
+            # copy is only safe if the thing it was copied from
+            # survives; otherwise "remove the duplicate" removes the
+            # last remaining version.
+            if blocker:
+                return {"action": blocker, "ok": False}
+            retired = _retire_to_trash(dst, "undone_copies")
+            # When the undone copy was a topic-router
+            # hardlink, the canonical's sidecar still
+            # advertises the now-dead path in
+            # ``copy_locations`` (and probably has the
+            # topic code in ``topic_codes``).  Walk back to
+            # the canonical (the original ``src`` of the
+            # copy op) and clean up so the sidecar matches
+            # filesystem reality.  Best-effort: a missing
+            # canonical sidecar is logged and skipped.
+            try:
+                from processing.identity import remove_dead_location
+                if src.exists():
+                    # Topic code is the prefix of the
+                    # destination's parent (e.g.
+                    # "07a - BSDEs" -> "07a").
+                    parent_name = dst.parent.name
+                    topic_code = (
+                        parent_name.split(" ", 1)[0]
+                        if " " in parent_name
+                        else None
+                    )
+                    remove_dead_location(
+                        src, dst,
+                        also_remove_topic_code=topic_code,
+                    )
+            except Exception as exc:  # pragma: no cover
+                logger.warning(
+                    "could not clean dead location %s "
+                    "from %s sidecar: %s", dst, src, exc,
+                )
+            return {"action": f"RETIRED COPY: {dst} → {retired}", "ok": True}
+
+        if op["type"] == "rename":
+            # Undo rename: rename back
+            if dry_run:
+                blocker = restore_blocker(dst, src)
+                return {"action": blocker or
+                        f"WOULD RENAME BACK: {dst.name} → {src.name}",
+                        "ok": not blocker}
+            return _restore(dst, src, "RENAMED BACK")
+
+        if op["type"] == "record_created":
+            # The record is retired, not deleted, and only while it holds
+            # exactly what this transaction made it hold.
+            fingerprint = op.get("fingerprint", "")
+            if dry_run:
+                where, fields = _created_record_after_undo(ops, i, skip)
+                blocker = created_record_blocker(where, fingerprint, fields)
+                return {"action": blocker or
+                        f"WOULD RETIRE the saved record this change created: {dst}",
+                        "ok": not blocker}
+            blocker = created_record_blocker(dst, fingerprint)
+            if blocker:
+                return {"action": blocker, "ok": False}
+            retired = _retire_record_to_trash(dst, src)
+            return {"action": f"RETIRED RECORD: {dst} → {retired}", "ok": True}
+
+        return {"action": f"CANNOT UNDO: unknown kind of change {op['type']!r}",
+                "ok": False}
 
     def list_transactions(self) -> list[dict]:
         """List all transactions.
@@ -566,6 +685,11 @@ class UndoLog:
           would be invisible (and un-undoable).  We glob the per-tx
           files and fold in any not present in the index, so every
           recorded transaction is always listable and reversible.
+
+        A partly undone transaction carries its ``partial_undo``. The
+        summary used to copy ``undone`` alone, so the Activity row that
+        reads ``partial_undo`` to say PARTLY UNDONE never saw one: a partial
+        undo looked exactly like a transaction never touched.
         """
         seen_ids: set[str] = set()
         transactions: list[dict] = []
@@ -588,7 +712,7 @@ class UndoLog:
                 if log_file.exists():
                     try:
                         full_tx = json.loads(log_file.read_text())
-                        tx["undone"] = full_tx.get("undone", False)
+                        tx.update(_undo_state(full_tx))
                     except (json.JSONDecodeError, ValueError, OSError):
                         pass
                 transactions.append(tx)
@@ -616,12 +740,21 @@ class UndoLog:
                 "timestamp": full_tx.get("timestamp", ""),
                 "description": full_tx.get("description", "(recovered)"),
                 "operations_count": len(full_tx.get("operations", [])),
-                "undone": full_tx.get("undone", False),
+                **_undo_state(full_tx),
             })
 
         # Stable chronological order regardless of index vs orphan source.
         transactions.sort(key=lambda t: t.get("timestamp", ""))
         return transactions
+
+    def reversed_so_far(self, tx_id: str) -> int:
+        """How many of ``tx_id``'s operations earlier undos brought back
+        (0 for a transaction never undone, or undone before this was kept)."""
+        try:
+            tx = json.loads((self.log_dir / f"{tx_id}.json").read_text())
+        except (OSError, ValueError):
+            return 0
+        return len(tx.get("reversed_ops", ()))
 
     def get_latest_transaction_id(self) -> Optional[str]:
         """Get the ID of the most recent non-undone transaction."""
@@ -630,6 +763,55 @@ class UndoLog:
             if not tx.get("undone"):
                 return tx["id"]
         return None
+
+
+def _undo_state(full_tx: dict) -> dict:
+    """The undo fields of a transaction's summary, read from its record."""
+    out = {"undone": full_tx.get("undone", False)}
+    if full_tx.get("partial_undo"):         # dropped when the undo finishes
+        out["partial_undo"] = full_tx["partial_undo"]
+    return out
+
+
+def _created_record_after_undo(ops: list, i: int, skip: set):
+    """Where the record ``ops[i]`` created will be, and what it will hold,
+    once undo has reversed the later operations of the transaction.
+
+    The dry run's prediction of what the live run will find. Undo runs in
+    reverse, so by the time it reaches ``ops[i]`` the record has been moved
+    back by this transaction's own later moves and its fields put back by
+    its own later edits; read now, it is still where they left it. So: follow
+    the record forward through those moves to where it is now, read it, and
+    take the edits off again, latest first. ``skip`` holds operations an
+    earlier undo already reversed. Returns ``(path, fields)``, with
+    ``fields`` as :func:`_read_record` gives them.
+    """
+    from processing.identity import sidecar_candidates
+    start = ops[i]["destination"]
+    where, edits = start, []
+    for j in range(i + 1, len(ops)):
+        if j in skip:
+            continue
+        op = ops[j]
+        if op["type"] in ("move", "rename") and op["source"] == where:
+            if restore_blocker(Path(op["destination"]), Path(op["source"])):
+                # It will not be moved back: the live run reads whatever is
+                # at the record's first place (nothing, or a stranger).
+                return Path(start), _read_record(Path(start))
+            where = op["destination"]
+        elif op["type"] == "sidecar_edit" and where in {
+                str(c) for c in sidecar_candidates(Path(op["path"]))}:
+            edits.append(op)
+    fields = _read_record(Path(where))
+    if isinstance(fields, dict):
+        for op in reversed(edits):
+            absent = set(op.get("absent", ()))
+            for f, (old, _new) in op.get("changes", {}).items():
+                if f in absent:
+                    fields.pop(f, None)
+                else:
+                    fields[f] = old
+    return Path(start), fields
 
 
 # ---------------------------------------------------------------------------
@@ -807,6 +989,30 @@ def _retire_to_trash(path: Path, reason: str) -> Path:
         target = trash / f"{path.stem} ({n}){path.suffix}"
         n += 1
     logged_move(path, target)
+    return target
+
+
+def _retire_record_to_trash(record: Path, pdf: Path) -> Path:
+    """Move the record of ``pdf`` that undo has taken away into the trash.
+
+    It goes to the trash of the paper's own library, where the record of a
+    paper of that name retired to ``.trash/undone_records/`` would go -- the
+    record mirror's shadow of the trash, which Conformance never counts as
+    orphaned -- under a name no file or record already answers to.
+    Unlogged, like ``_retire_to_trash``: this runs inside an undo.
+    """
+    from core.config_paths import get_library_root
+    from processing.identity import _library_root_for, sidecar_path
+    root = _library_root_for(pdf) or Path(get_library_root())
+    trash = root / ".trash" / "undone_records"
+    name = Path(pdf.name)
+    slot = trash / name.name
+    n = 1
+    while trash_slot_taken(slot):
+        slot = trash / f"{name.stem} ({n}){name.suffix}"
+        n += 1
+    target = sidecar_path(slot)
+    logged_move(record, target)
     return target
 
 

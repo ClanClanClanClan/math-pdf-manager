@@ -129,6 +129,44 @@ published destinations whose sources are long-gone temp directories, so
 exposing an Undo button on it before the fix would have deleted three real
 PDFs. Order matters — fix first, fold second.
 
+### 4. Undoing an upgrade leaves the published PDF on the shelf
+
+When you undo an upgrade (Upgrade Queue → "Download + Upgrade", or
+"Upgrade these papers"), the preprint comes back from the trash with its
+record, but the published PDF the upgrade filed **stays** in
+`01 - Published papers`. Activity says so — "Undone in part … REFUSED: the
+original is gone, so this copy is the only version left" — and pressing
+Undo again can never finish it.
+
+Why: the published PDF is filed by *copying* the download, and the download
+is deleted straight after. Undo refuses to take away a copy whose original
+is gone, because that copy is then the only version — the rule that came in
+after the Abraham–Delmas–Weibel paper was lost.
+
+Measured 2026-10-15, read-only:
+
+| | upgrades affected |
+|---|--:|
+| the history on Activity (153 entries) | **0** — its one upgrade entry (19 Aug) recorded no changes |
+| the hidden repo log (6 entries, not on Activity) | **1** — the June pilot `0c2b96e0e3af`: Cao, Keller-Ressel, Schmidt; 3 published PDFs on the shelf, downloads gone |
+| from now on | every upgrade you undo |
+
+The choice:
+
+* **A. Keep the rule (today's behaviour).** An undone upgrade leaves both
+  versions; you retire the published one yourself, and the entry stays
+  PARTLY UNDONE.
+* **B. Undo moves such a copy into the trash** (`.trash/undone_copies/`,
+  with its record) instead of refusing. Nothing is deleted; an undone
+  upgrade gives back exactly the shelves you had and is marked undone. The
+  cost: the trash then holds the only copy of that published PDF (to have it
+  back: take it out of the trash, or download it again). Suggested scope:
+  only copies made from a download the app itself deleted, marked when the
+  upgrade is made; a copy whose original vanished for any other reason is
+  still refused, since nobody knows why it vanished.
+
+Nothing has been changed; this waits for your answer.
+
 ---
 
 ## Standing rulings, 2026-10-09
@@ -220,12 +258,22 @@ batch sort's Apply reuses the same remembered answers; not measured.
    undo log; it now also fails against the real one.) Fixed on the way, in
    `undo_log`: an undo that left something behind was marked fully done when
    the leftover was a REFUSED copy (every upgrade), and the preview of undoing
-   a copy could not show that refusal. **Still open:** undoing an upgrade
-   cannot take the published PDF off the shelf (said honestly now, as a
-   partial undo); a retried partial undo never reaches "done" even when
-   everything came back; not in the undo log at all — Mark done (×3), Home
-   "Look again", Upgrade "Flag for manual", "Fill in missing details",
-   "Cache abstracts now"; undoing a topic filing leaves a blank record.
+   a copy could not show that refusal. *Fixed 2026-10-15:* a partly undone
+   entry, pressed again, retried EVERY change, so one already back said
+   "file gone" and the entry could never finish — and a reversal done twice
+   could move back a paper filed again since, or overwrite a record field
+   corrected since. Undo now remembers which changes came back
+   (`reversed_ops`), retries only the rest and finishes; Activity actually
+   shows PARTLY UNDONE (the listing had dropped it, so the row never did).
+   Undoing a topic filing (Pipeline Preview "Apply now") now also retires,
+   to `.trash/undone_records/`, the record the filing made for a paper that
+   had none — while it holds nothing added since; otherwise it is kept and
+   the undo says so. **Still open:** undoing an upgrade cannot take the
+   published PDF off the shelf — your decision, "Needs your decision" §4;
+   not in the undo log at all — Mark done (×3), Home "Look again", Upgrade
+   "Flag for manual", "Fill in missing details", "Cache abstracts now";
+   13 of the 153 entries on Activity are test runs from 10–22 Aug whose
+   every path is outside the library.
 2. **Slow screens**: Home/Attention 12–76 s. (Sort Queue: fixed 2026-10-15,
    see "Sort Queue speed" above.)
    *Conformance — FIXED 2026-10-15.* It took ~3.5 min against a label
