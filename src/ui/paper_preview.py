@@ -123,6 +123,15 @@ def name_source_note(prev: PaperPreview) -> tuple:
                 f"{_REGISTRY_WORDS[svc]} could not be checked: {why}. "
                 f"This name comes from {from_where} instead. Check it, or "
                 f"skip the paper and come back later.")
+    # The model was the last resort and could not name the paper. Said
+    # before "has no record", which would otherwise read as the whole story.
+    model = prev.lookups.get("model") or {}
+    if model.get("state") == "unknown":
+        why = model.get("reason") or "no reason given"
+        return ("warning",
+                f"No title in the PDF or the registries, and the local AI "
+                f"model could not name it: {why}. This name comes from "
+                f"{from_where}; check it before approving, or type the real one.")
     for svc in ("arxiv", "crossref"):
         if (prev.lookups.get(svc) or {}).get("state") == "absent":
             return ("caption",

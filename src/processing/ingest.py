@@ -668,6 +668,7 @@ def extract_metadata_from_pdf(pdf_path: Path) -> dict:
     empty metadata dict.
     """
     metadata = {"title": "", "authors": [], "doi": None, "arxiv_id": None, "year": None}
+    first_pages: List[str] = []
 
     # Magic-byte check.  A truncated browser download often ends as a
     # partial PDF with the trailer missing -- ``fitz.open`` will
@@ -732,9 +733,9 @@ def extract_metadata_from_pdf(pdf_path: Path) -> dict:
             metadata["keywords"] = _unlatex(_decode_entities(kw))
 
         # Check for DOI in first few pages
-        text = ""
-        for page_num in range(min(3, len(doc))):
-            text += doc[page_num].get_text()
+        first_pages = [doc[page_num].get_text()
+                       for page_num in range(min(3, len(doc)))]
+        text = "".join(first_pages)
 
         # Stash a bounded sample of the front-matter text so topic
         # classification can look at the abstract/intro, not just the
@@ -885,20 +886,44 @@ def extract_metadata_from_pdf(pdf_path: Path) -> dict:
     # is already present locally (never auto-download during ingest).
     # The result is marked ``title_source="llm"`` so the cockpit can flag
     # an AI-derived name for the user to verify before filing.
+    #
+    # What it reads and what of its answer is believed: see
+    # ``processing.model_input`` (a JSTOR cover sheet in front of five
+    # scans made it name five papers "The Annals of probability" by
+    # "000-00"). Its outcome is kept three-valued beside the registries'
+    # in ``lookups["model"]``: found, or unknown with the reason.
     if not metadata["title"]:
         try:
             from pdf_processing.llm_extractor import LLMMetadataExtractor
+            from processing import model_input
 
-            text_for_llm = metadata.get("fulltext_sample", "")
             model_path = LLMMetadataExtractor.local_model_path()
-            if text_for_llm and model_path and LLMMetadataExtractor.is_available():
-                llm_result = _llm_extract_remembered(
-                    LLMMetadataExtractor, model_path, text_for_llm)
-                if llm_result and llm_result.get("title"):
+            if model_path and LLMMetadataExtractor.is_available():
+                text_for_llm, left_out = model_input.text_for_model(first_pages)
+                why = model_input.nothing_to_read(text_for_llm, left_out)
+                llm_result = None
+                if why is None:
+                    try:
+                        llm_result = _llm_extract_remembered(
+                            LLMMetadataExtractor, model_path, text_for_llm)
+                    except Exception as exc:
+                        # Not remembered: asked again next time.
+                        why = (f"it failed ({type(exc).__name__}); it will be "
+                               f"asked again next time")
+                        logger.warning("LLM extraction failed for %s: %s",
+                                       pdf_path, exc)
+                if why is None:
+                    why = model_input.answer_problem(llm_result)
+                if why is None:
                     metadata["title"] = llm_result["title"]
                     metadata["title_source"] = "llm"
                     if llm_result.get("authors"):
                         metadata["authors"] = llm_result["authors"]
+                    metadata.setdefault("lookups", {})["model"] = {
+                        "state": "found", "reason": ""}
+                else:
+                    metadata.setdefault("lookups", {})["model"] = {
+                        "state": "unknown", "reason": why}
         except Exception as exc:
             logger.debug("LLM extraction skipped/failed for %s: %s", pdf_path, exc)
 
@@ -1610,6 +1635,9 @@ def ingest_paper(
                               metadata.get("fulltext_sample", ""))
         if _doubts:
             _state, _why = NEEDS_REVIEW, "; ".join(_doubts[:3])
+    _model = (metadata.get("lookups") or {}).get("model") or {}
+    if _state != IDENTIFIED and _model.get("state") == "unknown":
+        _why = f"{_why}; the local AI model could not name it: {_model.get('reason')}"
 
     result["identification_state"] = _state
     result["identification_note"] = _why if _state != IDENTIFIED else ""

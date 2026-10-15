@@ -284,11 +284,88 @@ paper, 74% of model papers show at once and the total wait falls from
 50.5 to 6.5 minutes; at 20 s, all of them; at 5 s, 38% and 19 minutes —
 the 17 books in a row arrive faster than any read-ahead can read them.
 
-Found on the way, **open**: `Download (1).pdf`, `Download2.pdf`,
-`Download4.pdf`, `Download6.pdf` and `Download8.pdf` are five different
-papers whose first 4,000 characters are the same Annals of Probability
-cover page, so the model names every one "The Annals of probability" by
-"000-00".
+Found on the way: five different papers named "The Annals of
+probability" by "000-00" -- fixed, next section.
+
+### The local model named papers after a cover sheet — fixed 2026-10-15
+
+**What it was** (measured read-only, real `12 - To be sorted`, 2,414
+PDFs; 70 always reach the model today, 216 while arXiv is unreachable).
+`Download (1).pdf`, `Download2/4/6/8.pdf` are not five papers behind a
+long cover page: each is a scan (2–9 pages, 129–698 KB) whose ONLY text
+is JSTOR's 152-character sheet, "Institute of Mathematical Statistics is
+collaborating with JSTOR to digitize, preserve, and extend access to The
+Annals of Probability."; the pages after it are images. That is the one
+model input shared by different files, in either population. A Birkhäuser
+book whose only text is the Modern Birkhäuser Classics series
+description was named "Modern Birkhäuser classics" by "Birkhäuser". Every
+other cover sheet among the model's papers -- ResearchGate 3, HAL,
+Taylor & Francis, DML-CZ, a university repository -- names the paper, and
+the model read each correctly; so did the books' series and
+editorial-board pages (GTM, Ergebnisse, Springer Series in Statistics).
+
+**Now** (`processing/model_input.py`, the only path to the model):
+* a page that says only who digitised or publishes the paper -- JSTOR's
+  early sheet, the Birkhäuser series description -- is not handed to the
+  model; a page that keeps any word once that sentence and its links are
+  removed is handed over verbatim. JSTOR's later sheets carry the same
+  sentence below the paper's title and authors and are kept;
+* an answer is used only if its title has letters and every author does
+  ("000-00" is not a name), judged every time it is used, remembered or
+  fresh;
+* the outcome is three-valued in `lookups["model"]`: found, or unknown
+  with the reason. The Sort Queue warns "No title in the PDF or the
+  registries, and the local AI model could not name it: page 1 is
+  JSTOR's cover sheet, which names only the journal, and the other pages
+  have no text to read (a scan without a text layer) …"; the batch sort's
+  note says the same.
+
+| real inbox | before | after |
+|---|--:|--:|
+| handed to the model (arXiv up / down) | 70 / 216 | 63 / 209 |
+| … from the same text as before, byte for byte | — | 63 / 209 |
+| named after a journal, series or publisher | 6 | 0 |
+| one model title on several different papers | 5 papers | 0 |
+| told "could not name it", with the reason | 0 | 12 |
+
+The 12: the 5 JSTOR scans, the Birkhäuser book, a 40-character page the
+model never read anyway, and 5 scans with no text at all (2
+`PPN243919689_*.pdf`; Feller, Lindvall and Seneta, already named in house
+form -- the note says "check it before approving, or type the real one").
+The real model's answer is on record for all 63 still handed over with
+arXiv up and 125 of the 209 with it down; the answer rule refuses none of
+them. Over all 128 real answers
+recorded (the model, read-only, on the inbox's distinct texts) it refuses
+two: the "000-00" and an empty title, both from texts no longer handed
+over.
+
+**The library at large** (29,795 PDFs, first pages): 427 carry JSTOR's
+sentence. The rule leaves out 96 -- 0 words left, the owner's title (from
+the filename) on none of them, and no other text in their first three
+pages: all scans. It keeps 331, each with 10 or more words left; 330
+carry the owner's title, the 331st is an inbox file whose name is not a
+title. All four Modern Birkhäuser Classics books in `05 - Books and
+lecture notes` (4,341 PDFs, first three pages) are caught -- one only
+after words broken over lines ("resear-\nchers", Triebel) were joined for
+matching; Hörmander's is then read from its own title page.
+
+**Remembered answers.** The cache key is the exact text. Where the text
+changed (the 7), it is now not handed over at all, so the old key is
+never looked up; where it did not (the 63/209), the remembered answer
+applies -- and is judged, so a "000-00" remembered before the fix is
+refused (tested). `~/.mathpdf/cache/lookups.json` does not exist yet on
+this Mac, so nothing wrong is remembered today.
+
+**Found, open: the model invents authors when the page has none.** Of the
+128 answers, 3 name people absent from their text and wrong: "Khintchine"
+for Iosifescu's *Metrical theory of continued fractions*, Kechris and
+Miller for Zapletal's AMS Memoir 793 (memo0793.pdf), four names for a
+paper signed "OpenAI"; a fourth adds Fornberg, rightly, to a book whose
+first pages never name him; a fifth misspells "Ardjani" as "Arjdani". A
+plain "is the surname in the text" check flags 11: those 5, the
+"000-00", and 5 right or defensible ones ("BanÄ uelos" and "Opriúan" are
+the PDFs' garbling, "Bühler" for "Buehler", "Muguruza Gonzalez" twice).
+Not fixed; raw list in agent-results `authors_not_in_text.txt`.
 
 ---
 
