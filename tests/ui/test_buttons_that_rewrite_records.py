@@ -211,6 +211,10 @@ def test_cache_abstracts_now_stores_the_first_page_text(ck):
     assert entry["action"] == "pipeline.abstracts"
     tx, = _new_txs(lib, txs)
     assert entry["tx_id"] == tx["id"]
+    # The page promised both halves of what the undo below does.
+    note = said(ck.st, "caption")
+    assert "takes the stored text back off" in note
+    assert "moves the records it made" in note, note
     undo_from_activity(ck, tx["id"])
     # The existing record back byte for byte; the one made from nothing
     # retired, not deleted.

@@ -3824,7 +3824,8 @@ def render_pipeline_preview() -> None:
         bf_n = cbf[0].selectbox("Papers to read", ["100", "500", "2000", "All"],
                                 index=0, key="abstracts_bf_limit")
         _reversible_note("Undo takes the stored text back off the papers "
-                         "it was added to.")
+                         "it was added to, and moves the records it made "
+                         "for papers that had none to the trash.")
         if cbf[1].button("Cache abstracts now", key="abstracts_bf_run"):
             from processing.classifier_text import (backfill_classifier_text,
                                                     describe_run)
