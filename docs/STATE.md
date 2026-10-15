@@ -471,6 +471,27 @@ Not fixed; raw list in agent-results `authors_not_in_text.txt`.
    with none, without the stranded-record check. "Check they still
    match" counts a record with no fingerprint as matching
    (`drift_check` returns `None`).
+
+   *The preview of putting a record's fields back — FIXED 2026-10-15.*
+   "Show what Undo would do" said WOULD RESTORE for every record edit,
+   whatever was on disk, and the press then skipped those with no readable
+   record. Measured read-only on the 15 entries on Activity not yet
+   undone that hold record edits: 41 of their 487 such rows now say the
+   press will skip them (39 with no readable record left, 2 whose record
+   is no longer where the entry put it). The preview asks what the press
+   will find, following the record through the entry's own later moves,
+   as the preview of retiring a made record already did. Found and fixed
+   on the way: when a record's move back was refused because another
+   paper's record sat in its place, the press wrote this paper's old
+   values onto that record and counted it done, so the retry that
+   brought the record home left it unrestored and marked the entry
+   undone; the press now refuses that edit and says why. A record that
+   is not UTF-8 made the preview and the press of undoing a filing raise
+   half-way; it is now unreadable, and KEPT, as a torn record is.
+   **Open, latent:** the preview of a *move* asks today's disk one move
+   at a time, so a file moved twice in one change shows "file gone" for
+   its first move back although the press succeeds — no pending entry
+   does that today (0 rows); a strict xfail pins it.
 2. **Slow screens**: Home/Attention 12–76 s. (Sort Queue: fixed 2026-10-15,
    see "Sort Queue speed" above.)
    *Conformance — FIXED 2026-10-15.* It took ~3.5 min against a label

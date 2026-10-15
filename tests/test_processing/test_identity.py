@@ -247,6 +247,17 @@ class TestRobustness:
         sidecar_path(pdf).write_bytes(body)
         assert PaperIdentity.load(pdf).is_new()
 
+    def test_a_link_lookup_passes_over_a_record_that_is_not_utf8(self, tmp_path):
+        """UnicodeDecodeError escaped load(): found 2026-10-16 when a test's
+        non-UTF-8 record crashed find_canonical_for_link, which reads every
+        record within four folders of the link."""
+        from processing.identity import find_canonical_for_link
+        pdf = _make_pdf(tmp_path / "paper.pdf")
+        sidecar_path(pdf).write_bytes(b"\xff\xfe\x00{\x00}")
+        assert PaperIdentity.load(pdf).is_new()
+        assert find_canonical_for_link(tmp_path / "07a" / "ghost.pdf") is None
+        assert sidecar_path(pdf).read_bytes() == b"\xff\xfe\x00{\x00}"
+
     def test_unknown_fields_ignored_for_forward_compat(self, tmp_path):
         pdf = _make_pdf(tmp_path / "paper.pdf")
         sidecar_path(pdf).write_text(json.dumps({

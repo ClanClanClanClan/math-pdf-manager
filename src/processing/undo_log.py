@@ -129,7 +129,7 @@ def _read_record(path: Path):
         text = path.read_text(encoding="utf-8")
     except FileNotFoundError:
         return _MISSING
-    except OSError:
+    except (OSError, ValueError):       # ValueError: bytes that are not UTF-8
         return None
     try:
         data = json.loads(text)
@@ -526,11 +526,15 @@ class UndoLog:
         came_back = set(tx.get("reversed_ops", ()))
 
         results = []
+        refused: set = set()        # this press's operations that did not come back
         for i in range(len(ops) - 1, -1, -1):        # undo in reverse order
             if i in came_back:
                 continue
-            row = self._undo_one(ops, i, dry_run=dry_run, skip=came_back)
+            row = self._undo_one(ops, i, dry_run=dry_run, skip=came_back,
+                                 refused=refused)
             row["op"] = i
+            if not row.get("ok"):
+                refused.add(i)
             results.append(row)
 
         # Mark transaction as undone — but ONLY if everything came back.
@@ -582,8 +586,12 @@ class UndoLog:
         return results
 
     def _undo_one(self, ops: list, i: int, *, dry_run: bool,
-                  skip: set) -> dict:
-        """Reverse ``ops[i]`` -- or, in the dry run, say whether it would be."""
+                  skip: set, refused: set) -> dict:
+        """Reverse ``ops[i]`` -- or, in the dry run, say whether it would be.
+
+        ``skip``: operations an earlier press brought back. ``refused``: the
+        later operations this press (or this preview) did not bring back.
+        """
         # Refuse to "restore" from special device files. Historical bug:
         # callers used to record deletions as moves to /dev/null, which made
         # undo try to move the device file and destroy the source.
@@ -596,6 +604,15 @@ class UndoLog:
             pdf = Path(op["path"])
             changes = op.get("changes", {})
             if dry_run:
+                # It used to say WOULD RESTORE whatever was on disk, and the
+                # press then refused for want of a readable record (found
+                # 2026-10-15): ask what the press will find.
+                place, fields = _edited_record_after_undo(ops, i, skip)
+                if fields is _NOT_BACK:
+                    return {"action": _not_back(pdf, place), "ok": False}
+                if not isinstance(fields, dict):
+                    return {"action": f"SKIP: no sidecar to restore: {pdf}",
+                            "ok": False}
                 return {
                     "action": f"WOULD RESTORE sidecar fields {list(changes)} on {pdf.name}",
                     "ok": True,
@@ -604,7 +621,17 @@ class UndoLog:
                 # The recorded fields, and nothing else: a full save
                 # here added every field the record predated, so the
                 # record that came back was not the one that left.
-                from processing.identity import patch_record
+                from processing.identity import patch_record, record_location
+                place = record_location(pdf)
+                if _refused_on_the_way(_trail(ops, i, str(place), skip),
+                                       refused):
+                    # This transaction moved the record on, and moving it
+                    # back was just refused: what is at its place is not
+                    # it -- most often another paper's record, the one in
+                    # the way. Undo wrote these fields onto that record and
+                    # counted the edit as come back, so a retry that did
+                    # bring the record home never put its fields back.
+                    return {"action": _not_back(pdf, place), "ok": False}
                 absent = set(op.get("absent", ()))
                 done = patch_record(
                     pdf, {f: old for f, (old, _new) in changes.items()
@@ -851,23 +878,14 @@ def _created_record_after_undo(ops: list, i: int, skip: set):
     earlier undo already reversed. Returns ``(path, fields)``, with
     ``fields`` as :func:`_read_record` gives them.
     """
-    from processing.identity import sidecar_candidates
     start = ops[i]["destination"]
-    where, edits = start, []
-    for j in range(i + 1, len(ops)):
-        if j in skip:
-            continue
-        op = ops[j]
-        if op["type"] in ("move", "rename") and op["source"] == where:
-            if restore_blocker(Path(op["destination"]), Path(op["source"])):
-                # It will not be moved back: the live run reads whatever is
-                # at the record's first place (nothing, or a stranger).
-                return Path(start), _read_record(Path(start))
-            where = op["destination"]
-        elif op["type"] == "sidecar_edit" and where in {
-                str(c) for c in sidecar_candidates(Path(op["path"]))}:
-            edits.append(op)
-    fields = _read_record(Path(where))
+    edits: list = []
+    trail = _trail(ops, i, start, skip, edits)
+    if not _will_be_back(trail):
+        # It will not be moved back: the live run reads whatever is at the
+        # record's first place (nothing, or a stranger).
+        return Path(start), _read_record(Path(start))
+    fields = _read_record(Path(trail[-1][1]))
     if isinstance(fields, dict):
         for op in reversed(edits):
             absent = set(op.get("absent", ()))
@@ -877,6 +895,106 @@ def _created_record_after_undo(ops: list, i: int, skip: set):
                 else:
                     fields[f] = old
     return Path(start), fields
+
+
+#: "This paper's record will not be back where it is looked for" -- one of
+#: this transaction's later moves of it is refused.
+_NOT_BACK = object()
+
+
+def _not_back(pdf: Path, place: Path) -> str:
+    return (f"SKIP: the record of {pdf.name} is not back at {place} (its "
+            f"move back was refused), so these fields are not put on "
+            f"whatever is there")
+
+
+def _edited_record_after_undo(ops: list, i: int, skip: set):
+    """Where the live run will look for the record whose fields ``ops[i]``
+    -- a ``sidecar_edit`` -- changed, and what it will find there:
+    ``(place, fields)``, ``fields`` as :func:`_read_record` gives them, or
+    ``_NOT_BACK``.
+
+    The live run takes the first of the paper's record places
+    (``record_location``) holding a file. Each place is asked here what
+    will be there by then: the record may be somewhere else now, moved on
+    by this transaction's later operations, which undo reverses first. A
+    place whose record will not come back holds, by then, what it holds now
+    (nothing, or a stranger), and the live run refuses to edit a stranger.
+    """
+    from processing.identity import sidecar_candidates
+    places = sidecar_candidates(Path(ops[i]["path"]))
+    for place in places:
+        trail = _trail(ops, i, str(place), skip)
+        not_back = not _will_be_back(trail)
+        found = place if not_back else Path(trail[-1][1])
+        try:
+            if not found.exists():
+                continue
+        except OSError:                 # a name too long to ask about
+            continue
+        return place, (_NOT_BACK if not_back else _read_record(found))
+    # Nothing at any of them: the live run then looks at the first, and
+    # says so in the same words.
+    first = places[0]
+    return first, (_MISSING if _will_be_back(_trail(ops, i, str(first), skip))
+                   else _NOT_BACK)
+
+
+def _trail(ops: list, i: int, start: str, skip: set,
+           edits: Optional[list] = None) -> list:
+    """Where what was at ``start`` just after ``ops[i]`` went next, as
+    ``[(j, place), ...]`` -- at ``place`` from operation ``j`` on, starting
+    with ``(i, start)``.
+
+    Undo runs in reverse, so by the time it reaches ``ops[i]`` it has
+    reversed this transaction's later operations: whatever they moved on
+    from ``start`` is back there, unless one of those moves back was
+    refused. Read now, it is still where they left it, at the trail's end.
+    Followed through the later moves and renames, in order, skipping the
+    operations in ``skip`` (an earlier undo reversed them already).
+
+    ``edits``, if given, collects the later record edits made to it on the
+    way, in order.
+    """
+    from processing.identity import sidecar_candidates
+    trail = [(i, start)]
+    for j in range(i + 1, len(ops)):
+        if j in skip:
+            continue
+        op = ops[j]
+        if op["type"] in ("move", "rename") and op["source"] == trail[-1][1]:
+            trail.append((j, op["destination"]))
+        elif edits is not None and op["type"] == "sidecar_edit" and (
+                trail[-1][1] in {str(c) for c in
+                                 sidecar_candidates(Path(op["path"]))}):
+            edits.append(op)
+    return trail
+
+
+def _refused_on_the_way(trail: list, refused: set) -> bool:
+    """Did undo refuse one of the trail's moves back? -- the live run's
+    answer, from ``refused``: undo runs in reverse, so by the time it
+    reaches the trail's first operation every later one has its row."""
+    return any(j in refused for j, _place in trail[1:])
+
+
+def _will_be_back(trail: list) -> bool:
+    """Will undo bring what is at the trail's end back to its start? -- the
+    dry run's answer, asked of the disk now.
+
+    Each move back needs its file and a free place to put it. The file is
+    the one at the trail's end now, and nothing else moves it on the way;
+    every earlier place on the trail must be free, or hold that same file
+    (a rename that only changed case, on a disk that folds case). Asked one
+    move at a time against today's disk -- as the preview of a move still
+    is -- the first move back of a file moved on twice looks "gone",
+    because the second has not been undone yet.
+    """
+    end = Path(trail[-1][1])
+    if len(trail) > 1 and not end.exists():
+        return False
+    return not any(Path(place).exists() and not _is_same_file(Path(place), end)
+                   for _j, place in trail[:-1])
 
 
 # ---------------------------------------------------------------------------

@@ -348,13 +348,10 @@ def test_presses_reverse_each_change_once_and_finish_when_nothing_blocks(
         live = log.undo_transaction(tx)
         assert [r["op"] for r in dry] == [r["op"] for r in live], (
             "the preview attempted different operations")
-        # The preview of restoring record fields always says it would
-        # (unchanged, and a separate matter); of everything else it must
-        # say what the press then does.
-        files = {i for i, (kind, _, _) in enumerate(plan) if kind != "edit"}
-        assert [(r["op"], r["ok"]) for r in dry if r["op"] in files] == [
-            (r["op"], r["ok"]) for r in live if r["op"] in files], (
-            "the preview disagreed")
+        # Of every kind of change -- restoring record fields too, which
+        # always said it would -- the preview says what the press then does.
+        assert [(r["op"], r["ok"]) for r in dry] == [
+            (r["op"], r["ok"]) for r in live], "the preview disagreed"
         assert not set(r["op"] for r in live) & set(ever_ok), (
             "an operation that had come back was attempted again")
         ever_ok += [r["op"] for r in live if r["ok"]]
