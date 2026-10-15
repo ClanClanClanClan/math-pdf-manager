@@ -22,7 +22,7 @@ import unicodedata
 from pathlib import Path
 
 import pytest
-from hypothesis import HealthCheck, given, settings, strategies as st
+from hypothesis import HealthCheck, example, given, settings, strategies as st
 
 from processing.identity import (PaperIdentity, enable_sidecar_mirror,
                                  find_sidecar)
@@ -384,6 +384,9 @@ _WORDS = st.sampled_from(["backward", "équations", "Itô", "Bellman–Isaacs",
 
 @settings(max_examples=40, deadline=None,
           suppress_health_check=[HealthCheck.function_scoped_fixture])
+# Found by CI on Linux: decomposed after shortening, this name was 256 bytes.
+@example(words=["backward"] * 25 + ["équations"], nfd=True,
+         had_record=False, gained=False)
 @given(words=st.lists(_WORDS, min_size=1, max_size=40),
        nfd=st.booleans(), had_record=st.booleans(),
        gained=st.booleans())
@@ -393,13 +396,14 @@ def test_undo_gives_back_exactly_the_records_there_were(
     monkeypatch.setenv("MATH_LIBRARY", str(lib))
     title = " ".join(words)
     name = f"Smith, J. - BSDEs {title}"
-    # Up to the 255-byte limit of a file name: the longest have a coded
+    if nfd:
+        name = unicodedata.normalize("NFD", name)
+    # Up to the 255-byte limit of a file name, counted AFTER decomposing (an
+    # "é" decomposed takes three bytes, not two): the longest have a coded
     # record, under .sidecars/.
     while len((name + ".pdf").encode()) > 255:
         name = name[:-1].rstrip()
     name += ".pdf"
-    if nfd:
-        name = unicodedata.normalize("NFD", name)
     p = _paper(lib, name)
     if had_record:
         ident = PaperIdentity.load(p)
