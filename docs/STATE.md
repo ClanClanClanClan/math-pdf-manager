@@ -501,9 +501,15 @@ Not fixed; raw list in agent-results `authors_not_in_text.txt`.
      prime or quotation mark stays as it is. 1,513 of the 1,699 apostrophe
      titles now arrive exactly as shelved (before: 0); none of the rest
      differs at an apostrophe (169 of them only at quotation marks). Neither fix
-     changes any proposal for a name already on a shelf (0 of 25,251).
-     **Still open:** a single-quoted `'passage'` arrives straight where
-     169 library titles write `‘…’`;
+     changes any proposal for a name already on a shelf (0 of 25,251);
+   - ~~a single-quoted `'passage'` arrives straight~~ — **fixed
+     2026-10-15**: a certain single quotation takes the language's outer
+     marks (`‘…’`, `« … »`), including the `‘…'` publishers send; an
+     uncertain one -- after a word in -s, a closing quote and a possessive
+     are the same mark -- is left as it arrived, with the reason. 172 of
+     the 175 single-quoted library titles arrive exactly as shelved
+     (before: 0), and 1,685 of the 1,699 apostrophe titles (before: 1,513).
+     0 of 25,251 proposals change. Left by rule: one nested quotation;
    - the Spelling page's *Name or ordinary word?* answers
      (`config/casing_decisions.json`) are read only by
      `core/sentence_case`, which no live path calls -- they change no

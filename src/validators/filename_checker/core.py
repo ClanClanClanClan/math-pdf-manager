@@ -234,12 +234,16 @@ def check_filename(
     # quotation -- not the authors' names, not the quoted words
     # ("Yule’s ‘nonsense correlation’, moments and density" is English).
     # Never set on a guess: an undetectable title keeps its marks
-    # (owner's rule, 2026-10-14).
+    # (owner's rule, 2026-10-14). Asked only when the converter will weigh
+    # a quotation, and on the title as it will see it -- apostrophes
+    # settled, so "Walras' law" after a quotation is no candidate closer.
+    from processing.apostrophes import title_apostrophes
+    from processing.quote_marks import holds_straight_quotation, quotation_language
     quote_lang = None
-    if '"' in title_wo_ext:
-        from processing.quote_marks import quotation_language
+    settled = title_apostrophes(title_wo_ext, math_regions)
+    if holds_straight_quotation(settled):
         try:
-            quote_lang = quotation_language(title_wo_ext, detect(title_wo_ext))
+            quote_lang = quotation_language(settled, detect(title_wo_ext))
         except (LangDetectException, ValueError):
             quote_lang = None
 

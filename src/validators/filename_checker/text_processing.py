@@ -425,19 +425,39 @@ def fix_and_flag_quotes(
         flags.append("straight double quote should use proper quotation marks")
 
     # Straight single marks that are not apostrophes: a quotation mark, or a
-    # prime. Both are left as they are (processing.apostrophes).
+    # prime (processing.apostrophes).
     from processing.apostrophes import is_title_apostrophe
-    if any(char == "'" and not any(start <= i < end for start, end in regions + spans)
-           and not is_title_apostrophe(text, i)
-           for i, char in enumerate(text)):
+    straight = sum(1 for i, char in enumerate(text)
+                   if char == "'" and not any(start <= i < end for start, end in regions + spans)
+                   and not is_title_apostrophe(text, i))
+
+    settled, text, result = _convert_marks(text, lang, regions, spans)
+
+    # Why the quotation was left as it is -- never silently.
+    if result is not None and result.status == "review":
+        flags.append(f"quotation marks left as they are: {result.why}")
+    # Only a mark of the pair is ever converted, and never a protected one.
+    if straight > settled.count("'") - text.count("'"):
         flags.append("straight single quote left as it is: not an apostrophe "
                      "(a quotation mark or a prime)")
 
-    # Convert straight quotes to proper quotes
-    text = convert_straight_quotes_to_proper(text, lang, regions, spans)
-
     debug_print(f"Quote processing result: '{text}', flags: {flags}")
     return text, flags
+
+
+def _convert_marks(text: str, lang: str, regions: List[Tuple[int, int]],
+                   spans: List[Tuple[int, int]]):
+    """``(settled, converted, requote result or None)``: the title after
+    its apostrophes, then after its quotation marks."""
+    from processing.apostrophes import title_apostrophes
+    from processing.quote_marks import holds_straight_quotation, requote
+    settled = title_apostrophes(text, regions)
+    if not holds_straight_quotation(settled):
+        return settled, settled, None
+    # A quote inside mathematics or a protected phrase is not ours to
+    # touch. Which languages convert is decided in quote_marks alone.
+    result = requote(settled, lang, list(regions) + list(spans))
+    return settled, result.title, result
 
 
 def convert_straight_quotes_to_proper(text: str, lang: str, regions: List[Tuple[int, int]], spans: List[Tuple[int, int]]) -> str:
@@ -452,11 +472,15 @@ def convert_straight_quotes_to_proper(text: str, lang: str, regions: List[Tuple[
       Mathematics is protected; a whitelisted phrase is not, because it
       protects casing and dashes, not this mark.
     * QUOTATION MARKS (processing.quote_marks, the owner's ruling of
-      2026-10-14): one pair of straight double marks becomes English
-      ‘outer’ or French « outer »; any other language is left as it is.
+      2026-10-14): one quotation -- a pair of straight double marks, or a
+      single quotation with a straight mark ('hot hand', ‘hot hand') --
+      becomes English ‘outer’ or French « outer »; any other language, and
+      any pairing that is not certain, is left as it is.
 
     Apostrophes first, on the text the regions were computed for: French
-    guillemets add spaces, which would shift every offset after them.
+    guillemets add spaces, which would shift every offset after them; and
+    a straight mark still standing after them is the only kind the
+    quotation rule may weigh.
 
     Args:
         text: The title, without its extension
@@ -468,19 +492,7 @@ def convert_straight_quotes_to_proper(text: str, lang: str, regions: List[Tuple[
         The title with its marks converted
     """
     debug_print(f"Converting straight quotes for language '{lang}' in text: '{text}'")
-
-    from processing.apostrophes import title_apostrophes
-    text = title_apostrophes(text, regions)
-
-    if '"' in text:
-        # A quote inside mathematics or a protected phrase is not ours to
-        # touch. Which languages convert is decided in quote_marks alone.
-        if any(start <= i < end for i, ch in enumerate(text) if ch == '"'
-               for start, end in regions + spans):
-            return text
-        from processing.quote_marks import requote
-        text = requote(text, lang).title
-
+    text = _convert_marks(text, lang, regions, spans)[1]
     debug_print(f"Quote conversion result: '{text}'")
     return text
 

@@ -249,18 +249,54 @@ This is the owner's ruling of 2026-10-14, kept in one place,
 Details:
 
 - In French, the space inside the guillemets is an ordinary U+0020.
-- One pair of double marks is converted. An odd number of marks, nesting, or
-  marks that cannot be paired are left as they are.
+- One quotation per title is converted: a pair of double marks, or a single
+  quotation with at least one straight mark (`'hot hand'`, and the
+  `‘hot hand'` that publishers' metadata often carries). Two quotations,
+  nesting (`"… 'risk-free' …"`), an odd number of marks, or marks that cannot
+  be paired with certainty are left as they are.
 - A straight `"` between two letters is an inch mark, not a quote.
+- **Single marks** (since 2026-10-15, `quote_marks._single`). Where a single
+  quotation opens and closes is defined once, in `processing/apostrophes.py`,
+  which needs it to judge a mark after `s`: it opens at a `‘`, or at a
+  straight mark that starts a word before a letter; it closes at the first
+  mark after it that ends a word. The trouble is that after a word in `-s`
+  a closing quote and a plural possessive are the same character in the
+  same place (`the 'reversals' and` against `Walras' law`). So the pair is
+  made only when that first closing mark can be nothing else -- it ends a
+  word of two letters or more that does not end in `s` -- or when no other
+  mark after it could close instead:
+  - `Dynamic preference 'reversals' and time inconsistency` → `‘reversals’`
+    (the only mark that could close);
+  - `Louis Bachelier's 'Théorie de la spéculation', the missing piece in
+    Walras' general equilibrium` → `‘Théorie de la spéculation’`, and
+    `Walras’` is a possessive (the quotation closed after `spéculation`);
+  - `'Walras' law' revisited` is left as it is: `Walras'` may close the
+    quotation or be a possessive inside it.
+  The apostrophes are settled first (§3.4), so a straight mark still standing
+  is never a certain apostrophe. `'Tis` is an elision, not an opener.
+  An elision at both ends of a word (`rock 'n' roll`) would be paired; the
+  library has none.
 - The language is that of the **title around the quotation**, not of the
   quoted words or the authors' names (`quote_marks.quotation_language`,
   since 2026-10-15). The seeded detector reads the title; then small words
   outside the quotation that only English or only French uses decide between
   those two. Any other answer, or none, leaves the marks as they are.
-- **Applied at arrival only**, and only when the title holds a straight `"`
-  outside mathematics (`validators/filename_checker/text_processing.convert_straight_quotes_to_proper`).
+- **Applied at arrival only**, and only when the title holds a straight mark
+  that may belong to a quotation -- a straight `"`, or a straight `'` in a
+  title where a single quotation opens (`quote_marks.holds_straight_quotation`,
+  used by `check_filename` and
+  `validators/filename_checker/text_processing.convert_straight_quotes_to_proper`).
+  Quotation marks that all arrived curly are left as they arrived. A mark of
+  the pair inside mathematics leaves the title as it is.
+- Whatever is left is said: the importer adds "quotation marks left as they
+  are: <why>" (`requote`'s reason) to `check_filename`'s messages.
 - No sweep applies it to names already filed; the module's own docstring
   calls for a per-file review instead.
+- Search and same-paper detection fold every form of a quotation to one key
+  (`quote_marks.fold_quotes` takes out the pair `requote` would make), so
+  `'hot hand'`, `‘hot hand'`, `‘hot hand’`, `"hot hand"` and `« hot hand »`
+  all match. A straight mark that only looks like an opener is kept:
+  `in 't Hout` still matches `in ’t Hout`.
 - The caser (§3.1) recognises `‘…’` and `‹…›`, nested, and never recases
   inside them.
 
@@ -274,6 +310,32 @@ languages are English 179, French 66 and other 6. Through `requote`:
 - **19** are left as they are: 6 read as a language other than English or
   French, 5 that already contain single marks (nesting), and 8 whose marks
   cannot be paired.
+
+**Measured, single quotations at arrival** (2026-10-15, read-only, old code
+against new over the 25,251 in-scope names):
+
+- **175** titles write a single quotation, one per title, every one as `‘…’`.
+  76 of them close it straight after an `s`.
+- Each of the 175, with every single mark made straight and passed through
+  the arrival namer: **172** come out exactly as shelved (the old code: 0).
+  The same 172 with the opener curly and the rest straight (`‘…'`).
+  The other 3: two are the colon rule (§3.6), and one is nested
+  (`"Option pricing theory, is ‘risk-free’ hedging feasible?"`), which is
+  left as it arrived and says why. The old code turned its double marks
+  into `‘…’` and left the inner ones straight.
+- The titles papers actually arrived with (records' original filenames,
+  1,282 holding a straight mark): **14** are named differently, **12** of
+  them now exactly as shelved (the old code: none of the 14); the other two
+  are the colon rule and the nested title above. Also left as they arrived,
+  with the reason: TeX-style `‘‘early warning''` (two openers).
+- Double marks: of the 234 titles whose quotation was made into straight
+  double marks, 0 are named differently.
+- `normalize_full_name`: 0 of the 25,251 proposals differ.
+- Matching keys, over the 27,887 in-scope and To-be-sorted names: the
+  same-paper title key differs for 1, `Indeterminateness and ‘the' universe
+  of sets…` in To be sorted, which now folds like `‘the’`. Surname keys: 0
+  differ. Of the 51 quoted shelf titles whose original filename has a
+  straight mark, the two now fold alike for 47 (the old code: 33).
 
 ### 3.4 Apostrophes, and the marks that look like them
 
@@ -311,8 +373,9 @@ It is certainly one when it stands:
 Everything else stays as it arrived:
 
 - a prime: `f'(x)`, `X'_t`, `S'-processes`, `u''`;
-- a quotation mark: `'hot hand'` keeps both straight marks. The quotation
-  rule (§3.3) converts double marks only;
+- a quotation mark. That is the quotation rule's business (§3.3), which
+  runs next and pairs `'hot hand'` into `‘hot hand’` when the pairing is
+  certain, and otherwise leaves both marks straight;
 - TeX's `''` closer.
 
 Mathematics is protected. A whitelisted phrase is not, because it guards
@@ -335,13 +398,15 @@ Search and duplicate detection fold every apostrophe-like mark together
   neither of the 2 primes, into one. It leaves alone the 6 marks of 3 TeX
   `''` closers.
 - The library's own 1,699 apostrophe titles were passed through the whole
-  arrival namer with every mark straightened. 1,513 come out exactly as they
-  are on the shelf (the old code: 0).
-  - Of the other 186, 169 differ only because a single-quoted passage stays
-    straight where the library has `‘…’`.
-  - The rest come from the colon rule (7), casing (4), TeX `''` (3) and the
-    double-quote rule (3).
-  - Not one differs at an apostrophe.
+  arrival namer with every mark straightened. **1,685** come out exactly as
+  they are on the shelf (before 2026-10-15: 0; with apostrophes fixed but
+  single quotations still straight: 1,513).
+  - The other 14 come from the colon rule (7), TeX `''` (3), two shelf
+    titles that keep straight double marks the quotation rule converts
+    (`Une preuve "standard" …`, §3.3), casing (1, `Euclid’s Elements`), and
+    the one nested quotation (§3.3).
+  - Not one differs at an apostrophe, and none at a single quotation that
+    could be paired.
 
 ### 3.5 Year ranges take an en dash
 
@@ -471,11 +536,15 @@ Do not cite these as the convention:
    in-scope names.
 2. ~~Title apostrophes at arrival~~ — **fixed 2026-10-15** (§3.4), with the
    same check over the same 25,251 names.
-3. **A single-quoted passage arrives straight.** `'hot hand'` keeps its
-   straight marks; the library writes `‘hot hand’` in 169 titles that
-   arrived that way. The quotation rule (§3.3) converts double marks only.
-   Pairing single marks needs care: after a word in `-s`, a closing quote
-   and a possessive are the same character (`'reversals' and`).
+3. ~~A single-quoted passage arrives straight~~ — **fixed 2026-10-15**
+   (§3.3): a certain single quotation takes the language's outer marks,
+   `'hot hand'` → `‘hot hand’`, and an uncertain one is left as it arrived
+   with the reason. 172 of the library's 175 single-quoted titles now arrive
+   exactly as shelved (before: 0); `normalize_full_name` gives the same
+   answer as before for all 25,251 in-scope names.
+   *Still open, by the module's own rule:* a quotation nested in another
+   (`"… 'risk-free' …"`, 1 title) is left as it arrived rather than written
+   `‘… “risk-free” …’`.
 4. **The Spelling page's *Name or ordinary word?* answers change no
    filename** (§3.1).
 5. *By design, noted because nothing else checks it:* **a typed name is

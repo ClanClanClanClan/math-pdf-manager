@@ -226,10 +226,20 @@ def test_an_english_possessive_is_not_a_french_elision():
 
 
 def test_no_quotation_means_nothing_to_arbitrate():
-    """No double quotation to set aside: the detector's answer stands,
-    whatever small words the title has."""
+    """No quotation to set aside: the detector's answer stands, whatever
+    small words the title has."""
     assert quotation_language("Sur la théorie des jeux de Borel", "en") == "en"
-    assert quotation_language("On the ‘hot hand’ and the crowd", "fr") == "fr"
+    assert quotation_language("Sur la théorie des jeux de Borel", "fr") == "fr"
+
+
+def test_a_single_quotation_is_set_aside_too():
+    """Since 2026-10-15 a single quotation is one ``requote`` pairs, so
+    the words around it arbitrate exactly as around a double one. (This
+    test used to pin the opposite: "On the ‘hot hand’ and the crowd" kept
+    the detector's "fr".)"""
+    assert quotation_language("On the ‘hot hand’ and the crowd", "fr") == "en"
+    assert quotation_language("On the 'hot hand' and the crowd", "fr") == "en"
+    assert quotation_language("Sur la 'main chaude' et les joueurs", "en") == "fr"
 
 
 def test_unpairable_marks_leave_the_detector_alone():

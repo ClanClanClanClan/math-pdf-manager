@@ -89,7 +89,7 @@ def test_an_apostrophe_becomes_u2019(title, expected):
     "Estimates for s' and t'",                                         # synthetic: a lone s
     # quotation marks: never an apostrophe, and never half-converted
     "A fresh look at the 'hot hand' paradox",
-    "Economic preference 'reversals' and time inconsistency",
+    "Dynamic preference 'reversals' and time inconsistency",
     "'Choose your opponent', a new knot",
     "Comment on the article 'The harmonic explorer'",
     # TeX's '' closer
@@ -163,7 +163,9 @@ def _arrive(title: str, authors=(Author("Smith", "J."),)) -> str:
     ("Itô's formula and l'équation de la chaleur",
      f"Smith, J. - Itô{A}s formula and l{A}équation de la chaleur.pdf"),
     ("Solutions of f'(x) = g(x)", "Smith, J. - Solutions of f'(x) = g(x).pdf"),
-    ("The 'hot hand' fallacy", "Smith, J. - The 'hot hand' fallacy.pdf"),
+    # a single quotation is paired since 2026-10-15
+    # (tests/safety/test_single_quotations_at_arrival.py)
+    ("The 'hot hand' fallacy", "Smith, J. - The ‘hot hand’ fallacy.pdf"),
     # with one: the old path kept the contraction straight and broke the rest
     ('The "hot hand" and Itô\'s formula', f"Smith, J. - The ‘hot hand’ and Itô{A}s formula.pdf"),
     ('The "hot hand" and f\'(x)', "Smith, J. - The ‘hot hand’ and f'(x).pdf"),

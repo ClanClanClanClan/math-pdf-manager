@@ -19,7 +19,9 @@ French, Italian, Irish and Dutch contain no apostrophe at all.
 See docs/FILENAME_CONVENTION.md 3.4 for the taxonomy, the per-class
 rulings and what the naming code actually does with them.  This module
 answers two questions: how to MATCH (``fold_marks``), and which straight
-marks in a new paper's TITLE are apostrophes (``title_apostrophes``).
+marks in a new paper's TITLE are apostrophes (``title_apostrophes``).  To
+answer the second it must know where a single quotation opens and closes;
+processing/quote_marks.py pairs the quotation with the same definitions.
 
 WHY FOLDING MATTERS MORE THAN THE SPELLING.  No Unicode normalisation
 form equates these marks -- NFC, NFD, NFKC, NFKD and casefold all leave
@@ -116,26 +118,77 @@ def _base_before(text: str, i: int) -> int:
     return j
 
 
+def _last_letter_of_word(text: str, i: int) -> str:
+    """The last letter of the word that ends just before ``i``, when that
+    word has two letters or more; "" otherwise.
+
+    One letter standing alone is a variable, not a word: "S'-processes".
+    """
+    b = _base_before(text, i)
+    # "b < 0" keeps text[-1] -- the END of the text -- out of it. Both
+    # callers already stand after a letter or an opening mark, so it never
+    # fires today (mutation, 2026-10-15); it is kept so the index never lies.
+    if b < 0 or not _is_letter(text[b]):
+        return ""
+    bb = _base_before(text, b)
+    return text[b] if bb >= 0 and _is_letter(text[bb]) else ""
+
+
+# ---------------------------------------------------------------------------
+# Where a single quotation opens and closes -- by the SHAPE of the mark
+# ---------------------------------------------------------------------------
+#
+# One definition, used twice: below, to know whether a mark after "s" sits
+# inside a quotation; and by processing.quote_marks, to pair the quotation.
+
+def opens_single_quotation(text: str, j: int) -> bool:
+    """``text[j]`` may open a single quotation: a ‘, or a straight mark
+    that starts a word and has a letter after it ("the 'hot hand'")."""
+    if text[j] == "‘":
+        return True
+    return (text[j] == "'" and (j == 0 or text[j - 1].isspace())
+            and j + 1 < len(text) and _is_letter(text[j + 1]))
+
+
+def closes_single_quotation(text: str, j: int) -> bool:
+    """``text[j]`` may close a single quotation: a ’ or a straight mark
+    that ends a word -- not at a word's start, and no letter after it.
+
+    A shape, not a verdict: "Walras' law" and "f'(x)" have it too.  ("j > 0"
+    keeps text[-1] out of it; no caller asks about position 0, where an
+    opener is looked for first.)"""
+    return (text[j] in "’'" and j > 0 and not text[j - 1].isspace()
+            and not (j + 1 < len(text) and _is_letter(text[j + 1])))
+
+
+def closes_for_certain(text: str, j: int) -> bool:
+    """A mark that closes a single quotation's shape can be nothing else.
+
+    It ends a word of two letters or more that does not end in s:
+    "the 'hot hand' paradox".  Anything else it could also be: a possessive
+    after a word in -s ("the 'reversals' and" against "Walras' law" -- the
+    same character in the same place), a prime after a lone letter, a
+    bracket or a digit ("S'-processes", "(uv)'"), or whatever follows "?".
+    """
+    last = _last_letter_of_word(text, j)
+    # A tuple, not "sS": the empty string is "in" every string.
+    return last != "" and last not in ("s", "S")
+
+
 def _quotation_open_at(text: str, i: int) -> bool:
     """A single quotation is still open at ``i``.
 
-    It opens at a ‘ or at a straight mark starting a word, and closes at a
-    single mark that ends one.  While one is open, a mark after "s" may
-    close it ("the 'reversals' and …") rather than make a possessive
-    ("Walras' equilibrium"), and the two cannot be told apart.  Once it has
-    closed -- "‘Théorie de la spéculation’, the missing piece in Walras'
-    general equilibrium" -- they can again.
+    While one is open, a mark after "s" may close it ("the 'reversals' and
+    …") rather than make a possessive ("Walras' equilibrium"), and the two
+    cannot be told apart.  Once it has closed -- "‘Théorie de la
+    spéculation’, the missing piece in Walras' general equilibrium" -- they
+    can again.
     """
     is_open = False
     for j in range(i):
-        c = text[j]
-        if c not in "‘’'":
-            continue
-        starts_word = j == 0 or text[j - 1].isspace()
-        letter_next = j + 1 < len(text) and _is_letter(text[j + 1])
-        if c == "‘" or (c == "'" and starts_word and letter_next):
+        if opens_single_quotation(text, j):
             is_open = True
-        elif not letter_next and not starts_word:
+        elif closes_single_quotation(text, j):
             is_open = False
     return is_open
 
@@ -193,8 +246,7 @@ def is_title_apostrophe(title: str, i: int) -> bool:
             return True
         # A word in -s: two letters at least, so a lone "s'" -- a variable
         # and its prime -- is not one.
-        bb = _base_before(title, b)
-        return (before in "sS" and bb >= 0 and _is_letter(title[bb])
+        return (_last_letter_of_word(title, i) in ("s", "S")
                 and not _quotation_open_at(title, i))
     if b < 0 or before.isspace():
         return _WORD_INITIAL_ELISION.match(title, i + 1) is not None
