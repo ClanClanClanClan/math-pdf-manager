@@ -294,12 +294,19 @@ batch sort's Apply reuses the same remembered answers; not measured.
    2026-10-15 from the code**: every rule names its module and carries the
    library's measured agreement (the automatic pipeline leaves 25,249 of
    25,251 in-scope names unchanged). Rewriting it surfaced three places
-   where the code disagrees with a settled ruling, listed in its §6, all
-   **open**, plus one gap by design:
-   - arrival collapses multi-letter initials, `Yu. A.` → `Y. A.`
-     (`cmo.Author.initials`); 174 library blocks carry one today;
-   - arrival keeps a title contraction as U+0027 (ruling and library:
-     U+2019, 1,699 to 0) and turns a prime `f'(x)` into `f’(x)`;
+   where the code disagrees with a settled ruling, listed in its §6, plus
+   one gap by design:
+   - ~~arrival collapses multi-letter initials~~ — **fixed 2026-10-15**:
+     `Yu. M.` and `Ch.` arrive whole, and `Yu.A.` no longer loses its `A.`.
+     All 174 library blocks that carry one rebuild exactly (before: 1);
+   - ~~arrival keeps a title contraction as U+0027 and turns a prime into
+     `’`~~ — **fixed 2026-10-15**: an apostrophe arrives as U+2019, a
+     prime or quotation mark stays as it is. 1,513 of the 1,699 apostrophe
+     titles now arrive exactly as shelved (before: 0); none of the rest
+     differs at an apostrophe (169 of them only at quotation marks). Neither fix
+     changes any proposal for a name already on a shelf (0 of 25,251).
+     **Still open:** a single-quoted `'passage'` arrives straight where
+     169 library titles write `‘…’`;
    - the Spelling page's *Name or ordinary word?* answers
      (`config/casing_decisions.json`) are read only by
      `core/sentence_case`, which no live path calls -- they change no

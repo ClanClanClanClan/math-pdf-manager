@@ -62,7 +62,7 @@ from __future__ import annotations
 import re
 import unicodedata
 
-__all__ = ["space_initials", "INITIAL_RE"]
+__all__ = ["space_initials", "INITIAL_RE", "letters_of_initial"]
 
 
 def _letter_class(category: str) -> str:
@@ -128,3 +128,20 @@ def space_initials(text: str) -> str:
     if not text:
         return text
     return INITIAL_RE.sub(lambda m: m.group(1) + " ", text)
+
+
+_WRITTEN_INITIAL = re.compile(rf"({INITIAL})\.")
+
+
+def letters_of_initial(token: str) -> str | None:
+    """``"Yu."`` -> ``"Yu"``; ``None`` when ``token`` is not an initial.
+
+    A token is an initial when it is written as one: the shape above and a
+    full stop. That full stop is what tells ``"Yu."`` -- the transliteration
+    of the one Cyrillic letter Ю, which the library keeps whole (174 author
+    blocks, all intact) -- from ``"Yu"``, a given name in full, whose initial
+    is ``"Y"``. Deriving ``"Yu."`` from a full name would need the name's
+    language: ``"Zhang"`` is Chinese and takes ``"Z."``, not ``"Zh."``.
+    """
+    m = _WRITTEN_INITIAL.fullmatch(unicodedata.normalize("NFC", token))
+    return m.group(1) if m else None

@@ -13,19 +13,6 @@ from .unicode_utils import iterate_nonmath_segments, is_in_spans
 from .math_utils import should_preserve_digit
 
 
-# Straight SINGLE quote handling per language (apostrophes; see
-# convert_straight_quotes_to_proper). Double quotation marks are not here:
-# they follow the owner's convention in processing.quote_marks (2026-10-14),
-# which replaced this table's American "en" opener, its closer table, and
-# its German/Spanish/Italian conversions.
-QUOTE_CONVERSIONS = {
-    "en": {"'": "\u2019"},  # Right single quotation mark (possessives)
-    "fr": {"'": "\u2019"},
-    "de": {"'": "\u2019"},
-    "es": {"'": "\u2019"},
-    "it": {"'": "\u2019"},
-}
-
 # Number word mappings
 NUMBERS = {
     "0": "zero",
@@ -416,83 +403,6 @@ def should_capitalize_after_quote(text: str, quote_pos: int) -> bool:
     return False
 
 
-def is_contraction_apostrophe(text: str, pos: int) -> bool:
-    """
-    FIXED: Enhanced check if the apostrophe at position is part of a contraction.
-    
-    Args:
-        text: The text to analyze
-        pos: Position of the apostrophe
-    
-    Returns:
-        True if the apostrophe is part of a contraction
-    """
-    if pos < 0 or pos >= len(text):
-        return False
-
-    # Get more context for better detection
-    before_char = text[pos - 1] if pos > 0 else " "
-    after_char = text[pos + 1] if pos < len(text) - 1 else " "
-
-    # FIXED: Check for possessive forms (letter before, 's after OR just s after for plural possessives)
-    if before_char.isalpha():
-        # Check for standard possessive 's
-        if pos < len(text) - 1 and text[pos : pos + 2] == "'s":
-            debug_print(f"Detected possessive 's at position {pos}")
-            return True
-        # FIXED: Check for plural possessive (just apostrophe after 's')
-        if before_char.lower() == "s" and (pos + 1 >= len(text) or not text[pos + 1].isalpha()):
-            debug_print(f"Detected plural possessive (species') at position {pos}")
-            return True
-
-    # Check if it's surrounded by letters (like "l'infini" or contractions)
-    if before_char.isalpha() and after_char.isalpha():
-        debug_print(f"Detected contraction (letter-apostrophe-letter) at position {pos}")
-        return True
-
-    # FIXED: Handle common contractions like "rock 'n' roll"
-    if pos >= 1 and pos < len(text) - 2:
-        # Check for "n'" pattern (like 'n' in "rock 'n' roll")
-        if text[pos : pos + 2] == "'n" and pos < len(text) - 3 and text[pos + 2] == "'":
-            debug_print(f"Detected informal contraction ('n') at position {pos}")
-            return True
-        # Check for "'s" at end of word
-        if text[pos : pos + 2] == "'s" and (pos + 2 >= len(text) or not text[pos + 2].isalpha()):
-            debug_print(f"Detected contraction 's at position {pos}")
-            return True
-
-    # Handle cases like "n't", "'re", "'ll", "'ve", "'d", etc.
-    if pos >= 1:
-        # Check for patterns like "n't", "s't", etc.
-        if pos < len(text) - 1 and text[pos + 1] == "t":
-            debug_print(f"Detected contraction ending 't at position {pos}")
-            return True
-        # Check for other common contractions
-        if pos < len(text) - 2:
-            next_two = text[pos + 1 : pos + 3]
-            if next_two in ["re", "ll", "ve"] or (next_two[0] == "d" and (pos + 2 >= len(text) or text[pos + 2].isspace())):
-                debug_print(f"Detected common English contraction at position {pos}")
-                return True
-
-    # FIXED: Handle archaic contractions like "'twas"
-    if pos == 0 and pos < len(text) - 1 and text[pos + 1].isalpha():
-        debug_print(f"Detected archaic contraction at start of text at position {pos}")
-        return True
-
-    # FIXED: Handle contractions like "o'clock", "ma'am"
-    special_contractions = ["o'clock", "ma'am", "y'all"]
-    for contraction in special_contractions:
-        apos_pos = contraction.find("'")
-        if apos_pos != -1:
-            start_check = pos - apos_pos
-            end_check = start_check + len(contraction)
-            if (start_check >= 0 and end_check <= len(text) and text[start_check:end_check].lower() == contraction):
-                debug_print(f"Detected special contraction '{contraction}' at position {pos}")
-                return True
-
-    return False
-
-
 def fix_and_flag_quotes(
     text: str,
     lang: str,
@@ -514,15 +424,14 @@ def fix_and_flag_quotes(
     if len(double_quote_positions) > 0:
         flags.append("straight double quote should use proper quotation marks")
 
-    # Find straight single quote pairs (excluding contractions)
-    single_quote_positions = []
-    for i, char in enumerate(text):
-        if char == "'" and not any(start <= i < end for start, end in regions + spans):
-            if not is_contraction_apostrophe(text, i):
-                single_quote_positions.append(i)
-
-    if len(single_quote_positions) > 0:
-        flags.append("straight single quote should use proper quotation marks")
+    # Straight single marks that are not apostrophes: a quotation mark, or a
+    # prime. Both are left as they are (processing.apostrophes).
+    from processing.apostrophes import is_title_apostrophe
+    if any(char == "'" and not any(start <= i < end for start, end in regions + spans)
+           and not is_title_apostrophe(text, i)
+           for i, char in enumerate(text)):
+        flags.append("straight single quote left as it is: not an apostrophe "
+                     "(a quotation mark or a prime)")
 
     # Convert straight quotes to proper quotes
     text = convert_straight_quotes_to_proper(text, lang, regions, spans)
@@ -532,25 +441,37 @@ def fix_and_flag_quotes(
 
 
 def convert_straight_quotes_to_proper(text: str, lang: str, regions: List[Tuple[int, int]], spans: List[Tuple[int, int]]) -> str:
-    """
-    Convert straight quotes to language-appropriate quotes.
-    
+    """A new title's straight marks, in the house conventions.
+
+    Two rules, each kept in one place and only called from here:
+
+    * APOSTROPHES (processing.apostrophes): a straight mark that is
+      certainly an apostrophe becomes U+2019, in every language -- the
+      apostrophe, unlike the quotation mark, does not depend on one. A
+      prime, a quotation mark, or anything uncertain is left as it is.
+      Mathematics is protected; a whitelisted phrase is not, because it
+      protects casing and dashes, not this mark.
+    * QUOTATION MARKS (processing.quote_marks, the owner's ruling of
+      2026-10-14): one pair of straight double marks becomes English
+      ‘outer’ or French « outer »; any other language is left as it is.
+
+    Apostrophes first, on the text the regions were computed for: French
+    guillemets add spaces, which would shift every offset after them.
+
     Args:
-        text: The text to process
-        lang: Language code
+        text: The title, without its extension
+        lang: The language its quotation marks follow, or None
         regions: Mathematical regions to avoid
-        spans: Exception spans to avoid
-    
+        spans: Exception spans to avoid (quotation marks only)
+
     Returns:
-        Text with proper quotes
+        The title with its marks converted
     """
     debug_print(f"Converting straight quotes for language '{lang}' in text: '{text}'")
 
-    # The owner's convention (2026-10-14, "1B") lives in ONE place,
-    # processing.quote_marks: English ‘outer’ with “inner”, French « outer »
-    # with ‹ inner ›, anything else left as it is. This table used to give
-    # English the American “…” and convert German, Spanish and Italian too.
-    # Straight single quotes keep their old handling below (apostrophes).
+    from processing.apostrophes import title_apostrophes
+    text = title_apostrophes(text, regions)
+
     if '"' in text:
         # A quote inside mathematics or a protected phrase is not ours to
         # touch. Which languages convert is decided in quote_marks alone.
@@ -558,37 +479,10 @@ def convert_straight_quotes_to_proper(text: str, lang: str, regions: List[Tuple[
                for start, end in regions + spans):
             return text
         from processing.quote_marks import requote
-        res = requote(text, lang)
-        if res.status != "changed":
-            return text
-        text = res.title
+        text = requote(text, lang).title
 
-    if lang not in QUOTE_CONVERSIONS:
-        debug_print(f"No quote conversion rules for language '{lang}', returning unchanged")
-        return text
-
-    conversions = QUOTE_CONVERSIONS[lang]
-    # We do per-character conversion (below) because the simple
-    # ``.replace(straight, proper)`` approach can't tell apostrophes from
-    # closing single-quotes — context matters for "don't" vs "'word'".
-    result_chars = list(text)
-
-    for i, char in enumerate(text):
-        # Skip if in math region or exception span
-        if any(start <= i < end for start, end in regions + spans):
-            continue
-
-        if char == "'":
-            # Only convert if it's NOT a contraction apostrophe
-            if not is_contraction_apostrophe(text, i):
-                result_chars[i] = conversions["'"]
-                debug_print(f"Converted straight single quote at position {i}")
-            else:
-                debug_print(f"Preserved contraction apostrophe at position {i}")
-
-    converted_text = "".join(result_chars)
-    debug_print(f"Quote conversion result: '{converted_text}'")
-    return converted_text
+    debug_print(f"Quote conversion result: '{text}'")
+    return text
 
 
 def check_parentheses_brackets_balance(text: str, math_regions=None):
@@ -631,58 +525,6 @@ def check_parentheses_brackets_balance(text: str, math_regions=None):
         issues.append(issue)
 
     return issues
-
-
-def fix_ascii_punctuation(text: str, regions, _exc=None, spans=None):
-    """Fix ASCII punctuation - RESTORED from original"""
-    from .unicode_utils import iterate_nonmath_segments, is_in_spans
-
-    spans = spans or []
-    if "--" not in text and "'" not in text and '"' not in text:
-        return text
-
-    def make_repl(offset):
-        def repl(m):
-            s, e = m.span()
-            abs_s, abs_e = s + offset, e + offset
-            if is_in_spans(abs_s, abs_e, spans):
-                return m.group()
-            return (
-                m.group()
-                .replace("--", "\u2014")
-                .replace("'", "\u2019")
-                .replace('"', "\u201c")
-            )
-
-        return repl
-
-    out, last = [], 0
-    for s, e, seg in iterate_nonmath_segments(text, regions):
-        seg2 = seg
-
-        # Only process if not in exception spans
-        if not any(is_in_spans(s + i, s + i + 1, spans) for i in range(len(seg))):
-            seg2 = re.sub(r"--+", "\u2014", seg2)
-            seg2 = re.sub(r"'", "\u2019", seg2)
-            # Be more careful with straight quotes - check for quoted titles
-            if '"' in seg2:
-                # Don't convert straight quotes in "quoted titles" contexts
-                if not (
-                    (
-                        'supplement to "' in text.lower()
-                        or 'based on "' in text.lower()
-                        or 'response to "' in text.lower()
-                        or ': "' in text
-                        or '; "' in text
-                    )
-                ):
-                    seg2 = re.sub(r'"', "\u201c", seg2)
-
-        out.append(text[last:s] + seg2)
-        last = e
-    out.append(text[last:])
-    result = "".join(out)
-    return result
 
 
 def fix_thousand_separators(text: str, regions, _exc, spans):
@@ -762,11 +604,6 @@ def fix_math_unicode(text: str, regions, exceptions, spans):
     
     result = "".join(out)
     return result
-
-
-def fix_quotes(text: str, regions, exceptions, spans):
-    """Simple quote fixing wrapper - RESTORED from original"""
-    return fix_ascii_punctuation(text, regions, exceptions, spans)
 
 
 def get_ligature_suggestions(text: str):

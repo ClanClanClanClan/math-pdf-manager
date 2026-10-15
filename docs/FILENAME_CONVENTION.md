@@ -89,13 +89,26 @@ Transliterated initials keep all their letters: `Kabanov, Yu. M.`,
 (`core/initials.INITIAL`), so `Yu.A.` is respaced to `Yu. A.` and never cut
 to `Y.`.
 
-**Measured.** 174 author blocks carry one. By occurrence: `Yu.` 154, `Ya.`
-12, `Kh.`, `Ch.`, `Th.`, `Ph.` 2 each, and `Ts.`, `Sh.`, `Sz.` 1 each.
+**At arrival**, `cmo.Author.initials` keeps a given name that is already
+written as initials whole (`core/initials.letters_of_initial`): `Yu. M.`
+stays `Yu. M.`, and a glued `Yu.A.` is spaced first, so it becomes
+`Yu. A.`. The full stop is what marks an initial, so a name in full is
+still cut to its first letter: `Yuri` and `Yu` give `Y.`. Turning a full
+name into `Yu.` would need its language (`Zhang` is Chinese and takes `Z.`).
+The over-length refit `library_normalize._fit_to_limit` rebuilds author
+blocks through the same method.
 
-**Open.** At arrival, `cmo.Author.initials` keeps the first letter of each
-given name, so a paper arriving as `Yu. A.` is named `Y. A.` (probe,
-2026-10-15). The over-length refit `library_normalize._fit_to_limit`
-rebuilds names the same way. See §6.
+Until 2026-10-15 arrival kept only the first letter of each token:
+`Yu. M.` became `Y. M.`, and `Yu.A.` became `Y.`, losing the `A.` too.
+
+**Measured.**
+- 174 author blocks carry one. By occurrence: `Yu.` 154, `Ya.` 12, `Kh.`,
+  `Ch.`, `Th.`, `Ph.` 2 each, and `Ts.`, `Sh.`, `Sz.` 1 each.
+- Each of those 174 blocks, parsed and rebuilt by the arrival namer, comes
+  out exactly as it is on the shelf: **174 of 174** (the old code managed 1).
+- The refit, run on every name with an author block, rebuilds the name
+  exactly for 24,683 of 25,196 (the old code: 24,510). It gained 173 and
+  lost none.
 
 ### 2.3 Commas
 
@@ -283,20 +296,52 @@ The full taxonomy and its sources are in `processing/apostrophes.py`.
 - **Title:** the settled choice is U+2019 for a punctuation apostrophe,
   because a title is prose. A prime must never become one.
 
-**What the code does.** No naming path applies the title rule in general.
-At arrival, `convert_straight_quotes_to_proper` behaves like this (probe,
-2026-10-15):
+**What the code does.** At arrival only, a straight `'` in the title that
+is **certainly** an apostrophe becomes U+2019, in every language
+(`apostrophes.title_apostrophes`, called by `convert_straight_quotes_to_proper`).
+It is certainly one when it stands:
 
-- A straight `'` it judges a contraction stays **U+0027**: `l'équation`,
-  `Itô's`.
-- Every other `'` becomes `’`. That includes a prime: `f'(x)` → `f’(x)`. It
-  also includes both ends of a quoted word: `'hot hand'` → `’hot hand’`.
+- between two letters: `l'équation`, `Itô's`, `don't`, `Tsirel'son`, `SDE's`;
+- between a letter and an opening quotation mark: `l'« inégalité »`;
+- after a word ending in `s`, when no single quotation is open:
+  `Walras' equilibrium`;
+- after `)` or a digit and before `s`: `Heston (2008)'s`;
+- at the start of `'Tis`.
+
+Everything else stays as it arrived:
+
+- a prime: `f'(x)`, `X'_t`, `S'-processes`, `u''`;
+- a quotation mark: `'hot hand'` keeps both straight marks. The quotation
+  rule (§3.3) converts double marks only;
+- TeX's `''` closer.
+
+Mathematics is protected. A whitelisted phrase is not, because it guards
+casing, not this mark.
+
+Until 2026-10-15 arrival did the opposite. A contraction stayed U+0027, and
+when the title also held a `"`, every other `'` became `’`: `f'(x)` became
+`f’(x)`, and `'hot hand'` became `’hot hand’`.
 
 Search and duplicate detection fold every apostrophe-like mark together
-(`apostrophes.fold_marks`); no naming path uses that fold.
+(`apostrophes.fold_marks`); the conversion leaves that fold unchanged.
 
-**Measured.** **1,699** titles contain U+2019 and **0** contain U+0027. So
-the library follows the title rule, while arrival does not. See §6.
+**Measured.**
+- **1,699** titles contain U+2019. **0** of the 25,196 names with an author
+  block contain U+0027; 2 of the 55 without one do, both ICM 1893 proceedings
+  (`world's`).
+- Every ’, ‘ and ′ in the 25,251 titles was made straight again and the rule
+  run over the result. It restores U+2019 at all 1,803 apostrophes. It turns
+  none of the 175 opening and 175 closing single quotation marks, and
+  neither of the 2 primes, into one. It leaves alone the 6 marks of 3 TeX
+  `''` closers.
+- The library's own 1,699 apostrophe titles were passed through the whole
+  arrival namer with every mark straightened. 1,513 come out exactly as they
+  are on the shelf (the old code: 0).
+  - Of the other 186, 169 differ only because a single-quoted passage stays
+    straight where the library has `‘…’`.
+  - The rest come from the colon rule (7), casing (4), TeX `''` (3) and the
+    double-quote rule (3).
+  - Not one differs at an apostrophe.
 
 ### 3.5 Year ranges take an en dash
 
@@ -420,16 +465,20 @@ Do not cite these as the convention:
 
 ## 6. Where the code and the settled rulings disagree (open)
 
-1. **Multi-letter initials collapse at arrival.** `Yu. A.` arrives as
-   `Y. A.` (`cmo.Author.initials`; also `library_normalize._fit_to_limit`).
-   The library holds 174 such blocks; the automatic pipeline leaves every
-   one of them as it is.
-2. **Title apostrophes at arrival** (§3.4). Contractions arrive as U+0027,
-   against both the ruling and the library's 1,699–0. A prime becomes `’`, and
-   a quoted `'word'` gets two closing marks.
-3. **The Spelling page's *Name or ordinary word?* answers change no
+1. ~~Multi-letter initials collapse at arrival~~ — **fixed 2026-10-15**
+   (§2.2). Arrival names no paper differently that is already on a shelf:
+   `normalize_full_name` gives the same answer as before for all 25,251
+   in-scope names.
+2. ~~Title apostrophes at arrival~~ — **fixed 2026-10-15** (§3.4), with the
+   same check over the same 25,251 names.
+3. **A single-quoted passage arrives straight.** `'hot hand'` keeps its
+   straight marks; the library writes `‘hot hand’` in 169 titles that
+   arrived that way. The quotation rule (§3.3) converts double marks only.
+   Pairing single marks needs care: after a word in `-s`, a closing quote
+   and a possessive are the same character (`'reversals' and`).
+4. **The Spelling page's *Name or ordinary word?* answers change no
    filename** (§3.1).
-4. *By design, noted because nothing else checks it:* **a typed name is
+5. *By design, noted because nothing else checks it:* **a typed name is
    taken verbatim** (§0). None of the rules here is applied to it; only
    Conformance would later notice one that breaks an every-path rule.
 

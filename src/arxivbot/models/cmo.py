@@ -34,21 +34,27 @@ class Author:
         that initials are spaced ("R. C.", never "R.C.") and the
         validator's ``fix_initial_spacing``.  Hyphenated names keep the
         hyphen-dot shape with no inner space ("Jean-Pierre" → "J.-P").
+
+        A given name that is ALREADY written as initials keeps every letter
+        of each one ("Yu. A." → "Yu. A", "Ch." → "Ch"): an initial is what
+        ``core.initials`` says it is, the same rule that spaces them.  This
+        used to keep only the first character of every token, so a paper by
+        "Kabanov, Yu. M." arrived as "Kabanov, Y. M.", and one by
+        "Neretin, Yu.A." -- one token -- as "Neretin, Y.", losing the "A."
+        too.  The sweep's over-length refit (``library_normalize``) rebuilds
+        author blocks through this method, so it carried the same damage.
         """
         if not self.given:
             return ""
-        tokens = re.split(r"\s+", self.given.strip())
+        from core.initials import letters_of_initial, space_initials
+        given = space_initials(unicodedata.normalize("NFC", self.given))
         segments: List[str] = []
-        for token in tokens:
-            if not token:
-                continue
+        for token in given.split():
             subparts = [part for part in token.split("-") if part]
             if not subparts:
                 continue
-            if len(subparts) == 1:
-                segments.append(subparts[0][0].upper())
-            else:
-                segments.append(".-".join(part[0].upper() for part in subparts))
+            segments.append(".-".join(
+                letters_of_initial(part) or part[0].upper() for part in subparts))
         return ". ".join(segments)
 
 
