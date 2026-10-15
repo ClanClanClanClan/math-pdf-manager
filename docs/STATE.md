@@ -173,6 +173,37 @@ treat them as rules, not suggestions.
 
 ---
 
+## Sort Queue speed — fixed 2026-10-15
+
+Measured read-only on the real `12 - To be sorted` (2,414 PDFs: 2,065 ask
+arXiv, 209 ask Crossref, 68 always reach the local AI model and up to 216
+when arXiv is down), on a 42-paper sample across all of them:
+
+| per paper | before | after, first time | after, seen before |
+|---|--:|--:|--:|
+| show, median | 0.63 s | 0.49 s | 0.13 s |
+| Approve, median / worst | 0.14 / 43 s | 0.05 / 0.30 s | 0.05 / 0.31 s |
+| arXiv unreachable: show / Approve, median | 10.3 / 10.1 s | 0.15 / 0.06 s | — |
+| the local model reads it: show / Approve | 28–72 / 29–66 s | 26–49 / 0.06–0.20 s | 0.12–1.1 / 0.03–0.06 s |
+
+The recorded "10–11 s per paper" is right only while arXiv is unreachable
+(a 10 s connect timeout, paid again on Approve because a failure was never
+remembered). With arXiv up it was 0.6 s. The worst case was the local
+model: 30–70 s to show a paper and the same again to approve it.
+
+Now: answers are kept in `~/.mathpdf/cache/lookups.json`
+(`processing/lookup_cache.py`) — found 30 days, "no such paper" 1 day, a
+failure never (instead the service is left alone for 5 minutes, then asked
+again). The page asks arXiv about the next 25 papers in one request, gives
+up on a dead connection after 5 s, and says where each name came from
+("arXiv could not be checked: no connection … this name comes from the
+PDF's own metadata"), with an "Ask again now" button.
+
+Still slow: the first time the local model reads a paper (26–49 s). The
+batch sort's Apply reuses the same remembered answers; not measured.
+
+---
+
 ## Known and open, ranked
 
 1. **Every library-changing cockpit button is now pressed by a test
@@ -195,9 +226,9 @@ treat them as rules, not suggestions.
    everything came back; not in the undo log at all — Mark done (×3), Home
    "Look again", Upgrade "Flag for manual", "Fill in missing details",
    "Cache abstracts now"; undoing a topic filing leaves a blank record.
-2. **Three slow screens**: Sort Queue 10–11 s per paper (a failed arXiv
-   lookup is never cached), Home/Attention 12–76 s, Conformance ~3.5 min
-   against a label saying "about a minute".
+2. **Slow screens**: Home/Attention 12–76 s, Conformance ~3.5 min
+   against a label saying "about a minute". (Sort Queue: fixed 2026-10-15,
+   see "Sort Queue speed" above.)
 3. **`filename_ground_truth` has no production caller.** 27 sites still split
    on `" - "` naively. The rename path produces 0 wrong proposals today, so
    this is latent, not active — but it is the module the docs call the owner

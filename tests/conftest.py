@@ -400,7 +400,21 @@ def _never_touch_the_real_library(tmp_path_factory, monkeypatch):
     root = tmp_path_factory.mktemp("library")
     monkeypatch.setenv("MATH_LIBRARY", str(root))
     monkeypatch.setenv("HOME", str(SESSION_HOME))
+    # Remembered arXiv/Crossref/model answers are per test too: HOME is
+    # shared by the session, and one test's "absent" or "unreachable"
+    # must never decide another test's lookup.
+    monkeypatch.setenv("MATHPDF_LOOKUP_CACHE", str(
+        tmp_path_factory.mktemp("lookups") / "lookups.json"))
+    _reset_lookup_memory()
     yield root
+    _reset_lookup_memory()
+
+
+def _reset_lookup_memory() -> None:
+    lc = sys.modules.get("processing.lookup_cache")
+    if lc is not None:
+        lc.forget_unreachable()
+        lc._LOADED.clear()
 
 
 # ---------------------------------------------------------------------------

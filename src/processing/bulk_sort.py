@@ -311,12 +311,8 @@ def bulk_sort(
     # to its own lookup, and offline the run simply proceeds without
     # arXiv.
     try:
-        import re as _re
-        from processing.ingest import prefetch_arxiv
-        _pat = _re.compile(
-            r"(\d{4}\.\d{4,5}(?:v\d+)?|[a-z-]+/\d{7}(?:v\d+)?)")
-        _ids = [m.group(1) for (pdf, _s) in candidates
-                if (m := _pat.search(pdf.stem))]
+        from processing.ingest import arxiv_ids_in_names, prefetch_arxiv
+        _ids = arxiv_ids_in_names(pdf for (pdf, _s) in candidates)
         if _ids:
             logger.info("arXiv prefetch: %d of %d ids resolved",
                         prefetch_arxiv(_ids), len(_ids))

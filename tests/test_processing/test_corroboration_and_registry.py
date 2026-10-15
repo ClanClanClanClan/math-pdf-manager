@@ -292,13 +292,6 @@ class TestTheLookupIsBatched:
     objection it was meant to refute.
     """
 
-    @pytest.fixture(autouse=True)
-    def clear_cache(self):
-        from processing.ingest import _ARXIV_CACHE
-        _ARXIV_CACHE.clear()
-        yield
-        _ARXIV_CACHE.clear()
-
     def _feed(self, ids):
         # Every entry carries its own <id>, as arXiv's really does. A
         # fake that omits it cannot show the ordering bug that shipped —
@@ -358,6 +351,23 @@ class TestTheLookupIsBatched:
         assert len(counting_api) == 1
         assert counting_api[0] == ["2401.00001"]
 
+    def test_a_bulk_run_asks_about_all_its_papers_together(
+            self, counting_api, tmp_path):
+        """bulk_sort resolves every arXiv-named paper in one pass of
+        batched requests BEFORE the per-paper loop, so a 3-paper preview
+        costs one request, and the per-paper extractions none."""
+        from tests.test_processing.test_stage0_fixes import write_pdf
+        from processing.bulk_sort import bulk_sort
+        staging = tmp_path / "12 - To be sorted" / "03 - Working papers"
+        ids = ["2401.00001", "2401.00002", "2401.00003"]
+        for i in ids:
+            write_pdf(staging / f"{i}v2.pdf", title=f"Embedded {i}",
+                      author="Embedded, A.")
+        (staging / "Smith, J. - A properly named paper.pdf").write_bytes(
+            b"%PDF-1.4\n%%EOF\n")
+        bulk_sort(tmp_path, dry_run=True)
+        assert counting_api == [ids], counting_api
+
     def test_a_failing_batch_does_not_raise(self, monkeypatch):
         """Offline must degrade, not stop a 2,000-paper run."""
         import requests
@@ -385,13 +395,6 @@ class TestEachRecordGoesToTheRightPaper:
     were shifted by one.
     """
 
-    @pytest.fixture(autouse=True)
-    def clear_cache(self):
-        from processing.ingest import _ARXIV_CACHE
-        _ARXIV_CACHE.clear()
-        yield
-        _ARXIV_CACHE.clear()
-
     @pytest.fixture
     def shuffling_api(self, monkeypatch):
         """Answers correctly, but in reverse order — as arXiv does."""
@@ -414,13 +417,15 @@ class TestEachRecordGoesToTheRightPaper:
 
     def test_a_reordered_response_is_still_filed_correctly(self,
                                                            shuffling_api):
-        from processing.ingest import _ARXIV_CACHE, prefetch_arxiv
+        from processing import lookup_cache
+        from processing.ingest import prefetch_arxiv
         ids = ["2105.10623", "2009.05157", "1706.03762", "2301.00001"]
         assert prefetch_arxiv(ids) == 4
         for i in ids:
-            assert _ARXIV_CACHE[i]["title"] == f"Title of {i}", (
+            rec = lookup_cache.get("arxiv", i).record
+            assert rec["title"] == f"Title of {i}", (
                 f"{i} was given another paper's record")
-            assert _ARXIV_CACHE[i]["authors"] == [f"Author {i}"]
+            assert rec["authors"] == [f"Author {i}"]
 
     def test_an_entry_nobody_asked_for_is_ignored(self, monkeypatch):
         """An unknown id makes arXiv return an error entry rather than
@@ -436,9 +441,11 @@ class TestEachRecordGoesToTheRightPaper:
             return R
         import requests
         monkeypatch.setattr(requests, "get", fake_get)
-        from processing.ingest import _ARXIV_CACHE, prefetch_arxiv
+        from processing import lookup_cache
+        from processing.ingest import prefetch_arxiv
         assert prefetch_arxiv(["9999.99999"]) == 0
-        assert "9999.99999" not in _ARXIV_CACHE
+        remembered = lookup_cache.get("arxiv", "9999.99999")
+        assert remembered is None or not remembered.found
 
     def test_a_single_lookup_checks_the_id_too(self, monkeypatch):
         def fake_get(url, *a, **k):

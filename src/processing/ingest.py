@@ -103,15 +103,42 @@ _LATEX_MULTILETTER_RE = re.compile(
 )
 
 
-#: Resolved arXiv records, keyed by version-stripped id.
-#:
 #: The API takes 25 ids per request. One-at-a-time the whole inbox costs
 #: 205 minutes (measured: 7.0 s per single-id call, 1,758 ids); batched
 #: by 25 it costs 7.3 minutes (6.2 s per 25-id call). Inverting the
 #: lookup gate without this would have made every batch run unusable and
 #: handed back the cost objection the inversion was meant to refute.
-_ARXIV_CACHE: dict = {}
+#:
+#: Answers are remembered in ``processing.lookup_cache`` (found, absent
+#: and unknown kept apart; see there for why and for how long).
 ARXIV_BATCH = 25
+_ARXIV_API = "https://export.arxiv.org/api/query"
+_ATOM_NS = {"atom": "http://www.w3.org/2005/Atom"}
+_OPENSEARCH_TOTAL = "{http://a9.com/-/spec/opensearch/1.1/}totalResults"
+#: Seconds to wait for a registry to ACCEPT the connection. Separate from
+#: the read timeout (10 s single, 30 s batch), which a slow-but-working
+#: arXiv needs (7 s per call was measured). An unreachable host used to
+#: cost the full 10 s per paper -- the recorded "10-11 s per paper".
+_CONNECT_S = 5
+
+def arxiv_ids_in_names(pdfs) -> list:
+    """The arXiv ids these files are named after, in order.
+
+    The SAME rule the extraction applies to each file
+    (``id_resolution.detect_filename_ids``), so a look-ahead asks about
+    exactly the ids the papers will be looked up by. The batch sort had
+    its own looser pattern, which read "2024.10432" out of the DOI-named
+    "10.1016_j.spa.2024.104321.pdf" -- and one malformed id makes arXiv
+    refuse the whole batch.
+    """
+    from processing.id_resolution import detect_filename_ids
+
+    out = []
+    for pdf in pdfs:
+        found = detect_filename_ids(Path(pdf).name).get("arxiv_id")
+        if found:
+            out.append(found)
+    return out
 
 
 def _bare_arxiv_id(arxiv_id: str) -> str:
@@ -158,76 +185,233 @@ def _parse_arxiv_entry(entry, ns) -> dict:
     return out
 
 
-def prefetch_arxiv(arxiv_ids) -> int:
-    """Resolve many ids in batches of 25 and cache them. Returns hits.
+def _read_arxiv_reply(content: bytes, requested: list) -> tuple:
+    """Settle what one API reply says about each requested id.
 
-    Call this ONCE before a bulk run. Every later per-paper lookup then
-    reads the cache instead of the network.
+    Returns ``(answers, problem, refused)``: ``answers`` maps an id to a
+    FOUND or ABSENT Answer and leaves out every id the reply does not
+    settle; ``problem`` says why some were left out; ``refused`` is True
+    when arXiv rejected the request over a malformed id.
+
+    ABSENT is only ever inferred from a reply that is about exactly what
+    was asked. MEASURED against the live API, 2026-10-15: an unknown id
+    is simply left out of a feed that states its own result count; one
+    malformed id makes arXiv refuse the WHOLE batch with a single error
+    entry naming it, so the other ids in that batch are unknown, not
+    absent. An empty reply to a many-id request, or one carrying an entry
+    nobody asked for, settles no absence at all.
     """
     import xml.etree.ElementTree as ET
 
+    from processing.lookup_cache import ABSENT, FOUND, Answer
+
+    try:
+        root = ET.fromstring(content)
+    except ET.ParseError as exc:
+        return {}, "its reply could not be read", False
+    wanted = set(requested)
+    answers: dict = {}
+    refused = foreign = False
+    untitled = set()
+    entries = root.findall("atom:entry", _ATOM_NS)
+    for entry in entries:
+        el = entry.find("atom:id", _ATOM_NS)
+        raw = (el.text or "").strip() if el is not None else ""
+        if "/api/errors" in raw:
+            refused = True
+            bad = raw.rsplit("incorrect_id_format_for_", 1)
+            if len(bad) == 2 and bad[1] in wanted:
+                answers[bad[1]] = Answer(
+                    ABSENT, reason="not a valid arXiv id")
+            continue
+        # Key on the entry's OWN id. Zipping against the request order was
+        # wrong: arXiv reorders freely, so every record was filed under the
+        # wrong paper.
+        entry_id = _entry_arxiv_id(entry, _ATOM_NS)
+        if entry_id not in wanted:
+            logger.warning("arXiv returned %r for a query about %s; ignoring",
+                           entry_id, ",".join(requested[:3]))
+            foreign = True
+            continue
+        rec = _parse_arxiv_entry(entry, _ATOM_NS)
+        if rec.get("title"):
+            answers[entry_id] = Answer(FOUND, rec)
+        else:
+            untitled.add(entry_id)
+    if refused:
+        return answers, "it refused the request over a malformed id", True
+    total = root.find(_OPENSEARCH_TOTAL)
+    counted = False
+    if total is not None:
+        try:
+            int((total.text or "").strip())
+            counted = True
+        except ValueError:
+            pass
+    if foreign:
+        return answers, "it answered about a different paper", False
+    if not counted:
+        return answers, "its reply did not say how many papers it found", False
+    if not entries and len(requested) > 1:
+        return answers, f"it sent an empty reply for {len(requested)} ids", False
+    for i in requested:
+        if i not in answers and i not in untitled:
+            answers[i] = Answer(ABSENT, reason="no paper with this id")
+    return answers, ("its record has no title" if untitled else ""), False
+
+
+def _ask_arxiv(ids: list, *, timeout) -> tuple:
+    """One request for ``ids``. Returns ``(answers, problem, refused)``.
+
+    Never raises. A failure to reach arXiv marks it unreachable for a few
+    minutes (see ``lookup_cache.mark_unreachable``) and settles nothing.
+    """
     import requests
 
-    ns = {"atom": "http://www.w3.org/2005/Atom"}
-    wanted = [i for i in dict.fromkeys(_bare_arxiv_id(a) for a in arxiv_ids)
-              if i and i not in _ARXIV_CACHE]
+    from processing import lookup_cache as lc
+
+    url = f"{_ARXIV_API}?id_list={','.join(ids)}"
+    if len(ids) > 1:
+        url += f"&max_results={len(ids)}"
+    try:
+        resp = requests.get(url, timeout=timeout)
+    except Exception as exc:          # never let a lookup stop the caller
+        why = lc.plain_failure(exc)
+        if lc.is_network_failure(exc):
+            lc.mark_unreachable("arxiv", why)
+        logger.warning("arXiv lookup failed for %s: %s", ids[0], exc)
+        return {}, why, False
+    code = getattr(resp, "status_code", None)
+    if code != 200:
+        why = f"it answered HTTP {code}"
+        if isinstance(code, int) and lc.is_service_trouble(code):
+            lc.mark_unreachable("arxiv", why)
+        return {}, why, False
+    return _read_arxiv_reply(resp.content, ids)
+
+
+def prefetch_arxiv(arxiv_ids) -> int:
+    """Resolve many ids in batches of 25 and remember them. Returns hits.
+
+    Call this before a bulk run, or ahead of the papers about to be
+    shown. Ids already answered are not asked again. If arXiv cannot be
+    reached it stops at once rather than waiting out a timeout for every
+    remaining batch: offline, 2,000 ids used to cost 80 x 30 s.
+    """
+    from processing import lookup_cache as lc
+
+    queue = [i for i in dict.fromkeys(_bare_arxiv_id(a) for a in arxiv_ids)
+             if i and lc.get("arxiv", i) is None]
     found = 0
-    for start in range(0, len(wanted), ARXIV_BATCH):
-        chunk = wanted[start:start + ARXIV_BATCH]
-        try:
-            resp = requests.get(
-                "https://export.arxiv.org/api/query"
-                f"?id_list={','.join(chunk)}&max_results={len(chunk)}",
-                timeout=30,
-            )
-            if resp.status_code != 200:
-                continue
-            root = ET.fromstring(resp.content)
-            requested = set(chunk)
-            for entry in root.findall("atom:entry", ns):
-                # Key on the entry's OWN id. Zipping against the request
-                # order was wrong: arXiv reorders freely, so every record
-                # was filed under the wrong paper.
-                entry_id = _entry_arxiv_id(entry, ns)
-                if entry_id not in requested:
-                    continue
-                rec = _parse_arxiv_entry(entry, ns)
-                if rec.get("title"):
-                    _ARXIV_CACHE[entry_id] = rec
-                    found += 1
-        except Exception as exc:      # never let a lookup stop a batch
-            logger.warning("arXiv batch lookup failed for %s…: %s",
-                           chunk[0], exc)
+    retried: set = set()
+    while queue and lc.unreachable("arxiv") is None:
+        chunk, queue = queue[:ARXIV_BATCH], queue[ARXIV_BATCH:]
+        answers, _problem, refused = _ask_arxiv(chunk, timeout=(_CONNECT_S, 30))
+        lc.put_many("arxiv", answers.items())
+        found += sum(1 for a in answers.values() if a.found)
+        if refused:
+            # One malformed id sank the batch; ask once more without it.
+            again = [i for i in chunk if i not in answers and i not in retried]
+            retried.update(again)
+            queue = again + queue
     return found
 
 
-def lookup_arxiv(arxiv_id: str) -> dict:
-    """Cached single lookup. Falls back to one request on a cache miss."""
-    import xml.etree.ElementTree as ET
+def arxiv_lookup(arxiv_id: str):
+    """What arXiv says about one id, as a three-valued ``Answer``.
 
-    import requests
+    ``found`` with the record, ``absent`` when arXiv answered that it has
+    no such paper, ``unknown`` (with the reason) when it could not be
+    asked or its reply could not be trusted. Remembered answers are used
+    first; ``unknown`` is never remembered.
+    """
+    from processing import lookup_cache as lc
 
     key = _bare_arxiv_id(arxiv_id)
-    if key in _ARXIV_CACHE:
-        return _ARXIV_CACHE[key]
-    ns = {"atom": "http://www.w3.org/2005/Atom"}
-    resp = requests.get(
-        f"https://export.arxiv.org/api/query?id_list={key}", timeout=10)
-    if resp.status_code != 200:
-        return {}
-    entry = ET.fromstring(resp.content).find("atom:entry", ns)
-    if entry is None:
-        return {}
-    # Even a single-id query is checked against the entry's own id: an
-    # unknown id makes arXiv return an error entry rather than nothing.
-    if _entry_arxiv_id(entry, ns) not in ("", key):
-        logger.warning("arXiv returned %s for a query about %s; ignoring",
-                       _entry_arxiv_id(entry, ns), key)
-        return {}
-    rec = _parse_arxiv_entry(entry, ns)
-    if rec.get("title"):
-        _ARXIV_CACHE[key] = rec
-    return rec
+    if not key:
+        return lc.Answer(lc.UNKNOWN, reason="no arXiv id")
+    hit = lc.get("arxiv", key)
+    if hit is not None:
+        return hit
+    down = lc.unreachable("arxiv")
+    if down:
+        return lc.Answer(lc.UNKNOWN, reason=down)
+    answers, problem, _refused = _ask_arxiv([key], timeout=(_CONNECT_S, 10))
+    lc.put_many("arxiv", answers.items())
+    return answers.get(key) or lc.Answer(
+        lc.UNKNOWN, reason=problem or "its reply did not settle this id")
+
+
+def lookup_arxiv(arxiv_id: str) -> dict:
+    """The arXiv record for one id, or ``{}`` when there is none to use.
+
+    ``{}`` covers both "arXiv has no such paper" and "arXiv could not be
+    asked"; callers that must tell them apart use ``arxiv_lookup``.
+    """
+    return arxiv_lookup(arxiv_id).record
+
+
+#: The fields of a Crossref "message" this module reads; only these are
+#: remembered, so the cache stays small.
+_CROSSREF_FIELDS = ("title", "author", "journal", "published-print",
+                    "published-online")
+
+
+def crossref_lookup(doi: str):
+    """What Crossref says about one DOI, as a three-valued ``Answer``.
+
+    404 is Crossref saying it has no such DOI (``absent``); a rate limit,
+    a server error or no connection is ``unknown`` and is asked again
+    later. Approve used to repeat this request for every published paper
+    (measured 0.37-1.1 s each, 175 of the first 238 papers in the queue).
+    """
+    import requests
+
+    from processing import lookup_cache as lc
+
+    key = (doi or "").strip().lower()       # DOIs are case-insensitive
+    if not key:
+        return lc.Answer(lc.UNKNOWN, reason="no DOI")
+    hit = lc.get("crossref", key)
+    if hit is not None:
+        return hit
+    down = lc.unreachable("crossref")
+    if down:
+        return lc.Answer(lc.UNKNOWN, reason=down)
+    try:
+        resp = requests.get(
+            f"https://api.crossref.org/works/{doi.strip()}",
+            headers={"User-Agent": "MathPDFManager/1.0 (mailto:admin@example.com)"},
+            timeout=(_CONNECT_S, 10),
+        )
+    except Exception as exc:
+        why = lc.plain_failure(exc)
+        if lc.is_network_failure(exc):
+            lc.mark_unreachable("crossref", why)
+        logger.warning("Crossref API request failed for DOI %s: %s", doi, exc)
+        return lc.Answer(lc.UNKNOWN, reason=why)
+    code = getattr(resp, "status_code", None)
+    if code == 404:
+        ans = lc.Answer(lc.ABSENT, reason="no record of this DOI")
+        lc.put("crossref", key, ans)
+        return ans
+    if code != 200:
+        why = f"it answered HTTP {code}"
+        if isinstance(code, int) and lc.is_service_trouble(code):
+            lc.mark_unreachable("crossref", why)
+        return lc.Answer(lc.UNKNOWN, reason=why)
+    try:
+        msg = resp.json().get("message", {})
+    except (ValueError, AttributeError) as exc:
+        return lc.Answer(lc.UNKNOWN,
+                         reason="its reply could not be read")
+    rec = {k: msg[k] for k in _CROSSREF_FIELDS
+           if isinstance(msg, dict) and msg.get(k)}
+    if not rec:
+        return lc.Answer(lc.UNKNOWN, reason="its record has no title or authors")
+    ans = lc.Answer(lc.FOUND, rec)
+    lc.put("crossref", key, ans)
+    return ans
 
 
 def _strip_publisher_boilerplate(title: str) -> str:
@@ -423,6 +607,48 @@ def _unlatex(text: str) -> str:
 # ---------------------------------------------------------------------------
 # Metadata extraction (lightweight — uses PyMuPDF + filename heuristics)
 # ---------------------------------------------------------------------------
+def _llm_key(model_path: Path, text: str) -> str:
+    """Same model file, same text -> same answer (it runs at temperature 0).
+
+    The model is identified by name, size and modification time, so a
+    retrained model never answers from its predecessor's memory.
+    """
+    import hashlib
+
+    st = Path(model_path).stat()
+    h = hashlib.sha256()
+    h.update(f"{Path(model_path).name}|{st.st_size}|{st.st_mtime_ns}|".encode())
+    h.update(text.encode("utf-8", "surrogatepass"))
+    return h.hexdigest()
+
+
+def _llm_extract_remembered(extractor_cls, model_path: Path, text: str):
+    """Ask the local model, unless it has already answered for this text.
+
+    MEASURED 2026-10-15 on the real inbox: 28-72 s for a paper the model
+    reads (loading 1.3-27 s, reading 26-43 s), and Approve read it again
+    (29-43 s). Only an answer is remembered; a model that fails is asked
+    again next time.
+    """
+    from processing import lookup_cache as lc
+
+    try:
+        key = _llm_key(model_path, text)
+    except OSError:
+        key = ""
+    hit = lc.get("llm", key) if key else None
+    if hit is not None:
+        return hit.record
+    extractor = extractor_cls(model_path=model_path)
+    try:
+        result = extractor.extract(text)
+    finally:
+        extractor.close()
+    if key and isinstance(result, dict) and "title" in result:
+        lc.put("llm", key, lc.Answer(lc.FOUND, result))
+    return result
+
+
 def extract_metadata_from_pdf(pdf_path: Path) -> dict:
     """Extract basic metadata from a PDF file.
 
@@ -575,9 +801,12 @@ def extract_metadata_from_pdf(pdf_path: Path) -> dict:
     if metadata.get("arxiv_id") and (
             not metadata["title"] or _is_bare_identifier(pdf_path.stem)):
         try:
-            import requests   # noqa: F401  (for the handler below)
-
-            rec = lookup_arxiv(metadata["arxiv_id"])
+            _ans = arxiv_lookup(metadata["arxiv_id"])
+            # Kept apart, so the Sort Queue can say "arXiv could not be
+            # reached" rather than imply arXiv has never heard of it.
+            metadata.setdefault("lookups", {})["arxiv"] = {
+                "state": _ans.state, "reason": _ans.reason}
+            rec = _ans.record
             if rec.get("title"):
                 metadata["title"] = rec["title"]
                 metadata["title_source"] = "arxiv"
@@ -588,8 +817,6 @@ def extract_metadata_from_pdf(pdf_path: Path) -> dict:
                 metadata["doi"] = rec["doi"]
             if rec.get("arxiv_category"):
                 metadata["arxiv_category"] = rec["arxiv_category"]
-        except requests.exceptions.RequestException as exc:
-            logger.warning("ArXiv API request failed for %s: %s", metadata["arxiv_id"], exc)
         except Exception as exc:
             logger.warning("ArXiv lookup failed for %s: %s", metadata["arxiv_id"], exc)
 
@@ -603,15 +830,11 @@ def extract_metadata_from_pdf(pdf_path: Path) -> dict:
         _doi = ""
     if _doi and (not metadata["title"] or _is_bare_identifier(pdf_path.stem)):
         try:
-            import requests
-
-            resp = requests.get(
-                f"https://api.crossref.org/works/{metadata['doi']}",
-                headers={"User-Agent": "MathPDFManager/1.0 (mailto:admin@example.com)"},
-                timeout=10,
-            )
-            if resp.status_code == 200:
-                cr = resp.json().get("message", {})
+            _ans = crossref_lookup(metadata["doi"])
+            metadata.setdefault("lookups", {})["crossref"] = {
+                "state": _ans.state, "reason": _ans.reason}
+            cr = _ans.record
+            if cr:
                 titles = cr.get("title", [])
                 if titles:
                     metadata["title"] = unicodedata.normalize("NFC", titles[0])
@@ -630,8 +853,6 @@ def extract_metadata_from_pdf(pdf_path: Path) -> dict:
                     parts = pub_date["date-parts"][0]
                     if parts:
                         metadata["year"] = parts[0]
-        except requests.exceptions.RequestException as exc:
-            logger.warning("Crossref API request failed for DOI %s: %s", metadata["doi"], exc)
         except Exception as exc:
             logger.warning("Crossref lookup failed for DOI %s: %s", metadata["doi"], exc)
 
@@ -665,11 +886,8 @@ def extract_metadata_from_pdf(pdf_path: Path) -> dict:
             text_for_llm = metadata.get("fulltext_sample", "")
             model_path = LLMMetadataExtractor.local_model_path()
             if text_for_llm and model_path and LLMMetadataExtractor.is_available():
-                extractor = LLMMetadataExtractor(model_path=model_path)
-                try:
-                    llm_result = extractor.extract(text_for_llm)
-                finally:
-                    extractor.close()
+                llm_result = _llm_extract_remembered(
+                    LLMMetadataExtractor, model_path, text_for_llm)
                 if llm_result and llm_result.get("title"):
                     metadata["title"] = llm_result["title"]
                     metadata["title_source"] = "llm"

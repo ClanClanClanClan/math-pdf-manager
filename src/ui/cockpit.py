@@ -966,6 +966,38 @@ def _render_batch_sort(lib: Path, pending: int) -> None:
                 st.rerun()
 
 
+def _prefetch_arxiv_ahead(candidates: list) -> None:
+    """Ask arXiv about the next 25 papers in ONE request.
+
+    85.5% of the inbox (2,065 of 2,414, measured 2026-10-15) asks arXiv,
+    one request per paper. When the paper about to be shown has no
+    remembered answer, this asks for it and the 24 behind it together,
+    so the next 24 cost nothing. A window is asked at most once per
+    ``UNREACHABLE_FOR`` seconds: a reply that settles nothing must not
+    turn every click on this page into another request. Never blocks
+    the page; the per-paper lookup remains the fallback.
+    """
+    from processing import lookup_cache as lc
+    from processing.ingest import (ARXIV_BATCH, _bare_arxiv_id,
+                                   arxiv_ids_in_names, prefetch_arxiv)
+
+    first = arxiv_ids_in_names(p for p, _ in candidates[:1])
+    if not first or lc.get("arxiv", _bare_arxiv_id(first[0])) is not None:
+        return
+    asked = st.session_state.setdefault("sort_arxiv_asked", {})
+    now = time.time()
+    ids = [i for i in arxiv_ids_in_names(p for p, _ in candidates[:ARXIV_BATCH])
+           if now - asked.get(_bare_arxiv_id(i), -1e18) >= lc.UNREACHABLE_FOR]
+    if not ids:
+        return
+    for i in ids:
+        asked[_bare_arxiv_id(i)] = now
+    try:
+        prefetch_arxiv(ids)
+    except Exception as exc:                    # never block the page
+        logger.warning("arXiv look-ahead skipped: %s", exc)
+
+
 @st.cache_data(ttl=3600, show_spinner=False)
 def _preview_pdf_cached(pdf_str: str, mtime: float, size: int):
     """Cached ``preview_pdf``, keyed on the file's identity.
@@ -1043,12 +1075,14 @@ def render_sort_queue() -> None:
     # Take the first candidate the user hasn't skipped
     pdf, status = candidates[0]
 
-    try:
-        _st = pdf.stat()
-        prev = _preview_pdf_cached(str(pdf), _st.st_mtime, _st.st_size)
-    except OSError:
-        from ui.paper_preview import preview_pdf
-        prev = preview_pdf(pdf)
+    with st.spinner("Reading the next paper…"):
+        _prefetch_arxiv_ahead(candidates)
+        try:
+            _st = pdf.stat()
+            prev = _preview_pdf_cached(str(pdf), _st.st_mtime, _st.st_size)
+        except OSError:
+            from ui.paper_preview import preview_pdf
+            prev = preview_pdf(pdf)
 
     st.subheader(f"{len(candidates)} left to sort — reviewing the next one")
     st.code(str(pdf.relative_to(lib)), language=None)
@@ -1081,6 +1115,16 @@ def render_sort_queue() -> None:
         st.code(status, language=None)
         st.markdown("**Extracted title**")
         st.write(prev.title or "_(none)_")
+        from ui.paper_preview import name_source_note, unsettled_lookups
+        _lvl, _note = name_source_note(prev)
+        (st.warning if _lvl == "warning" else st.caption)(_note)
+        _unsettled = unsettled_lookups(prev)
+        if _unsettled and st.button("↻ Ask again now", key=f"reask_{pdf}"):
+            from processing.lookup_cache import forget_unreachable
+            for _svc in _unsettled:
+                forget_unreachable(_svc)
+            _preview_pdf_cached.clear()
+            st.rerun()
         st.markdown("**Extracted authors**")
         st.write(prev.authors or "_(none)_")
         if prev.doi:
