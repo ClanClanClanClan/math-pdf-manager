@@ -587,11 +587,17 @@ class TestCacheAbstracts:
 
     def test_a_paper_with_no_record_gets_one_and_undo_retires_it(self, lib):
         from processing.classifier_text import backfill_classifier_text
+        from processing.identity import compute_content_hash, filing_date
         pdf = _pdf(lib / "01 - Published papers/S/Smith, J. - P.pdf")
         before = _tree(lib)
         log = _log(lib)
         backfill_classifier_text(lib, undo_log=log)
-        assert "first pages" in PaperIdentity.load(pdf).classifier_text
+        made = PaperIdentity.load(pdf)
+        assert "first pages" in made.classifier_text
+        # A whole record, not the text alone: "Fill in missing details"
+        # passes over any paper that has one.
+        assert made.content_sha256 == compute_content_hash(pdf)
+        assert made.first_ingested_at == filing_date(pdf)
         (op,) = log._current_tx["operations"]
         assert op["type"] == "record_created"
         assert op["destination"] == str(record_location(pdf))
@@ -601,7 +607,9 @@ class TestCacheAbstracts:
 
     def test_an_unreadable_record_is_not_written_over(self, lib):
         """It loads as "no record", and the old code saved a fresh one over
-        it -- whatever it held, gone. Now it is left and counted failed."""
+        it -- whatever it held, gone. Now it is left, unread, and counted
+        (``unreadable``: before 2026-10-15 it was read first and counted
+        ``failed``, which also let a run of them fill every batch)."""
         from processing.classifier_text import backfill_classifier_text
         pdf = _pdf(lib / "01 - Published papers/S/Smith, J. - P.pdf")
         rec = sidecar_path(pdf)
@@ -612,5 +620,6 @@ class TestCacheAbstracts:
         stats = backfill_classifier_text(lib, undo_log=log)
 
         assert rec.read_bytes() == b'{"doi": "10.1000/half-synced", '
-        assert stats["failed"] == 1 and stats["extracted"] == 0
+        assert stats["unreadable"] == 1 and stats["unreadable_papers"] == [pdf.name]
+        assert stats["read"] == stats["failed"] == stats["extracted"] == 0
         assert not log.has_operations()

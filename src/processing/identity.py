@@ -567,7 +567,11 @@ class PaperIdentity:
             return cls()
         try:
             raw = json.loads(path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError) as exc:
+        # ValueError, not only JSONDecodeError: bytes that are not UTF-8
+        # raise UnicodeDecodeError, which escaped -- one such record ended
+        # a whole-library sweep ("Cache abstracts") instead of being
+        # passed over as unreadable.
+        except (OSError, ValueError) as exc:
             logger.warning("sidecar unreadable %s: %s — treating as missing", path, exc)
             return cls()
         if not isinstance(raw, dict):
@@ -1102,19 +1106,37 @@ def save_new_record(identity: "PaperIdentity", pdf_path: Path, *,
     return path
 
 
+def filing_date(pdf_path: Path) -> str:
+    """When this file arrived, as best the file itself can say: its
+    creation time where the filesystem keeps one (APFS, HFS+), else its
+    last modification. Raises ``OSError`` when the file cannot be read."""
+    stat = pdf_path.stat()
+    when = getattr(stat, "st_birthtime", None) or stat.st_mtime
+    return datetime.fromtimestamp(when, tz=timezone.utc).isoformat(
+        timespec="seconds")
+
+
 def backfill_sidecar(
     pdf_path: Path,
     *,
     overwrite: bool = False,
     content_hash: str = "",
+    extra: Optional[dict] = None,
     undo_log=None,
 ) -> bool:
     """Create a minimal sidecar for a PDF that doesn't have one yet.
 
-    Used during one-shot migration of an existing library.  Only writes
-    the fields we can determine cheaply from the file itself:
+    THE way a paper with no record is given one from the file alone,
+    for both Settings' "Fill in missing details" and Pipeline Preview's
+    "Cache abstracts". Writes the fields the file itself can tell:
     ``content_sha256``, ``original_filename``, ``first_ingested_at``
-    (best-effort: stat().st_birthtime, falling back to st_mtime).
+    (:func:`filing_date`), plus ``extra`` -- the fields the caller came
+    to add, such as the cached first-page text. "Cache abstracts" used
+    to make a record holding its text alone: no fingerprint, so the
+    reconnect could never find the paper's record again after a Finder
+    rename, and no filing date -- and "Fill in missing details" then
+    passed the paper over for good, since it had a record (measured
+    2026-10-15: 147 such records in the library).
 
     External identifiers (DOI / arXiv) are left blank — they require a
     network round-trip and belong to a separate enrichment pass.
@@ -1136,24 +1158,68 @@ def backfill_sidecar(
     if not overwrite and existing is not None:
         return False
 
-    identity = PaperIdentity()
+    # A field name it does not know is a TypeError here, not a value
+    # silently dropped by the save.
+    identity = PaperIdentity(**(extra or {}))
     identity.content_sha256 = content_hash or compute_content_hash(pdf_path)
     identity.original_filename = pdf_path.name
-
-    # Filing date: prefer creation time when available (Apple HFS+/APFS),
-    # otherwise fall back to mtime.  Filing date matters for the aging
-    # state machine.
-    stat = pdf_path.stat()
-    when = getattr(stat, "st_birthtime", None) or stat.st_mtime
-    identity.first_ingested_at = datetime.fromtimestamp(
-        when, tz=timezone.utc
-    ).isoformat(timespec="seconds")
+    # Filing date matters for the aging state machine.
+    identity.first_ingested_at = filing_date(pdf_path)
 
     if existing is None:
         save_new_record(identity, pdf_path, undo_log=undo_log)
     else:
         identity.save(pdf_path, recompute_hash=False, undo_log=undo_log)
     return True
+
+
+#: The fields of a record that the file alone can fill in.
+FROM_THE_FILE = ("content_sha256", "first_ingested_at")
+
+
+def missing_from_the_file(pdf_path: Path) -> Optional[list[str]]:
+    """Which of :data:`FROM_THE_FILE` this paper's record leaves blank.
+
+    ``None`` when there is no readable record (none, or one that cannot
+    be parsed as an object): nothing to complete.
+    """
+    try:
+        data = json.loads(record_location(pdf_path).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if not isinstance(data, dict):
+        return None
+    return [k for k in FROM_THE_FILE if not data.get(k)]
+
+
+def complete_record(pdf_path: Path, *, content_hash: str = "",
+                    undo_log=None) -> Optional[bool]:
+    """Fill in the content fingerprint and filing date a record lacks,
+    from the file, and change nothing else (``patch_record``).
+
+    A record without a fingerprint cannot be found again by the
+    reconnect once a rename strands it, and "Check they still match" has
+    nothing to compare it with. Only the blank ones of the two are
+    written; one the file cannot give (an unreadable file hashes to "")
+    is left blank rather than written as blank.
+
+    True if the record changed, False if it lacked neither, None if
+    there is no readable record. With ``undo_log``, the previous values
+    are recorded, so undo gives the record back byte for byte.
+    """
+    missing = missing_from_the_file(pdf_path)
+    if missing is None:
+        return None
+    values = {}
+    if "content_sha256" in missing:
+        digest = content_hash or compute_content_hash(pdf_path)
+        if digest:
+            values["content_sha256"] = digest
+    if "first_ingested_at" in missing:
+        values["first_ingested_at"] = filing_date(pdf_path)
+    if not values:
+        return False
+    return patch_record(pdf_path, values, undo_log=undo_log)
 
 
 def list_hash_collisions(root: Path) -> dict[str, list[str]]:
@@ -1243,7 +1309,7 @@ def backfill_directory(
     Returns a summary dict::
 
         {"scanned": N, "written": M, "skipped": K, "errors": E,
-         "kept_for_reconnect": R}
+         "kept_for_reconnect": R, "completed": C}
 
     A paper with no record whose CONTENTS match a stranded record (one
     left behind by a rename) is not given a fresh, blank one: that would
@@ -1252,22 +1318,32 @@ def backfill_directory(
     measured 2026-10-09, 37 such papers, 13 with a DOI). They are counted
     in ``kept_for_reconnect`` and left for Conformance's reconnect.
 
+    A record that lacks its content fingerprint or filing date has them
+    filled in from the file (:func:`complete_record`), every other field
+    as it was; counted in ``completed``. Such a record used to be passed
+    over for good, since the paper had one (measured 2026-10-15: 147 in
+    the library, every one lacking both). That is so even when a stranded
+    record matches the paper: the spot is already taken, so completing
+    loses the reconnect nothing, and the stranded record stays as it is
+    (of the 147, 20 such pairs; each stranded one held the same filing
+    date the file gives).
+
     With ``undo_log`` every record made is logged, so Settings' "Fill in
     missing details" can be undone from Activity: measured 2026-10-15 on
     the real library, it would make up to 467 records, and none could be
     taken back.
     """
-    from processing.sidecar_repair import _recorded_hash, find_orphans
-    stranded = {h for h in map(_recorded_hash, find_orphans(root)) if h}
+    from processing.sidecar_repair import stranded_fingerprints, stranded_match
+    stranded = stranded_fingerprints(root)
     summary = {"scanned": 0, "written": 0, "skipped": 0, "errors": 0,
-               "kept_for_reconnect": 0}
+               "kept_for_reconnect": 0, "completed": 0}
     for pdf in iter_pdfs(root):
         summary["scanned"] += 1
         try:
             digest = ""
             if stranded and (overwrite or find_sidecar(pdf) is None):
-                digest = compute_content_hash(pdf)
-                if digest in stranded:
+                waits, digest = stranded_match(pdf, stranded)
+                if waits:
                     summary["kept_for_reconnect"] += 1
                     continue
             if backfill_sidecar(pdf, overwrite=overwrite, content_hash=digest,
@@ -1275,6 +1351,8 @@ def backfill_directory(
                 summary["written"] += 1
                 if verbose:
                     print(f"  wrote sidecar for {pdf}")
+            elif complete_record(pdf, undo_log=undo_log):
+                summary["completed"] += 1
             else:
                 summary["skipped"] += 1
         except (OSError, ValueError) as exc:
@@ -1328,7 +1406,8 @@ def main(argv: Optional[list[str]] = None) -> None:
         )
         print(
             f"Scanned {s['scanned']} PDFs: wrote {s['written']}, "
-            f"skipped {s['skipped']}, errors {s['errors']}"
+            f"completed {s['completed']}, skipped {s['skipped']}, "
+            f"errors {s['errors']}"
         )
     elif args.command == "show":
         ident = PaperIdentity.load(args.pdf)

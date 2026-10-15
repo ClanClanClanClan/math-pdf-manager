@@ -348,13 +348,52 @@ cover page, so the model names every one "The Annals of probability" by
    (pre-commit) now fails on any writing button whose test does not press
    ↶ Undo — one exemption, the weekly run, with the tests that prove its
    writes reversible named.
-   **Found, not fixed:** 147 live records have neither a content hash
-   nor a filing date; "Cache abstracts" makes such a record for a paper
-   with none (466 would be made by a full run now), and "Fill in missing
-   details" then skips that paper for good, since it has a record. And
-   the abstracts page's batch counts papers already done: measured, its
-   "100" would read 3 papers, "500" 4, "2000" 6 — only "All" reaches
-   the 758.
+   *"Cache abstracts" batch and the records it made — FIXED 2026-10-15.*
+   Its batch counted the papers it looked at, done or not: "100" read 3
+   papers, "500" 4, "2000" 6 — only "All" reached the 758 still waiting
+   (of 26,098 routable papers in scope). The batch is now papers still to
+   read; the walk then goes on, without reading, to count what is left,
+   and the page says it in words ("Read 100 papers: … 658 papers still to
+   read") where it printed the stats dict. A record that cannot be read
+   is no longer read and counted failed — it is passed over, so a run of
+   them cannot fill every batch — and one that is not UTF-8 no longer
+   raises out of `PaperIdentity.load` (it ended the whole run).
+   And 147 records had neither a content fingerprint nor a filing date
+   (0 lacked just one; 117 hold cached text, 30 the "tried" mark, 127
+   are in `12 - To be sorted`; none has a topic code, so not topic
+   filing): "Cache abstracts", since it came in on 18 June, gave a paper
+   with no record one holding the text alone, and "Fill in missing
+   details" then passed it over for good, since it had a record.
+   Without a fingerprint the reconnect cannot find a record again after
+   a Finder rename. Decided, on that evidence: (a), not (b). "Cache
+   abstracts" now gives a record-less paper the whole record "Fill in
+   missing details" makes — one function, `identity.backfill_sidecar`,
+   plus the text — and leaves alone one whose contents match a record a
+   rename left behind (`sidecar_repair.stranded_match`, shared with
+   "Fill in missing details"; 0 of the 466 today). Telling him to press
+   a second button on another page first would have left 466 of the
+   758 (61%) unread by this one. "Fill in missing details" now fills in
+   the fingerprint and filing date a record lacks
+   (`identity.complete_record`: those two fields only, `patch_record`
+   through the undo log, so ↶ Undo gives each record back byte for
+   byte). Measured with the new code on the real library, read-only
+   (every writer replaced by a counter, writes to the library denied by
+   the sandbox; load average 131–139): a batch of 100 reads 100 papers,
+   makes 58 records and adds text to 42, 119.5 s; counting alone 81.0 s;
+   "Fill in missing details" would make 467 records and complete all 147,
+   0 errors, 104.6 s. Reading one paper: median 0.106 s, max 0.381 s
+   (60 random waiting papers).
+   **Found, still open:** 20 of the 36 stranded records belong to
+   papers that have one of those 147 records; the reconnect cannot put
+   them back, since the paper has a record. Each holds only a
+   fingerprint, filing date and older name, and its filing date equals
+   the one completion writes (20 of 20), so completing loses nothing —
+   but the pair is two records for one paper, which the ruling says to
+   merge, and no page does yet. Topic filing (`file_into_topic`,
+   Pipeline Preview "Apply now") still makes a blank record for a paper
+   with none, without the stranded-record check. "Check they still
+   match" counts a record with no fingerprint as matching
+   (`drift_check` returns `None`).
 2. **Slow screens**: Home/Attention 12–76 s. (Sort Queue: fixed 2026-10-15,
    see "Sort Queue speed" above.)
    *Conformance — FIXED 2026-10-15.* It took ~3.5 min against a label

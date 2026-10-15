@@ -3812,27 +3812,32 @@ def render_pipeline_preview() -> None:
             "the text, so the classifier can judge a paper by its content "
             "instead of its title alone. It reads your PDFs and adds the "
             "text to their saved details — nothing is moved or renamed — "
-            "and you can stop and pick up where you "
-            "left off. The whole library takes 30–60 minutes, so start with "
-            "a small batch here to see the difference.")
+            "and you can stop and pick up where you left off. The batch "
+            "counts only papers still to read; those already done are "
+            "passed over, and the result says how many are left. Each press "
+            "first looks through the whole library, which takes a minute "
+            "or so; a batch of 100 took two minutes when measured.")
         cbf = st.columns([1, 1])
         # NB: keys must be unique across ALL pages — "bf_limit"/"bf_run" are
         # taken by the Settings sidecar-backfill widgets; sharing them would
         # bleed state between the two pages via st.session_state.
-        bf_n = cbf[0].selectbox("Batch", ["100", "500", "2000", "All"], index=0,
-                                key="abstracts_bf_limit")
+        bf_n = cbf[0].selectbox("Papers to read", ["100", "500", "2000", "All"],
+                                index=0, key="abstracts_bf_limit")
         _reversible_note("Undo takes the stored text back off the papers "
                          "it was added to.")
         if cbf[1].button("Cache abstracts now", key="abstracts_bf_run"):
-            from processing.classifier_text import backfill_classifier_text
+            from processing.classifier_text import (backfill_classifier_text,
+                                                    describe_run)
             lim = None if bf_n == "All" else int(bf_n)
             with st.spinner("Extracting abstracts…"), _Transaction(
                     "Cached the first pages' text for the topic guesses") as _t:
                 bstats = backfill_classifier_text(lib, limit=lim,
                                                   undo_log=_t.log)
-            st.success(f"Cached: {bstats}")
+            for _kind, _words in describe_run(bstats):
+                getattr(st, _kind)(_words)
             if _t.committed:
                 _log_activity("pipeline.abstracts", str(lib),
+                              f"read={bstats.get('read', 0)} "
                               f"extracted={bstats.get('extracted', 0)}", _t.id)
 
     # Reviewable band lists.
@@ -5725,7 +5730,10 @@ def render_settings() -> None:
         f"saved in a small companion file next to it — that is what search, "
         f"duplicate detection and the topic classifier actually read.  "
         f"**Fill in missing details** creates one for every PDF that has "
-        f"none.  **Check they still match** re-reads each PDF and reports "
+        f"none, and gives a record that lacks them its fingerprint and "
+        f"filing date (without the fingerprint, a paper renamed in Finder "
+        f"cannot be matched to its details again).  "
+        f"**Check they still match** re-reads each PDF and reports "
         f"any whose contents have changed since (a bad sync, for instance)."
     )
     bf_cols = st.columns([1, 1, 2])
@@ -5733,14 +5741,15 @@ def render_settings() -> None:
         "Stop after this many files (0 = no limit)", min_value=0, value=0,
         key="bf_limit",
     )
-    _reversible_note("Fill in missing details only adds records; Undo "
-                     "moves the ones it added to the trash.")
+    _reversible_note("Fill in missing details only adds: Undo moves the "
+                     "records it made to the trash, and takes the "
+                     "fingerprints and filing dates it filled in back off.")
     if bf_cols[0].button("Fill in missing details", key="bf_run",
                          use_container_width=True):
         from processing.identity import backfill_directory
         with st.spinner("Walking the library..."), _Transaction(
                 "Filled in missing details (records for papers that had "
-                "none)") as _t:
+                "none; fingerprints and filing dates records lacked)") as _t:
             ran, summary = _locked_call(
                 lib, "Fill in missing details", backfill_directory,
                 lib, limit=(bf_limit or None), verbose=False,
@@ -5749,8 +5758,14 @@ def render_settings() -> None:
         if ran:
             st.success(
                 f"Scanned {summary['scanned']} · wrote {summary['written']} · "
+                f"completed {summary.get('completed', 0)} · "
                 f"skipped {summary['skipped']} · errors {summary['errors']}"
             )
+            if summary.get("completed"):
+                st.caption(
+                    f"Completed: {summary['completed']} record(s) had no "
+                    "fingerprint or filing date and now have them, taken "
+                    "from the PDF; nothing else in them changed.")
             if summary.get("kept_for_reconnect"):
                 st.info(
                     f"{summary['kept_for_reconnect']} paper(s) were NOT given "
@@ -5759,7 +5774,8 @@ def render_settings() -> None:
                     "from the **Conformance** page (Find the papers these "
                     "records belong to).")
             _log_activity("settings.backfill", str(lib),
-                          f"wrote={summary['written']}",
+                          f"wrote={summary['written']} "
+                          f"completed={summary.get('completed', 0)}",
                           _t.id if _t.committed else "")
         else:
             _render_flashes()

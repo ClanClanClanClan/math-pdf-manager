@@ -108,7 +108,8 @@ class TestBackfill:
 
     def test_max_seconds_stops_early(self, tmp_path):
         # A zero-second budget stops before processing anything and flags
-        # it, so the run never blows past a harness/cron timeout.
+        # it, so the run never blows past a harness/cron timeout.  What is
+        # still waiting was not counted, and says so (None, not 0).
         from processing.identity import enable_sidecar_mirror
         from processing.classifier_text import backfill_classifier_text
         enable_sidecar_mirror(tmp_path)
@@ -117,17 +118,29 @@ class TestBackfill:
                             "some text about equations")
         s = backfill_classifier_text(tmp_path, max_seconds=0)
         assert s.get("stopped_early") is True
-        assert s["extracted"] == 0
+        assert s["extracted"] == 0 and s["read"] == 0
+        assert s["still_waiting"] is None
 
-    def test_limit(self, tmp_path):
-        from processing.identity import enable_sidecar_mirror
+    def test_limit_counts_the_papers_read(self, tmp_path):
+        """The batch is how many papers to READ. It was compared with every
+        paper looked at, so this asserted ``scanned == 2``; on the real
+        library "100" then read 3 papers (measured 2026-10-15)."""
+        from processing.identity import enable_sidecar_mirror, PaperIdentity
         from processing.classifier_text import backfill_classifier_text
         enable_sidecar_mirror(tmp_path)
+        for i in range(2):
+            done = tmp_path / "01 - Published papers" / f"A - done{i}.pdf"
+            _write_text_pdf(done, "text about something")
+            ident = PaperIdentity()
+            ident.classifier_text = "already cached"
+            ident.save(done)
         for i in range(4):
             _write_text_pdf(tmp_path / "01 - Published papers" / f"X - p{i}.pdf",
                             "text about something")
         s = backfill_classifier_text(tmp_path, limit=2)
-        assert s["scanned"] == 2
+        assert (s["read"], s["extracted"], s["skipped"]) == (2, 2, 2)
+        assert s["still_waiting"] == 2
+        assert s["scanned"] == 6, "the walk goes on, to count what waits"
 
 
 # ---------------------------------------------------------------------------

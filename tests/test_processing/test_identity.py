@@ -238,6 +238,15 @@ class TestRobustness:
         ident = PaperIdentity.load(pdf)
         assert ident.is_new()
 
+    @pytest.mark.parametrize("body", [b"\xff\xfe\x00{\x00}", b'{"doi": "\xe9"}'])
+    def test_bytes_that_are_not_utf8_treated_as_missing(self, tmp_path, body):
+        """They raised UnicodeDecodeError out of ``load``, which a sweep of
+        the library does not expect: one such record ended "Cache
+        abstracts" for every paper after it."""
+        pdf = _make_pdf(tmp_path / "paper.pdf")
+        sidecar_path(pdf).write_bytes(body)
+        assert PaperIdentity.load(pdf).is_new()
+
     def test_unknown_fields_ignored_for_forward_compat(self, tmp_path):
         pdf = _make_pdf(tmp_path / "paper.pdf")
         sidecar_path(pdf).write_text(json.dumps({

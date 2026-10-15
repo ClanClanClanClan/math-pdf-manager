@@ -24,6 +24,7 @@ from processing.identity import PaperIdentity, sidecar_path
 from processing.sidecar_repair import find_orphans, plan_reconnect
 from tests.ui.press_harness import (ck, presses, put, snapshot,  # noqa: F401
                                     transactions, undo_from_activity)
+from tests.ui.streamlit_double import said
 
 
 def _new_txs(lib, before):
@@ -148,7 +149,10 @@ def test_fill_in_missing_details_adds_records_and_moves_nothing(ck):
     lib = ck.lib
     bare = put(lib, "01 - Published papers/S/Smith, J. - No record yet.pdf")
     kept = put(lib, "01 - Published papers/T/Tan, X. - Has one.pdf")
-    _record(kept, doi="10.1000/kept")
+    # A whole record: one without its filing date is completed (the next
+    # test), so this one has it.
+    _record(kept, doi="10.1000/kept",
+            first_ingested_at="2020-01-01T00:00:00+00:00")
     kept_record = sidecar_path(kept).read_bytes()
     pdfs, txs, before = _pdfs_and_bytes(lib), transactions(lib), snapshot(lib)
     assert PaperIdentity.load(bare).is_new()
@@ -195,7 +199,14 @@ def test_cache_abstracts_now_stores_the_first_page_text(ck):
     assert ident.doi == "10.1000/rbsde", "the backfill lost a field"
     assert _pdfs_and_bytes(lib) == pdfs
     bare_record = sidecar_path(bare).read_bytes()
-    assert PaperIdentity.load(bare).classifier_text_tried
+    made = PaperIdentity.load(bare)
+    assert made.classifier_text_tried
+    assert made.content_sha256 and made.first_ingested_at, (
+        "a record made from nothing without its fingerprint and filing date")
+    told = said(ck.st, "success", "info", "warning")
+    assert "Read 2 papers: 2 now have their text stored." in told, told
+    assert "1 of them had no saved details" in told
+    assert "{" not in told, "the page printed the raw stats"
     entry = ck.st.session_state["activity_log"][0]
     assert entry["action"] == "pipeline.abstracts"
     tx, = _new_txs(lib, txs)
@@ -205,6 +216,77 @@ def test_cache_abstracts_now_stores_the_first_page_text(ck):
     # retired, not deleted.
     assert _untrashed(lib) == before
     assert _retired(lib, bare) == bare_record
+
+
+@presses("render_pipeline_preview[abstracts_bf_run]")
+def test_cache_abstracts_batch_of_100_reads_the_papers_still_to_read(
+        ck, monkeypatch):
+    """Measured on his library: "100" read 3 papers, because the batch
+    counted the papers already done. Here every one of the first 100 in the
+    walk is done; the two after them must still be read."""
+    import processing.identity as identity
+    lib = ck.lib
+    for i in range(100):
+        _record(put(lib, f"01 - Published papers/A/A{i:03d}, A. - Done.pdf"),
+                classifier_text="cached before")
+    late = [_pdf_with_text(lib / f"01 - Published papers/Z/Z{i}, Z. - Late.pdf",
+                           f"Abstract. Paper {i} on mean-field games.")
+            for i in range(2)]
+    real = identity.iter_pdfs
+    monkeypatch.setattr(identity, "iter_pdfs",
+                        lambda root, **kw: iter(sorted(real(root, **kw))))
+    txs = transactions(lib)
+    before = snapshot(lib)
+
+    ck.st.press("▶ Run preview")
+    ck.run("render_pipeline_preview")
+    ck.st.press("abstracts_bf_run")
+    ck.run("render_pipeline_preview")
+
+    assert ck.st.session_state["abstracts_bf_limit"] == "100"
+    for pdf in late:
+        assert "mean-field games" in PaperIdentity.load(pdf).classifier_text
+    told = said(ck.st, "success", "info", "warning")
+    assert "Read 2 papers" in told and "That was the last of them" in told, told
+    tx, = _new_txs(lib, txs)
+    undo_from_activity(ck, tx["id"])
+    assert _untrashed(lib) == before
+
+
+@presses("render_settings[bf_run]")
+def test_fill_in_missing_details_completes_a_record_without_a_fingerprint(ck):
+    """What the first "Cache abstracts" left on 147 papers: a record with the
+    text and no fingerprint or filing date. Fill in missing details passed
+    it over, since the paper had a record."""
+    import json
+    from dataclasses import asdict
+    lib = ck.lib
+    pdf = _pdf_with_text(lib / "12 - To be sorted/Smith, J. - Sparse.pdf",
+                         "Abstract. Optimal stopping.")
+    rec = sidecar_path(pdf)
+    rec.parent.mkdir(parents=True, exist_ok=True)
+    sparse = {k: v for k, v in asdict(PaperIdentity(
+        classifier_text="first pages", arxiv_id="2401.00001",
+        original_filename=pdf.name)).items() if not k.startswith("_")}
+    rec.write_text(json.dumps(sparse, indent=2, ensure_ascii=False,
+                              sort_keys=True), encoding="utf-8")
+    original, txs = rec.read_bytes(), transactions(lib)
+
+    ck.st.press("bf_run")
+    ck.run("render_settings")
+
+    now = json.loads(rec.read_text(encoding="utf-8"))
+    assert now["content_sha256"] and now["first_ingested_at"]
+    assert {k: v for k, v in now.items()
+            if k not in ("content_sha256", "first_ingested_at")} == {
+        k: v for k, v in sparse.items()
+        if k not in ("content_sha256", "first_ingested_at")}
+    told = said(ck.st, "success", "caption")
+    assert "completed 1" in told and "now have them" in told, told
+    tx, = _new_txs(lib, txs)
+    assert ck.st.session_state["activity_log"][0]["tx_id"] == tx["id"]
+    undo_from_activity(ck, tx["id"])
+    assert rec.read_bytes() == original
 
 
 @presses("_render_variant_section[var_scan]")

@@ -140,6 +140,36 @@ def _recorded_hash(sidecar: Path) -> str:
     return _read_record(sidecar).get("content_sha256") or ""
 
 
+def stranded_fingerprints(library_root: Path) -> set[str]:
+    """The content fingerprints of the records a rename left behind.
+
+    A paper whose contents hash to one of these HAS a record, stranded
+    under its old name, and is not to be given another: a fresh record
+    fills the very spot the reconnect needs (only papers with no record
+    are its candidates), and the stranded one -- DOI, filing date and all
+    -- can then never go back. Measured 2026-10-15: 20 of the 36 stranded
+    records belong to papers that had since been given a record without a
+    fingerprint (every one holding cached first-page text, the kind
+    "Cache abstracts" made), so none of the 20 can be put back.
+    """
+    return {h for h in map(_recorded_hash, find_orphans(library_root)) if h}
+
+
+def stranded_match(pdf: Path, stranded: set) -> tuple[bool, str]:
+    """``(True, fingerprint)`` when ``pdf``'s contents match one of
+    ``stranded`` (:func:`stranded_fingerprints`).
+
+    ``fingerprint`` is the paper's content hash, read only when there is
+    something to match it against ("" otherwise), so a caller about to
+    write it into a record need not read the file twice.
+    """
+    if not stranded:
+        return False, ""
+    from processing.identity import compute_content_hash
+    digest = compute_content_hash(pdf)
+    return digest in stranded, digest
+
+
 def _places_it_answers_for(sidecar: Path, locations):
     """The entries of ``locations`` naming where this record's paper was
     when the record was left behind -- ``None`` when that cannot be told
