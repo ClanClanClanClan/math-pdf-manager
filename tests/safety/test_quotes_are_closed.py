@@ -163,3 +163,123 @@ def test_same_paper_detection_sees_through_quote_forms():
     a, b = 'A fresh look at the "hot hand" paradox', "A fresh look at the ‘hot hand’ paradox"
     assert _fold(a) == _fold(b)
     assert _title_ratio(a, b) == 100.0
+
+
+# ------------------------------------- whose language: the title's, not the quote's
+
+from processing.quote_marks import quotation_language  # noqa: E402
+
+# Real titles, 2026-10-15. The first four were filed with « » because the
+# quoted French pulled the detector to French; the owner ruled them English.
+ENGLISH_AROUND_FRENCH = [
+    'Louis Bachelier’s "Théorie de la spéculation", the missing piece in Walras’ general equilibrium',
+    "Desargues and the “trait à preuves“",
+    "Yule’s “nonsense correlation”, moments and density",
+    'A remark on the paper "Une martingale d’opérateurs bornés, non représentable en '
+    'intégrale stochastique", by J.-L. Journé and P.-A. Meyer',
+    'Louis Bachelier on the centenary of "Théorie de la spéculation"',
+]
+
+
+@pytest.mark.parametrize("title", ENGLISH_AROUND_FRENCH)
+def test_an_english_title_quoting_french_takes_english_marks(title):
+    assert quotation_language(title, "fr") == "en"
+
+
+@pytest.mark.parametrize("title,want", [
+    ('Les "principes d’invariance" en probabilité sur l’espace de Wiener', "fr"),
+    ('Erratum et addendum "les dérivations en théorie descriptive des ensembles"', "fr"),
+    ('Remarques sur "Optimal stopping and free boundaries"', "fr"),
+    ('Présentation de l’"inégalité de Doob" de Métivier et Pellaumail', "fr"),
+    ('Erratum to "Some remarks on mutual windings"', "en"),
+    ('Comment on “Optimal contract to induce continued effort”', "en"),
+    ('The "bébé Fock"', "en"),                          # capitalised, first word
+    ('Le "standard model"', "fr"),
+])
+def test_the_words_around_the_quotation_decide(title, want):
+    other = "en" if want == "fr" else "fr"
+    assert quotation_language(title, other) == want
+
+
+@pytest.mark.parametrize("title", [
+    'Correction "Sur un théorème de C. Stricker"',       # one word around: no evidence
+    'Erratum "Optimal stopping time problem in a general framework"',
+    '"Lebesgue measure"',                                 # nothing around at all
+    'Addendum to the paper "X" by de Finetti',           # both languages around
+])
+@pytest.mark.parametrize("detected", ["en", "fr"])
+def test_without_evidence_around_it_the_detector_stands(title, detected):
+    assert quotation_language(title, detected) == detected
+
+
+@pytest.mark.parametrize("detected", [None, "de", "it", "es", "no", "tl"])
+def test_another_language_is_never_turned_into_english_or_french(detected):
+    """"in", "la", "un" are German, Spanish, Italian words too."""
+    t = '"Butterfly effect" vs chaos in the energy future markets'
+    assert quotation_language(t, detected) == detected
+
+
+def test_an_english_possessive_is_not_a_french_elision():
+    assert quotation_language('Yule’s "nonsense correlation"', "fr") == "fr", \
+        "Yule’s is no evidence either way: nothing else around"
+    assert quotation_language('l’"inégalité de Doob"', "en") == "fr"
+
+
+def test_no_quotation_means_nothing_to_arbitrate():
+    """No double quotation to set aside: the detector's answer stands,
+    whatever small words the title has."""
+    assert quotation_language("Sur la théorie des jeux de Borel", "en") == "en"
+    assert quotation_language("On the ‘hot hand’ and the crowd", "fr") == "fr"
+
+
+def test_unpairable_marks_leave_the_detector_alone():
+    t = 'On "a" and "b" in the plane'
+    assert quotation_language(t, "fr") == "fr"
+
+
+_FRAME_EN = st.lists(st.sampled_from(["the", "and", "of", "to", "with", "Supplement", "Erratum"]),
+                     min_size=1, max_size=4).filter(lambda ws: any(w.islower() for w in ws))
+_FRAME_FR = st.lists(st.sampled_from(["les", "et", "sur", "pour", "Correction", "Appendice"]),
+                     min_size=1, max_size=4).filter(lambda ws: any(w.islower() for w in ws))
+_INSIDE = st.lists(st.sampled_from(["the", "and", "les", "et", "sur", "of", "martingale", "l’espace"]),
+                   min_size=1, max_size=6)
+
+
+@given(_FRAME_EN, _INSIDE, st.sampled_from(["en", "fr"]))
+def test_words_inside_the_quotation_never_count_en(frame, inside, detected):
+    t = f'{" ".join(frame)} "{" ".join(inside)}"'
+    assert quotation_language(t, detected) == "en"
+
+
+@given(_FRAME_FR, _INSIDE, st.sampled_from(["en", "fr"]))
+def test_words_inside_the_quotation_never_count_fr(frame, inside, detected):
+    t = f'{" ".join(inside)}: "{" ".join(inside)}" {" ".join(frame)}'.replace(
+        f'{" ".join(inside)}: ', "", 1)
+    assert quotation_language(t, detected) == "fr"
+
+
+@pytest.mark.parametrize("family,given,title,want", [
+    ("Ernst", "P. A.", 'Yule’s "nonsense correlation", moments and density', "‘nonsense correlation’"),
+    ("Bouleau", "N.", 'Desargues and the "trait à preuves"', "‘trait à preuves’"),
+    ("Meyer", "P.-A.", 'Correction "Sur un théorème de C. Stricker"', "« Sur un théorème de C. Stricker »"),
+])
+def test_a_new_arrival_is_named_by_the_title_around_the_quotation(family, given, title, want):
+    """Through the call that names every new arrival (ingest -> CMO)."""
+    from arxivbot.models.cmo import Author, CMO
+    cmo = CMO(external_id="t", source="test", title=title,
+              authors=[Author(family=family, given=given)])
+    name = cmo.get_canonical_filename(max_bytes=251)
+    assert want in name, name
+
+
+def test_the_importer_asks_only_when_a_title_has_a_straight_double_mark(monkeypatch):
+    """No extra detector call for the 29k titles with no quotation."""
+    import validators.filename_checker.core as core
+    calls = []
+    real = core.detect
+    monkeypatch.setattr(core, "detect", lambda t: calls.append(t) or real(t))
+    core.check_filename("Smith, J. - On the heat equation.pdf", auto_fix_nfc=True)
+    assert len(calls) == 1, calls
+    calls.clear()
+    core.check_filename('Smith, J. - On the "heat" equation.pdf', auto_fix_nfc=True)
+    assert calls[-1] == 'On the "heat" equation', calls

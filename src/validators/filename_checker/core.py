@@ -226,13 +226,22 @@ def check_filename(
     # Get language from the full filename for better context
     try:
         lang = detect(filename)
-        quote_lang = lang
     except (LangDetectException, ValueError):
         lang = "en"
-        # Quotation marks are never set on a guess: an undetectable
-        # language keeps its straight marks (owner's rule, 2026-10-14).
-        quote_lang = None
     debug_print(f"Detected language from full filename: {lang}")
+
+    # Quotation marks follow the language of the TITLE around the
+    # quotation -- not the authors' names, not the quoted words
+    # ("Yule’s ‘nonsense correlation’, moments and density" is English).
+    # Never set on a guess: an undetectable title keeps its marks
+    # (owner's rule, 2026-10-14).
+    quote_lang = None
+    if '"' in title_wo_ext:
+        from processing.quote_marks import quotation_language
+        try:
+            quote_lang = quotation_language(title_wo_ext, detect(title_wo_ext))
+        except (LangDetectException, ValueError):
+            quote_lang = None
 
     # Find phrase spans for exceptions
     phrase_spans = find_all_exception_spans(

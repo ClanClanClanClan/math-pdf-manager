@@ -18,10 +18,10 @@ apostrophe is a different mark with its own settled rule
 an apostrophe or a prime, never a quote, and is never touched here.
 
 This module only PROPOSES: ``requote`` returns the new title and a
-status. Which language a title is in is the caller's question -- and the
-repository's detector disagrees with itself on at least 12 of the 184
-straight-quoted titles (NAMING-RULING section 1.6), so the existing
-library goes through a per-file review, not a sweep.
+status. The language is the language of the TITLE AROUND the quotation,
+not of the quotation: "Yule’s ‘nonsense correlation’, moments and
+density" is English. ``quotation_language`` decides that, from the
+detector's answer and the small words outside the quoted passage.
 """
 from __future__ import annotations
 
@@ -105,6 +105,62 @@ def requote(title: str, lang: Optional[str]) -> Requote:
         inner = f" {inner.strip()} "
     new = title[:a] + o + inner + c + title[b + 1:]
     return Requote(new, "changed" if new != title else "unchanged")
+
+
+#: Small words that only ONE of English and French uses. Outside a
+#: quotation they say which of the two the title is written in.
+#: Measured 2026-10-15 on the 216 titles whose quote language the owner
+#: settled: whole-filename detection got 5 wrong (four English titles
+#: quoting French, read as French), this rule 0. The detector cannot do
+#: this itself: on two-word frames it reads "Comment on" as French and
+#: "Erratum to" as Portuguese.
+_EN_FRAME = frozenset({
+    "the", "and", "of", "to", "with", "for", "from", "by", "on", "in",
+    "an", "at", "is", "are", "its", "their", "this", "that", "which",
+    "into", "without", "between", "toward", "towards", "versus",
+})
+_FR_FRAME = frozenset({
+    "le", "la", "les", "des", "du", "de", "et", "sur", "pour", "une",
+    "un", "dans", "par", "au", "aux", "à", "en", "avec", "sans", "entre",
+    "vers", "chez", "est",
+})
+#: l’espace, d’une, qu’il, and l’ / d’ right before a quotation --
+#: French elision. Not "Yule’s".
+_FR_ELISION = re.compile(r"^(?:l|d|qu|j|n|s|c)[’'](?:\w|$)", re.IGNORECASE)
+_TOKEN = re.compile(r"[^\W\d_][\w’']*", re.UNICODE)
+
+
+def quotation_language(title: str, detected: Optional[str]) -> Optional[str]:
+    """The language ``title``'s quotation marks follow.
+
+    ``detected`` is the language detector's answer for the whole title
+    (None when it failed). A quoted passage pulls the detector toward its
+    own language, so the words OUTSIDE it arbitrate: when they carry
+    small words of exactly one of English and French, that language wins.
+    "Correction" alone, or a frame with both, says nothing -- the
+    detector's answer stands.
+
+    Only ever chooses BETWEEN English and French: any other answer comes
+    back unchanged and ``requote`` leaves the marks alone. "in", "la" and
+    "un" are German, Spanish and Italian words too, so the frame is never
+    allowed to turn another language into one of these two.
+    """
+    if detected not in CONVENTION:
+        return detected
+    spans = _pairs(title)
+    if not spans:
+        return detected
+    frame, last = [], 0
+    for a, b in spans:
+        frame.append(title[last:a])
+        last = b + 1
+    frame.append(title[last:])
+    words = [w.lower() for w in _TOKEN.findall(" ".join(frame))]
+    en = any(w in _EN_FRAME for w in words)
+    fr = any(w in _FR_FRAME or _FR_ELISION.match(w) for w in words)
+    if en != fr:
+        return "en" if en else "fr"
+    return detected
 
 
 def fold_quotes(s: str) -> str:
