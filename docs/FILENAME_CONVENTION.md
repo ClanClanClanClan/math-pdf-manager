@@ -255,7 +255,10 @@ word**:
   - a word after an internal `. ! ? …`;
   - a short capitalised run that may be a name.
 - **A German title**, recognised by a marker word or by `ß`, has **no** word
-  lowered.
+  lowered. The markers are words only German uses (`über`, `für`, `und`,
+  `zur`, `eine` …). `des` was one until 2026-10-16. It is French just as
+  often, and it was the only marker in 581 French titles, which were
+  therefore never cased. None of the 34 German titles depended on it.
 - **A mid-title word is never capitalised.** A whitelist entry can only keep a
   capital that is already there. The owner's **phrase rulings** are the only
   thing that imposes a spelling, dash included: `title_vocab.json` "phrases",

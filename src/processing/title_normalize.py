@@ -261,9 +261,14 @@ def _multiword_phrases(candidates: frozenset) -> tuple:
 # occur in an English or French mathematical title, so one hit is enough;
 # "die"/"der" alone would be too eager (both are English words in other
 # senses) and are deliberately absent.
+#
+# So is "des": it is a French word at least as often ("Théorie des
+# ensembles"). Measured 2026-10-15 over 25,196 in-scope titles: it was
+# the only marker in 581, every one of them French, and none of the 34
+# German titles relied on it -- each also has über, für, und, zur, eine...
 _GERMAN_MARKERS = frozenset({
     "und", "über", "für", "auf", "eine", "einer", "einem", "einen",
-    "des", "dem", "den", "zur", "zum", "mit", "durch", "nicht", "ist",
+    "dem", "den", "zur", "zum", "mit", "durch", "nicht", "ist",
     "sind", "werden", "wird", "vom", "beim", "im", "aus", "nach",
     "theorie", "anwendung", "beitrag", "untersuchungen", "bemerkungen",
     "grundlagen", "einführung", "wahrscheinlichkeitsrechnung",

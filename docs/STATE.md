@@ -369,6 +369,27 @@ Not fixed; raw list in agent-results `authors_not_in_text.txt`.
 
 ---
 
+## French titles read as German — fixed 2026-10-16 (owner's choice A)
+
+The caser lowers nothing in a German title, and `des` counted as German.
+Measured read-only on 2026-10-15 over 25,196 in-scope titles: 619 read as
+German. Of these, 581 had `des` as their only marker, and all 581 are
+French. 34 are German, and each also carries another marker. The remaining
+4 still read as German after the fix: `Gauß` in an English title,
+`den Hollander`, the acronym `IM`, and an unaccented `theorie`. Nothing in
+those 4 would change anyway.
+
+`des` is no longer a marker. **No file is renamed by this**: Normalize
+proposes the same 2 renames, and the Title-vocabulary list keeps the same
+1,354 words, because the shelved French titles were already sentence-cased.
+None of the 2,636 staging names changes either. The fix matters for a French
+title that arrives in Title Case. Simulated by Title-Casing the 585
+misread titles: 3,454 of the 5,850 raised words now return to the shelf's
+spelling (before: 0), and no capital on the shelf is lost. Measurements and
+scripts: side-session notes `german-des/`.
+
+---
+
 ## Known and open, ranked
 
 1. **Every library-changing cockpit button is now pressed by a test
