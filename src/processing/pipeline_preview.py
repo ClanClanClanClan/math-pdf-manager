@@ -426,10 +426,17 @@ def apply_topic_proposals(
         inside ONE undo transaction, so the whole batch reverses as a
         unit from the cockpit Activity tab.
 
-    Returns a result dict with ``applied`` / ``failed`` lists and (when
-    not a dry run) the ``tx_id`` for undo.
+    Returns a result dict with ``applied`` / ``failed`` / ``duplicates``
+    lists and (when not a dry run) the ``tx_id`` for undo, plus
+    ``kept_for_reconnect`` -- papers with no record left where they are
+    because their older record, stranded by a rename, waits to be put
+    back (``file_into_topic``) -- and ``records_made``: how many of the
+    filed papers had no record and were given their first.
     """
-    from processing.publication_topic_router import file_into_topic
+    from processing.identity import find_sidecar
+    from processing.publication_topic_router import (KEPT_FOR_RECONNECT,
+                                                     file_into_topic)
+    from processing.sidecar_repair import stranded_fingerprints
 
     _, proposals = preview_topic_filing(library_root, scope=scope,
                                         with_extras=False, enrich=enrich)
@@ -464,6 +471,8 @@ def apply_topic_proposals(
         # as errors.  This is the class that previously hid as a bare
         # "destination already exists" failure.
         "duplicates": [],
+        "kept_for_reconnect": [],
+        "records_made": 0,
     }
     if dry_run:
         result["would_apply"] = []
@@ -490,14 +499,21 @@ def apply_topic_proposals(
     # done would then be unrecorded/unreversible.  Catch per paper, record the
     # failure, keep going, and ALWAYS commit in `finally` so whatever succeeded
     # is persisted and reversible.
+    # The records a rename left behind: a walk of the whole library, so
+    # found once a run, and only once a paper with no record comes up.
+    stranded = None
     try:
         for p in targets:
             pdf = Path(p.path)
+            had_none = False
             try:
+                had_none = find_sidecar(pdf) is None
+                if had_none and stranded is None:
+                    stranded = stranded_fingerprints(library_root)
                 sub, doc = _finer_routing(pdf, p.proposed_topic, library_root, enrich)
                 ok, msg = file_into_topic(
                     pdf, p.proposed_topic, library_root, undo_log=log,
-                    subtopic_folder=sub, doc_bucket=doc,
+                    subtopic_folder=sub, doc_bucket=doc, stranded=stranded,
                 )
             except Exception as exc:  # filesystem / unexpected error
                 ok, msg, sub, doc = False, f"error: {exc}", None, None
@@ -505,8 +521,12 @@ def apply_topic_proposals(
                      "subtopic": sub, "doc_bucket": doc, "msg": msg}
             if ok:
                 result["applied"].append(entry)
+                if had_none:
+                    result["records_made"] += 1
             elif msg.startswith("duplicate:"):
                 result["duplicates"].append(entry)
+            elif msg.startswith(KEPT_FOR_RECONNECT):
+                result["kept_for_reconnect"].append(entry)
             else:
                 result["failed"].append(entry)
     finally:

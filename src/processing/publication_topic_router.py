@@ -245,6 +245,11 @@ def list_topic_suggestions(library_root: Path) -> list[dict]:
     return out
 
 
+#: How :func:`file_into_topic`'s message begins when it leaves a paper
+#: alone because its older record, stranded by a rename, still waits.
+KEPT_FOR_RECONNECT = "waits for its older record"
+
+
 def file_into_topic(
     pdf_path: Path,
     code: str,
@@ -254,6 +259,7 @@ def file_into_topic(
     subtopic_folder: Optional[str] = None,
     doc_bucket: Optional[str] = None,
     normalize: bool = True,
+    stranded: Optional[set] = None,
 ) -> tuple[bool, str]:
     """Move a paper from its standard status folder into topic ``code``'s
     matching status sub-bucket, recording the topic on the sidecar.
@@ -277,8 +283,31 @@ def file_into_topic(
     carries the sidecar and is reversible via the undo log, and records
     a ``sidecar_edit`` so undo also restores the prior topic fields --
     and, for a paper that had no record, the record's creation, so undo
-    retires it to the trash rather than leave a blank one behind.
+    retires it to the trash rather than leave one behind.
     Returns ``(ok, message)``.  Does NOT require a stored suggestion.
+
+    A paper with no record is given its first one as every writer gives
+    it (``identity.backfill_sidecar``): content fingerprint, filing date
+    and name, then the topic. Filing used to write it blank -- no
+    fingerprint, so the reconnect could never find it again after a
+    Finder rename, and no filing date -- and "Fill in missing details"
+    then passed it over, since it had a record.
+
+    A paper with no record whose contents match a record a rename left
+    behind (``sidecar_repair.stranded_match``) is NOT filed: nothing is
+    written or moved, and the message begins :data:`KEPT_FOR_RECONNECT`.
+    The reconnect can put that record back -- DOI, filing date and all --
+    only while the paper has none, and a filing cannot leave it without
+    one: the topic it records is the one an upgrade to the published
+    version keeps the paper in. Measured 2026-10-16, read-only: 36
+    stranded records; 0 of the 466 routable papers with no record match
+    one; 4 of the 466 are where a topic filing can reach them, and the
+    classifier proposes none of the 4 for a move.
+
+    ``stranded`` -- the fingerprints of those records
+    (``sidecar_repair.stranded_fingerprints``: a walk of the whole
+    library, 18 s on his), for a caller filing many papers to find once.
+    ``None``: found here, and only for a paper with no record.
 
     Optional finer routing:
       * ``subtopic_folder`` — a sub-subtopic folder name under the topic
@@ -288,7 +317,8 @@ def file_into_topic(
         document-type folder (``"05 - Books and lecture notes"`` /
         ``"06 - Theses"``) when the paper is a book/thesis.
     """
-    from processing.identity import PaperIdentity, find_sidecar, save_new_record
+    from processing.identity import PaperIdentity, backfill_sidecar, find_sidecar
+    from processing.sidecar_repair import stranded_fingerprints, stranded_match
     from processing.undo_log import logged_move
     from organization.system import (
         OrganizationSystem, PUBLISHED, UNPUBLISHED, WORKING, BOOKS, THESES,
@@ -321,6 +351,21 @@ def file_into_topic(
     # Bucket = the same status as now, unless a document-type override
     # (book/thesis) redirects it.
     bucket = doc_bucket or current_status_dir
+
+    # Asked before anything is written -- the vocabulary queue below
+    # included -- so a paper left alone is left exactly as it was.
+    has_record = find_sidecar(pdf_path) is not None
+    digest = ""
+    if not has_record:
+        if stranded is None:
+            stranded = stranded_fingerprints(library_root)
+        waits, digest = stranded_match(pdf_path, stranded)
+        if waits:
+            return False, (
+                f"{KEPT_FOR_RECONNECT}: its saved details are under the name "
+                f"it had before a rename; put them back from the Conformance "
+                f"page (Find the papers these records belong to), then file "
+                f"it again")
     # Preserve the alpha-subdir (and year for working papers) by taking
     # everything after the (closest) status dir in the current path.
     tail = Path(*parts[status_idx + 1:])  # "S/Smith - X.pdf" or "S/2020/..."
@@ -366,14 +411,17 @@ def file_into_topic(
     # that never had one, and (b) travels with ``logged_move`` as part of
     # the same reversible transaction.  Capture the prior field values so
     # the recorded ``sidecar_edit`` can restore them on undo.
+    if not has_record:
+        # No record anywhere: this filing makes the paper's first one,
+        # whole (fingerprint, filing date, name), and logs THAT, so undo --
+        # once it has put the topic fields back -- can see the record holds
+        # nothing more and retire it. Undo used to leave it: a paper that
+        # arrived with no record went back to its shelf with a blank one
+        # (measured 2026-10-15). A record made meanwhile is not written over.
+        backfill_sidecar(pdf_path, content_hash=digest, undo_log=undo_log)
+    # Loaded AFTER the record is made: the topic save below writes every
+    # field it holds, and a blank one would wipe the fingerprint and date.
     identity = PaperIdentity.load(pdf_path)
-    if undo_log is not None and find_sidecar(pdf_path) is None:
-        # No record anywhere: this filing makes one. Write it blank first
-        # and log THAT, so undo -- once it has put the topic fields back --
-        # can see the record holds nothing more and retire it. Undo used to
-        # leave it: a paper that arrived with no record went back to its
-        # shelf with a blank one (measured 2026-10-15).
-        save_new_record(identity, pdf_path, undo_log=undo_log)
     old_suggestion = identity.topic_suggestion
     old_confidence = identity.topic_confidence
     old_codes = list(identity.topic_codes)

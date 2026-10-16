@@ -12,10 +12,12 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from processing.identity import PaperIdentity, iter_pdfs
+from processing.identity import PaperIdentity, compute_content_hash, iter_pdfs
+from processing.sidecar_repair import plan_reconnect
 from tests.harness.synth_library import _write_minimal_pdf
 from tests.ui.press_harness import (ck, presses, put, snapshot,  # noqa: F401
                                     transactions, undo_from_activity)
+from tests.ui.streamlit_double import said
 
 
 def _new_txs(lib, before):
@@ -329,7 +331,15 @@ def test_apply_now_files_the_previewed_papers_into_their_topic(ck):
 
     dest = lib / "07a - BSDEs/01 - Published papers/S" / p.name
     assert dest.exists() and not p.exists()
-    assert "07a" in PaperIdentity.load(dest).topic_codes
+    filed = PaperIdentity.load(dest)
+    assert "07a" in filed.topic_codes
+    # A whole first record, as "Fill in missing details" makes it: it used
+    # to be blank -- no fingerprint, no filing date.
+    assert filed.content_sha256 == compute_content_hash(dest) != ""
+    assert filed.first_ingested_at
+    told = said(ck.st, "success")
+    assert "1 of them had no saved details" in told, told
+    assert "moves the details it made to the trash" in told, told
     tx, = _new_txs(lib, txs)
     undo_from_activity(ck, tx["id"])
     assert ck.flashes()[-1][0] == "success"
@@ -340,3 +350,44 @@ def test_apply_now_files_the_previewed_papers_into_their_topic(ck):
     assert not dest.exists()
     new_in_trash, = _trashed(lib) - trash
     assert new_in_trash.startswith(".mathpdf-sidecars/.trash/undone_records/")
+
+
+@presses("render_pipeline_preview[preview_apply_now]")
+def test_apply_now_leaves_a_paper_whose_older_record_is_stranded(ck):
+    """Renamed in Finder, its record left under the old name: filing it
+    would give it a new record in the very spot the reconnect needs. It is
+    left where it is, the page says why and where to go, and the other
+    paper is filed as ever."""
+    lib = ck.lib
+    (lib / "07a - BSDEs" / "01 - Published papers").mkdir(parents=True)
+    shelf = lib / "01 - Published papers/S"
+    shelf.mkdir(parents=True, exist_ok=True)
+    held = shelf / ("Smith, J. - Reflected BSDEs and backward stochastic "
+                    "equations.pdf")
+    _write_minimal_pdf(held, title="held", author="Smith, J.")
+    ident = PaperIdentity()
+    ident.doi = "10.1000/stranded"
+    ident.save(held)
+    renamed = held.with_name("Smith, J. - Reflected BSDEs and backward "
+                             "stochastic equations, renamed.pdf")
+    held.rename(renamed)
+    other = shelf / "Stone, A. - Reflected BSDEs with jumps.pdf"
+    _write_minimal_pdf(other, title="other", author="Stone, A.")
+    left_alone = {k: v for k, v in snapshot(lib).items() if "Smith" in k}
+
+    ck.st.press("▶ Run preview")
+    ck.run("render_pipeline_preview")
+    assert ck.st.session_state["preview_summary"]["proposed_moves"] == 2
+    ck.st.set(preview_apply_confirm=True)
+    ck.st.press("preview_apply_now")
+    ck.run("render_pipeline_preview")
+
+    assert renamed.exists(), "the paper whose record waits was moved"
+    assert {k: v for k, v in snapshot(lib).items() if "Smith" in k} == left_alone
+    assert (lib / "07a - BSDEs/01 - Published papers/S" / other.name).exists()
+    told = said(ck.st, "info")
+    assert "1 paper(s) were left where they are" in told, told
+    assert "Conformance" in told
+    assert "Filed 1 paper(s); 0 failed." in said(ck.st, "success")
+    match, = plan_reconnect(lib)["matched"]
+    assert match[1] == renamed, "the reconnect can no longer put it back"

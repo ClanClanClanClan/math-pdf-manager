@@ -3970,11 +3970,32 @@ def render_pipeline_preview() -> None:
                 return
             ok_n, fail_n = len(res["applied"]), len(res["failed"])
             dup_n = len(res.get("duplicates", []))
+            kept = res.get("kept_for_reconnect", [])
+            made = res.get("records_made", 0)
             if res.get("tx_id"):
                 _log_activity("topic.bulk_apply", f"{ok_n} moved",
                               f"{fail_n} failed", res["tx_id"])
-            st.success(f"Filed {ok_n} paper(s); {fail_n} failed. "
-                       f"Undo from the Activity tab (one transaction).")
+            said = f"Filed {ok_n} paper(s); {fail_n} failed."
+            if made:
+                said += (f" {made} of them had no saved details; each now has "
+                         f"them — its fingerprint, filing date and topic.")
+            said += " Undo from the Activity tab (one transaction)"
+            said += (", which also moves the details it made to the trash."
+                     if made else ".")
+            st.success(said)
+            if kept:
+                st.info(
+                    f"{len(kept)} paper(s) were left where they are: each "
+                    f"has saved details under the name it had before a "
+                    f"rename, and filing it now would give it new ones in "
+                    f"their place. Put those back from the **Conformance** "
+                    f"page (Find the papers these records belong to), then "
+                    f"apply again to file them."
+                )
+                st.dataframe(
+                    [{"paper": Path(k["path"]).name} for k in kept[:200]],
+                    use_container_width=True, hide_index=True,
+                )
             if dup_n:
                 st.info(
                     f"{dup_n} paper(s) are already filed in their topic "

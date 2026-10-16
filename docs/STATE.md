@@ -466,11 +466,42 @@ Not fixed; raw list in agent-results `authors_not_in_text.txt`.
    fingerprint, filing date and older name, and its filing date equals
    the one completion writes (20 of 20), so completing loses nothing —
    but the pair is two records for one paper, which the ruling says to
-   merge, and no page does yet. Topic filing (`file_into_topic`,
-   Pipeline Preview "Apply now") still makes a blank record for a paper
-   with none, without the stranded-record check. "Check they still
+   merge, and no page does yet. "Check they still
    match" counts a record with no fingerprint as matching
    (`drift_check` returns `None`).
+
+   *Topic filing's first record — FIXED 2026-10-16.* Pipeline Preview
+   "Apply now" (`file_into_topic`) was the last writer giving a paper
+   with no record a blank one — no fingerprint, no filing date. It now
+   makes it as "Fill in missing details" and "Cache abstracts" do
+   (`identity.backfill_sidecar`), then adds the topic; undo still
+   retires it while it holds only that, and the page says how many it
+   made. A paper with no record whose contents match a record a rename
+   left behind (`sidecar_repair.stranded_match`) is not filed at all —
+   nothing moved, nothing written — and the page names it and says to
+   put the older record back from Conformance, then apply again.
+   Decided over filing it without a record: the topic would then be
+   recorded nowhere, and the upgrade to the published version reads it
+   from the record to keep the paper in its topic
+   (`upgrade_to_published`); filing it with a new record takes the
+   reconnect's spot for good. Measured read-only (every write under
+   the library refused — by `sandbox-exec`, then by an audit hook —
+   and 0 attempted): 36 stranded records, all with a fingerprint; 466
+   routable papers with no record, 0 of them matching one; 460 of the
+   466 are in `12 - To be sorted` (the Sort Queue's job, never a bulk
+   move) and 4 sit where a topic filing can reach them, none of which
+   the classifier proposes to move — so a press today would make 0
+   records and keep back 0 papers; the fix is for papers still to
+   come. The stranded records are looked for once per press (17.8 s on
+   the real library), and only once a paper with no record comes up.
+   **Found, still open:** filing a paper whose record cannot be read
+   writes a fresh record over it (`file_into_topic`'s topic save), so
+   what the torn record held is gone and undo cannot bring it back;
+   "Cache abstracts" passes such a paper over since 8f8a374.
+   Measured read-only: 0 of the 25,370 records read are unreadable;
+   262 more are Dropbox online-only placeholders and were not read
+   (reading one makes Dropbox download it, and those downloads hung
+   that day), 164 of them on papers a topic filing can reach.
 
    *The preview of putting a record's fields back — FIXED 2026-10-15.*
    "Show what Undo would do" said WOULD RESTORE for every record edit,
