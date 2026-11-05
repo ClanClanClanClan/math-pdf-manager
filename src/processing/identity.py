@@ -934,46 +934,6 @@ def repath_topic_copies(
     return renamed
 
 
-def find_canonical_for_link(link_path: Path) -> Optional[Path]:
-    """Reverse-lookup the canonical sidecar that lists ``link_path``.
-
-    The topic router (and any future copier) registers each
-    derivative location in the canonical's ``copy_locations`` list.
-    When a link gets deleted -- via undo, manual removal, or
-    ``unlink_topic`` -- we need to find the canonical to clean up
-    that stale entry.
-
-    Walks every sidecar under ``link_path``'s top-level parent until
-    one matches.  Returns ``None`` if no sidecar references the
-    link (likely because the link was created without a sidecar
-    update -- e.g. ``classify_and_link`` on a sidecar-less PDF).
-    """
-    # Heuristic: search from the deepest reasonable ancestor.  We
-    # don't know the canonical's location a priori, but it's almost
-    # always a sibling in the same library tree.  Walk up to the
-    # filesystem root and try each ancestor as the search root.
-    link_str = str(link_path)
-    parent = link_path.parent
-    while parent != parent.parent:
-        try:
-            for pdf in iter_pdfs(parent):
-                if pdf == link_path:
-                    continue
-                identity = PaperIdentity.load(pdf)
-                if identity.is_new():
-                    continue
-                if link_str in identity.copy_locations:
-                    return pdf
-        except (OSError, PermissionError):
-            pass
-        # Stop after walking 4 levels up -- avoids reading the
-        # entire library when the link's canonical lives elsewhere.
-        if len(parent.parts) <= len(link_path.parts) - 4:
-            break
-        parent = parent.parent
-    return None
-
-
 def remove_dead_location(
     canonical_pdf: Path,
     dead_location: Path,

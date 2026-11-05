@@ -247,17 +247,6 @@ class TestRobustness:
         sidecar_path(pdf).write_bytes(body)
         assert PaperIdentity.load(pdf).is_new()
 
-    def test_a_link_lookup_passes_over_a_record_that_is_not_utf8(self, tmp_path):
-        """UnicodeDecodeError escaped load(): found 2026-10-16 when a test's
-        non-UTF-8 record crashed find_canonical_for_link, which reads every
-        record within four folders of the link."""
-        from processing.identity import find_canonical_for_link
-        pdf = _make_pdf(tmp_path / "paper.pdf")
-        sidecar_path(pdf).write_bytes(b"\xff\xfe\x00{\x00}")
-        assert PaperIdentity.load(pdf).is_new()
-        assert find_canonical_for_link(tmp_path / "07a" / "ghost.pdf") is None
-        assert sidecar_path(pdf).read_bytes() == b"\xff\xfe\x00{\x00}"
-
     def test_unknown_fields_ignored_for_forward_compat(self, tmp_path):
         pdf = _make_pdf(tmp_path / "paper.pdf")
         sidecar_path(pdf).write_text(json.dumps({
@@ -597,7 +586,7 @@ class TestBackfill:
 
 
 # ---------------------------------------------------------------------------
-# Audit-5 helpers: remove_dead_location, find_canonical_for_link, verify_all
+# Audit-5 helpers: remove_dead_location, verify_all
 # ---------------------------------------------------------------------------
 
 class TestRemoveDeadLocation:
@@ -627,28 +616,6 @@ class TestRemoveDeadLocation:
         ident.save(pdf)
         # Nothing to remove
         assert not remove_dead_location(pdf, Path("/never/was/here.pdf"))
-
-
-class TestFindCanonicalForLink:
-
-    def test_finds_canonical_via_copy_locations(self, tmp_path):
-        from processing.identity import find_canonical_for_link
-        canonical = _make_pdf(tmp_path / "canonical.pdf")
-        link = tmp_path / "07a - BSDEs" / "canonical.pdf"
-        link.parent.mkdir()
-        link.write_bytes(b"%PDF")
-        ident = PaperIdentity()
-        ident.copy_locations = [str(canonical), str(link)]
-        ident.save(canonical)
-        out = find_canonical_for_link(link)
-        assert out == canonical
-
-    def test_returns_none_when_no_sidecar_references_link(self, tmp_path):
-        from processing.identity import find_canonical_for_link
-        canonical = _make_pdf(tmp_path / "x.pdf")
-        PaperIdentity().save(canonical)
-        out = find_canonical_for_link(tmp_path / "07a - BSDEs" / "ghost.pdf")
-        assert out is None
 
 
 class TestVerifyAllSidecars:
