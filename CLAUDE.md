@@ -23,6 +23,42 @@ you build something and it has no cockpit surface, you have not shipped it.
 PYTHONPATH=src streamlit run src/ui/cockpit.py
 ```
 
+**The goal (owner, 2026-11-03):** "not have to use you for this project in
+the end: it should work perfectly and independently (with going back here
+only when issues emerge and we want to fix them)". A step-back audit on
+2026-11-04 found that only 1 of 11 conditions for that holds: he cannot open
+the cockpit without a Claude session, and 96.7% of logged changes were made
+by Claude-run scripts. Judge every change by "does this still work if no
+Claude session ever runs again?" Applying his rulings by one-off script is a
+stopgap, not the design.
+
+## The owner's standing rulings (2026-11-05)
+
+The single record of these answers; do not ask them again.
+
+1. **A Dock icon opens the cockpit.** Yes.
+2. **Filing by default.** The app may file arXiv-named papers from
+   `12 - To be sorted` on its own, each batch undoable — only after he has
+   seen 20 papers it would file and 20 it would hold back, and said yes.
+3. **No backup disk.** Dropbox is the only copy outside this Mac. Do not
+   build anything that needs a backup disk to be safe.
+4. **Papers arrive from several devices.** He adds PDFs to Dropbox from
+   another computer and his phone. The app runs on this Mac only for now;
+   portability may be wanted later, so do not hard-wire this Mac.
+5. **The 148 "name or ordinary word?" questions are retired**: remove that
+   Spelling section and the code behind it. This supersedes the Spelling
+   session's A/B question.
+6. **Undo of an upgrade:** not yet decided (re-explained 2026-11-05).
+7. **Weekly publication checks, report-only**, once they are fixed. Yes.
+8. **No new naming refinements** until the pile in `12 - To be sorted`
+   shrinks every week. Fixes that touch arrivals or safety are still fine.
+9. **`master` becomes the default branch on GitHub.** Yes.
+10. **His ETH password:** he wants it kept securely; how is not yet decided.
+11. **No new cockpit pages for a month** (from 2026-11-05) while openings
+    are recorded. Improve existing pages instead.
+12. **`12 - To be sorted` is the front door.** The hidden inbox
+    (`~/.mathpdf/inbox`) goes.
+
 ## Non-negotiables
 
 Each was bought with damage.
