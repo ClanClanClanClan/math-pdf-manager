@@ -350,10 +350,13 @@ def test_turning_it_on_from_the_page_leaves_auto_apply_off_by_default(C, monkeyp
     assert calls == [("start", {"auto_apply_safe": False})]
 
 
-def test_auto_apply_only_with_the_tick(C, monkeypatch):
+def test_the_tick_cannot_switch_filing_on(C, monkeypatch):
+    """Filing by itself is refused since 2026-11-05 (step-back audit G4-1):
+    the tick is drawn switched off, and even read as ticked it asks for a
+    report-only sweep. tests/safety/test_the_monday_sweep_never_files_by_itself.py"""
     calls = _page(C, monkeypatch, {"on": False}, pressed={"Turn the Monday sweep on"},
                   ticked=True)
-    assert calls == [("start", {"auto_apply_safe": True})]
+    assert calls == [("start", {"auto_apply_safe": False})]
 
 
 def test_turning_it_off(C, monkeypatch):

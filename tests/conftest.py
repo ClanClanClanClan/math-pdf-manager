@@ -334,6 +334,33 @@ os.environ["XDG_CACHE_HOME"] = str(SESSION_HOME / ".cache")
 os.environ["XDG_DATA_HOME"] = str(SESSION_HOME / ".local" / "share")
 os.environ["XDG_STATE_HOME"] = str(SESSION_HOME / ".local" / "state")
 os.environ["MATH_LIBRARY"] = str(SESSION_LIBRARY)
+# No test may open anything on the owner's screen (owner, 2026-11-05: "Stop
+# opening tabs on my chrome"). The weekly job ends by opening its report; a
+# test that ran it opened a Chrome tab per run. Three walls: the job reads
+# MATHPDF_NO_OPEN (it runs as a child process), and in this process the
+# browser module and the macOS ``open`` command are made to do nothing.
+os.environ["MATHPDF_NO_OPEN"] = "1"
+
+import subprocess as _subprocess  # noqa: E402
+import webbrowser as _webbrowser  # noqa: E402
+
+for _name in ("open", "open_new", "open_new_tab"):
+    setattr(_webbrowser, _name, lambda *a, **k: False)
+
+
+class _NoOpenPopen(_subprocess.Popen):
+    """``open <anything>`` becomes ``true``: it would show a tab, a Finder
+    window or an app on his screen."""
+
+    def __init__(self, args, *a, **k):
+        argv = args if isinstance(args, (list, tuple)) else str(args).split()
+        if argv and os.path.basename(str(argv[0])) == "open":
+            args = ["/usr/bin/true"]
+            k.pop("shell", None)
+        super().__init__(args, *a, **k)
+
+
+_subprocess.Popen = _NoOpenPopen
 # So a subprocess (or a test that needs to *name* the real world without
 # touching it) can find it without re-deriving the owner's home.
 os.environ["MATHPDF_TEST_REAL_HOME"] = str(REAL_HOME)

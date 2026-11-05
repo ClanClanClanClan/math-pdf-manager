@@ -169,6 +169,8 @@ class TestRobustness:
             "newly_permanent": [], "errors": [],
             # Papers Crossref did not answer for -- unknown, not misses.
             "unchecked": [],
+            # Answered from the saved answers -- not a new check.
+            "replayed": [],
         }
 
     def test_result_without_file_is_skipped(self, tmp_path):

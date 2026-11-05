@@ -109,6 +109,11 @@ class CrossrefChecker:
         # paper is unpublished, the second is no evidence at all. Callers
         # read this flag right after each call to tell them apart.
         self.last_lookup_failed = False
+        # An answer replayed from the saved cache is not a new look: the
+        # weekly run counted each replayed "no match" as a fresh miss, and
+        # three presses latched a paper permanently_unpublished on what was
+        # one Crossref answer from June (step-back audit G4-2).
+        self.last_from_cache = False
         self.failed_lookups = 0
         if cache_path and cache_path.exists():
             try:
@@ -199,6 +204,7 @@ class CrossrefChecker:
         if a match is found, or None otherwise.
         """
         self.last_lookup_failed = False
+        self.last_from_cache = False
         cache_key = self._cache_key(title)
         if cache_key in self._cache:
             cached = self._cache[cache_key]
@@ -213,6 +219,7 @@ class CrossrefChecker:
             if cached and _is_repository_match(cached):
                 self._cache[cache_key] = None
                 self._save_cache()
+                self.last_from_cache = True
                 return None
             # Audit-3's safe-upgrade gate needs ``author_count``.  An
             # old cached match that pre-dates that field would
@@ -223,6 +230,7 @@ class CrossrefChecker:
                 self._save_cache()
                 # Fall through to re-query Crossref below
             else:
+                self.last_from_cache = True
                 return cached
 
         self._rate_limit()
@@ -470,6 +478,7 @@ def scan_directory(
             "filename": pdf.name,
             "parsed_title": title,
             "parsed_authors": lastnames,
+            "from_cache": bool(getattr(checker, "last_from_cache", False)),
         }
 
         if getattr(checker, "last_lookup_failed", False):

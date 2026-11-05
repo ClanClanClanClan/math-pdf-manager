@@ -529,6 +529,7 @@ def run_publication_check(
         sys.executable, "-m", "maintenance.weekly_report",
         "--library", str(library_root),
         "--no-notify",
+        "--no-open",
     ]
     if auto_apply_safe:
         cmd.append("--auto-apply-safe")

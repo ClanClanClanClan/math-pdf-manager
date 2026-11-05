@@ -30,13 +30,8 @@ UNDO_CALLS = {"undo_from_activity"}
 
 #: Write sites whose press test does not press ↶ Undo, and why.
 NOT_UNDONE: dict[str, str] = {
-    "render_maintenance[run_weekly_now]": (
-        "runs maintenance.weekly_report in a subprocess; its test proves a "
-        "run Crossref cannot answer changes nothing, and what a run does "
-        "write is one transaction each: tests/safety/"
-        "test_monday_sweep_has_a_surface.py::test_the_sweeps_publication_"
-        "check_is_one_undoable_transaction and ::test_file_the_safe_ones_"
-        "runs_the_real_upgrader_reversibly"),
+    # "Run weekly now" was the one exemption; it is switched off in the
+    # source since 2026-11-05 (disabled=True), so it is no write site.
 }
 
 

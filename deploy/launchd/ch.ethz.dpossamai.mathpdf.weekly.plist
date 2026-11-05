@@ -24,6 +24,7 @@
         <string>-m</string>
         <string>maintenance.weekly_report</string>
         <string>--no-notify</string>
+        <string>--no-open</string>
         <!-- Auto-apply only the SAFE subset of findings:
              * single-author Crossref hits at >= 0.95 confidence
              * working papers that are both >5y old AND marked

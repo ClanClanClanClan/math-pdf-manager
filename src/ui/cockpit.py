@@ -2148,6 +2148,7 @@ def _render_weekly_service() -> None:
     nobody watching (reversibly, in one Activity entry per run).
     """
     from ui.cockpit_actions import start_weekly, stop_weekly
+    from maintenance.weekly_report import AUTO_FILE_BLOCKED
     st.subheader("🗓 Monday sweep")
     w = _weekly_status_cached()
     kind, line = _weekly_summary(w)
@@ -2158,11 +2159,8 @@ def _render_weekly_service() -> None:
         "whether your unpublished and working papers have appeared, notes "
         "the answer in each paper's saved details, and writes a report you "
         "can open below and review on the **Upgrade Queue** page. Noting the "
-        "answers is undoable from Activity. With **also file the safe "
-        "ones**, it additionally downloads near-certain published versions "
-        "(one author, 95%+ match) and moves the preprints to the trash, and "
-        "moves old working papers Crossref has missed three times to "
-        "Unpublished — one Activity entry per run, undoable.")
+        "answers is undoable from Activity. It never files, moves or trashes "
+        "a paper by itself.")
     if w.get("last_error"):
         with st.expander("What the failed run said", expanded=True):
             st.code(w["last_error"])
@@ -2175,18 +2173,26 @@ def _render_weekly_service() -> None:
         st.caption("That report predates runs recording their problems, so "
                    "whether it was complete is not known.")
     cols = st.columns([2, 1])
+    # Filing by itself is refused by the weekly job (AUTO_FILE_BLOCKED); the
+    # tick is shown switched off, with the reason, rather than hidden.
+    cols[0].checkbox("Also file the safe ones by itself", value=False,
+                     key="weekly_auto", disabled=bool(AUTO_FILE_BLOCKED))
+    if AUTO_FILE_BLOCKED:
+        cols[0].caption("Switched off — " + AUTO_FILE_BLOCKED.split(": ", 1)[-1])
     if w.get("on"):
-        auto_now = bool(w.get("auto_apply"))
-        auto = cols[0].checkbox("Also file the safe ones by itself",
-                                value=auto_now, key="weekly_auto")
-        if auto != auto_now:
-            if cols[1].button("Save this choice", key="weekly_resave",
+        if w.get("auto_apply"):
+            # A sweep installed before the lock still asks to file by
+            # itself. The job refuses, but the setting should say what it
+            # does.
+            st.warning("Your Monday sweep is still set to file papers by "
+                       "itself. It no longer does — it only reports. Press "
+                       "**Make it report only** to make the setting say so.")
+            if cols[1].button("Make it report only", key="weekly_resave",
                               type="primary", use_container_width=True):
-                ok, msg = start_weekly(auto_apply_safe=auto)
+                ok, msg = start_weekly(auto_apply_safe=False)
                 _flash("success" if ok else "error", msg)
                 if ok:
-                    _log_activity("maintenance.weekly_on",
-                                  "auto" if auto else "report-only")
+                    _log_activity("maintenance.weekly_on", "report-only")
                 _weekly_status_cached.clear()
                 st.rerun()
         if cols[1].button("Turn the Monday sweep off", key="weekly_off",
@@ -2198,18 +2204,12 @@ def _render_weekly_service() -> None:
             _weekly_status_cached.clear()
             st.rerun()
     else:
-        auto = cols[0].checkbox("Also file the safe ones by itself",
-                                value=False, key="weekly_auto")
-        if auto:
-            _reversible_note("Each Monday it will then download, move and "
-                             "trash files with nobody watching.")
         if cols[1].button("Turn the Monday sweep on", key="weekly_on",
                           type="primary", use_container_width=True):
-            ok, msg = start_weekly(auto_apply_safe=auto)
+            ok, msg = start_weekly(auto_apply_safe=False)
             _flash("success" if ok else "error", msg)
             if ok:
-                _log_activity("maintenance.weekly_on",
-                              "auto" if auto else "report-only")
+                _log_activity("maintenance.weekly_on", "report-only")
             _weekly_status_cached.clear()
             st.rerun()
     if w.get("last_report") and Path(w["last_report"]).with_suffix(".html").exists():
@@ -2229,9 +2229,8 @@ def render_maintenance() -> None:
         "missed three times is no longer re-checked — that is reversible "
         "from the Activity page.  It also keeps a lookup cache file in "
         "“02” and “03” so a repeat run does not re-ask Crossref.  The other "
-        "things on this page that write — the filename tidy-up just below, "
-        "and the full weekly run *if* you tick “also file the safe ones for "
-        "me” — are reversible from Activity too."
+        "thing on this page that writes — the filename tidy-up just below — "
+        "is reversible from Activity too."
     )
 
     lib = _library()
@@ -2243,25 +2242,22 @@ def render_maintenance() -> None:
     # Phase 5: one-click full weekly run (the Monday plist's equivalent)
     # via the cockpit so users don't need a terminal to trigger it.
     with st.expander("Full weekly run (subprocess + report)", expanded=False):
+        # Switched off (step-back audit G4-2): at the default limit it cannot
+        # finish inside its 30 minutes, and a run stopped part-way had
+        # already rewritten records while the page said nothing changed.
+        st.caption(
+            "**Switched off for now.** A full run cannot finish within its "
+            "30 minutes, and one stopped part-way has already noted answers "
+            "in papers' records. Use **Run checks** at the bottom of this "
+            "page instead: it looks at 100 papers at a time.")
         cols_full = st.columns([2, 2, 1])
-        auto_apply = cols_full[0].checkbox(
-            "Also file the safe ones for me (this changes files)",
-            value=False,
-            help=(
-                "Off = look and report only.  On = papers whose published "
-                "version is a near-certain match (single author, 95%+ "
-                "confidence) are upgraded, and working papers old enough "
-                "are moved to Unpublished papers."
-            ),
-        )
-        if auto_apply:
-            _reversible_note("With this ticked, the run will move and rename "
-                             "files in your library.")
+        auto_apply = False
         limit = cols_full[1].number_input(
             "Crossref query limit (0 = no limit)",
-            min_value=0, value=0,
+            min_value=0, value=0, disabled=True,
         )
-        if cols_full[2].button("▶ Run weekly now", key="run_weekly_now"):
+        if cols_full[2].button("▶ Run weekly now", key="run_weekly_now",
+                               disabled=True):
             from ui.cockpit_actions import run_publication_check
             with st.spinner("Running weekly maintenance (may take a few minutes)..."):
                 out = run_publication_check(
@@ -2285,11 +2281,9 @@ def render_maintenance() -> None:
                 # happened to be in session state.
                 st.error(f"The weekly run did not finish: {out.message}")
                 st.caption(
-                    "Nothing in your library was changed.  The usual cause "
-                    "is the network dropping part-way through the Crossref "
-                    "lookups — try again, or set **Crossref query limit** "
-                    "to 100 for a shorter run."
-                )
+                    "It may have stopped part-way: answers it had already "
+                    "noted in papers' records are listed on the Activity "
+                    "page, where they can be undone. No paper was moved.")
         # Drawn outside the click branch so it survives the rerun that
         # pressing it causes.
         _wr = st.session_state.get("weekly_report_path")
@@ -2411,7 +2405,8 @@ def render_maintenance() -> None:
                 st.warning("Could not save these results for the Upgrade "
                            f"Queue: {exc}")
         _p = results.get("publications") or {}
-        if _p.get("unchecked") or _p.get("_errors") or _p.get("_not_checked"):
+        if (_p.get("unchecked") or _p.get("replayed") or _p.get("_errors")
+                or _p.get("_not_checked")):
             st.warning("Finished — but the publication check is incomplete. "
                        "See **Results** below for what could not be checked.")
         else:
@@ -2454,7 +2449,7 @@ def render_maintenance() -> None:
         unk = pubs.get("unchecked") or []
         problems = ([e.get("error", "?") for e in pubs.get("_errors") or []]
                     + list(pubs.get("_not_checked") or []))
-        if unk or problems:
+        if unk or problems or pubs.get("replayed"):
             # Three-valued: found / not found / NOT CHECKED. The old line
             # printed "0 found" when Crossref never answered at all.
             st.markdown(f"**Newly-published papers found**: {total} "
@@ -2473,6 +2468,16 @@ def render_maintenance() -> None:
                 st.error(f"Publication check problem: {msg}")
         else:
             st.markdown(f"**Newly-published papers found**: {total}")
+        replayed = pubs.get("replayed") or []
+        if replayed:
+            # Not a new look: the answer is the one saved by an earlier run.
+            # Counting these as fresh misses latched papers "never
+            # published" after three presses (step-back audit G4-2).
+            st.info(
+                f"**{len(replayed)} paper(s) were not asked again** — their "
+                f"answer came from the answers saved by an earlier run, so "
+                f"nothing new is known about them. They were not counted as "
+                f"unpublished and their records were left as they were.")
 
 
 # ---------------------------------------------------------------------------

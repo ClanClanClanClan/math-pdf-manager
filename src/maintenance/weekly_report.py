@@ -24,6 +24,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import os
 import sys
 import time
 from datetime import datetime
@@ -69,6 +70,9 @@ def check_publications(
         "newly_permanent": [],
         # Papers Crossref did not answer for. NOT unpublished: unknown.
         "unchecked": [],
+        # Answered from the saved answers, not asked again: nothing new
+        # is known about them.
+        "replayed": [],
         # Folders that were not looked at, and why.
         "_not_checked": [],
         "_errors": [],
@@ -96,6 +100,7 @@ def check_publications(
             try:
                 state = update_publication_state(found, undo_log=undo_log)
                 results["newly_permanent"].extend(state.newly_permanent)
+                results["replayed"].extend(state.replayed)
                 if verbose and state.newly_permanent:
                     print(
                         f"  {len(state.newly_permanent)} paper(s) tipped into "
@@ -283,6 +288,18 @@ def count_to_be_sorted(library_root: Path) -> dict:
 # auto-upgrade".  Borderline matches still appear in the report; the
 # user reviews them via the Upgrade Queue / Attention Queue tabs.
 SAFE_UPGRADE_CONFIDENCE = 0.95
+
+# Why filing by itself is switched off, in his words; None would let it run.
+# Found 2026-11-04 (step-back audit G4-1, G4-2): on its first Monday it would
+# have trashed the second-order Zhou preprint for the FIRST-order paper (a
+# 96.4% Crossref match), and it moves "old" papers on misses that were
+# replayed from saved answers rather than asked again. It comes back when a
+# download is checked against the paper it replaces.
+AUTO_FILE_BLOCKED: Optional[str] = (
+    "filing by itself is switched off: an unattended upgrade could replace "
+    "a paper with a different one (it would have swapped the second-order "
+    "Zhou preprint for the first-order paper). The report still lists "
+    "everything it found for you to review.")
 
 
 def auto_apply_safe_transitions(
@@ -535,7 +552,14 @@ def run_maintenance(
 
     # 4. Optional: auto-apply only the safe subset of findings.
     # Borderline cases stay in the report.
-    if auto_apply_safe:
+    if auto_apply_safe and AUTO_FILE_BLOCKED:
+        # An old Monday plist may still pass --auto-apply-safe. The refusal
+        # lives here, not in the cockpit, so nothing can get round it.
+        results["auto_applied"] = {
+            "upgraded": [], "aged_moved": [], "skipped_borderline": [],
+            "errors": [], "skipped": AUTO_FILE_BLOCKED,
+        }
+    elif auto_apply_safe:
         if verbose:
             print("\n" + "=" * 60)
             print("AUTO-APPLY SAFE TRANSITIONS"
@@ -613,6 +637,10 @@ def run_problems(results: dict) -> list:
     if pubs.get("unchecked"):
         out.append(f"{len(pubs['unchecked'])} paper(s) could not be looked up "
                    "(Crossref did not answer) — unknown, not unpublished")
+    if pubs.get("replayed"):
+        out.append(f"{len(pubs['replayed'])} paper(s) were not asked again: "
+                   "their answer came from the answers saved by an earlier "
+                   "run, so nothing new is known about them")
     auto = results.get("auto_applied") or {}
     if auto.get("skipped"):
         out.append(f"nothing was filed automatically — {auto['skipped']}")
@@ -651,6 +679,11 @@ def main(argv: list[str] | None = None) -> None:
     )
     parser.add_argument("-v", "--verbose", action="store_true")
     parser.add_argument("--no-notify", action="store_true")
+    # The cockpit and the Monday sweep pass this: the cockpit has its own
+    # "Open the full report" button, and a browser tab nobody asked for is
+    # not a report (owner, 2026-11-05).
+    parser.add_argument("--no-open", action="store_true",
+                        help="do not open the HTML report in the browser")
     args = parser.parse_args(argv)
 
     logging.basicConfig(
@@ -709,8 +742,11 @@ def main(argv: list[str] | None = None) -> None:
         except Exception:
             pass
 
-    # Open report in browser
-    if not args.dry_run:
+    # Open the report in the browser -- only for a run someone started by
+    # hand in a terminal. MATHPDF_NO_OPEN is set for every test run
+    # (tests/conftest.py): one test running this job once opened a Chrome
+    # tab per run, dozens of them under a mutation harness.
+    if not (args.dry_run or args.no_open or os.environ.get("MATHPDF_NO_OPEN")):
         import subprocess
         subprocess.run(["open", str(report_path)], capture_output=True)
 

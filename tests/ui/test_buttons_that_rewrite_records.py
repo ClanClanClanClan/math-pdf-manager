@@ -350,11 +350,56 @@ def test_run_checks_records_crossrefs_answer_reversibly(ck, monkeypatch):
     assert sidecar_path(pre).read_bytes() == before_record
 
 
-@presses("render_maintenance[run_weekly_now]")
-def test_run_weekly_now_runs_the_real_job_on_this_library(ck, monkeypatch):
-    """The real ``maintenance.weekly_report`` subprocess, pointed at THIS
-    library, with the network made unreachable: a run Crossref cannot
-    answer must change nothing in the library and still finish."""
+@presses("render_maintenance[▶ Run checks]")
+def test_run_checks_over_saved_answers_says_it_is_incomplete(ck, monkeypatch):
+    """Every answer replayed from the saved Crossref answers: the record is
+    left exactly as it was (no counter advanced, step-back audit G4-2), and
+    the page says the check is incomplete instead of "Done"."""
+    from processing import publication_checker as pc
+    lib = ck.lib
+    pre = put(lib, "02 - Unpublished papers/S/Smith, J. - Optimal stopping games.pdf")
+    _record(pre, arxiv_id="2401.00001", recheck_count=2)
+
+    def check_title(self, title, lastnames):
+        self.last_lookup_failed = False
+        self.last_from_cache = True
+        return None
+
+    monkeypatch.setattr(pc.CrossrefChecker, "check_title", check_title)
+    before_record = sidecar_path(pre).read_bytes()
+    ck.st.press("▶ Run checks")
+
+    ck.run("render_maintenance")
+
+    assert sidecar_path(pre).read_bytes() == before_record
+    assert "the publication check is incomplete" in said(ck.st)
+    assert "were not asked again" in said(ck.st)
+    assert not PaperIdentity.load(pre).permanently_unpublished
+
+
+def test_run_weekly_now_is_switched_off_and_pressing_it_does_nothing(ck):
+    """Switched off since 2026-11-05 (step-back audit G4-2): a full run
+    cannot finish inside its 30 minutes, and one stopped part-way had
+    already rewritten records while the page said nothing changed."""
+    lib = ck.lib
+    pre = put(lib, "02 - Unpublished papers/S/Smith, J. - Optimal stopping games.pdf")
+    _record(pre, arxiv_id="2401.00001", recheck_count=1)
+    before = snapshot(lib)
+    ck.st.press("run_weekly_now")
+
+    ck.run("render_maintenance")
+
+    assert "Switched off for now" in said(ck.st)
+    assert not [r for r in ck.st.session_state.get("activity_log", [])
+                if r.get("action") == "maintenance.run_full"]
+    assert snapshot(lib) == before
+
+
+def test_the_weekly_job_runs_on_this_library_and_an_unanswered_check_changes_nothing(ck, monkeypatch):
+    """The real ``maintenance.weekly_report`` subprocess the Monday sweep
+    runs, pointed at THIS library, with the network made unreachable: a
+    run Crossref cannot answer must change nothing and still finish."""
+    from ui.cockpit_actions import run_publication_check
     lib = ck.lib
     pre = put(lib, "02 - Unpublished papers/S/Smith, J. - Optimal stopping games.pdf")
     _record(pre, arxiv_id="2401.00001", recheck_count=1)
@@ -364,13 +409,10 @@ def test_run_weekly_now_runs_the_real_job_on_this_library(ck, monkeypatch):
     for var in ("NO_PROXY", "no_proxy"):
         monkeypatch.delenv(var, raising=False)
     assert os.environ["HOME"] == str(ck.home)
-    ck.st.press("run_weekly_now")
 
-    ck.run("render_maintenance")
+    out = run_publication_check(lib, auto_apply_safe=False)
 
-    errors = [a[0] for n, a, _ in ck.st.calls if n == "error"]
-    assert not errors, errors
-    assert ck.st.session_state["activity_log"][0]["action"] == "maintenance.run_full"
+    assert out.ok, out.message
     reports = list((ck.home / ".mathpdf").rglob("*.json"))
     assert reports, "the run wrote no report where the cockpit reads them"
     assert snapshot(lib) == before, "an unanswered check changed the library"

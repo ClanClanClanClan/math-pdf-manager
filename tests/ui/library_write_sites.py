@@ -154,8 +154,13 @@ def _text(node) -> str:
 
 
 def _button_call(node) -> ast.Call | None:
+    """A button press -- unless it is drawn with a literal ``disabled=True``,
+    which streamlit never reports as pressed: a button switched off in the
+    source (Run weekly now, 2026-11-05) writes nothing, so it is no site."""
     if (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
-            and node.func.attr in _BUTTONS):
+            and node.func.attr in _BUTTONS
+            and not any(kw.arg == "disabled" and isinstance(kw.value, ast.Constant)
+                        and kw.value.value is True for kw in node.keywords)):
         return node
     return None
 

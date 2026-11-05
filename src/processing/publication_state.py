@@ -49,11 +49,15 @@ class StateUpdateSummary:
     newly_permanent: list[str] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
     unchecked: list[str] = field(default_factory=list)    # Crossref did not answer
+    # Answered from the saved cache and already known: no new evidence,
+    # so nothing was recorded and no counter moved.
+    replayed: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         return {
             "checked": list(self.checked),
             "unchecked": list(self.unchecked),
+            "replayed": list(self.replayed),
             "hits": list(self.hits),
             "skipped": list(self.skipped),
             "newly_permanent": list(self.newly_permanent),
@@ -109,6 +113,17 @@ def update_publication_state(
         except Exception as exc:
             summary.errors.append(f"{pdf}: load failed: {exc}")
             continue
+        if entry.get("from_cache"):
+            # A saved answer is the one Crossref gave once, not a new one.
+            # Counted again on every run, a saved "no match" latched papers
+            # permanently_unpublished after three presses in one day, and a
+            # saved borderline match did the same as a "miss". It is new
+            # evidence only when it is a hit this record does not hold yet.
+            saved = (entry.get("match") or {}) if entry.get("published") else {}
+            if (float(saved.get("confidence", 0)) < hit_threshold
+                    or _hit_already_recorded(identity, saved.get("doi", ""))):
+                summary.replayed.append(str(pdf))
+                continue
 
         # Skip papers we've already given up on, *unless* this scan
         # found a hit — in which case the previous "permanent" verdict
@@ -127,7 +142,8 @@ def update_publication_state(
         try:
             identity.record_publication_check(
                 hit=is_hit,
-                source="crossref",
+                source="crossref (saved answer)" if entry.get("from_cache")
+                else "crossref",
                 confidence=confidence,
                 details={"doi": hit_match.get("doi", "")} if hit_match else None,
             )
@@ -184,6 +200,18 @@ def update_publication_state(
             summary.newly_permanent.append(str(pdf))
 
     return summary
+
+
+def _hit_already_recorded(identity: PaperIdentity, doi: str) -> bool:
+    """Does this record already hold a hit for ``doi``?"""
+    want = (doi or "").strip().lower()
+    for check in identity.publication_checks:
+        if not check.get("hit"):
+            continue
+        got = str((check.get("details") or {}).get("doi") or "").strip().lower()
+        if got == want:
+            return True
+    return False
 
 
 def list_borderline_matches(
