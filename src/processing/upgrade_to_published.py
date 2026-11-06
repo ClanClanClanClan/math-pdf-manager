@@ -381,6 +381,13 @@ def upgrade_paper(
             )
 
             if ingest_result["success"]:
+                # The download is deleted below, so undo would refuse this
+                # copy as "the only version left". Say what it replaced,
+                # and undo can retire it once the preprint is back (the
+                # owner's ruling of 2026-11-06).
+                if undo_log is not None and ingest_result.get("destination"):
+                    undo_log.mark_copy_from_download(
+                        Path(ingest_result["destination"]), replaces=preprint_path)
                 # Bridge the preprint's publication-state history
                 # into the newly-filed published sidecar BEFORE the
                 # preprint moves to .trash.  Without this the

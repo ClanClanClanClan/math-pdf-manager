@@ -193,29 +193,25 @@ def test_download_and_upgrade_replaces_the_preprint(ck, monkeypatch):
     assert (lib / ".trash/upgraded_preprints" / pre.name).read_bytes() == pre_body
     assert str(pre) in ck.st.session_state["upgrade_done"]
     tx, = _new_txs(lib, txs)
-    _assert_undoing_an_upgrade_is_partial_and_says_so(ck, tx["id"], pre,
-                                                      pre_body, shelves)
+    _assert_undoing_an_upgrade_puts_the_shelf_back(ck, tx["id"], pre,
+                                                   pre_body, shelves)
 
 
-def _assert_undoing_an_upgrade_is_partial_and_says_so(ck, tx_id, pre,
-                                                      pre_body, shelves):
-    """Undo brings the preprint and its record back -- but NOT the removal
-    of the published copy: the copy's source was the download, which is
-    gone, and undoing a copy whose original is gone is refused (it could
-    be the only copy).  Measured 2026-10-15; the page says so, as a
-    partial undo, rather than claiming the upgrade was reversed."""
+def _assert_undoing_an_upgrade_puts_the_shelf_back(ck, tx_id, pre,
+                                                   pre_body, shelves):
+    """The owner's ruling of 2026-11-06: Undo brings the preprint and its
+    record back and takes the published copy off the shelf, to the trash,
+    not gone. It used to stay: its original, the download, is deleted by
+    design, and undoing a copy whose original is gone is refused."""
     lib = ck.lib
     undo_from_activity(ck, tx_id)
     assert pre.read_bytes() == pre_body
     assert PaperIdentity.load(pre).arxiv_id == "2401.00001"
-    published = "01 - Published papers/S/Smith, J. - Optimal stopping games.pdf"
-    assert set(_shelves(lib)) - set(shelves) == {
-        published,
-        f".mathpdf-sidecars/{published[:-4]}.meta.json"}
-    (kind, msg), = ck.flashes()
-    assert kind == "warning" and msg.startswith("Undone in part:"), msg
+    assert _shelves(lib) == shelves
+    name = "Smith, J. - Optimal stopping games.pdf"
+    assert (lib / ".trash/undone_copies" / name).exists(), "retired, not deleted"
     row = next(t for t in transactions(lib) if t["id"] == tx_id)
-    assert row["undone"] is False, "a partial undo was marked complete"
+    assert row["undone"] is True
 
 
 @presses("render_upgrade_queue[upg_flag_{}]")
@@ -303,8 +299,8 @@ def test_upgrade_these_papers_after_a_preview(ck, monkeypatch):
     assert kind == "success" and msg.startswith("Upgraded 1 "), msg
     ck.st.session_state.pop("flash")
     tx, = _new_txs(lib, txs)
-    _assert_undoing_an_upgrade_is_partial_and_says_so(ck, tx["id"], pre,
-                                                      pre_body, shelves)
+    _assert_undoing_an_upgrade_puts_the_shelf_back(ck, tx["id"], pre,
+                                                   pre_body, shelves)
 
 
 # --------------------------------------------------------------------------

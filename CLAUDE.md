@@ -32,7 +32,7 @@ by Claude-run scripts. Judge every change by "does this still work if no
 Claude session ever runs again?" Applying his rulings by one-off script is a
 stopgap, not the design.
 
-## The owner's standing rulings (2026-11-05)
+## The owner's standing rulings (2026-11-05, 06)
 
 The single record of these answers; do not ask them again.
 
@@ -48,16 +48,20 @@ The single record of these answers; do not ask them again.
 5. **The 148 "name or ordinary word?" questions are retired**: remove that
    Spelling section and the code behind it. This supersedes the Spelling
    session's A/B question.
-6. **Undo of an upgrade:** not yet decided (re-explained 2026-11-05).
+6. **Undo of an upgrade moves the published copy to the trash too**
+   (2026-11-06), so the shelf really goes back to how it was.
 7. **Weekly publication checks, report-only**, once they are fixed. Yes.
 8. **No new naming refinements** until the pile in `12 - To be sorted`
    shrinks every week. Fixes that touch arrivals or safety are still fine.
 9. **`master` becomes the default branch on GitHub.** Yes.
-10. **His ETH password:** he wants it kept securely; how is not yet decided.
+10. **His ETH password lives only in this Mac's Keychain** (2026-11-06):
+    nothing in Dropbox. The publisher logins borrowed in June are deleted.
 11. **No new cockpit pages for a month** (from 2026-11-05) while openings
     are recorded. Improve existing pages instead.
 12. **`12 - To be sorted` is the front door.** The hidden inbox
     (`~/.mathpdf/inbox`) goes.
+13. **The background filer runs on the project's own Python** (`.venv`,
+    2026-11-06), the one the tests use, so it can run the local model.
 
 ## Non-negotiables
 

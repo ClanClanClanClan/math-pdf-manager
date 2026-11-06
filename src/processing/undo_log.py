@@ -99,7 +99,8 @@ def restore_blocker(dst: Path, src: Path) -> str:
     return ""
 
 
-def copy_undo_blocker(dst: Path, src: Path) -> str:
+def copy_undo_blocker(dst: Path, src: Path, download: Optional[dict] = None,
+                      replaced_is_back: bool = False) -> str:
     """Why undoing the copy ``src`` -> ``dst`` would not happen, or "".
 
     restore_blocker's counterpart for copies, asked by the dry run and the
@@ -108,12 +109,28 @@ def copy_undo_blocker(dst: Path, src: Path) -> str:
     PDF -- whose original, the download, is always gone -- and the live
     run then refused it: the preview of undoing every upgrade disagreed
     with the undo (found 2026-10-15).
+
+    ``download``: an upgrade's mark (:meth:`UndoLog.mark_copy_from_download`).
+    The original there was a temporary download the app removed on purpose,
+    so "the original is gone" says nothing; the paper's other version is the
+    preprint it replaced. The owner's ruling of 2026-11-06: undoing an
+    upgrade takes the published copy off the shelf too -- but only while it
+    is still exactly what was filed, and only when the preprint is back
+    (``replaced_is_back``), so the shelf never loses its last version.
     """
     if not dst.exists():
         return f"SKIP: copy already gone: {dst}"
-    if not src.exists():
+    if src.exists():
+        return ""
+    if not download:
         return (f"REFUSED: the original is gone, so this copy is the only "
                 f"version left: {dst}")
+    if _sha256(dst) != download.get("sha256"):
+        return (f"KEPT: the published copy has changed since it was filed, "
+                f"so it stays on the shelf: {dst}")
+    if not replaced_is_back:
+        return (f"KEPT: the preprint it replaced is not back on the shelf, "
+                f"so the published copy stays: {dst}")
     return ""
 
 
@@ -316,6 +333,26 @@ class UndoLog:
             "source": str(source),
             "destination": str(destination),
         })
+
+    def mark_copy_from_download(self, destination: Path, *, replaces: Path) -> bool:
+        """Note that this transaction's copy to ``destination`` came from a
+        temporary download the app is about to remove, in place of the
+        preprint ``replaces``. Undo then retires the copy once the preprint
+        is back (see :func:`copy_undo_blocker`). False when no such copy was
+        recorded: undo then refuses, as for any copy whose original is gone.
+        Marked in the record kept in memory, which ``commit`` writes: after
+        a crash before the commit the journal holds the plain copy, and undo
+        refuses -- the safe way round.
+        """
+        if self._current_tx is None:
+            raise RuntimeError("No active transaction — call begin_transaction() first")
+        want = str(destination)
+        for op in reversed(self._current_tx["operations"]):
+            if op.get("type") == "copy" and op.get("destination") == want:
+                op["download"] = {"sha256": _sha256(Path(destination)),
+                                  "replaces": str(replaces)}
+                return True
+        return False
 
     def record_rename(self, old_path: Path, new_path: Path) -> None:
         """Record a file rename operation."""
@@ -702,9 +739,11 @@ class UndoLog:
 
         if op["type"] == "copy":
             # Undo copy: remove the copy
-            blocker = copy_undo_blocker(dst, src)
+            blocker = copy_undo_blocker(
+                dst, src, op.get("download"),
+                _replaced_is_back(ops, i, skip, refused))
             if dry_run:
-                return {"action": blocker or f"WOULD DELETE COPY: {dst}",
+                return {"action": blocker or f"WOULD RETIRE COPY to the trash: {dst}",
                         "ok": not blocker}
             # DO NOT UNLINK. This is the only hard delete of a
             # library PDF in src/, and it has already cost a paper:
@@ -943,6 +982,23 @@ def _not_back(pdf: Path, place: Path) -> str:
     return (f"SKIP: the record of {pdf.name} is not back at {place} (its "
             f"move back was refused), so these fields are not put on "
             f"whatever is there")
+
+
+def _replaced_is_back(ops: list, i: int, skip: set, refused: set) -> bool:
+    """Is the preprint a marked copy replaced on the shelf by the time undo
+    reaches ``ops[i]``? It is there now, or a later operation moved it away
+    and undo brings it back: the live run has done that by now, the dry run
+    has not, and a move not refused and not skipped is one that succeeds."""
+    download = ops[i].get("download")
+    if not download:
+        return False
+    replaced = download.get("replaces", "")
+    later = [j for j in range(i + 1, len(ops))
+             if ops[j].get("type") == "move"
+             and ops[j].get("source") == replaced]
+    if any(j in refused for j in later):
+        return False                # what stands at its place is not it
+    return Path(replaced).exists() or any(j not in skip for j in later)
 
 
 def _fields_after_later_edits(ops: list, i: int, skip: set, fields: dict):
