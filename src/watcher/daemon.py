@@ -438,18 +438,44 @@ def _current_watch(inbox: Path):
     return (st.st_dev, st.st_ino, birth)
 
 
-def _auto_reconnect(library_root: Path) -> dict:
+def _note_put_back(res: dict, config: Optional[WatcherConfig]) -> None:
+    """Leave the one line Home reads (audit G1-3), and tell him the moment
+    this job has failed twice running, once: a failure that reaches only a
+    log file reaches nobody."""
+    from maintenance import job_runs as J
+    log_dir = config.log_dir if config else None
+    if res.get("error"):
+        state, text = J.PROBLEM, f"it stopped with: {res['error']}"
+    elif res.get("busy"):
+        state, text = J.UNKNOWN, "the library was busy; it tries again in an hour"
+    elif res.get("unreadable"):
+        state, text = J.UNKNOWN, (f"{res['unreadable']} paper(s) or folder(s) could "
+                                  "not be read, so nothing was put back this hour")
+    else:
+        state, text = J.OK, (f"{res.get('reconnected', 0)} put back, "
+                             f"{res.get('orphans', 0)} record(s) without a paper")
+    J.record_run(J.PUT_BACK, state, text, log_dir=log_dir)
+    if config and config.notifications and J.just_failed_twice(J.PUT_BACK, log_dir=log_dir):
+        notify("Maths library", "Putting back saved details has failed twice. "
+                                "Open Home to see why.")
+
+
+def _auto_reconnect(library_root: Path,
+                    config: Optional[WatcherConfig] = None) -> dict:
     """One timed pass of ``sidecar_repair.auto_reconnect``; never raises.
 
-    Whatever happens is logged in words; a failure must not take the
-    filer down with it.
+    Whatever happens is logged in words and leaves its one line for Home;
+    a failure must not take the filer down with it.
     """
     try:
         from processing.sidecar_repair import auto_reconnect
         res = auto_reconnect(library_root)
     except Exception as exc:                      # keep filing regardless
         logger.error("Putting back saved details failed: %s", exc)
-        return {"error": str(exc)}
+        res = {"error": str(exc)}
+        _note_put_back(res, config)
+        return res
+    _note_put_back(res, config)
     if res.get("busy"):
         logger.info("Saved details: the library was busy; will retry.")
     elif res.get("reconnected"):
@@ -547,7 +573,7 @@ def run_daemon(config: WatcherConfig, *, dry_run: bool = False) -> None:
             if (not dry_run
                     and time.monotonic() - last_reconnect >= RECONNECT_EVERY):
                 last_reconnect = time.monotonic()
-                _auto_reconnect(config.library_root)
+                _auto_reconnect(config.library_root, config)
 
             if time.monotonic() - last_check < CHECK_EVERY:
                 continue

@@ -18,7 +18,7 @@ from typing import Iterable, Optional
 
 __all__ = [
     "NON_LIBRARY", "STAGING", "ARCHIVAL_COLLECTIONS",
-    "exclusion_reason", "in_scope", "filter_in_scope",
+    "exclusion_reason", "in_scope", "filter_in_scope", "is_staging",
 ]
 
 #: Not the library at all: the code that manages it, backups, scratch. The
@@ -128,6 +128,12 @@ def exclusion_reason(rel_path: str, *,
                 return ("archival collection the owner asked to leave alone "
                         f"({prefix.split('/')[-1]})")
     return None
+
+
+def is_staging(rel_path: str) -> bool:
+    """Is this path in staging: a paper not filed yet?"""
+    path = _norm(rel_path)
+    return any(_under(path, prefix) for prefix in STAGING)
 
 
 def in_scope(rel_path: str, **kwargs) -> bool:

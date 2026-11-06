@@ -261,13 +261,23 @@ def _name_the_paper_here(pdf: Path, old_places, log) -> list[str]:
         _read_record(record_location(pdf)).get("copy_locations", []))
 
 
-def plan_reconnect(library_root: Path) -> dict:
+def plan_reconnect(library_root: Path, *, hourly: bool = False) -> dict:
     """Work out which orphan belongs to which PDF.  Touches nothing.
 
     Returns ``{"orphans": n, "matched": [(sidecar, pdf)], "ambiguous":
     [...], "to_trash": [(sidecar, trash_pdf)], "to_trash_refused":
     [(sidecar, reason)], "unmatched": [...], "candidates": n,
-    "trash_candidates": n, "still": [(sidecar, [words])]}``.
+    "trash_candidates": n, "still": [(sidecar, [words])], "unreadable":
+    [paths not looked at]}``.
+
+    ``unreadable``: papers that could not be read and folders that could
+    not be listed. One of them might be the real match, so "one candidate
+    only" is not known to hold while this is not empty.
+
+    ``hourly``: leave out what the unattended pass has no use for: papers
+    not filed yet (it read up to 1 MB of each of 575 of them, every hour,
+    for records that belong to filed papers, audit D12-3) and the trash
+    (it acts on ``matched`` only).
 
     ``still``: for each record of ``matched`` and ``to_trash`` that the
     move would leave naming a place where no file is, what
@@ -288,17 +298,23 @@ def plan_reconnect(library_root: Path) -> dict:
     and no tool proposes retiring anything in them.
     """
     from processing.identity import PDF_GLOB, compute_content_hash, iter_pdfs
-    from processing.library_scope import why_not_proposable
+    from processing.library_scope import is_staging, why_not_proposable
 
-    claimed, homeless = claimed_records(iter_pdfs(library_root))
+    unreadable: list[str] = []
+    claimed, homeless = claimed_records(iter_pdfs(
+        library_root, on_unreadable=lambda folder, _exc: unreadable.append(str(folder))))
     orphans = unclaimed_records(library_root, claimed)
 
     by_hash: dict[str, list[Path]] = {}
     if orphans:                       # nothing to match: hash nothing
         for pdf in homeless:
+            if hourly and is_staging(pdf.relative_to(library_root).as_posix()):
+                continue
             h = compute_content_hash(pdf)
             if h:
                 by_hash.setdefault(h, []).append(pdf)
+            else:
+                unreadable.append(str(pdf))
 
     matched, ambiguous, unmatched = [], [], []
     claimed_pdfs: set[Path] = set()
@@ -315,7 +331,7 @@ def plan_reconnect(library_root: Path) -> dict:
 
     to_trash, refused, n_trash = [], [], 0
     trash = library_root / ".trash"
-    if unmatched and trash.is_dir():
+    if unmatched and trash.is_dir() and not hourly:
         _, trash_homeless = claimed_records(sorted(trash.rglob(PDF_GLOB)))
         n_trash = len(trash_homeless)
         in_trash: dict[str, list[Path]] = {}
@@ -354,7 +370,7 @@ def plan_reconnect(library_root: Path) -> dict:
             "ambiguous": ambiguous, "to_trash": to_trash,
             "to_trash_refused": refused, "unmatched": unmatched,
             "candidates": len(homeless), "trash_candidates": n_trash,
-            "still": stays_wrong}
+            "still": stays_wrong, "unreadable": unreadable}
 
 
 def _former_place(library_root: Path, sidecar: Path) -> Path:
@@ -513,12 +529,14 @@ def auto_reconnect(library_root: Path) -> dict:
     undoable transaction per run, visible on the Activity page.
 
     Returns ``{"orphans", "reconnected", "left": [(record name, why)],
-    "skipped", "tx_id", "busy"}``.
+    "skipped", "tx_id", "busy", "unreadable": n}``. With anything unreadable
+    nothing is put back that hour: the rule is "one candidate only", and
+    that cannot be known of a paper that could not be read.
     """
     from processing.library_scope import why_not_proposable
     from processing.locking import LibraryLock
 
-    plan = plan_reconnect(library_root)
+    plan = plan_reconnect(library_root, hourly=True)
     warned = {str(sc) for sc, _words in plan.get("still") or []}
     certain, left = [], []
     for sc, pdf in plan.get("matched", []):
@@ -531,8 +549,9 @@ def auto_reconnect(library_root: Path) -> dict:
         else:
             certain.append((sc, pdf))
     out = {"orphans": plan.get("orphans", 0), "reconnected": 0, "left": left,
-           "skipped": [], "tx_id": None, "busy": False}
-    if not certain:
+           "skipped": [], "tx_id": None, "busy": False,
+           "unreadable": len(plan.get("unreadable") or [])}
+    if not certain or out["unreadable"]:
         return out
     lock = LibraryLock(library_root)
     if not lock.acquire(blocking=False):

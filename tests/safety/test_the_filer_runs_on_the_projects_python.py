@@ -163,7 +163,7 @@ def _run(tmp_path, monkeypatch, versions):
     monkeypatch.setattr(D, "Observer", lambda: made.append(_Observer()) or made[-1])
     monkeypatch.setattr(D, "PDFHandler", _Handler)
     monkeypatch.setattr(D, "notify", lambda *a, **k: None)
-    monkeypatch.setattr(D, "_auto_reconnect", lambda root: {})
+    monkeypatch.setattr(D, "_auto_reconnect", lambda root, config=None: {})
     clock = {"t": 0.0}
     monkeypatch.setattr(D.time, "monotonic",
                         lambda: clock.__setitem__("t", clock["t"] + 60.0) or clock["t"])

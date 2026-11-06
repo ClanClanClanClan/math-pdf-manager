@@ -112,7 +112,7 @@ def test_nothing_to_do_costs_no_hashing_and_no_transaction(lib, monkeypatch):
                         lambda *a, **k: (_ for _ in ()).throw(AssertionError("hashed")))
     res = auto_reconnect(lib)
     assert res == {"orphans": 0, "reconnected": 0, "left": [], "skipped": [],
-                   "tx_id": None, "busy": False}
+                   "tx_id": None, "busy": False, "unreadable": 0}
     assert not (lib / ".operation_log").exists() or not list((lib / ".operation_log").glob("*.json"))
 
 
@@ -121,8 +121,8 @@ def test_a_pair_the_plan_warns_about_is_left_for_conformance(lib, monkeypatch):
     _finder_rename(_paper(lib, "01 - Published papers/B", OLD), NEW)
     real = R.plan_reconnect
 
-    def _warned(root):
-        plan = real(root)
+    def _warned(root, **k):
+        plan = real(root, **k)
         plan["still"] = [(sc, ["it still lists a place where no file is: x"])
                          for sc, _ in plan["matched"]]
         return plan
@@ -142,8 +142,8 @@ def test_the_filer_runs_it_on_a_timer_and_not_in_a_dry_run():
     fn = next(n for n in ast.parse(src).body
               if isinstance(n, ast.FunctionDef) and n.name == "run_daemon")
     body = ast.unparse(fn)
-    assert "_auto_reconnect(config.library_root)" in body
-    assert "not dry_run" in body.split("_auto_reconnect(config.library_root)")[0][-400:]
+    assert "_auto_reconnect(config.library_root, config)" in body
+    assert "not dry_run" in body.split("_auto_reconnect(config.library_root, config)")[0][-400:]
     assert "RECONNECT_EVERY = 3600.0" in body
 
 
