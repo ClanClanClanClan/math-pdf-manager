@@ -21,7 +21,8 @@ __all__ = [
     "exclusion_reason", "in_scope", "filter_in_scope",
 ]
 
-#: Not the library at all: the code that manages it, backups, scratch.
+#: Not the library at all: the code that manages it, backups, scratch. The
+#: one list: ``iter_pdfs`` never enters a folder with one of these names.
 NON_LIBRARY = (
     "Scripts",
     "archive",
@@ -31,6 +32,12 @@ NON_LIBRARY = (
     "gmnap-private-eval-backup",
     "unicode_utils",
     ".trash",
+    ".git",
+    "node_modules",
+    "htmlcov",
+    "__pycache__",
+    ".venv",
+    "venv",
 )
 
 #: Staging.  These PDFs have not been renamed yet, so measuring naming

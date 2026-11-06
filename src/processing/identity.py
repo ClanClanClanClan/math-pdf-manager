@@ -42,7 +42,9 @@ from contextlib import contextmanager
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional
+
+from processing.library_scope import NON_LIBRARY
 
 logger = logging.getLogger(__name__)
 
@@ -369,25 +371,56 @@ def find_sidecar(pdf_path: Path) -> Optional[Path]:
 PDF_GLOB = "*.[Pp][Dd][Ff]"
 
 
-def iter_pdfs(root: Path, *, recursive: bool = True):
+def iter_pdfs(root: Path, *, recursive: bool = True,
+              on_unreadable: Optional[Callable[[Path, OSError], None]] = None):
     """Yield every PDF under ``root`` (case-insensitive suffix match).
 
-    Skips files under any ``.trash`` directory so library scans don't
-    fold trash entries back into live workflows.  Callers that *want*
-    trash should iterate with ``root.rglob(PDF_GLOB)`` directly.
+    Never ENTERS a folder of :data:`processing.library_scope.NON_LIBRARY`
+    or a hidden one. It used to go through everything and drop those paths
+    afterwards: 89% of each walk's time went on a 126,000-file project and
+    the code folder, and a test's temporary folder inside the code folder
+    failed the hourly job 21 times in a row (step-back audit D12-2, D12-3).
+    Callers that *want* the trash iterate with ``root.rglob(PDF_GLOB)``.
+
+    ``on_unreadable(folder, error)`` hears of a folder that could not be
+    listed: what it holds was not looked at, which is not "no papers".
 
     ``recursive=False`` matches only direct children of ``root`` (the
     non-recursive ``glob`` equivalent), used by callers like
     ``filename_normalizer`` that already loop over subfolders
     themselves.
     """
-    if not root.exists():
+    if not root.is_dir():
         return
-    walker = root.rglob(PDF_GLOB) if recursive else root.glob(PDF_GLOB)
-    for pdf in walker:
-        if not _is_library_pdf(pdf):
+    if not recursive:
+        for pdf in root.glob(PDF_GLOB):
+            if _is_library_pdf(pdf):
+                yield pdf
+        return
+    if not _is_library_pdf(root):
+        return
+    stack = [str(root)]
+    while stack:
+        folder = stack.pop()
+        try:
+            with os.scandir(folder) as listing:
+                entries = list(listing)
+        except OSError as exc:
+            logger.warning("could not list %s: %s", folder, exc)
+            if on_unreadable is not None:
+                on_unreadable(Path(folder), exc)
             continue
-        yield pdf
+        for entry in entries:
+            try:
+                is_dir = entry.is_dir(follow_symlinks=False)
+            except OSError:
+                is_dir = False
+            if is_dir:
+                if (entry.name not in _NON_LIBRARY_DIRS
+                        and not entry.name.startswith(".")):
+                    stack.append(entry.path)
+            elif entry.name.lower().endswith(".pdf"):
+                yield Path(entry.path)
 
 
 # Directories that live INSIDE the library root but hold no papers.  The
@@ -395,16 +428,7 @@ def iter_pdfs(root: Path, *, recursive: bool = True):
 # 77 publisher-download test fixtures in it, which every scan counted as
 # the owner's papers — inflating the library total and feeding duplicate
 # and variant detection with files that are not his.
-_NON_LIBRARY_DIRS = frozenset({
-    ".trash",          # recoverable deletions, deliberately out of scope
-    "Scripts",         # the code checkout
-    ".git",
-    "node_modules",
-    "htmlcov",
-    "__pycache__",
-    ".venv",
-    "venv",
-})
+_NON_LIBRARY_DIRS = frozenset(NON_LIBRARY)
 
 
 def _is_library_pdf(pdf: Path) -> bool:
