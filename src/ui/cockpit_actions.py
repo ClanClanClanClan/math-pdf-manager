@@ -275,16 +275,24 @@ def watcher_status() -> dict:
 AUTO_APPLY_FLAG = "--auto-apply-safe"
 
 
+def project_python(project_root: Optional[Path] = None) -> str:
+    """The Python everything in the background runs on (ruling 13): the
+    project's ``.venv``, the one the tests use. A checkout without one has
+    only the Python that is running."""
+    root = project_root or Path(__file__).resolve().parents[2]
+    venv = root / ".venv" / "bin" / "python"
+    return str(venv) if venv.exists() else sys.executable
+
+
 def install_launch_agents(labels=None, *,
                           weekly_auto_apply: bool = False) -> tuple[bool, str]:
     """Write launchd plists into ``~/Library/LaunchAgents``.
 
-    This is what ``deploy/launchd/install.sh`` does -- a script the
-    cockpit user cannot run, which meant ``start_watcher`` could only
-    ever answer "plist not installed" and the watcher could never be
-    switched on from the UI at all.  The interpreter is pinned to the
-    one running the cockpit rather than whatever ``python3`` happens to
-    be first on PATH, so the daemon gets the same dependencies.
+    The one installer. Before it, the remedy was a shell script the
+    cockpit user cannot run, so ``start_watcher`` could only ever answer
+    "plist not installed". The interpreter is pinned to the project's own
+    Python (:func:`project_python`): the filer ran for months on a Python
+    shared with another project, which could not run the local model.
 
     ``labels`` restricts it to those services. It used to install EVERY
     template: turning on automatic filing (whenever its plist was
@@ -315,7 +323,7 @@ def install_launch_agents(labels=None, *,
                     .replace("PROJECT_PATH", str(project_root))
                     .replace("HOME/", str(Path.home()) + "/")
                     .replace("<string>python3</string>",
-                             f"<string>{sys.executable}</string>"))
+                             f"<string>{project_python(project_root)}</string>"))
             if tpl.stem == WEEKLY_LABEL and not weekly_auto_apply:
                 body = re.sub(r"[ \t]*<string>" + re.escape(AUTO_APPLY_FLAG)
                               + r"</string>[ \t]*\n?", "", body)
@@ -522,11 +530,10 @@ def run_publication_check(
     Returns the JSON report's path so the cockpit can load it into
     the Upgrade Queue without making the user paste the path by hand.
     """
-    # Use ``sys.executable`` so pyenv / conda / uv users keep their
-    # active interpreter (and its installed deps) instead of falling
-    # back to whatever ``python3`` happens to be first on PATH.
+    # The project's own Python, whatever started this page: the job gets
+    # the tested dependencies, not whatever ``python3`` is first on PATH.
     cmd = [
-        sys.executable, "-m", "maintenance.weekly_report",
+        project_python(), "-m", "maintenance.weekly_report",
         "--library", str(library_root),
         "--no-notify",
         "--no-open",

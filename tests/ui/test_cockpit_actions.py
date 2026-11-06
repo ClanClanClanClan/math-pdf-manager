@@ -148,8 +148,7 @@ class TestStartStopWatcher:
         """A missing service is now SET UP, not reported back at him.
 
         It used to answer "plist not installed" — true, but the remedy was
-        ``deploy/launchd/install.sh``, a shell script the cockpit user
-        cannot run.  So automatic filing could never be switched on from
+        a shell script (since deleted) the cockpit user cannot run.  So automatic filing could never be switched on from
         the UI at all.  start_watcher now installs the agent into the
         user's own ~/Library/LaunchAgents and proceeds.
         """

@@ -42,7 +42,8 @@ def state_path(log_dir: Path) -> Path:
 
 
 def write_state(log_dir: Path, *, pid: int, inbox: Path, watching: bool,
-                started_at: str, note: str = "") -> None:
+                started_at: str, note: str = "", code_version: str = "",
+                python: str = "") -> None:
     """Record what this daemon is watching. Never raises.
 
     A failure to write the report must not take the filer down: a filer
@@ -57,6 +58,10 @@ def write_state(log_dir: Path, *, pid: int, inbox: Path, watching: bool,
         "started_at": started_at,
         "checked_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "note": note,
+        # Which code and which Python this filer runs: it is no longer a
+        # guess that it runs the tested Python (ruling 13, 2026-11-06).
+        "code_version": code_version,
+        "python": python,
     }
     try:
         from core.io import atomic_write_text

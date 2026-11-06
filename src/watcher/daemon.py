@@ -463,6 +463,14 @@ def _auto_reconnect(library_root: Path) -> dict:
     return res
 
 
+def _code_has_moved_on(running: str) -> bool:
+    """Is the code on disk a different commit from ``running``? "Cannot
+    tell" on either side is no: a filer never restarts on a guess."""
+    from core.code_version import code_version
+    now = code_version()
+    return bool(running and now and now != running)
+
+
 def run_daemon(config: WatcherConfig, *, dry_run: bool = False) -> None:
     """Run the filesystem watcher daemon."""
     config.ensure_dirs()
@@ -486,19 +494,10 @@ def run_daemon(config: WatcherConfig, *, dry_run: bool = False) -> None:
     if dry_run:
         logger.info("DRY RUN mode — files will not be moved")
 
-    if config.notifications:
-        notify(
-            "Math-PDF Watcher Started",
-            f"Watching {config.inbox_dir.name}/ for new papers",
-            sound="",
-        )
-
     # Handle graceful shutdown
     def _shutdown(signum, frame):
         logger.info("Shutting down watcher...")
         observer.stop()
-        if config.notifications:
-            notify("Math-PDF Watcher Stopped", "Watcher daemon stopped", sound="")
 
     signal.signal(signal.SIGINT, _shutdown)
     signal.signal(signal.SIGTERM, _shutdown)
@@ -528,12 +527,15 @@ def run_daemon(config: WatcherConfig, *, dry_run: bool = False) -> None:
     # re-deriving the inbox from the config, which can disagree with what
     # this process was started on (see watcher/state.py for the outage
     # that cost).
+    from core.code_version import code_version
     from watcher.state import write_state, started_at_now
     _started = started_at_now()
+    _code = code_version()
 
     def _report(watching: bool, note: str = "") -> None:
         write_state(config.log_dir, pid=os.getpid(), inbox=config.inbox_dir,
-                    watching=watching, started_at=_started, note=note)
+                    watching=watching, started_at=_started, note=note,
+                    code_version=_code, python=sys.executable)
 
     _report(watch is not None)
 
@@ -550,6 +552,14 @@ def run_daemon(config: WatcherConfig, *, dry_run: bool = False) -> None:
             if time.monotonic() - last_check < CHECK_EVERY:
                 continue
             last_check = time.monotonic()
+            if _code_has_moved_on(_code):
+                # launchd keeps this service alive, so leaving IS restarting
+                # onto the new code: after a fix nothing needs a Claude
+                # session or a reboot (audit G1-4). Between two papers, so
+                # none is half filed.
+                logger.info("The code has changed since this filer started; "
+                            "restarting onto it.")
+                break
             now = _current_watch(config.inbox_dir)
             if now == watch:
                 _report(watch is not None)

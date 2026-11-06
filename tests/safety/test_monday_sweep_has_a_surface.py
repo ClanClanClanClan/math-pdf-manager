@@ -223,7 +223,7 @@ def test_the_sweep_installs_without_auto_apply_unless_asked(home, launchctl):
     assert ok and _agents(home) == [f"{A.WEEKLY_LABEL}.plist"]
     args = _args(home, A.WEEKLY_LABEL)
     assert A.AUTO_APPLY_FLAG not in args and "maintenance.weekly_report" in args
-    assert sys.executable in args, "the cockpit's interpreter, with its packages"
+    assert A.project_python() in args, "the project's own Python (ruling 13)"
     ok, _ = A.start_weekly(auto_apply_safe=True)
     assert ok and A.AUTO_APPLY_FLAG in _args(home, A.WEEKLY_LABEL)
     assert ("bootstrap", f"gui/{os.getuid()}",

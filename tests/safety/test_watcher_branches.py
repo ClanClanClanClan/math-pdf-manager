@@ -1014,7 +1014,9 @@ class TestDaemonLifecycle:
             "SIGTERM did not stop the observer; the daemon would keep "
             "filing papers after being asked to quit"
         )
-        assert any("Stop" in t for t, _ in spy_notify), spy_notify
+        # No "Watcher Stopped" notice since 2026-11-06: the filer restarts
+        # itself after every fix, and a pop-up each time helps nobody.
+        assert spy_notify == [], spy_notify
 
 
 # ---------------------------------------------------------------------------

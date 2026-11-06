@@ -143,15 +143,15 @@ PYTHONPATH=src python3 -m watcher.daemon
 PYTHONPATH=src python3 -m maintenance.weekly_report
 ```
 
-### 4. Install as launchd agents (optional)
+### 4. Background services
 
-```bash
-bash deploy/launchd/install.sh
-```
+The cockpit installs them when you switch them on: automatic filing from
+the sidebar, the Monday sweep on the Maintenance page. Both run on the
+project's own Python (`.venv`), as LaunchAgents in `~/Library/LaunchAgents/`:
 
-This installs two agents in `~/Library/LaunchAgents/`:
-- `ch.ethz.dpossamai.mathpdf.watcher` — runs the inbox watcher continuously
-- `ch.ethz.dpossamai.mathpdf.weekly` — runs maintenance every Monday at 09:00
+- `ch.ethz.dpossamai.mathpdf.watcher` — the filer, running continuously; it
+  restarts itself when the code changes
+- `ch.ethz.dpossamai.mathpdf.weekly` — the Monday sweep, report-only
 
 Logs land in `~/.mathpdf/`.
 

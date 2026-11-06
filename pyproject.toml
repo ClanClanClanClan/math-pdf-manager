@@ -40,6 +40,10 @@ dependencies = [
     "streamlit>=1.30.0",
     # Text processing
     "langdetect>=1.0.9",
+    # Spelling in filename checks (core/text_processing/my_spellchecker.py).
+    # Optional in code, so its absence was silent: the filer's Python had
+    # it and the project's did not, undeclared here (2026-11-06).
+    "pyspellchecker>=0.8.0",
     "lz4>=4.3.0",
     # Filesystem watcher (src/watcher/daemon.py)
     "watchdog>=3.0.0",

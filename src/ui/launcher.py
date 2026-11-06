@@ -36,16 +36,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable, Optional
 
+from core.code_version import code_version, repo_root
+
 #: The cockpit's address on this Mac.
 PORT = int(os.environ.get("MATHPDF_COCKPIT_PORT", "8501"))
 #: How long a fresh start may take before the icon gives up and says so.
 START_WAIT_SECONDS = 90.0
 APP_NAME = "Maths Library"
-
-
-def repo_root() -> Path:
-    """``Scripts/``: this file is ``Scripts/src/ui/launcher.py``."""
-    return Path(__file__).resolve().parents[2]
 
 
 def _state_dir() -> Path:
@@ -65,33 +62,6 @@ def openings_path() -> Path:
 
 def log_path() -> Path:
     return _state_dir() / "cockpit.log"
-
-
-# --------------------------------------------------------------- the code
-
-def code_version(repo: Path) -> str:
-    """The commit the code on disk is at, read from ``.git`` directly (no
-    ``git`` binary needed), or "" when it cannot be told."""
-    git = repo / ".git"
-    try:
-        head = (git / "HEAD").read_text(encoding="utf-8").strip()
-    except OSError:
-        return ""
-    if not head.startswith("ref: "):
-        return head                                  # detached
-    ref = head[len("ref: "):]
-    try:
-        return (git / ref).read_text(encoding="utf-8").strip()
-    except OSError:
-        pass
-    try:
-        for line in (git / "packed-refs").read_text(encoding="utf-8").splitlines():
-            parts = line.split()
-            if len(parts) == 2 and parts[1] == ref:
-                return parts[0]
-    except OSError:
-        pass
-    return ""
 
 
 # ------------------------------------------------------------- the server
