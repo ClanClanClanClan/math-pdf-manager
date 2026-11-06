@@ -18,6 +18,11 @@ showErrorDetails = true
 runOnSave = false
 # The library lives in Dropbox; uploads are not part of this workflow.
 maxUploadSize = 50
+# Only this Mac may reach the cockpit: it moves, renames and trashes his
+# files, and Streamlit otherwise listens on every network the Mac is on
+# (its first start from the Dock icon printed a "Network URL" and an
+# "External URL", 2026-11-05).
+address = "127.0.0.1"
 
 [browser]
 gatherUsageStats = false

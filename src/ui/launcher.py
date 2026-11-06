@@ -139,8 +139,13 @@ def start_server(repo: Path, port: int = PORT) -> int:
     env = dict(os.environ, PYTHONPATH="src")
     with open(log_path(), "ab") as log:
         proc = subprocess.Popen(
+            # 127.0.0.1: Streamlit listens on every network by default, and
+            # this page moves, renames and trashes his files -- the first
+            # start announced itself at a "Network URL" and an "External
+            # URL" (2026-11-05). Only this Mac may reach it.
             [str(python), "-m", "streamlit", "run", "src/ui/cockpit.py",
-             "--server.headless", "true", "--server.port", str(port)],
+             "--server.headless", "true", "--server.port", str(port),
+             "--server.address", "127.0.0.1"],
             cwd=str(repo), env=env, stdin=subprocess.DEVNULL,
             stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
     return proc.pid
@@ -175,7 +180,9 @@ def ensure_running(repo: Path, *, port: int = PORT,
                    _sleep: Callable[[float], None] = time.sleep) -> Outcome:
     """Make sure the cockpit is up, on current code. Three-valued at heart:
     reused / started (or restarted) / failed WITH a reason."""
-    url = f"http://localhost:{port}"
+    # The address it listens on, not "localhost": a browser may try the
+    # IPv6 loopback for that name first, where nothing answers.
+    url = f"http://127.0.0.1:{port}"
     version = code_version(repo)
     state = read_state()
     what = "started"

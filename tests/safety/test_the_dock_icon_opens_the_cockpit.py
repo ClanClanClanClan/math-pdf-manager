@@ -135,7 +135,7 @@ def test_one_that_will_not_stop_is_opened_and_he_is_told(repo, monkeypatch):
 def test_none_running_is_started_on_the_projects_python(repo, monkeypatch):
     f = _Fake(monkeypatch, up=False, comes_up_after=3)
     out = L.ensure_running(repo, _sleep=_no_sleep)
-    assert (out.ok, out.what, out.url) == (True, "started", f"http://localhost:{L.PORT}")
+    assert (out.ok, out.what, out.url) == (True, "started", f"http://127.0.0.1:{L.PORT}")
     assert f.started == [repo] and L.read_state()["code_version"] == "a" * 40
 
 
@@ -170,7 +170,7 @@ def test_a_click_opens_the_cockpit_once_and_is_noted(repo, monkeypatch):
     _Fake(monkeypatch, up=True)
     _state("a" * 40)
     assert L.main(repo) == 0
-    assert shown == {"told": [], "opened": [f"http://localhost:{L.PORT}"]}
+    assert shown == {"told": [], "opened": [f"http://127.0.0.1:{L.PORT}"]}
     (row,) = _openings()
     assert (row["what"], row["ok"], row["code_version"]) == ("reused", True, "a" * 40)
 
@@ -211,7 +211,9 @@ def test_the_server_is_started_detached_on_the_projects_python(repo, monkeypatch
     assert L.start_server(repo, 8599) == 99
     assert seen["args"][:5] == [str(repo / ".venv/bin/python"), "-m", "streamlit",
                                 "run", "src/ui/cockpit.py"]
-    assert seen["args"][-4:] == ["--server.headless", "true", "--server.port", "8599"]
+    assert seen["args"][-6:] == ["--server.headless", "true", "--server.port", "8599",
+                                 "--server.address", "127.0.0.1"], (
+        "only this Mac may reach a page that moves his files")
     assert seen["k"]["cwd"] == str(repo) and seen["k"]["env"]["PYTHONPATH"] == "src"
     assert seen["k"]["start_new_session"] is True
 
@@ -296,6 +298,14 @@ def test_a_cockpit_that_could_not_be_restarted_opens_and_he_is_told(repo, monkey
     _Fake(monkeypatch, up=True, ours=False)
     _state("0" * 40)
     assert L.main(repo) == 0
-    assert shown["opened"] == [f"http://localhost:{L.PORT}"]
+    assert shown["opened"] == [f"http://127.0.0.1:{L.PORT}"]
     (msg,) = shown["told"]
     assert "could not be restarted onto the newest code" in msg
+
+
+def test_the_cockpits_own_settings_keep_it_on_this_mac():
+    """Whoever starts it -- the icon, the README's command, a Claude
+    session -- Streamlit reads this file from Scripts/."""
+    import tomllib
+    cfg = tomllib.loads((L.repo_root() / ".streamlit" / "config.toml").read_text())
+    assert cfg["server"]["address"] == "127.0.0.1"
