@@ -220,4 +220,12 @@ def test_no_test_can_open_anything_on_his_screen():
     assert webbrowser.open("https://example.org") is False
     r = subprocess.run(["open", "https://example.org"], capture_output=True)
     assert r.returncode == 0 and r.args == ["/usr/bin/true"]
+    r = subprocess.run(["osascript", "-e", 'display dialog "x"'], capture_output=True)
+    assert r.returncode == 0 and r.args == ["/usr/bin/true"]
+    # A grandchild that looks the command up by name finds the stand-in.
+    import shutil
+    for cmd in ("open", "osascript"):
+        assert "quiet-bin" in (shutil.which(cmd) or ""), cmd
+    r = subprocess.run(["sh", "-c", "command -v osascript"], capture_output=True, text=True)
+    assert "quiet-bin" in r.stdout
     assert subprocess.run(["echo", "x"], capture_output=True, text=True).stdout == "x\n"

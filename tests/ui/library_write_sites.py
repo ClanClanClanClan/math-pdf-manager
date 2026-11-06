@@ -46,7 +46,7 @@ SRC = _src()
 #: The ui modules the cockpit is made of.  ``cockpit.py`` delegates pages
 #: and actions to the others.
 UI_MODULES = ("ui/cockpit.py", "ui/cockpit_actions.py", "ui/attention_queue.py",
-              "ui/search_page.py", "ui/paper_preview.py")
+              "ui/search_page.py", "ui/paper_preview.py", "ui/launcher.py")
 
 #: Library-writing entry points, by the name the cockpit calls them under,
 #: with what they write.  Generic names (``save``) are deliberately NOT

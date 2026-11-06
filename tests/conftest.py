@@ -348,19 +348,35 @@ for _name in ("open", "open_new", "open_new_tab"):
     setattr(_webbrowser, _name, lambda *a, **k: False)
 
 
+#: Commands that put something on his screen: a tab, a Finder window or an
+#: app (``open``), a dialog or a notification (``osascript``).
+_SHOWS_SOMETHING = {"open", "osascript"}
+
+
 class _NoOpenPopen(_subprocess.Popen):
-    """``open <anything>`` becomes ``true``: it would show a tab, a Finder
-    window or an app on his screen."""
+    """A command that would show something on his screen becomes ``true``."""
 
     def __init__(self, args, *a, **k):
         argv = args if isinstance(args, (list, tuple)) else str(args).split()
-        if argv and os.path.basename(str(argv[0])) == "open":
+        if argv and os.path.basename(str(argv[0])) in _SHOWS_SOMETHING:
             args = ["/usr/bin/true"]
             k.pop("shell", None)
         super().__init__(args, *a, **k)
 
 
 _subprocess.Popen = _NoOpenPopen
+
+# And for every program a test starts, however indirectly (a shell script
+# that calls osascript by name, a child job that runs `open`): stand-ins
+# that do nothing come first on the PATH. A launcher test ran the Dock
+# icon's script for real and left a dialog on his screen (2026-11-05).
+_QUIET_BIN = SESSION_SANDBOX / "quiet-bin"
+_QUIET_BIN.mkdir(exist_ok=True)
+for _cmd in sorted(_SHOWS_SOMETHING):
+    _stub = _QUIET_BIN / _cmd
+    _stub.write_text("#!/bin/sh\n# A test may not show anything on his screen.\nexit 0\n")
+    _stub.chmod(0o755)
+os.environ["PATH"] = str(_QUIET_BIN) + os.pathsep + os.environ.get("PATH", "")
 # So a subprocess (or a test that needs to *name* the real world without
 # touching it) can find it without re-deriving the owner's home.
 os.environ["MATHPDF_TEST_REAL_HOME"] = str(REAL_HOME)
