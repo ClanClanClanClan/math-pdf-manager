@@ -313,8 +313,15 @@ def test_an_unreadable_record_is_not_counted_as_created(lib):
     ident = PaperIdentity.load(p)
     ident.save(p)
     find_sidecar(p).write_text("{ torn")
-    log, tx, _dest = _file(lib, p)
-    assert "record_created" not in {op["type"] for op in _ops(log, tx)}
+    # Since 2026-11-05 the filing is refused outright (step-back audit
+    # D4-2): it would write a blank record over the torn one.
+    log = UndoLog(log_dir=lib / ".operation_log")
+    log.begin_transaction("Bulk topic apply: 1 paper(s)")
+    ok, msg = file_into_topic(p, "07a", lib, undo_log=log)
+    assert not ok and "could not be read" in msg
+    assert not log.has_operations()
+    log.discard()
+    assert p.exists() and find_sidecar(p).read_text() == "{ torn"
 
 
 def test_the_preview_of_a_retry_ignores_what_a_first_press_undid(lib):

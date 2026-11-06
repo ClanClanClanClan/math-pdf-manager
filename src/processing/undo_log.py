@@ -170,6 +170,36 @@ def created_record_blocker(record: Path, fingerprint: str,
     return ""
 
 
+def edited_fields_blocker(fields, changes: dict, unknown=()) -> str:
+    """Why undo would not put back the fields a ``sidecar_edit`` changed, or "".
+
+    Only while each field still holds what that edit wrote (or already
+    holds what it replaced). A field changed since to anything else -- a DOI
+    corrected by hand, a later publication check -- is the
+    paper's newer truth, and putting the old value back over it lost that
+    correction without a word (step-back audit D4-3). The fields are KEPT,
+    all of them, and the undo says which moved: half an edit put back would
+    leave a record that matches neither moment.
+
+    ``fields`` is the record as it stands (or, in the dry run, as it will
+    stand by then); not a dict means there is nothing to compare and the
+    caller's own "no record" answer applies. ``unknown``: fields the dry
+    run cannot predict (see :func:`_fields_after_later_edits`), not judged.
+    """
+    if not isinstance(fields, dict):
+        return ""
+    # A field the edit removed is recorded with None as its new value
+    # (patch_record), so a field that is not there matches None. A field
+    # already back at its old value is no conflict: putting it back changes
+    # nothing. Only a THIRD value is a correction made since.
+    moved = sorted(f for f, (old, new) in changes.items()
+                   if f not in unknown and fields.get(f) not in (new, old))
+    if not moved:
+        return ""
+    return (f"KEPT: {', '.join(moved)} changed since this change was made, "
+            f"so the saved details were left as they are")
+
+
 #: Where undoing a ``file_created`` puts the file it made.
 UNDONE_CREATIONS = "undone_creations"
 
@@ -613,6 +643,10 @@ class UndoLog:
                 if not isinstance(fields, dict):
                     return {"action": f"SKIP: no sidecar to restore: {pdf}",
                             "ok": False}
+                predicted, unknown = _fields_after_later_edits(ops, i, skip, fields)
+                blocker = edited_fields_blocker(predicted, changes, unknown)
+                if blocker:
+                    return {"action": blocker, "ok": False}
                 return {
                     "action": f"WOULD RESTORE sidecar fields {list(changes)} on {pdf.name}",
                     "ok": True,
@@ -632,6 +666,9 @@ class UndoLog:
                     # counted the edit as come back, so a retry that did
                     # bring the record home never put its fields back.
                     return {"action": _not_back(pdf, place), "ok": False}
+                blocker = edited_fields_blocker(_read_record(place), changes)
+                if blocker:
+                    return {"action": blocker, "ok": False}
                 absent = set(op.get("absent", ()))
                 done = patch_record(
                     pdf, {f: old for f, (old, _new) in changes.items()
@@ -906,6 +943,35 @@ def _not_back(pdf: Path, place: Path) -> str:
     return (f"SKIP: the record of {pdf.name} is not back at {place} (its "
             f"move back was refused), so these fields are not put on "
             f"whatever is there")
+
+
+def _fields_after_later_edits(ops: list, i: int, skip: set, fields: dict):
+    """``(fields, unknown)``: the record's fields as they will be when undo
+    reaches ``ops[i]``, and the fields that cannot be told.
+
+    By then undo has put back this transaction's later field edits, newest
+    first; the dry run reads the record as it is NOW. A later edit of the
+    same paper under the same name is applied here. One recorded under
+    another name -- the paper was renamed or moved on in between -- may or
+    may not be this record, so the fields it touched are ``unknown`` and the
+    preview does not call them "changed since"; the live run, which reads
+    the record when it gets there, decides."""
+    out, unknown = dict(fields), set()
+    here = ops[i]["path"]
+    for j in range(len(ops) - 1, i, -1):
+        later = ops[j]
+        if j in skip or later.get("type") != "sidecar_edit":
+            continue
+        if later.get("path") != here:
+            unknown |= set(later.get("changes", {}))
+            continue
+        gone = set(later.get("absent", ()))
+        for f, (old, _new) in later.get("changes", {}).items():
+            if f in gone:
+                out.pop(f, None)
+            else:
+                out[f] = old
+    return out, unknown
 
 
 def _edited_record_after_undo(ops: list, i: int, skip: set):

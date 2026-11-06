@@ -435,6 +435,25 @@ def compute_content_hash(pdf_path: Path) -> str:
         return ""
 
 
+class RecordUnreadable(OSError):
+    """A paper's saved record exists but could not be read just now.
+
+    load() hands back a blank identity for it -- the same as for a paper
+    with no record -- and saving that blank wrote it over the real record:
+    its DOI, arrival date and original name gone, while Undo then reported
+    "restored" (step-back audit D4-2, verified 3 of 3). ``save`` raises this
+    instead, and the record is left exactly as it was.
+    """
+
+
+def record_is_unreadable(pdf_path: Path) -> bool:
+    """Is there a record where this paper's would be saved that load()
+    cannot read (bad bytes, not a JSON object, fields of the wrong type,
+    or a read error such as a Dropbox file that is not on this Mac)?"""
+    return (record_location(pdf_path).exists()
+            and PaperIdentity._load_uncached(pdf_path).is_new())
+
+
 @dataclass
 class PaperIdentity:
     """Persistent metadata that travels with each filed PDF.
@@ -610,7 +629,17 @@ class PaperIdentity:
         the log.  A bulk pass over 300 sidecars was therefore
         irreversible.  Pass an open transaction and the previous field
         values are recorded, so undo restores them.
+
+        Raises :class:`RecordUnreadable`, writing nothing, when this
+        identity was built because no record could be read and a record
+        is nonetheless there: that blank would replace the paper's real
+        details.
         """
+        if self._is_new and record_is_unreadable(pdf_path):
+            raise RecordUnreadable(
+                f"the saved details of {pdf_path.name} could not be read just "
+                f"now, so they were left exactly as they were")
+        before = None
         if undo_log is not None:
             path_now = record_location(pdf_path)
             existed = path_now.exists()
@@ -631,36 +660,41 @@ class PaperIdentity:
                     "sidecar is unreadable, so the previous values are "
                     "unknown", pdf_path.name)
             else:
-                try:
-                    # UNCACHED on purpose.  Inside sidecar_read_cache()
-                    # load() hands back the very object being mutated, so
-                    # `before` IS `self`, every diff is empty and recording
-                    # is silently disabled — measured: has_operations()
-                    # stayed False for a real field change.
-                    before = PaperIdentity._load_uncached(pdf_path)
-                    old = {k: v for k, v in asdict(before).items()
-                           if not k.startswith("_")}
-                    new = {k: v for k, v in asdict(self).items()
-                           if not k.startswith("_")}
-                    changes = {k: [old.get(k), new.get(k)]
-                               for k in set(old) | set(new)
-                               if old.get(k) != new.get(k)}
-                    if changes:
-                        undo_log.record_sidecar_edit(pdf_path, changes)
-                except RuntimeError:
-                    # "No active transaction" is a PROGRAMMER error, not a
-                    # runtime hiccup.  Swallowing it meant a caller that
-                    # forgot begin_transaction() recorded nothing, warned
-                    # nothing and returned success.
-                    raise
-                except Exception as exc:            # never block the write
-                    logger.warning("could not record sidecar edit for %s: %s",
-                                   pdf_path, exc)
+                # UNCACHED on purpose.  Inside sidecar_read_cache() load()
+                # hands back the very object being mutated, so `before` IS
+                # `self`, every diff is empty and recording is silently
+                # disabled — measured: has_operations() stayed False for a
+                # real field change.
+                before = PaperIdentity._load_uncached(pdf_path)
 
         if recompute_hash and pdf_path.exists():
             self.content_sha256 = compute_content_hash(pdf_path)
         if not self.original_filename:
             self.original_filename = pdf_path.name
+
+        if before is not None:
+            # Diffed AFTER the fingerprint and name are filled in: the edit
+            # records what is written, so Undo can tell whether a field still
+            # holds it or was corrected since (step-back audit D4-3).
+            try:
+                old = {k: v for k, v in asdict(before).items()
+                       if not k.startswith("_")}
+                new = {k: v for k, v in asdict(self).items()
+                       if not k.startswith("_")}
+                changes = {k: [old.get(k), new.get(k)]
+                           for k in set(old) | set(new)
+                           if old.get(k) != new.get(k)}
+                if changes:
+                    undo_log.record_sidecar_edit(pdf_path, changes)
+            except RuntimeError:
+                # "No active transaction" is a PROGRAMMER error, not a
+                # runtime hiccup.  Swallowing it meant a caller that forgot
+                # begin_transaction() recorded nothing, warned nothing and
+                # returned success.
+                raise
+            except Exception as exc:            # never block the write
+                logger.warning("could not record sidecar edit for %s: %s",
+                               pdf_path, exc)
 
         path = record_location(pdf_path)
         # Live-trial finding: when ``sidecar_path`` falls back to

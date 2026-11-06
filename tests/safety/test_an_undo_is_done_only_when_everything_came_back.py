@@ -85,8 +85,8 @@ def test_a_failed_record_restore_leaves_the_transaction_retryable(
     pdf.write_bytes(b"%PDF")
     from processing.identity import PaperIdentity
     ident = PaperIdentity.load(pdf)
-    ident.doi = "10.1/x"
-    ident.save(pdf)
+    ident.doi = "10.1/y"          # what the edit below wrote, so Undo may
+    ident.save(pdf)               # put "10.1/x" back (D4-3)
     tx = log.begin_transaction("edit")
     log.record_sidecar_edit(pdf, {"doi": ["10.1/x", "10.1/y"]})
     log.commit()

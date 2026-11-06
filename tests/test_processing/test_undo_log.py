@@ -564,16 +564,18 @@ class TestSidecarRecordingCannotBeSilentlyDead:
     def test_a_corrupt_sidecar_is_refused_not_recorded_as_empty(self, tmp_path):
         """load() collapses unreadable and absent into the same blank, so
         a record would claim every field was previously ""."""
-        from processing.identity import PaperIdentity, sidecar_path
+        from processing.identity import PaperIdentity, RecordUnreadable, sidecar_path
         from processing.undo_log import UndoLog
         pdf = self._pdf(tmp_path)
         sidecar_path(pdf).write_text("{corrupt")
         log = UndoLog(log_dir=tmp_path / ".operation_log")
         log.begin_transaction("t")
         i = PaperIdentity(original_filename=pdf.name, doi="10.1/new")
-        i.save(pdf, recompute_hash=False, undo_log=log)
+        with pytest.raises(RecordUnreadable):   # and the write is refused too
+            i.save(pdf, recompute_hash=False, undo_log=log)
         assert not log.has_operations(), \
             "must refuse rather than record blanks as the previous values"
+        assert sidecar_path(pdf).read_text() == "{corrupt"
 
     def test_every_persisted_field_round_trips(self, tmp_path):
         """Reducing the recorder to a single field left the suite green."""

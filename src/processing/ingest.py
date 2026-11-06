@@ -1696,6 +1696,7 @@ def ingest_paper(
     # metadata.  Skip in dry-run mode and when the destination doesn't
     # actually exist (e.g. dry-run org with no copy performed).
     if result["success"] and not dry_run:
+        from processing.identity import RecordUnreadable
         try:
             from processing.identity import PaperIdentity
             from datetime import datetime, timezone
@@ -1755,6 +1756,13 @@ def ingest_paper(
                 identity.identification_note = result.get(
                     "identification_note", "")
                 identity.save(dest_path)
+        except RecordUnreadable as exc:
+            # The paper is filed; its record, unreadable just now, is left
+            # as it was rather than replaced by a blank one (D4-2).
+            logger.warning("sidecar left untouched for %s: %s",
+                           org_result.destination, exc)
+            result["actions"] = list(result.get("actions") or []) + [
+                f"WARNING: {exc}"]
         except Exception as exc:  # pragma: no cover -- best effort
             logger.warning("sidecar write failed for %s: %s", org_result.destination, exc)
 

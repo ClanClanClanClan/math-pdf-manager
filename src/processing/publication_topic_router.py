@@ -317,7 +317,8 @@ def file_into_topic(
         document-type folder (``"05 - Books and lecture notes"`` /
         ``"06 - Theses"``) when the paper is a book/thesis.
     """
-    from processing.identity import PaperIdentity, backfill_sidecar, find_sidecar
+    from processing.identity import (PaperIdentity, backfill_sidecar, find_sidecar,
+                                     record_is_unreadable)
     from processing.sidecar_repair import stranded_fingerprints, stranded_match
     from processing.undo_log import logged_move
     from organization.system import (
@@ -355,6 +356,12 @@ def file_into_topic(
     # Asked before anything is written -- the vocabulary queue below
     # included -- so a paper left alone is left exactly as it was.
     has_record = find_sidecar(pdf_path) is not None
+    if record_is_unreadable(pdf_path):
+        # Filing would write a blank record over the real one (D4-2).
+        return False, (
+            "its saved details could not be read just now (a file Dropbox "
+            "has not brought to this Mac, or damaged), so it was left "
+            "exactly where it was; try again later")
     digest = ""
     if not has_record:
         if stranded is None:

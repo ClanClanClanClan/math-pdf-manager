@@ -853,24 +853,23 @@ class TestSidecarEditsAreOnlyRecordedWhenThePastIsKnown:
         blanks over the paper's real DOI, arXiv id and cached text."""
         from processing.identity import PaperIdentity, sidecar_path, load_sidecar
 
+        from processing.identity import RecordUnreadable
         pdf = _write(tmp_path / "p.pdf", "PAPER")
         sidecar_path(pdf).write_text("{not json at all")   # corrupt on disk
 
         log.begin_transaction("edit")
-        PaperIdentity(doi="10.7/REAL", arxiv_id="2401.00001").save(
-            pdf, recompute_hash=False, undo_log=log)
-        tx = log._tx_id
+        # Since 2026-11-05 (step-back audit D4-2) the write itself is
+        # refused: a blank-built identity may not replace a record that is
+        # there but unreadable. tests/safety/test_an_unreadable_record_is_never_overwritten.py
+        with pytest.raises(RecordUnreadable):
+            PaperIdentity(doi="10.7/REAL", arxiv_id="2401.00001").save(
+                pdf, recompute_hash=False, undo_log=log)
         record_ops = list(log._current_tx["operations"])
-        log.commit()
+        log.discard()
 
         assert not any(o["type"] == "sidecar_edit" for o in record_ops), (
             "recorded a sidecar edit whose 'previous' values were invented")
-
-        log.undo_transaction(tx)
-
-        # POSTCONDITION: undo did not blank the identity.
-        assert load_sidecar(pdf).doi == "10.7/REAL"
-        assert load_sidecar(pdf).arxiv_id == "2401.00001"
+        assert sidecar_path(pdf).read_text() == "{not json at all"
 
     def test_a_readable_sidecar_edit_is_recorded_and_reversible(
             self, tmp_path, log):

@@ -612,7 +612,7 @@ def apply_record_merges(library_root: Path, plan: list, *, undo_log=None) -> dic
     the older copy to ``.trash/duplicate_records/`` -- one undoable
     transaction. Conflicting fields keep the app's value and are reported.
     """
-    from processing.identity import PaperIdentity
+    from processing.identity import PaperIdentity, RecordUnreadable
     from processing.undo_log import UndoLog, logged_move
 
     own = undo_log is None
@@ -633,7 +633,14 @@ def apply_record_merges(library_root: Path, plan: list, *, undo_log=None) -> dic
             for field, value in {**item["fill"], **item["arrival"]}.items():
                 if hasattr(ident, field):
                     setattr(ident, field, value)
-            ident.save(pdf, recompute_hash=False, undo_log=log)
+            try:
+                ident.save(pdf, recompute_hash=False, undo_log=log)
+            except RecordUnreadable:
+                # Readable at the plan, not now: merging into a blank would
+                # write it over the record the app reads (D4-2).
+                skipped.append({"pdf": pdf.name, "reason": "its record could "
+                                "not be read just now; left untouched"})
+                continue
             retire = Path(item["retire"])
             dest = (library_root / ".trash" / "duplicate_records"
                     / retire.relative_to(library_root / ".mathpdf-sidecars"))
