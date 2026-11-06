@@ -2234,6 +2234,34 @@ def _render_weekly_service() -> None:
     st.divider()
 
 
+def _render_move_to_keychain() -> None:
+    """One press, once: the old encrypted file's login into the Keychain.
+
+    A press, not done behind his back: the first time this program opens a
+    Keychain item macOS may ask, and a dialog nobody expected has locked
+    him out of his machine before.
+    """
+    from secure_credential_manager import get_credential_manager
+    mgr = get_credential_manager()
+    if not mgr.has_old_file():
+        return
+    st.info("Your ETH login is still in the old encrypted file on this Mac. "
+            "Move it into the Keychain to finish: the file and the publisher "
+            "logins borrowed in June are then deleted. macOS may ask you to "
+            "allow this; choose **Always Allow**.")
+    if st.button("Move my ETH login into the Keychain", key="eth_to_keychain",
+                 type="primary"):
+        out = mgr.move_to_keychain()
+        if out["problem"]:
+            _flash("error", f"Nothing was moved: {out['problem']}.")
+        else:
+            _flash("success", "Done: your ETH login is in the Keychain, and "
+                              "the old file is gone.")
+        _log_activity("settings.eth_creds", "", "moved to the Keychain"
+                      if not out["problem"] else "move failed")
+        st.rerun()
+
+
 def render_maintenance() -> None:
     st.header("🧹 Maintenance")
     st.caption(
@@ -5596,7 +5624,7 @@ def render_settings() -> None:
         "Reuses the session your normal browser already established, so "
         "paywalled downloads work for **every publisher you have access to** "
         "— no per-publisher login. Cookies are read only for academic "
-        "publishers, stored encrypted locally, and never shown."
+        "publishers, kept in this Mac's Keychain, and never shown."
     )
     st.warning(
         "⚠️ **Turn your VPN OFF** before downloading from Cloudflare-protected "
@@ -5669,10 +5697,10 @@ def render_settings() -> None:
 
     st.divider()
 
-    # ETH institutional credentials — stored in the local encrypted
-    # credential store (Fernet, key in the OS keychain).  This is the
-    # no-terminal way to provide ETH login for paywalled downloads; the
-    # download chain reads eth_username/eth_password from this store.
+    # ETH institutional credentials, in this Mac's Keychain and nowhere
+    # else (the owner's ruling of 2026-11-06). This is the no-terminal way
+    # to provide ETH login for paywalled downloads; the download chain
+    # reads eth_username/eth_password from the same store.
     st.subheader("🔑 ETH institutional login (fallback)")
     try:
         from core.config.secure_config import get_secure_credential, get_config_manager
@@ -5687,8 +5715,10 @@ def render_settings() -> None:
             ("✅ Credentials stored." if (_has_user and _has_pwd)
              else "⚠️ Not set — paywalled downloads will skip the ETH "
                   "strategy.") +
-            "  Stored encrypted locally; used only for institutional PDF access."
+            "  Kept in this Mac's Keychain, nothing in Dropbox; used only "
+            "for institutional PDF access."
         )
+        _render_move_to_keychain()
         with st.form(key="eth_creds_form"):
             eth_user = st.text_input("ETH username (nethz)", value="",
                                      placeholder="(unchanged)" if _has_user else "")
@@ -5703,7 +5733,7 @@ def render_settings() -> None:
             if eth_pwd:
                 mgr.set_credential("eth_password", eth_pwd); saved.append("password")
             if saved:
-                st.success(f"Saved ETH {', '.join(saved)} (encrypted).")
+                st.success(f"Saved ETH {', '.join(saved)} in the Keychain.")
                 _log_activity("settings.eth_creds", "", "stored")
                 st.rerun()
             else:

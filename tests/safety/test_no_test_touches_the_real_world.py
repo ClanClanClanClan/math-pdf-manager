@@ -618,10 +618,11 @@ class TestTheOSKeychainIsUnreachable:
             f"tests are wired to {type(keyring.get_keyring()).__name__}; a "
             "real backend can raise a modal dialog on the owner's screen")
 
-    def test_the_call_that_prompted_now_returns_from_memory(self):
-        from secure_credential_manager import _load_or_create_key
-        key = _load_or_create_key("academic_papers")
-        assert key and len(key) == 44
+    def test_the_store_that_prompted_now_answers_from_memory(self, tmp_path):
+        from secure_credential_manager import SecureCredentialManager
+        m = SecureCredentialManager("probe-app", enc_path=tmp_path / "c.enc")
+        assert m.store_credential("probe", "value") is True
+        assert m.get_credential("probe") == "value"
 
     def test_nothing_reached_the_real_keychain(self):
         """The memory backend keeps its own store; assert the round-trip

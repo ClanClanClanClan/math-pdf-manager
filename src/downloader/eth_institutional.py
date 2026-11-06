@@ -29,6 +29,7 @@ import os
 import re
 from pathlib import Path
 from typing import Optional
+from urllib.parse import urlsplit
 
 logger = logging.getLogger(__name__)
 
@@ -93,12 +94,31 @@ async def _kill_overlays(page) -> None:
     await page.wait_for_timeout(500)
 
 
-async def _eth_shibboleth_login(page, username: str, password: str) -> bool:
-    """Fill and submit the ETH Shibboleth login form.
+#: The one place his ETH password may be typed.
+ETH_LOGIN_HOST = "aai-logon.ethz.ch"
 
-    Expects the page to be at aai-logon.ethz.ch.
+
+def is_eth_login(url: str) -> bool:
+    """Is this page ETH's login, by its own host and over https? The test
+    used to be a substring of the whole address: any page with that string
+    in a parameter (``entityID=...``, as a sign-in link carries) passed it,
+    and got his password (step-back audit D9-6)."""
+    try:
+        parts = urlsplit(url)
+        return parts.scheme == "https" and parts.hostname == ETH_LOGIN_HOST
+    except ValueError:
+        return False
+
+
+async def _eth_shibboleth_login(page, username: str, password: str) -> bool:
+    """Fill and submit the ETH Shibboleth login form, on ETH's page only.
+
     Returns True if login succeeded (page navigated away from login).
     """
+    if not is_eth_login(page.url):
+        logger.warning("Not ETH's login page; nothing typed: %s",
+                       urlsplit(page.url).hostname)
+        return False
     u_field = await page.query_selector(
         'input#username, input[name="j_username"]'
     )
@@ -120,7 +140,7 @@ async def _eth_shibboleth_login(page, username: str, password: str) -> bool:
     if submit:
         await submit.click()
         await page.wait_for_timeout(8000)
-        if "aai-logon.ethz.ch" not in page.url:
+        if not is_eth_login(page.url):
             logger.info("ETH login successful")
             return True
         else:
@@ -213,7 +233,7 @@ async def _generic_wayf(page, doi: str) -> bool:
     Tested publishers: Cambridge, AMS, IOP, OUP, De Gruyter, AIMS, MDPI.
     """
     # Check if we're already at ETH login (might have been redirected)
-    if "aai-logon.ethz.ch" in page.url:
+    if is_eth_login(page.url):
         return True
 
     await _kill_overlays(page)
@@ -256,7 +276,7 @@ async def _generic_wayf(page, doi: str) -> bool:
     await _kill_overlays(page)
 
     # Check if we landed on ETH login
-    if "aai-logon.ethz.ch" in page.url:
+    if is_eth_login(page.url):
         return True
 
     # Step 2: Search for ETH in the WAYF institution search
@@ -308,7 +328,7 @@ async def _generic_wayf(page, doi: str) -> bool:
             continue
 
     # Final check
-    if "aai-logon.ethz.ch" in page.url:
+    if is_eth_login(page.url):
         return True
 
     return False
@@ -520,18 +540,18 @@ async def download_with_eth_auth(
                 else:
                     wayf_ok = await _generic_wayf(page, doi)
 
-                if not wayf_ok and "aai-logon.ethz.ch" not in page.url:
+                if not wayf_ok and not is_eth_login(page.url):
                     logger.warning("Could not navigate to ETH login for %s", doi)
                     return None
 
                 # Step 4: ETH login
-                if "aai-logon.ethz.ch" in page.url:
+                if is_eth_login(page.url):
                     login_ok = await _eth_shibboleth_login(page, username, password)
                     if not login_ok:
                         return None
                     # Verify we're not stuck in an auth loop
                     await page.wait_for_timeout(2000)
-                    if "aai-logon" in page.url:
+                    if is_eth_login(page.url):
                         logger.warning("Stuck in auth loop for %s", doi)
                         return None
 

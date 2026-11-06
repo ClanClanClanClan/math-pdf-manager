@@ -239,7 +239,8 @@ async def start_session(publisher: str) -> None:
         if username and password:
             print("\nAttempting ETH institutional login...")
             try:
-                from downloader.eth_institutional import _kill_overlays, _generic_wayf, _eth_shibboleth_login
+                from downloader.eth_institutional import (_kill_overlays, _generic_wayf,
+                                                          _eth_shibboleth_login, is_eth_login)
 
                 await _kill_overlays(page)
 
@@ -251,7 +252,7 @@ async def start_session(publisher: str) -> None:
 
                 # Try WAYF
                 wayf_ok = await _generic_wayf(page, "")
-                if wayf_ok or "aai-logon.ethz.ch" in page.url:
+                if wayf_ok or is_eth_login(page.url):
                     login_ok = await _eth_shibboleth_login(page, username, password)
                     if login_ok:
                         # Re-extract cookies (now with institutional auth)

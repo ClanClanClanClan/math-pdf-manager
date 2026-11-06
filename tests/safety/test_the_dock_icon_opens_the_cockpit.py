@@ -309,3 +309,11 @@ def test_the_cockpits_own_settings_keep_it_on_this_mac():
     import tomllib
     cfg = tomllib.loads((L.repo_root() / ".streamlit" / "config.toml").read_text())
     assert cfg["server"]["address"] == "127.0.0.1"
+
+
+def test_the_icon_goes_where_he_will_look():
+    """Finder's Applications, not ~/Applications: the first install went
+    there, and he could not find it (2026-11-06)."""
+    import inspect
+    src = inspect.getsource(L.install_app)
+    assert 'Path("/Applications")' in src and 'Path.home()' not in src

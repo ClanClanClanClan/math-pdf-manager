@@ -18,7 +18,7 @@ Every click is noted in ``~/.mathpdf/cockpit_opened.jsonl``, so whether the
 cockpit is used can be measured instead of guessed (audit D2-2: only button
 presses were recorded, never an opening).
 
-:func:`install_app` writes the icon itself, ``~/Applications/Maths
+:func:`install_app` writes the icon itself, ``/Applications/Maths
 Library.app``: a two-line shell script that runs this module.
 """
 from __future__ import annotations
@@ -268,10 +268,11 @@ _PLIST = """<?xml version="1.0" encoding="UTF-8"?>
 
 def install_app(dest_dir: Optional[Path] = None, repo: Optional[Path] = None) -> Path:
     """Write ``Maths Library.app`` into ``dest_dir`` (default
-    ``~/Applications``) and return it. Replaces an older copy of itself."""
+    ``/Applications``, the folder in Finder's sidebar) and return it.
+    Replaces an older copy of itself."""
     import shlex
     repo = repo or repo_root()
-    dest_dir = dest_dir or (Path.home() / "Applications")
+    dest_dir = dest_dir or Path("/Applications")
     app = dest_dir / f"{APP_NAME}.app"
     macos = app / "Contents" / "MacOS"
     macos.mkdir(parents=True, exist_ok=True)

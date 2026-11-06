@@ -149,9 +149,8 @@ class TestScanAndLoad:
 
 class TestCache:
     def _store(self, tmp_path):
-        from cryptography.fernet import Fernet
         from secure_credential_manager import SecureCredentialManager
-        return SecureCredentialManager(enc_path=tmp_path / "c.enc", key=Fernet.generate_key())
+        return SecureCredentialManager(enc_path=tmp_path / "c.enc")
 
     def test_round_trip(self, tmp_path, monkeypatch):
         from downloader import browser_session as bs
