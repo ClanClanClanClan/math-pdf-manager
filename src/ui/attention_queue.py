@@ -353,20 +353,26 @@ def collect_aging_candidates(library_root: Path, *, max_age_years: int = 5) -> l
     items: list[AttentionItem] = []
     for cand in candidates:
         path = cand.get("path") or cand.get("file") or ""
-        age = cand.get("age_years") or cand.get("years") or "?"
+        # find_aged_papers says "age"; the title read "age_years" and so
+        # always said "aged ?y" (step-back audit G2-3).
+        age = cand.get("age", "?")
         key = f"aging::{path}"
         items.append(
             AttentionItem(
                 key=key,
                 source="aging",
                 severity=SEVERITY_INFO,
-                title=f"Working paper aged {age}y: {Path(path).stem}",
-                detail=f"Path: `{path}` — older than {max_age_years} years, "
-                       f"consider moving to Unpublished.",
+                title=f"Working paper {age} years old: {Path(path).stem}",
+                # No per-paper move any more (step-back audit G2-3): it judged
+                # by the year folder alone, and a quarter of the 2021 papers
+                # it offered had a published version in the April check.
+                detail=f"Path: `{path}` — older than {max_age_years} years. "
+                       f"Moving it to Unpublished from here is switched off: "
+                       f"the folder's year alone cannot tell whether it was "
+                       f"published since.",
                 created_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
                 payload={"path": path, "age_years": age},
                 actions=[
-                    ("Move to Unpublished", "transition_aged"),
                     ("Dismiss 30d", "dismiss_30d"),
                 ],
             )

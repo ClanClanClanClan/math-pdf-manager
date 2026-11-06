@@ -91,7 +91,10 @@ def test_everything_the_cockpit_imports_that_writes_is_a_sink():
     assert {("processing.library_normalize", "apply_renames"),
             ("maintenance.weekly_report", "check_publications"),
             ("processing.undo_log", "logged_move")} <= set(found)
-    assert len(found) == 24
+    # 23 since 2026-11-05: Home's per-paper "Move to Unpublished" was
+    # switched off, and with it the import of transition_aged_papers.
+    assert len(found) == 23
+    assert ("processing.aging_checker", "transition_aged_papers") not in found
     missing = {f"{b}.{n}": sorted(p) for (b, n), p in found.items()
                if n not in W.SINKS and n not in W.IMPORTS_NOT_THE_LIBRARY}
     assert not missing, (

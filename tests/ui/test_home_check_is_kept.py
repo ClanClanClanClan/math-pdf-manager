@@ -102,7 +102,9 @@ def test_home_row_actions_use_the_row_removal_not_the_global_clear():
               if isinstance(n, ast.FunctionDef) and n.name == "render_attention")
     src = ast.unparse(fn)
     assert "_attention_count_cached.clear()" not in src
-    assert src.count("_attention_resolved(it.key") == 7
+    # Six row actions resolve their row; "Move to Unpublished" was the
+    # seventh until it was switched off (2026-11-05, step-back audit G2-3).
+    assert src.count("_attention_resolved(it.key") == 6
 
 
 # -------------------------------------------- 15. outdated, not deleted

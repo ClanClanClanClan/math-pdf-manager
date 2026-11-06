@@ -318,6 +318,15 @@ def upgrade_paper(
         return result
 
     preprint_path = Path(entry.get("file", ""))
+    if not preprint_path.is_file():
+        # Asked before any download: from a list made months ago the
+        # preprint may have moved, been renamed or been upgraded already,
+        # and "upgrading" it filed the download beside nothing it replaced
+        # (step-back audit D9-3, G4-1).
+        result["action"] = (f"SKIP: the preprint is no longer at "
+                            f"{preprint_path.name[:60]} — moved, renamed or "
+                            f"upgraded since this list was made")
+        return result
 
     if dry_run:
         result["action"] = f"WOULD TRY: download {doi} → replace {preprint_path.name[:50]}"

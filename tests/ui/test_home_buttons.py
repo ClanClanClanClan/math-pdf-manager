@@ -82,21 +82,18 @@ def test_mark_done_on_home_moves_the_note_to_the_trash(ck):
     assert snapshot(lib) == before
 
 
-@presses("render_attention[{btn_key}]<transition_aged>")
-def test_move_to_unpublished_moves_an_aged_working_paper(ck):
+def test_an_aged_working_paper_is_listed_but_offers_no_move(ck):
+    """Switched off 2026-11-05 (step-back audit G2-3): the per-paper move
+    judged by the year folder alone, and a quarter of the 2021 papers it
+    offered had a published version in the April check."""
+    from ui.attention_queue import collect_aging_candidates
     lib = ck.lib
     old_year = datetime.now().year - 9
     pdf = put(lib, f"03 - Working papers/S/{old_year}/Smith, J. - Old idea.pdf")
-    _record(pdf, doi="")
-    before, txs = snapshot(lib), transactions(lib)
-
-    assert _press_on_home(ck, "aging", "transition_aged") == "rerun"
-
-    moved = lib / "02 - Unpublished papers/S/Smith, J. - Old idea.pdf"
-    assert moved.exists() and not pdf.exists()
-    tx, = _new_txs(lib, txs)
-    undo_from_activity(ck, tx["id"])
-    assert snapshot(lib) == before
+    (item,) = [i for i in collect_aging_candidates(lib) if i.payload["path"] == str(pdf)]
+    assert [a for _label, a in item.actions] == ["dismiss_30d"]
+    assert item.title.startswith("Working paper 9 years old")
+    assert "?" not in item.title and "switched off" in item.detail
 
 
 @presses("render_attention[{btn_key}]<accept_topic>")

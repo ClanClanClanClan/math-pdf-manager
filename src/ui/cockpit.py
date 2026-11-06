@@ -1513,14 +1513,18 @@ def render_upgrade_queue() -> None:
         _age = (time.time() - rp.stat().st_mtime) / 86400
     except OSError:
         _age = None
-    if _age is not None and _age > WEEKLY_STALE_DAYS:
+    # Too old to act on: upgrades from it are switched off (step-back audit
+    # D9-3: on the April list 278 of 1,672 upgrades would have filed a
+    # second copy, most under an outdated name).
+    too_old = _age is not None and _age > WEEKLY_STALE_DAYS
+    if too_old:
         # The date was in the label; nothing said what it MEANT. The
         # default report was 152 days old (audit, finding 16).
         st.warning(
             f"This check is **{int(_age)} days old**. Papers it lists may "
             "have been upgraded, moved or renamed since, and anything "
-            "published since is missing. Run a fresh one from "
-            "**Maintenance**, or turn on the Monday sweep there.")
+            "published since is missing, so upgrading from it is switched "
+            "off. Run a fresh one from **Maintenance** (Run checks).")
     try:
         report = json.loads(rp.read_text())
     except Exception as exc:
@@ -1603,7 +1607,8 @@ def render_upgrade_queue() -> None:
                 st.rerun()
         return
 
-    _render_batch_upgrade(lib, rp, candidates, min_conf, len(candidates))
+    _render_batch_upgrade(lib, rp, candidates, min_conf, len(candidates),
+                          too_old=too_old)
 
     entry = candidates[0]
     match = entry.get("match", {})
@@ -1641,7 +1646,12 @@ def render_upgrade_queue() -> None:
                      "moves this preprint to the trash — not deleted.")
     cols = st.columns([1, 1, 1, 1, 4])
 
-    if cols[0].button("✅ Download + Upgrade", key=f"upg_approve_{entry['file']}", type="primary"):
+    if cols[0].button("✅ Download + Upgrade", key=f"upg_approve_{entry['file']}",
+                      type="primary", disabled=too_old or not file_path.is_file(),
+                      help=("Switched off: this list is too old to act on."
+                            if too_old else "Switched off: the preprint is not "
+                            "where this list says." if not file_path.is_file()
+                            else None)):
         _ran, _r = _locked_call(lib, "Download + Upgrade", _approve_upgrade,
                                 entry, lib)
         ok, msg = _r if _ran else _BUSY
@@ -1683,7 +1693,8 @@ def render_upgrade_queue() -> None:
 
 
 def _render_batch_upgrade(lib: Path, report_path: Path, candidates: list,
-                          min_conf: float, pending: int) -> None:
+                          min_conf: float, pending: int, *,
+                          too_old: bool = False) -> None:
     """Upgrade many preprints in one reversible batch.
 
     ``processing.upgrade_to_published.process_report`` has always
@@ -1740,8 +1751,11 @@ def _render_batch_upgrade(lib: Path, report_path: Path, candidates: list,
             "of 25 can take ~15 minutes. Leave the tab open while it runs."
         )
 
+        if too_old:
+            st.caption("**Switched off:** this list is too old to act on. "
+                       "Run a fresh check from **Maintenance** first.")
         if c1.button("👁 Preview (changes nothing)", use_container_width=True,
-                     key="bulk_upg_preview"):
+                     key="bulk_upg_preview", disabled=too_old):
             with st.spinner("Checking which papers would be upgraded…"):
                 _pv = process_report(
                     run_path, library_root=lib, min_confidence=min_conf,
@@ -1776,7 +1790,7 @@ def _render_batch_upgrade(lib: Path, report_path: Path, candidates: list,
         if st.checkbox("Yes, I've read the list above", key="bulk_upg_confirm"):
             if st.button(f"✅ Upgrade these {len(rows)} papers",
                          type="primary", use_container_width=True,
-                         key="bulk_upg_apply"):
+                         key="bulk_upg_apply", disabled=too_old):
                 with st.spinner(f"Working through {len(rows)} papers…"):
                     # EXACTLY the papers in the list above (finding 8).
                     _ran, out = _locked_call(
@@ -4728,45 +4742,6 @@ def render_attention() -> None:
                                             f"Still cannot file {src.name}: "
                                             f"{r.get('error', 'unknown reason')}"
                                         )
-                            elif action_id == "transition_aged":
-                                # Actually do the move via aging_checker.
-                                # Single-paper transition: build a minimal
-                                # candidate dict the way find_aged_papers
-                                # does and call transition_aged_papers.
-                                from processing.aging_checker import (
-                                    find_aged_papers, transition_aged_papers,
-                                )
-                                # Find this paper in the global candidate
-                                # list — safer than reconstructing the
-                                # destination by hand because the alpha
-                                # routing has edge cases (nobiliary
-                                # particles, Greek/Cyrillic, …).
-                                all_aged = find_aged_papers(lib)
-                                target_path = it.payload.get("path", "")
-                                match = next(
-                                    (c for c in all_aged if c["path"] == target_path),
-                                    None,
-                                )
-                                if match is None:
-                                    _flash(
-                                        "warning",
-                                        "That paper is no longer in the aging "
-                                        "list — press ↻ Rescan and try again."
-                                    )
-                                else:
-                                    # transition_aged_papers records its own
-                                    # reversible undo tx (visible in Activity);
-                                    # log the action to the activity feed too.
-                                    results = transition_aged_papers([match], dry_run=False)
-                                    status = results[0]["status"] if results else "no-op"
-                                    _log_activity("attention.transition_aged",
-                                                  Path(target_path).name, status)
-                                    st.toast(
-                                        f"Moved to Unpublished papers "
-                                        f"({status}) — undo it from the "
-                                        f"Activity page."
-                                    )
-                                    _attention_resolved(it.key, files_moved=True)
                             elif action_id == "reset_recheck":
                                 # Restore a paper the state machine
                                 # gave up on.  Backs the Phase 2
