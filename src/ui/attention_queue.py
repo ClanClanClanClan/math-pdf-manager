@@ -235,13 +235,9 @@ def collect_watcher_failures(
         log_path = Path.home() / ".mathpdf" / "watcher.log"
     if not log_path.exists():
         return []
-    try:
-        # Last N lines is plenty — RotatingFileHandler keeps the
-        # current file <10MB by default which is ~50k lines.
-        text = log_path.read_text(encoding="utf-8", errors="replace")
-    except OSError as exc:
-        logger.warning("cannot read watcher log %s: %s", log_path, exc)
-        return []
+    # Last N lines is plenty — RotatingFileHandler keeps the
+    # current file <10MB by default which is ~50k lines.
+    text = log_path.read_text(encoding="utf-8", errors="replace")
     lines = text.splitlines()[-lookback_lines:]
 
     latest: dict[str, AttentionItem] = {}
@@ -335,20 +331,13 @@ def collect_upgrade_flags(library_root: Path) -> list[AttentionItem]:
 def collect_aging_candidates(library_root: Path, *, max_age_years: int = 5) -> list[AttentionItem]:
     """Working papers that should move to unpublished (aged out).
 
-    Wraps ``maintenance.weekly_report.check_aging``.  If the import
-    fails (e.g. in a stripped test env) the collector yields nothing
-    rather than raising.
+    Wraps ``maintenance.weekly_report.check_aging``. A failure is left to
+    reach ``gather_attention_items``, which shows it as "could not run":
+    returning nothing here made a failed check read as a clean one (the
+    four collectors that did so, step-back audit D8-4).
     """
-    try:
-        from maintenance.weekly_report import check_aging
-    except ImportError as exc:
-        logger.warning("aging check unavailable: %s", exc)
-        return []
-    try:
-        candidates = check_aging(library_root, max_age_years=max_age_years)
-    except Exception as exc:
-        logger.warning("aging check raised: %s", exc)
-        return []
+    from maintenance.weekly_report import check_aging
+    candidates = check_aging(library_root, max_age_years=max_age_years)
 
     items: list[AttentionItem] = []
     for cand in candidates:
@@ -430,16 +419,8 @@ def collect_borderline_matches(library_root: Path) -> list[AttentionItem]:
     here with an "Open DOI" action so the user can decide whether to
     upgrade manually.
     """
-    try:
-        from processing.publication_state import list_borderline_matches
-    except ImportError as exc:
-        logger.warning("publication_state unavailable: %s", exc)
-        return []
-    try:
-        rows = list_borderline_matches(library_root)
-    except Exception as exc:
-        logger.warning("borderline scan raised: %s", exc)
-        return []
+    from processing.publication_state import list_borderline_matches
+    rows = list_borderline_matches(library_root)
     items: list[AttentionItem] = []
     for row in rows:
         pdf_path = Path(row["path"])
@@ -483,16 +464,8 @@ def collect_permanently_unpublished(library_root: Path) -> list[AttentionItem]:
     show them as INFO severity (sorted last) with a one-click "reset
     recheck" action that drops them back into the live queue.
     """
-    try:
-        from processing.publication_state import list_permanently_unpublished
-    except ImportError as exc:
-        logger.warning("publication_state unavailable: %s", exc)
-        return []
-    try:
-        paths = list_permanently_unpublished(library_root)
-    except Exception as exc:
-        logger.warning("permanently-unpublished scan raised: %s", exc)
-        return []
+    from processing.publication_state import list_permanently_unpublished
+    paths = list_permanently_unpublished(library_root)
     items: list[AttentionItem] = []
     for pdf in paths:
         key = f"permanent::{pdf.relative_to(library_root)}"
@@ -539,16 +512,8 @@ def collect_topic_suggestions(library_root: Path) -> list[AttentionItem]:
     paper into ``<topic>/<status>/`` via the undo log (reversible);
     rejecting clears the suggestion.
     """
-    try:
-        from processing.publication_topic_router import list_topic_suggestions
-    except ImportError as exc:
-        logger.warning("topic router unavailable: %s", exc)
-        return []
-    try:
-        rows = list_topic_suggestions(library_root)
-    except Exception as exc:
-        logger.warning("topic-suggestion scan raised: %s", exc)
-        return []
+    from processing.publication_topic_router import list_topic_suggestions
+    rows = list_topic_suggestions(library_root)
     # A bare code ("07b") means nothing in a list of suggestions -- show
     # the folder name the owner actually files by hand.  ``code`` is used
     # for display in the title/detail and for the undo-transaction

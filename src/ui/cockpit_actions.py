@@ -24,6 +24,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
@@ -33,6 +34,7 @@ logger = logging.getLogger(__name__)
 
 # ``launchctl`` labels match the plist files in ``deploy/launchd/``.
 WATCHER_LABEL = "ch.ethz.dpossamai.mathpdf.watcher"
+BOOTSTRAP_TRIES = 3
 WEEKLY_LABEL = "ch.ethz.dpossamai.mathpdf.weekly"
 
 
@@ -360,14 +362,21 @@ def start_watcher() -> tuple[bool, str]:
         if not ok or not plist.exists():
             return False, f"could not set up the auto-filer: {msg}"
     uid = os.getuid()
-    proc = _launchctl("bootstrap", f"gui/{uid}", str(plist))
-    if proc.returncode != 0:
+    # launchd needs a moment after a bootout: right after one, bootstrap
+    # answers "5: Input/output error" although nothing is wrong (seen
+    # moving the filer, 2026-11-06). The sidebar's Restart does exactly that.
+    for attempt in range(BOOTSTRAP_TRIES):
+        proc = _launchctl("bootstrap", f"gui/{uid}", str(plist))
+        if proc.returncode == 0:
+            return True, "watcher started"
         # 'service already loaded' is fine
         msg = (proc.stderr or proc.stdout or "").strip()
         if "already loaded" in msg.lower() or "already bootstrapped" in msg.lower():
             return True, "already running"
-        return False, msg or f"launchctl exit {proc.returncode}"
-    return True, "watcher started"
+        if "input/output error" not in msg.lower() or attempt == BOOTSTRAP_TRIES - 1:
+            break
+        time.sleep(1)
+    return False, msg or f"launchctl exit {proc.returncode}"
 
 
 def stop_watcher() -> tuple[bool, str]:

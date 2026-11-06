@@ -701,6 +701,12 @@ def render_sidebar() -> None:
                 )
                 if wstatus.get("note"):
                     st.caption(wstatus["note"])
+                # "ON" means its own folder. The pile it does not touch was
+                # named nowhere near this badge (step-back audit G1-2).
+                _n = _waiting_cached(str(_library())).get("count")
+                if _n:
+                    st.caption(f"{_n:,} papers wait in “12 - To be sorted”; "
+                               f"it does not file those yet.")
             if wstatus.get("running") and _filing is not True:
                 if st.button("Restart automatic filing",
                              use_container_width=True,
@@ -4333,6 +4339,54 @@ def _attention_severity_emoji(sev: str) -> str:
     }.get(sev, "•")
 
 
+_STATUS_MARK = {"ok": "✅", "problem": "⛔", "unknown": "❓", "note": "📌"}
+
+
+def _sweep_status_line():
+    """The Monday sweep's line for Home, from the sidebar's own words."""
+    from maintenance.status import StatusLine
+    w = _weekly_status_cached()
+    kind, text = _weekly_summary(w)
+    if w.get("last_error") or w.get("problems"):
+        state = "problem"
+    elif kind == "warning":
+        state = "unknown"           # can't confirm it, or overdue
+    else:
+        state = "ok" if w.get("on") else "note"
+    return StatusLine("Monday sweep",
+                      state, text.replace("🗓 ", "").replace("Monday sweep: ", ""))
+
+
+@st.cache_data(ttl=30, show_spinner=False)
+def _waiting_cached(library: str) -> dict:
+    """The sidebar redraws on every click; the count is cheap, not free."""
+    from maintenance.status import waiting
+    return waiting(Path(library))
+
+
+def _render_status_strip(lib: Path) -> None:
+    """Is everything running, and what is waiting: every line OK, a problem
+    with its reason, or "cannot tell" with its reason (step-back audit
+    D8-4, G1-3). A broken strip says so; it never takes Home down."""
+    from core.code_version import code_version
+    from maintenance.status import gather
+    from watcher.config import WatcherConfig
+    from watcher.state import read_state
+    try:
+        log_dir = WatcherConfig.load().log_dir
+        report = read_state(log_dir) or {}
+        lines = gather(lib, watcher=_watcher_status_cached(),
+                       running_code=report.get("code_version", ""),
+                       code_now=code_version(), sweep=_sweep_status_line(),
+                       log_dir=log_dir)
+    except Exception as exc:
+        st.warning(f"The status of the background jobs could not be read: {exc}")
+        return
+    st.markdown("\n".join(
+        f"- {_STATUS_MARK.get(line.state, '❓')} **{line.name}:** {line.text}"
+        for line in lines))
+
+
 def render_attention() -> None:
     """Show the unified attention queue.
 
@@ -4365,6 +4419,7 @@ def render_attention() -> None:
             st.rerun()
 
     lib = _library()
+    _render_status_strip(lib)
     # ``Path("...")`` is always truthy, so the old ``if not lib`` could
     # never fire.  With a wrong or half-synced folder every collector
     # returned nothing and this page showed the green "Nothing needs your
