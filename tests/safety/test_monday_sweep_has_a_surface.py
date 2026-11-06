@@ -152,7 +152,7 @@ def test_the_sweeps_publication_check_is_one_undoable_transaction(lib, monkeypat
     _record_for(pre)
     monkeypatch.setattr(pc, "scan_directory", lambda folder, **k: [
         {"file": str(pre), "filename": pre.name, "parsed_authors": ["Smith"],
-         "published": False}] if "02" in str(folder) else [])
+         "published": False}] if folder.name.startswith("02") else [])
     (lib / "03 - Working papers").mkdir()
     _check_publications_logged(lib)
     assert PaperIdentity.load(pre).recheck_count == 1
